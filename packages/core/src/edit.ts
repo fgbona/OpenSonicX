@@ -4,6 +4,7 @@ import { modelOf, toParam, type Block, type Preset } from './dump.ts';
 import { setPresetVolume } from './slots.ts';
 
 const AMP_MODULE = 3;
+const IR_MODULE = 4;
 const NR_MODULE = 0;
 
 /** One change to the edit buffer. Values are already encoded (see encodeValue). */
@@ -44,7 +45,13 @@ export function applyEdit(preset: Preset, edit: Edit): Preset {
         model: model?.name ?? `0x${edit.code.toString(16).toUpperCase().padStart(8, '0')}`,
         params: model ? model.params.map((p) => toParam(p, p.default ?? p.min ?? 0)) : [],
       }));
-      return edit.module === AMP_MODULE ? { ...next, ampMode: clone ? 'clone' : 'normal' } : next;
+      if (edit.module !== AMP_MODULE) return next;
+      // The unit turns IR off when a captured profile is picked on it and back on when it leaves
+      // clone mode, but not when the change arrives over MIDI, so the editor does the same itself.
+      const leavingClone = preset.ampMode === 'clone' && !clone;
+      const withMode: Preset = { ...next, ampMode: clone ? 'clone' : 'normal' };
+      if (clone) return mapBlock(withMode, IR_MODULE, (b) => ({ ...b, on: false }));
+      return leavingClone ? mapBlock(withMode, IR_MODULE, (b) => ({ ...b, on: true })) : withMode;
     }
   }
 }
@@ -68,7 +75,9 @@ export function editToCommands(preset: Preset, edit: Edit): Uint8Array[] {
       const clone = edit.module === AMP_MODULE && edit.clone === true;
       if (edit.module !== AMP_MODULE) return [selectModel(edit.module, edit.code)];
       const modeSwitch = (preset.ampMode === 'clone') !== clone ? [setAmpMode(clone)] : [];
-      return [...modeSwitch, selectModel(clone ? CLONE_MODULE : AMP_MODULE, edit.code)];
+      const leavingClone = preset.ampMode === 'clone' && !clone;
+      const ir = clone ? [setBlockOn(IR_MODULE, false)] : leavingClone ? [setBlockOn(IR_MODULE, true)] : [];
+      return [...modeSwitch, selectModel(clone ? CLONE_MODULE : AMP_MODULE, edit.code), ...ir];
     }
   }
 }
