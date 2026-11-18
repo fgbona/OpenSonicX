@@ -3,9 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   applyEdit, decodeCurrentPreset, decodePreset, diffPresets, editToCommands, MessageType, Query,
-  type Edit, type Frame, type Preset,
+  restoreFromBackup, saveToSlot,
+  type BackupFile, type Edit, type Frame, type Pedal, type Preset, type Progress, type SaveResult, type SlotBackup,
 } from '@pocket-master/core';
 import { LinkClosedError, openMidi, pickPocketMaster, PocketMasterLink, type LogEntry } from './midi';
+import { webPedal } from './webPedal';
+import { downloadBackup, loadBackups, storeBackup } from './backupStore';
 
 export const LOG_LIMIT = 2000;
 /** After a model or chain change the pedal applies defaults; re-read once it settles. */
@@ -31,11 +34,22 @@ export interface PocketMasterState {
   readonly restorePoint: Preset | null;
   readonly liveEdit: boolean;
   readonly log: readonly LogEntry[];
+  /** A save or restore in progress; live edit and automatic re-reads pause meanwhile. */
+  readonly busy: Progress | null;
+  /** Preset names as last read from the pedal (index 0..99). */
+  readonly names: readonly string[] | null;
+  /** Backups kept in this browser, newest first. */
+  readonly backups: readonly BackupFile[];
+  /** Backups taken by the last save or restore, offered for download when it ends. */
+  readonly flowBackups: readonly BackupFile[];
+  /** Set when the browser could not keep a backup; the user must download it. */
+  readonly storageWarning: string | null;
 }
 
 const INITIAL: PocketMasterState = {
   status: 'idle', error: null, inputs: [], outputs: [], inputId: '', outputId: '',
   preset: null, presetIndex: null, restorePoint: null, liveEdit: false, log: [],
+  busy: null, names: null, backups: [], flowBackups: [], storageWarning: null,
 };
 
 const toOptions = (ports: Iterable<MIDIPort>): PortOption[] =>
@@ -68,6 +82,8 @@ export function usePocketMaster() {
   /** Bumped by every edit; a dump requested before the latest edit is stale. */
   const editGeneration = useRef(0);
   const notifyRef = useRef<(f: Frame) => void>(() => undefined);
+  const busyRef = useRef(false);
+  const backupsRef = useRef<BackupFile[]>([]);
 
   const patch = useCallback((p: Partial<PocketMasterState>) => setState((s) => ({ ...s, ...p })), []);
 
@@ -106,13 +122,14 @@ export function usePocketMaster() {
 
   const scheduleReread = useCallback(() => {
     if (settleTimer.current) clearTimeout(settleTimer.current);
+    if (busyRef.current) return; // a save or restore drives the pedal; it re-reads when done
     settleTimer.current = setTimeout(() => void readRef.current(), SETTLE_MS);
   }, []);
 
   /** Reads preset number and edit buffer. Resolves with the pedal's preset, or null if stale or failed. */
   const read = useCallback(async (): Promise<Preset | null> => {
     const current = link.current;
-    if (!current) return null;
+    if (!current || busyRef.current) return null;
     patch({ status: 'reading', error: null });
     try {
       await current.drained(); // never read while edits are still on their way
@@ -149,7 +166,7 @@ export function usePocketMaster() {
     (edits: readonly Edit[]) => {
       const current = link.current;
       const preset = presetRef.current;
-      if (!current || !preset || edits.length === 0) return;
+      if (!current || !preset || edits.length === 0 || busyRef.current) return;
       try {
         // Validate and build everything first; queue only when the whole list is good.
         const { next, commands } = edits.reduce(
@@ -201,7 +218,7 @@ export function usePocketMaster() {
     link.current = null;
     restoreRef.current = null;
     presetRef.current = null;
-    patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false });
+    patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false, names: null });
     try {
       await Promise.all([input.open(), output.open()]);
       link.current = new PocketMasterLink(input, output, appendLog, (f) => notifyRef.current(f));
@@ -247,8 +264,95 @@ export function usePocketMaster() {
 
   // A preset switched on the pedal: re-read so edits never land on a preset the screen does not show.
   notifyRef.current = (f: Frame) => {
-    if (isPresetChange(f)) scheduleReread();
+    if (isPresetChange(f) && !busyRef.current) scheduleReread();
   };
+
+  useEffect(() => {
+    backupsRef.current = loadBackups();
+    patch({ backups: backupsRef.current });
+  }, [patch]);
+
+  const keepBackup = useCallback(
+    (file: BackupFile) => {
+      const { list, stored } = storeBackup(backupsRef.current, file);
+      backupsRef.current = list;
+      setState((s) => ({
+        ...s,
+        backups: list,
+        flowBackups: [...s.flowBackups, file],
+        storageWarning: stored ? s.storageWarning : 'This browser could not keep the backup. Download it now and keep the file.',
+      }));
+    },
+    [],
+  );
+
+  /** Runs a save or restore flow with live edit paused; on success the saved preset is the new restore point. */
+  const runFlow = useCallback(
+    async (target: number, flow: (pedal: Pedal, onProgress: (p: Progress) => void) => Promise<SaveResult>) => {
+      const current = link.current;
+      if (!current || busyRef.current) return false;
+      busyRef.current = true;
+      if (settleTimer.current) clearTimeout(settleTimer.current);
+      patch({ busy: { step: 'Preparing', done: 0, total: 1 }, error: null, flowBackups: [] });
+      let failure: string | null = null;
+      try {
+        await current.drained();
+        const pedal = webPedal(current);
+        const result = await flow(pedal, (busy) => patch({ busy }));
+        const names = await pedal.readNames();
+        editGeneration.current += 1;
+        presetRef.current = result.saved;
+        restoreRef.current = result.saved;
+        busyRef.current = false;
+        patch({ busy: null, preset: result.saved, presetIndex: target, restorePoint: result.saved, names });
+        return true;
+      } catch (e) {
+        console.error('save flow failed', e);
+        failure = e instanceof LinkClosedError ? 'The connection to the pedal was closed during the save.' : message(e);
+      }
+      busyRef.current = false;
+      // Re-sync the screen with the pedal first; the error is set after, so the read cannot clear it.
+      if (link.current === current) await readRef.current();
+      patch({ busy: null, error: failure });
+      return false;
+    },
+    [patch],
+  );
+
+  const save = useCallback(
+    (target: number, name: string, backup = true) =>
+      runFlow(target, (pedal, onProgress) =>
+        saveToSlot(pedal, { target, name, backup, edited: presetRef.current, onProgress, onBackup: keepBackup }),
+      ),
+    [runFlow, keepBackup],
+  );
+
+  const restore = useCallback(
+    (slot: SlotBackup) =>
+      runFlow(slot.index, (pedal, onProgress) =>
+        restoreFromBackup(pedal, slot, { onProgress, onBackup: keepBackup }),
+      ),
+    [runFlow, keepBackup],
+  );
+
+  const loadNames = useCallback(async () => {
+    const current = link.current;
+    if (!current || busyRef.current) return;
+    try {
+      patch({ names: await webPedal(current).readNames() });
+    } catch (e) {
+      if (!(e instanceof LinkClosedError)) patch({ error: message(e) });
+    }
+  }, [patch]);
+
+  const importBackup = useCallback(
+    (file: BackupFile) => {
+      const { list, stored } = storeBackup(backupsRef.current, file);
+      backupsRef.current = list;
+      patch({ backups: list, storageWarning: stored ? null : 'This browser could not keep the imported backup; keep the file.' });
+    },
+    [patch],
+  );
 
   const modified = useMemo(() => safeModified(state.preset, state.restorePoint), [state.preset, state.restorePoint]);
 
@@ -261,9 +365,16 @@ export function usePocketMaster() {
     read,
     edit,
     revert: () => void revert(),
+    save,
+    restore,
+    loadNames,
+    importBackup,
+    downloadBackup,
     setLiveEdit: (liveEdit: boolean) => patch({ liveEdit }),
     selectInput: (inputId: string) => patch({ inputId }),
     selectOutput: (outputId: string) => patch({ outputId }),
     clearLog: () => patch({ log: [] }),
+    showError: (error: string) => patch({ error }),
+    clearError: () => patch({ error: null }),
   };
 }

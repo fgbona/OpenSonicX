@@ -78,7 +78,7 @@ test('validateChain keeps DRV-AMP-IR-EQ together and every module once', () => {
   assert.throws(() => setChain([0, 1, 3, 2, 4, 5, 6, 7, 8]), /together/);
 });
 
-test('isAllowedEdit accepts only chain, model, parameter and on/off commands', () => {
+test('isAllowedEdit accepts only chain, model, parameter, on/off and preset volume commands', () => {
   assert.equal(isAllowedEdit(setParam(3, 4, 71)), true);
   assert.equal(isAllowedEdit(setBlockOn(2, false)), true);
   assert.equal(isAllowedEdit(selectModel(2, 1)), true);
@@ -86,7 +86,7 @@ test('isAllowedEdit accepts only chain, model, parameter and on/off commands', (
   assert.equal(isAllowedEdit(buildFrame([0x11, 0x4a, 0, 0, 0, 0])), false, 'save');
   assert.equal(isAllowedEdit(buildFrame([0x11, 0x43, 7, 0, 0, 0])), false, 'select preset');
   assert.equal(isAllowedEdit(buildFrame([0x11, 0x11, 2, 2, 0, 0, 50, 0, 0, 0])), false, 'global');
-  assert.equal(isAllowedEdit(buildFrame([0x11, 0x42, 1, 0x20, 1, 0, 50])), false, 'preset volume');
+  assert.equal(isAllowedEdit(buildFrame([0x11, 0x42, 1, 0x20, 1, 0, 50])), true, 'preset volume (needed to restore backups)');
   assert.equal(isAllowedEdit(queryFrame(Query.EDIT_BUFFER)), false, 'query');
   assert.equal(isAllowedEdit(Uint8Array.from([0xf0, 0x7f, 0xf7])), false, 'garbage');
 });

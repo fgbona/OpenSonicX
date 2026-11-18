@@ -3,7 +3,7 @@ import { MessageType } from './queries.ts';
 import { CLONE_MODULE, type ParamSpec } from './catalog.ts';
 
 /** Second payload byte of the set commands the live editor may send. */
-export const EditCommand = { CHAIN: 0x44, MODEL: 0x47, PARAM: 0x48, BLOCK_ON: 0x49 } as const;
+export const EditCommand = { VOLUME: 0x42, CHAIN: 0x44, MODEL: 0x47, PARAM: 0x48, BLOCK_ON: 0x49 } as const;
 const ALLOWED_EDITS: ReadonlySet<number> = new Set(Object.values(EditCommand));
 
 const MODULE_COUNT = 9;
@@ -58,7 +58,7 @@ export function validateChain(order: readonly number[]): void {
   }
 }
 
-/** True only for well-formed chain, model, parameter and block on/off commands. Never save, select or globals. */
+/** True only for chain, model, parameter, block on/off and preset volume commands. Never save, select or globals. */
 export function isAllowedEdit(sysex: Uint8Array): boolean {
   try {
     const f = parseFrame(sysex);
@@ -78,6 +78,7 @@ export function editKey(sysex: Uint8Array): string {
   const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
   const command = payload[1] ?? 0;
   if (command === EditCommand.CHAIN) return 'chain';
+  if (command === EditCommand.VOLUME) return 'volume';
   const module = view.getUint32(2, true);
   return command === EditCommand.PARAM ? `${command}:${module}:${view.getUint32(6, true)}` : `${command}:${module}`;
 }

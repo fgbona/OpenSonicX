@@ -4,8 +4,8 @@ A free, open-source browser editor for the **Sonicake Pocket Master** guitar
 multi-effects pedal, over USB MIDI. No install and no driver: open the page in
 Chrome, Edge or Opera, plug the pedal in, and read your preset.
 
-> **Status: preview.** Reading and live editing work. Saving to preset slots
-> comes next, after hardware validation, and will always take a backup first.
+> **Status: preview.** Reading, live editing and saving to preset slots work.
+> Every save backs up the slot it overwrites, unless you opt out for that save.
 
 ## What it does today
 
@@ -16,6 +16,9 @@ Chrome, Edge or Opera, plug the pedal in, and read your preset.
   Nothing is saved to a slot.
 - Revert brings the preset back to how it was first read, including knob
   turns made on the pedal.
+- Saves to a user slot (P01..P50), backing up the slot it overwrites
+  first (you can skip that per save). Backups can be downloaded and
+  restored from the Backups panel.
 - Logs every SysEx message sent and received, in hex, with a label.
 
 Tested on firmware **V1.3.3** over USB.
