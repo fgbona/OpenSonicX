@@ -6,6 +6,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-18
+
+Read-only preview, validated on a Pocket Master with firmware V1.3.3.
+Container image: `ghcr.io/fgbona/pocket-master-editor:v0.1.0`.
+
 ### Added
 
 - `packages/core`: Pocket Master SysEx protocol in TypeScript with no browser
@@ -33,6 +38,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - Container image: Next.js standalone server, multi-stage build that runs the
   tests, non-root user, health check. `compose.yaml` for local use.
 - MIT license, NOTICE with third-party attribution, README, CONTRIBUTING, CI.
+- Release workflow: a `v*.*.*` tag publishes the container image to GHCR and a
+  GitHub release with this changelog's notes.
 
 ### Fixed
 
@@ -41,3 +48,6 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - Double-clicking Connect no longer opens two links on the same ports.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
+
+[Unreleased]: https://github.com/fgbona/pocket-master-editor/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/fgbona/pocket-master-editor/releases/tag/v0.1.0

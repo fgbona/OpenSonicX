@@ -35,7 +35,13 @@ npm test          # core protocol tests, with coverage
 npm run dev       # editor at http://localhost:3000
 ```
 
-In a container:
+In a container, from the published image:
+
+```sh
+docker run --rm -p 3000:3000 ghcr.io/fgbona/pocket-master-editor:latest
+```
+
+Or build it yourself:
 
 ```sh
 docker compose up --build   # editor at http://localhost:3000
@@ -50,6 +56,12 @@ The wire format follows [`docs/PROTOCOL.md`](https://github.com/voronkovd/pocket
 of pocket-master-mcp (MIT). The implementation here was written from scratch.
 Real captures from a V1.3.3 unit live in `packages/core/test/fixtures` and are
 the reference the tests check against.
+
+## Releases
+
+Each version is a git tag, a [GitHub release](https://github.com/fgbona/pocket-master-editor/releases)
+and a container image in the GitHub Container Registry. Changes are listed in
+[CHANGELOG.md](CHANGELOG.md). Versions below 1.0 are previews.
 
 ## Contributing
 
