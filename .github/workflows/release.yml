@@ -1,17 +1,21 @@
 name: Release
-# Push a tag like v0.1.0 to publish the container image to GHCR and a GitHub release
-# whose notes are that version's section of CHANGELOG.md.
+# Push a tag like v0.2.0. The pipeline tests the code, publishes a multi-arch image
+# (linux/amd64 and linux/arm64) to GHCR under the version tag, pulls that published
+# image back and smoke-tests it, and only then moves `latest` and creates the GitHub
+# release with that version's CHANGELOG.md section as notes.
 on:
   push:
     tags: ['v*.*.*']
 permissions:
   contents: write
   packages: write
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
-  release:
+  verify:
+    name: Test and check versions
     runs-on: ubuntu-latest
-    env:
-      IMAGE: ghcr.io/${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,17 +25,32 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run typecheck
-      - name: Check tag matches package versions
+      - run: npm run build
+      - name: Tag matches every package.json version
         run: |
           v="${GITHUB_REF_NAME#v}"
           for f in package.json packages/core/package.json apps/web/package.json; do
             test "$(node -p "require('./$f').version")" = "$v" || { echo "::error::$f version is not $v"; exit 1; }
           done
-      - name: Extract release notes from CHANGELOG.md
+      - name: CHANGELOG.md has a section for this version
         run: |
           v="${GITHUB_REF_NAME#v}"
           awk -v v="$v" '$0 ~ "^## \\[" v "\\]" {on=1; next} on && /^## \[/ {exit} on' CHANGELOG.md > notes.md
           test -s notes.md || { echo "::error::No CHANGELOG.md section for $v"; exit 1; }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: notes.md
+
+  publish:
+    name: Publish image
+    needs: verify
+    runs-on: ubuntu-latest
+    env:
+      IMAGE: ghcr.io/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -41,19 +60,54 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
+          platforms: linux/amd64,linux/arm64
           push: true
-          tags: |
-            ${{ env.IMAGE }}:${{ github.ref_name }}
-            ${{ env.IMAGE }}:latest
+          tags: ${{ env.IMAGE }}:${{ github.ref_name }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.version=${{ github.ref_name }}
+            org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.licenses=MIT
             org.opencontainers.image.description=Browser editor for the Sonicake Pocket Master over USB MIDI
-      - name: Create GitHub release
+
+  smoke:
+    name: Smoke-test the published image
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker pull ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+      - run: scripts/smoke-test.sh ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+
+  release:
+    name: Tag latest and create the GitHub release
+    needs: smoke
+    runs-on: ubuntu-latest
+    env:
+      IMAGE: ghcr.io/${{ github.repository }}
+    steps:
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Move latest to this version
+        run: docker buildx imagetools create -t "$IMAGE:latest" "$IMAGE:$GITHUB_REF_NAME"
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+      - name: Create or update the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           prerelease=""
           case "$GITHUB_REF_NAME" in v0.*) prerelease="--prerelease";; esac
-          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md $prerelease
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" --notes-file notes.md $prerelease
+          else
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md $prerelease
+          fi

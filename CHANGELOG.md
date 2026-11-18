@@ -6,6 +6,20 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- CI smoke test: every push and pull request builds the container image,
+  starts it and checks with `scripts/smoke-test.sh` that the editor page,
+  its static assets and the non-root user are in place.
+- Release pipeline split into verify, publish, smoke and release jobs. The
+  published image is pulled back and smoke-tested before `latest` moves and
+  the GitHub release is created.
+
+### Changed
+
+- Container images are published for `linux/amd64` and `linux/arm64`, so
+  the image runs on Apple Silicon and ARM servers.
+
 ## [0.1.0] - 2026-11-18
 
 Read-only preview, validated on a Pocket Master with firmware V1.3.3.
