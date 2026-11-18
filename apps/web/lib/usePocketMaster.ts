@@ -7,7 +7,7 @@ import {
   type BackupFile, type Edit, type Frame, type Pedal, type Preset, type PresetFile, type Progress, type SaveResult, type SlotBackup,
 } from '@pocket-master/core';
 import { LinkClosedError, openMidi, pickPocketMaster, PocketMasterLink, type LogEntry } from './midi';
-import { readUserIrNames, webPedal } from './webPedal';
+import { readProfileNames, readUserIrNames, webPedal } from './webPedal';
 import { downloadBackup, downloadJson, loadBackups, storeBackup } from './backupStore';
 
 export const LOG_LIMIT = 2000;
@@ -46,12 +46,14 @@ export interface PocketMasterState {
   readonly storageWarning: string | null;
   /** Names the owner gave the five user IR slots, null for an empty slot. */
   readonly irNames: readonly (string | null)[] | null;
+  /** Names of the five captured-profile slots, null for an empty slot. */
+  readonly profileNames: readonly (string | null)[] | null;
 }
 
 const INITIAL: PocketMasterState = {
   status: 'idle', error: null, inputs: [], outputs: [], inputId: '', outputId: '',
   preset: null, presetIndex: null, restorePoint: null, liveEdit: false, log: [],
-  busy: null, names: null, backups: [], flowBackups: [], storageWarning: null, irNames: null,
+  busy: null, names: null, backups: [], flowBackups: [], storageWarning: null, irNames: null, profileNames: null,
 };
 
 const toOptions = (ports: Iterable<MIDIPort>): PortOption[] =>
@@ -224,12 +226,14 @@ export function usePocketMaster() {
     try {
       await Promise.all([input.open(), output.open()]);
       link.current = new PocketMasterLink(input, output, appendLog, (f) => notifyRef.current(f));
-      patch({ status: 'connected', error: null, irNames: null });
+      patch({ status: 'connected', error: null, irNames: null, profileNames: null });
       await read();
       // User IR names are only labels: a failure must not spoil the connection.
       try {
-        const slots = await readUserIrNames(link.current);
-        patch({ irNames: slots.map((s) => (s.empty || !s.name ? null : s.name)) });
+        const names = (slots: { name: string; empty: boolean }[]) => slots.map((s) => (s.empty || !s.name ? null : s.name));
+        const irs = await readUserIrNames(link.current);
+        const profiles = await readProfileNames(link.current);
+        patch({ irNames: names(irs), profileNames: names(profiles) });
       } catch (e) {
         if (!(e instanceof LinkClosedError)) console.error('could not read the user IR names', e);
       }

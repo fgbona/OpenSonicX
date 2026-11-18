@@ -6,6 +6,16 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Captured profiles (clone mode) on AMP. The AMP model list groups amp
+  models and the occupied captured-profile slots by name (for example
+  "Randall SA (profile 1)"); choosing a profile switches amp mode on,
+  choosing an amp switches it off, and the editor re-reads the pedal, which
+  turns IR off for a profile. In clone mode the chain and the AMP card show
+  the profile name. Clone decoding is now verified on hardware with the
+  owner's NAM capture.
+
 ## [0.6.0] - 2026-11-18
 
 User IR slots show the names of the loaded IR files, validated on a Pocket

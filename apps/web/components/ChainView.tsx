@@ -11,10 +11,11 @@ interface Props {
   modified: boolean;
   onEdit: (edit: Edit) => void;
   irNames: readonly (string | null)[] | null;
+  profileNames: readonly (string | null)[] | null;
 }
 
 /** Memoised: incoming SysEx packets re-render the page, but the chain only when the preset changes. */
-export const ChainView = memo(function ChainView({ preset, presetIndex, editable, modified, onEdit, irNames }: Props) {
+export const ChainView = memo(function ChainView({ preset, presetIndex, editable, modified, onEdit, irNames, profileNames }: Props) {
   const { t } = useI18n();
   return (
     <section aria-label="Current preset">
@@ -29,9 +30,9 @@ export const ChainView = memo(function ChainView({ preset, presetIndex, editable
           <div><dt>{t('preset.access')}</dt><dd>{editable ? t('live.label') : t('preset.readOnly')}</dd></div>
         </dl>
       </div>
-      <ChainStrip chain={preset.chain} editable={editable} onEdit={onEdit} irNames={irNames} />
+      <ChainStrip chain={preset.chain} editable={editable} onEdit={onEdit} irNames={irNames} profileNames={profileNames} ampMode={preset.ampMode} />
       <div className="blocks">
-        {preset.chain.map((b) => <BlockCard key={b.key} preset={preset} block={b} editable={editable} onEdit={onEdit} irNames={irNames} />)}
+        {preset.chain.map((b) => <BlockCard key={b.key} preset={preset} block={b} editable={editable} onEdit={onEdit} irNames={irNames} profileNames={profileNames} />)}
       </div>
     </section>
   );
