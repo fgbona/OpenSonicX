@@ -27,15 +27,25 @@ export default function EditorPage() {
         onConnect={pm.connect}
         onDisconnect={pm.disconnect}
         onRead={pm.read}
+        liveEdit={pm.liveEdit}
+        modified={pm.modified}
+        onLiveEdit={pm.setLiveEdit}
+        onRevert={pm.revert}
       />
       <main className="main">
         {pm.error && <p className="alert" role="alert">{pm.error}</p>}
+        {pm.liveEdit && (
+          <p className="notice" role="status">
+            Live edit is on. Every change goes to the pedal at once, in its edit buffer only. Nothing is saved to a
+            preset slot. Revert brings back what was read when you connected.
+          </p>
+        )}
         {pm.preset ? (
-          <ChainView preset={pm.preset} presetIndex={pm.presetIndex} />
+          <ChainView preset={pm.preset} presetIndex={pm.presetIndex} editable={pm.liveEdit} modified={pm.modified} onEdit={pm.edit} />
         ) : (
           <section className="empty">
             <h1>Read your Pocket Master</h1>
-            <p className="muted">This release only reads from the pedal. Nothing is written to it.</p>
+            <p className="muted">Read the edit buffer, then turn on Live edit to change the sound from here.</p>
             <ol className="steps">{STEPS.map((s) => <li key={s}>{s}</li>)}</ol>
             <p className="muted small">Works in Chrome, Edge and Opera on desktop.</p>
           </section>

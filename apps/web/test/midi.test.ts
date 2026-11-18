@@ -79,3 +79,60 @@ test('pickPocketMaster never falls back to another device', () => {
   assert.equal(pickPocketMaster(ports)?.name, 'Pocket Master');
   assert.equal(pickPocketMaster([{ name: 'UMC404HD 192k' }] as MIDIPort[]), undefined);
 });
+
+// --- live edit path -------------------------------------------------------
+import { setParam, setBlockOn } from '@pocket-master/core';
+
+test('edit refuses anything that is not a chain, model, parameter or on/off command', () => {
+  const f = fakes();
+  assert.throws(() => f.link.edit('save', buildFrame([0x11, 0x4a, 0, 0, 0, 0])), /Blocked/);
+  assert.throws(() => f.link.edit('query', buildFrame([0x12, 0x41])), /Blocked/);
+  assert.equal(f.sent.length, 0);
+});
+
+test('edit sends at once, then spaces messages and keeps only the latest per key', async () => {
+  const f = fakes();
+  f.link.edit('3:4', setParam(3, 4, 10));
+  f.link.edit('3:4', setParam(3, 4, 11));
+  f.link.edit('3:4', setParam(3, 4, 12));
+  f.link.edit('on:7', setBlockOn(7, true));
+  assert.deepEqual(f.sent, [toHex(setParam(3, 4, 10))]);
+  mock.timers.tick(20);
+  assert.deepEqual(f.sent.slice(1), [toHex(setParam(3, 4, 12))]);
+  mock.timers.tick(20);
+  assert.deepEqual(f.sent.slice(2), [toHex(setBlockOn(7, true))]);
+  mock.timers.tick(100);
+  assert.equal(f.sent.length, 3);
+});
+
+test('edit after close throws and queued edits are dropped', () => {
+  const f = fakes();
+  f.link.edit('3:4', setParam(3, 4, 10));
+  f.link.edit('3:4', setParam(3, 4, 11));
+  f.link.close();
+  mock.timers.tick(100);
+  assert.equal(f.sent.length, 1);
+  assert.throws(() => f.link.edit('3:4', setParam(3, 4, 12)), LinkClosedError);
+});
+
+test('drained resolves once every queued edit is sent', async () => {
+  const f = fakes();
+  f.link.edit('a', setParam(3, 4, 10));
+  f.link.edit('b', setParam(3, 3, 10));
+  const done = f.link.drained();
+  mock.timers.tick(20);
+  await done;
+  assert.equal(f.sent.length, 2);
+});
+
+test('a replaced edit moves behind edits queued after it, so order is kept', () => {
+  const f = fakes();
+  f.link.edit('first', setBlockOn(1, true)); // goes out at once
+  f.link.edit('param:2:0', setParam(2, 0, 10));
+  f.link.edit('model:2', buildFrame([0x11, 0x47, 2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 3]));
+  f.link.edit('param:2:0', setParam(2, 0, 20)); // must follow the model change
+  mock.timers.tick(20);
+  mock.timers.tick(20);
+  assert.equal(f.sent.length, 3);
+  assert.equal(f.sent[2], toHex(setParam(2, 0, 20)));
+});
