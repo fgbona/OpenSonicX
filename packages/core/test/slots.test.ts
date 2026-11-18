@@ -84,3 +84,12 @@ test('encodeName refuses leading or trailing spaces, which the pedal would not k
   assert.throws(() => encodeName(' Lead'), /spaces/);
   assert.doesNotThrow(() => encodeName('My Lead'));
 });
+
+test('select and save match the real commands from the owner\'s save, and the real acknowledge is ok', () => {
+  const c = readCapture('save-capture.txt');
+  assert.equal(toHex(selectPreset(8)), toHex(c[0]!.bytes));
+  assert.equal(toHex(savePreset(8, 'IRON-LEAD')), toHex(c[3]!.bytes));
+  // The pedal acknowledges a selection too (14 08 00), not only a save.
+  assert.equal(decodeAck(parseFrame(c[2]!.bytes).payload), true);
+  assert.equal(decodeAck(parseFrame(c[6]!.bytes).payload), true);
+});

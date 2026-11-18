@@ -184,10 +184,28 @@ test('presetOperation refuses anything but a selection or a user-slot save', asy
   assert.equal(f.sent.length, 0);
 });
 
-test('a selection is sent once and does not wait for an acknowledge', async () => {
+test('a selection waits for its own acknowledge, so it cannot be mistaken for the save one', async () => {
   const f = fakes();
-  await f.link.presetOperation(selectPreset(2));
+  let done = false;
+  const select = f.link.presetOperation(selectPreset(2)).then((ok) => ((done = true), ok));
+  await flush();
+  assert.equal(done, false, 'still waiting for 14 08 00');
+  f.receive(buildFrame([0x14, 0x08, 0x00])); // the real pedal acknowledges every selection
+  assert.equal(await select, true);
   assert.deepEqual(f.sent, [toHex(selectPreset(2))]);
+  // The next save waits for a new acknowledge, not the selection's.
+  const save = f.link.presetOperation(savePreset(2, 'Lead'));
+  await flush();
+  f.receive(buildFrame([0x14, 0x08, 0x01]));
+  assert.equal(await save, false);
+});
+
+test('a selection without acknowledge fails after 3 s', async () => {
+  const f = fakes();
+  const outcome = assert.rejects(f.link.presetOperation(selectPreset(2)), /no acknowledge for the preset selection/);
+  await flush();
+  mock.timers.tick(3000);
+  await outcome;
 });
 
 test('a save resolves with the acknowledge and is never re-sent', async () => {
@@ -220,6 +238,8 @@ test('a preset operation waits until queued edits are written', async () => {
   await flush();
   assert.equal(f.sent.length, 1, 'select waits behind the queued edit');
   mock.timers.tick(20);
+  await flush();
+  f.receive(buildFrame([0x14, 0x08, 0x00]));
   await op;
   assert.deepEqual(f.sent.slice(1), [toHex(setParam(3, 3, 10)), toHex(selectPreset(1))]);
 });

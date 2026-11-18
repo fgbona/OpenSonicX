@@ -121,21 +121,26 @@ export class PocketMasterLink {
   }
 
   /**
-   * Selects a preset or saves to a user slot, after queued edits are written. A save resolves with
-   * the pedal's acknowledge (true ok, false failed) and is never re-sent; no acknowledge rejects.
+   * Selects a preset or saves to a user slot, after queued edits are written. Resolves with the
+   * pedal's acknowledge (true ok, false failed); it is never re-sent and no acknowledge rejects.
    */
   async presetOperation(bytes: Uint8Array): Promise<boolean> {
     if (this.#closed) throw new LinkClosedError();
     if (!isPresetOperation(bytes)) throw new Error('Blocked: only preset selections and user-slot saves can be sent here.');
     await this.drained();
     if (this.#closed) throw new LinkClosedError();
+    // The pedal acknowledges every selection and every save with 14 08 xx (seen on V1.3.3).
+    // Waiting for each one keeps a late selection acknowledge from being read as the save's.
     const isSave = parseFrame(bytes).payload[1] === PresetCommand.SAVE;
-    const ack = isSave ? this.#waitForAck() : null;
+    const ack = this.#waitForAck();
     this.#transmit(bytes);
-    if (!ack) return true;
     const frame = await ack;
     if (this.#closed) throw new LinkClosedError();
-    if (!frame) throw new Error('The pedal sent no acknowledge for the save; treat it as not saved.');
+    if (!frame) {
+      throw new Error(isSave
+        ? 'The pedal sent no acknowledge for the save; treat it as not saved.'
+        : 'The pedal sent no acknowledge for the preset selection.');
+    }
     return decodeAck(frame.payload);
   }
 

@@ -29,8 +29,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
   and the backupAllSlots, saveToSlot and restoreFromBackup flows, tested
   against a simulated pedal that applies real commands to real dumps.
 - Web link: a third guarded send path for preset selections and
-  user-slot saves that waits for the acknowledge and never re-sends a
-  save.
+  user-slot saves. Every operation waits for its own acknowledge (the
+  pedal acknowledges selections too, seen on hardware), so a late
+  selection acknowledge can never be taken for the save's; nothing is
+  re-sent.
 
 ### Changed
 

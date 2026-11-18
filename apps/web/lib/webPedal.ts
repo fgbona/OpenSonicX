@@ -1,7 +1,7 @@
 import { decodeCurrentPreset, decodePresetNames, Query, savePreset, selectPreset, type Pedal } from '@pocket-master/core';
 import type { PocketMasterLink } from './midi';
 
-/** The pedal needs a moment to load a preset or apply edits before it reports them. */
+/** After its acknowledge the pedal still needs a moment before it reports the new preset (V1.3.3: ~250 ms works). */
 const SELECT_SETTLE_MS = 250;
 const EDIT_SETTLE_MS = 100;
 
@@ -20,7 +20,8 @@ export function webPedal(link: PocketMasterLink): Pedal {
       return decodePresetNames((await link.request(Query.PRESET_NAMES)).payload);
     },
     async selectPreset(index) {
-      await link.presetOperation(selectPreset(index));
+      const ok = await link.presetOperation(selectPreset(index));
+      if (!ok) throw new Error(`the pedal refused to load preset ${index + 1}`);
       await wait(SELECT_SETTLE_MS);
     },
     async sendEdits(commands) {
