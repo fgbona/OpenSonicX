@@ -14,6 +14,10 @@ interface Props {
   onConnect: () => void;
   onDisconnect: () => void;
   onRead: () => void;
+  liveEdit: boolean;
+  modified: boolean;
+  onLiveEdit: (on: boolean) => void;
+  onRevert: () => void;
 }
 
 const STATUS_TEXT: Record<Status, string> = {
@@ -60,6 +64,21 @@ export function Toolbar(p: Props) {
           <button className="btn btn-primary" onClick={p.onEnable} disabled={p.status === 'requesting'}>Enable MIDI</button>
         ) : linked ? (
           <>
+            <label className="live-toggle">
+              <span>Live edit</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={p.liveEdit}
+                className={`switch${p.liveEdit ? ' switch-on' : ''}`}
+                onClick={() => p.onLiveEdit(!p.liveEdit)}
+              >
+                <span className="switch-knob" />
+              </button>
+            </label>
+            {p.liveEdit && (
+              <button className="btn" onClick={p.onRevert} disabled={!p.modified}>Revert</button>
+            )}
             <button className="btn btn-primary" onClick={p.onRead} disabled={p.status === 'reading'}>Read</button>
             <button className="btn" onClick={p.onDisconnect}>Disconnect</button>
           </>

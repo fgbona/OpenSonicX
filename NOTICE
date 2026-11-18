@@ -4,8 +4,8 @@ Copyright (c) 2026 Fernando Bona and contributors. Licensed under MIT, see LICEN
 Third-party material
 ====================
 
-packages/core/src/catalog.json and packages/core/test/fixtures/p34-payload.hex
-are copied from pocket-master-mcp (https://github.com/voronkovd/pocket-master-mcp).
+packages/core/src/catalog.json, packages/core/test/fixtures/p34-payload.hex and
+packages/core/test/fixtures/pocketedit-commands.json are copied from pocket-master-mcp (https://github.com/voronkovd/pocket-master-mcp).
 The protocol implementation in packages/core/src was written from scratch
 following that project's docs/PROTOCOL.md. Its license:
 

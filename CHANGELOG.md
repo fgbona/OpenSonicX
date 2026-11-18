@@ -6,6 +6,38 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Live edit (phase 2). A Live edit switch, off by default, turns the
+  editor into a live controller of the pedal's edit buffer:
+  - parameter sliders, switches and option lists, and block on/off;
+  - model selection per block (AMP lists amp models; captured profiles
+    are shown but not selectable);
+  - chain reordering by drag and drop or arrow buttons, with
+    DRV-AMP-IR-EQ moving as one group.
+  Nothing is saved to a preset slot.
+- Restore point and Revert: the first read of a preset is kept. Revert
+  re-reads the pedal, so knob turns made on the unit are undone too, then
+  sends only the edits needed to return to it (chain, then models, then
+  on/off, then parameters).
+- A preset switched on the pedal during live edit is detected from its
+  notification and re-read, so edits never land on a preset the screen
+  does not show.
+- `packages/core`: command builders for chain, model, parameter, block
+  on/off and amp mode, checked byte for byte against ~7400 captured
+  commands; `isAllowedEdit` guard; `encodeValue`; `applyEdit`,
+  `editToCommands`, `diffPresets`; `chainUnits` and `moveInChain`.
+- Web link edit path: only live-edit commands pass, messages are spaced
+  20 ms apart and a slider drag sends only its latest value.
+
+### Changed
+
+- After a model or chain change the editor re-reads the edit buffer, so
+  the screen shows the defaults the pedal applied. A dump requested before
+  the latest edit is discarded and read again, so sliders never jump back.
+- A model code the catalog does not know is still applied and shown as
+  hex instead of crashing the page.
+
 ## [0.1.1] - 2026-11-18
 
 Hardened container and a release pipeline that tests what it publishes.
