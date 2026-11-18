@@ -15,10 +15,24 @@ and the project uses [Semantic Versioning](https://semver.org/).
   published image is pulled back and smoke-tested before `latest` moves and
   the GitHub release is created.
 
+- CI lints the Dockerfile with hadolint, validates compose.yaml and scans
+  the image with Trivy (fails on HIGH or CRITICAL issues that have a fix).
+  The release pipeline scans the published image too.
+- Dependabot for base-image digests, GitHub Actions and npm packages.
+
 ### Changed
 
 - Container images are published for `linux/amd64` and `linux/arm64`, so
   the image runs on Apple Silicon and ARM servers.
+- Hardened container image: base images pinned by digest, distroless
+  Node 24 runtime (no shell, no package manager), root-owned read-only app
+  files, unprivileged user 65532, Node-based health check, dependency
+  install with `--ignore-scripts`, narrower build context.
+- Hardened compose.yaml: read-only root filesystem with a small `/tmp`
+  tmpfs, all capabilities dropped, `no-new-privileges`, init process,
+  port bound to localhost, pid, memory and CPU limits, rotated logs.
+- The smoke test runs the image with the same restrictions as compose.yaml
+  and also checks the health check and a clean stop on SIGTERM.
 
 ## [0.1.0] - 2026-11-18
 

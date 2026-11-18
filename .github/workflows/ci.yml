@@ -26,10 +26,14 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
   container:
-    name: Container build and smoke test
+    name: Container lint, build, scan and smoke test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Lint Dockerfile (hadolint)
+        run: docker run --rm -i hadolint/hadolint:v2.15.1-debian hadolint - < Dockerfile
+      - name: Validate compose.yaml
+        run: docker compose config -q
       - uses: docker/setup-buildx-action@v3
       - uses: docker/build-push-action@v6
         with:
@@ -38,4 +42,9 @@ jobs:
           tags: pocket-master-editor:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - run: scripts/smoke-test.sh pocket-master-editor:ci
+      - name: Scan image for HIGH and CRITICAL vulnerabilities with a fix (Trivy)
+        run: >
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.76.2
+          image --quiet --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 pocket-master-editor:ci
+      - name: Smoke test with the hardened runtime flags
+        run: scripts/smoke-test.sh pocket-master-editor:ci

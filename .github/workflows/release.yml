@@ -79,6 +79,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker pull ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+      - name: Scan the published image (Trivy)
+        run: >
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.76.2
+          image --quiet --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1
+          ghcr.io/${{ github.repository }}:${{ github.ref_name }}
       - run: scripts/smoke-test.sh ghcr.io/${{ github.repository }}:${{ github.ref_name }}
 
   release:

@@ -1,7 +1,30 @@
+# Local run of the editor with a hardened runtime: docker compose up --build
+# The editor is served on http://localhost:3000 only (Web MIDI needs localhost or https).
+name: pocket-master-editor
+
 services:
   web:
-    build: .
-    image: pocket-master-editor
+    build:
+      context: .
+    image: pocket-master-editor:local
+    init: true                    # tini as PID 1: forwards signals, reaps zombies
+    user: "65532:65532"
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 1.0
+    stop_grace_period: 10s
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
