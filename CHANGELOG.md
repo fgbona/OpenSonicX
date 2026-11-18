@@ -8,6 +8,20 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The screen follows the pedal: knobs turned and blocks switched on the
+  unit show up at once; a model or amp-mode change on the unit is re-read.
+- Light/dark theme button in the toolbar. Without a choice the page
+  follows the system; the choice is remembered in this browser and applied
+  before the page paints.
+
+### Fixed
+
+- The pedal acknowledges every edit too (14 08 00, seen on hardware); the
+  link consumes those acknowledges and a selection or save waits for them,
+  so a late edit acknowledge can never answer a preset operation.
+
+### Added
+
 - Portuguese (Brazil) interface. The language follows the browser (any pt
   locale gets Portuguese, everything else English), a PT/EN switch in the
   toolbar changes it, and the choice is remembered in this browser. The
