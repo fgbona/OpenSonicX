@@ -17,8 +17,12 @@ const AMP_MODULE = 3;
 
 export interface Param {
   readonly name: string;
+  readonly kind: 'number' | 'switch' | 'select';
   readonly value: number;
   readonly display: string;
+  /** Range of a number parameter, from the catalog. */
+  readonly min?: number;
+  readonly max?: number;
 }
 
 export interface Block {
@@ -82,7 +86,9 @@ function decodeParams(model: ModelSpec | undefined, view: DataView, module: numb
     .filter((p) => view.byteLength >= PARAM_STRIDE * module + 4 * p.alg + 4)
     .map((p) => {
       const value = view.getFloat32(PARAM_STRIDE * module + 4 * p.alg, true);
-      return { name: p.name, value: round(value, decimals(p)), display: formatValue(p, value) };
+      const kind = p.type ?? 'number';
+      const range = kind === 'number' ? { min: p.min ?? 0, max: p.max ?? 100 } : {};
+      return { name: p.name, kind, value: round(value, decimals(p)), display: formatValue(p, value), ...range };
     });
 }
 

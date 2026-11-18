@@ -78,3 +78,12 @@ test('clone amp mode reads the AMP slot from the captured-profile module', () =>
   assert.equal(preset.ampMode, 'clone');
   assert.equal(block(preset.chain, 'amp').model, 'User Profile 2');
 });
+
+test('params carry kind and range for display', () => {
+  const { chain } = decodePreset(p08Payload());
+  const middle = param(block(chain, 'amp'), 'Middle');
+  assert.deepEqual([middle.kind, middle.min, middle.max], ['number', 0, 100]);
+  const eq = param(block(chain, 'eq'), '400Hz');
+  assert.deepEqual([eq.min, eq.max], [-50, 50]);
+  assert.equal(param(block(chain, 'fx1'), '+3dB').kind, 'switch');
+});
