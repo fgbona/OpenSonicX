@@ -6,6 +6,8 @@ const config: NextConfig = {
   reactStrictMode: true,
   // Self-contained server for the container image; traces files from the monorepo root.
   output: 'standalone',
+  // The editor has no images to optimise, so Next never loads sharp (removed from the image in the Dockerfile).
+  images: { unoptimized: true },
   outputFileTracingRoot: fileURLToPath(new URL('../../', import.meta.url)),
 };
 

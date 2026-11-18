@@ -22,6 +22,9 @@ let nextLogId = 0; // module-wide so log keys stay unique across reconnects
 
 export class MidiUnavailableError extends Error {}
 
+const sendError = (error: unknown) =>
+  new Error(`Could not send to the pedal: ${error instanceof Error ? error.message : String(error)}. Check the USB cable, then Connect again.`);
+
 /** Thrown by a request that was pending, or started, after the link was closed. */
 export class LinkClosedError extends Error {
   constructor() {
@@ -97,7 +100,13 @@ export class PocketMasterLink {
     for (let attempt = 0; attempt <= REQUEST_RETRIES; attempt++) {
       if (this.#closed) throw new LinkClosedError();
       const reply = this.#waitFor(kind);
-      this.#send(queryFrame(kind));
+      try {
+        this.#send(queryFrame(kind));
+      } catch (error) {
+        this.#cancelWaits();
+        await reply;
+        throw sendError(error);
+      }
       const frame = await reply;
       if (this.#closed) throw new LinkClosedError();
       if (frame) return frame;
@@ -133,7 +142,13 @@ export class PocketMasterLink {
     // Waiting for each one keeps a late selection acknowledge from being read as the save's.
     const isSave = parseFrame(bytes).payload[1] === PresetCommand.SAVE;
     const ack = this.#waitForAck();
-    this.#transmit(bytes);
+    try {
+      this.#transmit(bytes);
+    } catch (error) {
+      this.#cancelWaits();
+      await ack;
+      throw sendError(error);
+    }
     const frame = await ack;
     if (this.#closed) throw new LinkClosedError();
     if (!frame) {
@@ -177,9 +192,23 @@ export class PocketMasterLink {
       return;
     }
     this.#queue = rest;
-    this.#transmit(next.bytes);
+    try {
+      this.#transmit(next.bytes);
+    } catch (error) {
+      // The port is gone: drop the queue so drained() resolves and the next read reports the error.
+      console.error('could not send an edit to the pedal', error);
+      this.#queue = [];
+      this.#pumpTimer = null;
+      this.#resolveDrained();
+      return;
+    }
     if (rest.length === 0) this.#resolveDrained();
     this.#pumpTimer = setTimeout(() => this.#pump(), EDIT_GAP_MS);
+  }
+
+  /** Ends every pending wait (they resolve with no reply). */
+  #cancelWaits(): void {
+    this.#pending.forEach((cancel) => cancel());
   }
 
   #resolveDrained(): void {

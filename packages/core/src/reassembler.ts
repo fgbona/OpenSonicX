@@ -17,6 +17,7 @@ export class Reassembler {
 
   feed(frame: Frame, now: number): Frame | null {
     if (frame.total <= 1) return frame;
+    if (frame.index >= frame.total) return null; // malformed packet: never let it count towards a set
     const current = this.#pending.get(frame.total);
     const restart = !current || frame.index === 0 || now - current.startedAt > PARTIAL_TTL_MS;
     const base = restart ? { startedAt: now, parts: new Map<number, Frame>() } : current;

@@ -20,6 +20,8 @@ interface Props {
   onRevert: () => void;
   onSave: () => void;
   busy: boolean;
+  /** Save needs a preset read from the pedal first. */
+  canSave: boolean;
 }
 
 const STATUS_TEXT: Record<Status, string> = {
@@ -81,7 +83,7 @@ export function Toolbar(p: Props) {
             {p.liveEdit && (
               <button className="btn" onClick={p.onRevert} disabled={!p.modified}>Revert</button>
             )}
-            <button className="btn" onClick={p.onSave} disabled={p.busy}>Save…</button>
+            <button className="btn" onClick={p.onSave} disabled={p.busy || !p.canSave}>Save…</button>
             <button className="btn btn-primary" onClick={p.onRead} disabled={p.status === 'reading' || p.busy}>Read</button>
             <button className="btn" onClick={p.onDisconnect} disabled={p.busy}>Disconnect</button>
           </>

@@ -9,6 +9,10 @@ import { toHex } from './hex.ts';
  */
 const Tag = { VOLUME: 0x2001, STATES: 0x3001, CHAIN: 0x3002, EFFECTS: 0x3003, PARAMS: 0x3004 } as const;
 const REQUIRED = [Tag.STATES, Tag.CHAIN, Tag.EFFECTS, Tag.PARAMS];
+/** Smallest record sizes the decoder reads: mask, 9 chain bytes, 10 codes, 10 x 8 floats. */
+const MIN_SIZE: ReadonlyMap<number, number> = new Map([
+  [Tag.STATES, 4], [Tag.CHAIN, 9], [Tag.EFFECTS, 40], [Tag.PARAMS, 320], [Tag.VOLUME, 4],
+]);
 const MODULE_COUNT = 9;
 const PARAM_STRIDE = 32; // 8 x float32 per module
 const RECORD_HEADER = 4;
@@ -53,6 +57,11 @@ export function decodePreset(payload: Uint8Array): Preset {
   const missing = REQUIRED.filter((t) => !tags.has(t));
   if (missing.length > 0) {
     throw new Error(`edit-buffer dump is missing records ${missing.map((t) => '0x' + t.toString(16)).join(', ')}`);
+  }
+  // Only records that are present are size-checked; whether one is mandatory is REQUIRED's job (volume is optional).
+  for (const [tag, size] of MIN_SIZE) {
+    const data = tags.get(tag);
+    if (data && data.length < size) throw new Error(`edit-buffer dump record 0x${tag.toString(16)} is too short (${data.length} < ${size} bytes)`);
   }
   const view = (tag: number) => dataView(tags.get(tag) as Uint8Array);
   const mask = view(Tag.STATES).getUint32(0, true);

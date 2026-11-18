@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { presetLabel, type Edit, type Preset } from '@pocket-master/core';
 import { BlockCard } from './BlockCard';
 import { ChainStrip } from './ChainStrip';
@@ -10,7 +11,8 @@ interface Props {
   onEdit: (edit: Edit) => void;
 }
 
-export function ChainView({ preset, presetIndex, editable, modified, onEdit }: Props) {
+/** Memoised: incoming SysEx packets re-render the page, but the chain only when the preset changes. */
+export const ChainView = memo(function ChainView({ preset, presetIndex, editable, modified, onEdit }: Props) {
   return (
     <section aria-label="Current preset">
       <div className="preset-head">
@@ -30,4 +32,4 @@ export function ChainView({ preset, presetIndex, editable, modified, onEdit }: P
       </div>
     </section>
   );
-}
+});

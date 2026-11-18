@@ -57,8 +57,8 @@ docker compose up --build   # editor at http://localhost:3000
 The container only serves the page. The browser talks to the pedal, so the
 container needs no USB access. Web MIDI only works on `https` or `localhost`.
 
-The image is distroless (no shell), runs as an unprivileged user and works
-with a read-only root filesystem. `compose.yaml` applies those restrictions
+The image is Alpine with only the Node binary (no npm, no package manager),
+runs as an unprivileged user and works with a read-only root filesystem. `compose.yaml` applies those restrictions
 and binds the port to localhost only. To serve it publicly, put it behind a
 reverse proxy that terminates HTTPS.
 

@@ -243,3 +243,14 @@ test('a preset operation waits until queued edits are written', async () => {
   await op;
   assert.deepEqual(f.sent.slice(1), [toHex(setParam(3, 3, 10)), toHex(selectPreset(1))]);
 });
+
+test('a port that fails to send rejects the request with a readable error and leaves nothing pending', async () => {
+  const input = { onmidimessage: null as ((e: { data: Uint8Array }) => void) | null };
+  let sends = 0;
+  const output = { send: () => { sends++; throw new Error('port disconnected'); } };
+  const link = new PocketMasterLink(input as unknown as MIDIInput, output as unknown as MIDIOutput, () => undefined);
+  await assert.rejects(link.request(0x43), /Could not send to the pedal: port disconnected/);
+  mock.timers.tick(10_000);
+  await flush();
+  assert.equal(sends, 1, 'no retry after a send failure');
+});
