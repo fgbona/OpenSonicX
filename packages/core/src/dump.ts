@@ -58,9 +58,10 @@ export function decodePreset(payload: Uint8Array): Preset {
   if (missing.length > 0) {
     throw new Error(`edit-buffer dump is missing records ${missing.map((t) => '0x' + t.toString(16)).join(', ')}`);
   }
+  // Only records that are present are size-checked; whether one is mandatory is REQUIRED's job (volume is optional).
   for (const [tag, size] of MIN_SIZE) {
-    const length = tags.get(tag)?.length ?? 0;
-    if (length < size) throw new Error(`edit-buffer dump record 0x${tag.toString(16)} is too short (${length} < ${size} bytes)`);
+    const data = tags.get(tag);
+    if (data && data.length < size) throw new Error(`edit-buffer dump record 0x${tag.toString(16)} is too short (${data.length} < ${size} bytes)`);
   }
   const view = (tag: number) => dataView(tags.get(tag) as Uint8Array);
   const mask = view(Tag.STATES).getUint32(0, true);

@@ -100,3 +100,18 @@ test('decodePreset reports short records in words', () => {
   const payload = Uint8Array.from([0x12, 0x41, 0xff, 0x00, ...u16(0), ...record(0x0003, records)]);
   assert.throws(() => decodePreset(payload), /record 0x3003 is too short \(8 < 40 bytes\)/);
 });
+
+test('a dump without the optional volume record still decodes', () => {
+  const u16 = (v: number) => [v & 0xff, v >> 8];
+  const record = (tag: number, data: number[]) => [...u16(tag), ...u16(data.length), ...data];
+  const codes = [27, 0, 0, 0, 0, 0, 0, 0, 0, 0].flatMap((c) => [c, 0, 0, 0]);
+  const records = [
+    ...record(0x3001, [0x01, 0, 0, 0]),
+    ...record(0x3002, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+    ...record(0x3003, codes),
+    ...record(0x3004, new Array(320).fill(0)),
+  ];
+  const preset = decodePreset(Uint8Array.from([0x12, 0x41, 0xff, 0x00, ...u16(0), ...record(0x0003, records)]));
+  assert.equal(preset.volume, null);
+  assert.equal(preset.chain.length, 9);
+});

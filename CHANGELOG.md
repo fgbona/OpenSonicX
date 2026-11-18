@@ -6,6 +6,28 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Container runtime is Alpine 3.23 with only the official Node 24 binary and
+  libstdc++ (no npm, no yarn, apk removed), replacing distroless; sharp is
+  dropped since image optimisation is off. The image shrinks accordingly.
+- Save… stays disabled until a preset was read from the pedal.
+- The SysEx log and the chain view are memoised, so each incoming packet
+  renders one log line instead of the whole page (selections during a
+  backup were taking up to a second).
+
+### Fixed
+
+- A packet whose index is outside its set no longer crashes reassembly.
+- Short dump records are reported in words ("record 0x3003 is too short");
+  the optional volume record may still be absent.
+- A MIDI port that fails to send (cable pulled) rejects with a readable
+  error and leaves no timer or listener behind, on all three send paths.
+
+### Added
+
+- App icon (favicon).
+
 ## [0.3.0] - 2026-11-18
 
 Save to a preset slot, validated on a Pocket Master with firmware V1.3.3:

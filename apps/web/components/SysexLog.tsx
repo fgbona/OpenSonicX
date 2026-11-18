@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import type { LogEntry } from '@/lib/midi';
 
 const time = (ms: number) => {
@@ -10,6 +10,18 @@ const time = (ms: number) => {
 };
 
 export const formatLogLine = (e: LogEntry) => `${time(e.time)} ${e.dir} ${e.hex}`;
+
+/** One line; memoised so a new packet renders one line, not the whole log. */
+const LogLine = memo(function LogLine({ entry }: { entry: LogEntry }) {
+  return (
+    <div className={`log-line log-${entry.dir.toLowerCase()}`}>
+      <span className="log-time">{time(entry.time)}</span>
+      <span className="log-dir">{entry.dir}</span>
+      <span className="log-note">{entry.note}</span>
+      <span className="log-hex">{entry.hex}</span>
+    </div>
+  );
+});
 
 export function SysexLog({ log, onClear }: { log: readonly LogEntry[]; onClear: () => void }) {
   const body = useRef<HTMLDivElement>(null);
@@ -42,14 +54,7 @@ export function SysexLog({ log, onClear }: { log: readonly LogEntry[]; onClear: 
       </header>
       <div ref={body} className="log-body" role="log" aria-live="off">
         {log.length === 0 && <p className="muted small log-empty">Every SysEx message sent and received appears here in hex.</p>}
-        {log.map((e) => (
-          <div key={e.id} className={`log-line log-${e.dir.toLowerCase()}`}>
-            <span className="log-time">{time(e.time)}</span>
-            <span className="log-dir">{e.dir}</span>
-            <span className="log-note">{e.note}</span>
-            <span className="log-hex">{e.hex}</span>
-          </div>
-        ))}
+        {log.map((e) => <LogLine key={e.id} entry={e} />)}
       </div>
     </section>
   );

@@ -42,6 +42,7 @@ export default function EditorPage() {
           void pm.loadNames();
         }}
         busy={pm.busy !== null}
+        canSave={pm.preset !== null}
       />
       <main className="main">
         {pm.error && <p className="alert" role="alert">{pm.error}</p>}
