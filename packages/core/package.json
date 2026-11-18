@@ -1,0 +1,18 @@
+{
+  "name": "@pocket-master/core",
+  "version": "0.1.0",
+  "description": "Sonicake Pocket Master SysEx protocol: framing, decoding and model catalog. No browser or MIDI dependency.",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test --experimental-test-coverage --test-coverage-include='src/**' 'test/**/*.test.ts'",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "^6.0.3"
+  }
+}
