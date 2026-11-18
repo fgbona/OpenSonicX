@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { BackupsPanel } from '@/components/BackupsPanel';
 import { ChainView } from '@/components/ChainView';
 import { SaveDialog } from '@/components/SaveDialog';
+import { PresetFiles } from '@/components/PresetFiles';
 import { SysexLog } from '@/components/SysexLog';
 import { Toolbar } from '@/components/Toolbar';
 import { usePocketMaster } from '@/lib/usePocketMaster';
@@ -48,6 +49,16 @@ export default function EditorPage() {
           <p className="notice" role="status">
             {t('live.notice')}
           </p>
+        )}
+        {pm.preset && (
+          <PresetFiles
+            connected={connected}
+            busy={pm.busy}
+            error={pm.error}
+            onExport={pm.exportPreset}
+            onImport={pm.importPreset}
+            onError={pm.showError}
+          />
         )}
         {pm.preset ? (
           <ChainView preset={pm.preset} presetIndex={pm.presetIndex} editable={pm.liveEdit && pm.busy === null} modified={pm.modified} onEdit={pm.edit} />

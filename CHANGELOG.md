@@ -6,6 +6,15 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Export and import presets. Export re-reads the edit buffer from the pedal
+  and downloads it as a `pocket-master-preset` JSON file with the raw dump,
+  so settings the editor does not decode yet are kept. Import asks first,
+  loads the file into the edit buffer with live-edit commands and checks it
+  on the pedal; nothing is saved to a slot, and Revert brings back the
+  preset you had. Foreign, damaged or unknown-model files are refused.
+
 ## [0.4.0] - 2026-11-18
 
 Portuguese interface, the screen follows the pedal, a theme button and a

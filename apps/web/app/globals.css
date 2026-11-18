@@ -303,6 +303,8 @@ button, select { font: inherit; color: inherit; }
 .flow-backups { display: grid; gap: 8px; margin: 12px 0; }
 .flow-backups p { margin: 0; }
 .flow-backup-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.preset-files { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: -12px; }
+.file-button.is-disabled { opacity: 0.4; pointer-events: none; }
 .backup-actions { padding: 0 16px 8px; }
 
 /* SysEx log */
