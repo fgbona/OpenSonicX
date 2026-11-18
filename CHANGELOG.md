@@ -8,9 +8,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Container runtime is Alpine 3.23 with only the official Node 24 binary and
-  libstdc++ (no npm, no yarn, apk removed), replacing distroless; sharp is
-  dropped since image optimisation is off. The image shrinks accordingly.
+- Container runtime is Alpine 3.23 with only Alpine's nodejs package (Node
+  24, no npm, no yarn, apk removed), replacing distroless; sharp is dropped
+  since image optimisation is off. Image layers go from 189 MB to about
+  95 MB.
 - Save… stays disabled until a preset was read from the pedal.
 - The SysEx log and the chain view are memoised, so each incoming packet
   renders one log line instead of the whole page (selections during a
