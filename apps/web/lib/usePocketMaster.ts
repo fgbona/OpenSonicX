@@ -111,6 +111,20 @@ export function usePocketMaster() {
     patch({ status: 'ready' });
   }, [patch]);
 
+  // Skip the Enable MIDI click when the visitor already granted access earlier; never prompts by itself.
+  useEffect(() => {
+    let cancelled = false;
+    navigator.permissions
+      ?.query({ name: 'midi', sysex: true } as unknown as PermissionDescriptor)
+      .then((s) => {
+        if (!cancelled && s.state === 'granted') void enable();
+      })
+      .catch(() => undefined); // browsers without the MIDI permission name keep the manual button
+    return () => {
+      cancelled = true;
+    };
+  }, [enable]);
+
   useEffect(() => () => link.current?.close(), []);
 
   return {
