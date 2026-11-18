@@ -1,12 +1,19 @@
 name: CI
+# Every push and pull request: unit tests, typecheck, production build, then the
+# container image is built and started for real and checked by scripts/smoke-test.sh.
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test:
+    name: Test, typecheck, build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,7 +26,25 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
   container:
+    name: Container lint, build, scan and smoke test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -t pocket-master-editor .
+      - name: Lint Dockerfile (hadolint)
+        run: docker run --rm -i hadolint/hadolint:v2.15.1-debian hadolint - < Dockerfile
+      - name: Validate compose.yaml
+        run: docker compose config -q
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: pocket-master-editor:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Scan image for HIGH and CRITICAL vulnerabilities with a fix (Trivy)
+        run: >
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.76.2
+          image --quiet --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 pocket-master-editor:ci
+      - name: Smoke test with the hardened runtime flags
+        run: scripts/smoke-test.sh pocket-master-editor:ci

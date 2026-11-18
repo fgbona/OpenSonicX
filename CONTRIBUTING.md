@@ -34,6 +34,23 @@ The editor's SysEx log has a Copy button. Paste the lines into an issue with:
 your firmware version, the preset you read, and what the pedal screen shows.
 That is enough to add a test.
 
+## Releases
+
+1. Move the `Unreleased` entries in CHANGELOG.md to a new version section.
+2. Set the same version in `package.json`, `packages/core/package.json` and
+   `apps/web/package.json`, and run `npm install --package-lock-only`.
+3. Merge to `main`, then push a tag `vX.Y.Z`.
+
+The release workflow refuses a tag that does not match the package versions
+or has no changelog section. It publishes the image, smoke-tests the published
+image, and only then moves `latest` and creates the GitHub release.
+
+Run the container check locally with:
+
+```sh
+docker build -t pocket-master-editor . && scripts/smoke-test.sh pocket-master-editor
+```
+
 ## Commits and pull requests
 
 - Conventional commit messages: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`.
