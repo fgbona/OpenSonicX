@@ -78,7 +78,6 @@ export default function EditorPage() {
           open={saveOpen}
           presetIndex={pm.presetIndex}
           names={pm.names}
-          hasSessionBackup={pm.sessionBackup !== null}
           busy={pm.busy}
           error={pm.error}
           flowBackups={pm.flowBackups}

@@ -10,7 +10,6 @@ interface Props {
   open: boolean;
   presetIndex: number | null;
   names: readonly string[] | null;
-  hasSessionBackup: boolean;
   busy: Progress | null;
   /** Why the last save failed; shown inside the dialog. */
   error: string | null;
@@ -18,7 +17,7 @@ interface Props {
   flowBackups: readonly BackupFile[];
   storageWarning: string | null;
   onDownload: (file: BackupFile) => void;
-  onSave: (target: number, name: string) => Promise<boolean>;
+  onSave: (target: number, name: string, backup: boolean) => Promise<boolean>;
   onClose: () => void;
 }
 
@@ -31,16 +30,18 @@ const nameError = (name: string) => {
   }
 };
 
-export function SaveDialog({ open, presetIndex, names, hasSessionBackup, busy, error: saveError, flowBackups, storageWarning, onDownload, onSave, onClose }: Props) {
+export function SaveDialog({ open, presetIndex, names, busy, error: saveError, flowBackups, storageWarning, onDownload, onSave, onClose }: Props) {
   const initial = presetIndex !== null && presetIndex < USER_PRESETS ? presetIndex : 0;
   const [target, setTarget] = useState(initial);
   const [name, setName] = useState('');
   const [done, setDone] = useState(false);
+  const [skipBackup, setSkipBackup] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setTarget(initial);
     setDone(false);
+    setSkipBackup(false); // backup is on again every time the sheet opens
   }, [open, initial]);
 
   // Names arrive after the dialog opens; fill the name once they do, without overwriting typing.
@@ -58,7 +59,7 @@ export function SaveDialog({ open, presetIndex, names, hasSessionBackup, busy, e
         <ProgressBar progress={busy} />
       ) : done ? (
         <>
-          <p>Saved to {label} as “{name}” and checked on the pedal.</p>
+          <p>Saved to {label} as “{name}” and checked on the pedal.{skipBackup ? ' No backup was taken.' : ''}</p>
           <FlowBackups backups={flowBackups} warning={storageWarning} onDownload={onDownload} />
           <div className="sheet-actions"><button className="btn btn-primary" onClick={onClose}>Done</button></div>
         </>
@@ -68,7 +69,7 @@ export function SaveDialog({ open, presetIndex, names, hasSessionBackup, busy, e
           onSubmit={async (e) => {
             e.preventDefault();
             if (error) return;
-            if (await onSave(target, name)) setDone(true);
+            if (await onSave(target, name, !skipBackup)) setDone(true);
           }}
         >
           <label className="field">
@@ -90,16 +91,24 @@ export function SaveDialog({ open, presetIndex, names, hasSessionBackup, busy, e
           {error && name.length > 0 && <p className="field-error" id="save-name-error">{error}</p>}
           {saveError && <p className="alert" role="alert">{saveError}</p>}
           {saveError && flowBackups.length > 0 && <FlowBackups backups={flowBackups} warning={storageWarning} onDownload={onDownload} />}
+          <label className="check">
+            <input type="checkbox" checked={skipBackup} onChange={(e) => setSkipBackup(e.target.checked)} />
+            <span>Don't back up {label} before saving</span>
+          </label>
           <div className="sheet-note">
             <p><strong>{label}{current ? ` “${current}”` : ''} will be overwritten.</strong></p>
-            <p>
-              Before saving, the editor backs up {hasSessionBackup ? 'the target slot' : 'all 50 user presets (once per connection, about 30 seconds) and the target slot'}.
-              The pedal switches presets while it does that; your unsaved edits are put back before the save. Backups are kept in this browser and offered for download.
-            </p>
+            {skipBackup ? (
+              <p>No backup: what {label} holds now cannot be restored from the editor after this save.</p>
+            ) : (
+              <p>
+                Before saving, the editor backs up what {label} holds now. The pedal loads {label} for a moment to read
+                it; your unsaved edits are put back before the save. The backup is kept in this browser and offered for download.
+              </p>
+            )}
           </div>
           <div className="sheet-actions">
             <button type="button" className="btn" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-danger" disabled={error !== null}>Back up and save to {label}</button>
+            <button type="submit" className="btn btn-danger" disabled={error !== null}>{skipBackup ? 'Save' : 'Back up and save'} to {label}</button>
           </div>
         </form>
       )}

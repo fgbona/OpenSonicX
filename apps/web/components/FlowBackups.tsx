@@ -10,7 +10,7 @@ export function FlowBackups({ backups, warning, onDownload }: { backups: readonl
       <div className="flow-backup-buttons">
         {backups.map((b) => (
           <button key={`${b.kind}-${b.createdAt}`} type="button" className="btn btn-small" onClick={() => onDownload(b)}>
-            Download {b.kind === 'session' ? 'all 50 presets' : `${b.slots[0]?.label} backup`}
+            Download {b.kind === 'session' ? 'all presets backup' : `${b.slots[0]?.label} backup`}
           </button>
         ))}
       </div>

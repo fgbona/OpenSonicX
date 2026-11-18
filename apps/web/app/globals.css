@@ -245,6 +245,8 @@ button, select { font: inherit; color: inherit; }
 }
 .field input[aria-invalid='true'] { box-shadow: 0 0 0 2px var(--red); }
 .field-error { margin: -6px 0 0; color: var(--red); font-size: 0.8125rem; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 0.875rem; cursor: pointer; }
+.check input { width: 16px; height: 16px; accent-color: var(--blue); }
 .btn-danger { background: var(--red); color: #fff; }
 .progress { display: grid; gap: 10px; padding: 8px 0; }
 .progress-step { margin: 0; font-weight: 500; }

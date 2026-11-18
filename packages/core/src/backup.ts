@@ -107,7 +107,11 @@ async function restoreLoaded(pedal: Pedal, original: number, edited: Preset | nu
   if (edited) await applyPreset(pedal, edited);
 }
 
-/** Reads every user slot (P01..P50) and returns to the loaded preset with its edits. */
+/**
+ * Reads every user slot (P01..P50) and returns to the loaded preset with its edits.
+ * Not part of the save flow (the owner chose target-only backups); kept for a future
+ * "back up all presets" action and for the MCP server.
+ */
 export async function backupAllSlots(
   pedal: Pedal,
   options: FlowOptions & { edited: Preset | null },
@@ -130,11 +134,16 @@ export async function backupAllSlots(
 
 export interface SaveResult {
   readonly saved: Preset;
-  readonly sessionBackup: BackupFile;
-  readonly targetBackup: BackupFile;
+  /** Null when the save ran with `backup: false`. */
+  readonly targetBackup: BackupFile | null;
 }
 
-type SaveOptions = FlowOptions & { target: number; name: string; sessionBackup: BackupFile | null };
+type SaveOptions = FlowOptions & {
+  target: number;
+  name: string;
+  /** Back up the target slot before writing it. Default true; the user can opt out per save. */
+  backup?: boolean;
+};
 
 /**
  * A block whose model the catalog does not know decodes without parameters. Re-creating it by
@@ -151,7 +160,7 @@ function requireKnownModels(preset: Preset): void {
 
 /**
  * Saves the pedal's edit buffer to user slot `target` under `name`:
- * session backup (when missing) → target backup → save → verify name and content.
+ * target backup (unless `backup: false`) → save → verify name and content.
  * `edited` is what the screen shows; the save is refused when the pedal no longer matches it
  * (for example after a knob was turned on the unit), so nothing is saved that the user did not see.
  */
@@ -170,13 +179,14 @@ async function saveEdited(pedal: Pedal, options: SaveOptions, original: number, 
   const { target, name } = options;
   const now = options.now ?? (() => new Date());
 
-  const sessionBackup = options.sessionBackup ?? (await backupAllSlots(pedal, { ...options, edited }));
-
-  options.onProgress?.({ step: `Backing up ${presetLabel(target)}`, done: 0, total: 3 });
-  const names = await pedal.readNames();
-  const slot = await carryEdits(pedal, original, edited, () => readSlot(pedal, target, names[target] ?? ''));
-  const targetBackup = backupFile('slot', [slot], now);
-  options.onBackup?.(targetBackup);
+  let targetBackup: BackupFile | null = null;
+  if (options.backup !== false) {
+    options.onProgress?.({ step: `Backing up ${presetLabel(target)}`, done: 0, total: 3 });
+    const names = await pedal.readNames();
+    const slot = await carryEdits(pedal, original, edited, () => readSlot(pedal, target, names[target] ?? ''));
+    targetBackup = backupFile('slot', [slot], now);
+    options.onBackup?.(targetBackup);
+  }
 
   options.onProgress?.({ step: `Saving ${presetLabel(target)}`, done: 1, total: 3 });
   const ok = await pedal.savePreset(target, name);
@@ -189,7 +199,7 @@ async function saveEdited(pedal: Pedal, options: SaveOptions, original: number, 
   const saved = decodePreset(await pedal.readEditBuffer());
   if (diffPresets(saved, edited).length > 0) throw new Error(`saved, but ${presetLabel(target)} differs from what was edited`);
   options.onProgress?.({ step: `Saved ${presetLabel(target)}`, done: 3, total: 3 });
-  return { saved, sessionBackup, targetBackup };
+  return { saved, targetBackup };
 }
 
 /**
@@ -199,7 +209,7 @@ async function saveEdited(pedal: Pedal, options: SaveOptions, original: number, 
 export async function restoreFromBackup(
   pedal: Pedal,
   slot: SlotBackup,
-  options: FlowOptions & { sessionBackup: BackupFile | null },
+  options: FlowOptions,
 ): Promise<SaveResult> {
   const name = slot.name || slot.label;
   savePreset(slot.index, name); // validates before the selection discards anything
@@ -208,7 +218,8 @@ export async function restoreFromBackup(
   await pedal.selectPreset(slot.index);
   const loaded = await pedal.readCurrentIndex();
   if (loaded !== slot.index) throw new Error(`asked for ${slot.label} but the pedal loaded ${presetLabel(loaded)}; nothing was restored`);
-  return saveEdited(pedal, { ...options, target: slot.index, name }, slot.index, preset);
+  // A restore always backs up what it overwrites: it exists to undo, so it must be undoable too.
+  return saveEdited(pedal, { ...options, target: slot.index, name, backup: true }, slot.index, preset);
 }
 
 /** Parses and checks a backup file. Throws a readable error for anything that is not one. */

@@ -40,8 +40,6 @@ export interface PocketMasterState {
   readonly names: readonly string[] | null;
   /** Backups kept in this browser, newest first. */
   readonly backups: readonly BackupFile[];
-  /** Full backup of P01..P50 taken in this connection, before its first save. */
-  readonly sessionBackup: BackupFile | null;
   /** Backups taken by the last save or restore, offered for download when it ends. */
   readonly flowBackups: readonly BackupFile[];
   /** Set when the browser could not keep a backup; the user must download it. */
@@ -51,7 +49,7 @@ export interface PocketMasterState {
 const INITIAL: PocketMasterState = {
   status: 'idle', error: null, inputs: [], outputs: [], inputId: '', outputId: '',
   preset: null, presetIndex: null, restorePoint: null, liveEdit: false, log: [],
-  busy: null, names: null, backups: [], sessionBackup: null, flowBackups: [], storageWarning: null,
+  busy: null, names: null, backups: [], flowBackups: [], storageWarning: null,
 };
 
 const toOptions = (ports: Iterable<MIDIPort>): PortOption[] =>
@@ -86,7 +84,6 @@ export function usePocketMaster() {
   const notifyRef = useRef<(f: Frame) => void>(() => undefined);
   const busyRef = useRef(false);
   const backupsRef = useRef<BackupFile[]>([]);
-  const sessionRef = useRef<BackupFile | null>(null);
 
   const patch = useCallback((p: Partial<PocketMasterState>) => setState((s) => ({ ...s, ...p })), []);
 
@@ -221,8 +218,7 @@ export function usePocketMaster() {
     link.current = null;
     restoreRef.current = null;
     presetRef.current = null;
-    sessionRef.current = null; // a new connection takes its own full backup before its first save
-    patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false, sessionBackup: null, names: null });
+    patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false, names: null });
     try {
       await Promise.all([input.open(), output.open()]);
       link.current = new PocketMasterLink(input, output, appendLog, (f) => notifyRef.current(f));
@@ -280,11 +276,9 @@ export function usePocketMaster() {
     (file: BackupFile) => {
       const { list, stored } = storeBackup(backupsRef.current, file);
       backupsRef.current = list;
-      if (file.kind === 'session') sessionRef.current = file;
       setState((s) => ({
         ...s,
         backups: list,
-        sessionBackup: sessionRef.current,
         flowBackups: [...s.flowBackups, file],
         storageWarning: stored ? s.storageWarning : 'This browser could not keep the backup. Download it now and keep the file.',
       }));
@@ -326,9 +320,9 @@ export function usePocketMaster() {
   );
 
   const save = useCallback(
-    (target: number, name: string) =>
+    (target: number, name: string, backup = true) =>
       runFlow(target, (pedal, onProgress) =>
-        saveToSlot(pedal, { target, name, edited: presetRef.current, sessionBackup: sessionRef.current, onProgress, onBackup: keepBackup }),
+        saveToSlot(pedal, { target, name, backup, edited: presetRef.current, onProgress, onBackup: keepBackup }),
       ),
     [runFlow, keepBackup],
   );
@@ -336,7 +330,7 @@ export function usePocketMaster() {
   const restore = useCallback(
     (slot: SlotBackup) =>
       runFlow(slot.index, (pedal, onProgress) =>
-        restoreFromBackup(pedal, slot, { sessionBackup: sessionRef.current, onProgress, onBackup: keepBackup }),
+        restoreFromBackup(pedal, slot, { onProgress, onBackup: keepBackup }),
       ),
     [runFlow, keepBackup],
   );

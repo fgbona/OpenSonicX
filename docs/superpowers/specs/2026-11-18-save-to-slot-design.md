@@ -4,9 +4,11 @@
 
 The owner validated live edit on the pedal and asked for the last phase:
 write the edit buffer to a user preset slot, always with a backup first.
-The owner chose both kinds of backup: a full backup of the 50 user slots once
-per session, before the first save, and a backup of the target slot before
-every save.
+The owner first chose both kinds of backup (a full backup of the 50 user slots
+once per session plus a target-slot backup), then, after trying it on the pedal,
+changed it to the target slot only, with a per-save checkbox to skip it.
+A restore always backs up the slot it overwrites. `backupAllSlots` stays in
+core, unused by the editor, for a possible future "back up all presets" action.
 
 ## Protocol facts that shape the design
 

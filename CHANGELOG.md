@@ -10,23 +10,25 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 - Save to a preset slot (phase 3). Save… opens a sheet with the target
   slot (P01..P50, with current names), the name (1..10 ASCII characters)
-  and what will be overwritten. Before writing, the editor:
-  - backs up all 50 user presets once per connection (about 30 seconds);
-  - backs up the target slot before every save;
-  - puts your unsaved edits back on the loaded preset after each backup;
-  then saves, requires the pedal's acknowledge and checks the name and
-  content of the slot. Backups are kept in the browser (last 3 full and
-  20 slot backups) and offered as JSON downloads when the save ends,
-  also when it fails. A warning appears if the browser cannot keep them.
+  and what will be overwritten. Before writing, the editor backs up the
+  target slot (about 1 second) and puts your unsaved edits back on the
+  loaded preset; then it saves, requires the pedal's acknowledge and
+  checks the name and content of the slot. A "Don't back up before
+  saving" checkbox skips the backup for one save; it is off every time
+  the sheet opens. Backups are kept in the browser (last 20) and offered
+  as JSON downloads when the save ends, also when it fails. A warning
+  appears if the browser cannot keep them.
 - A save is refused when the pedal's preset no longer matches the screen
   (knob turned on the unit) or uses a model the editor does not know.
 - Backups panel: download any backup, import a backup file, and restore a
   slot from a backup (what the slot holds is backed up first). Settings
   the editor does not decode yet, such as the probable tempo, are not
-  restored; the file keeps the raw dump.
+  restored; the file keeps the raw dump. A restore always backs up the
+  slot it overwrites.
 - `packages/core`: selectPreset, savePreset, setPresetVolume,
   isPresetOperation, decodePresetNames, decodeAck, the Pedal interface
-  and the backupAllSlots, saveToSlot and restoreFromBackup flows, tested
+  and the saveToSlot and restoreFromBackup flows (plus backupAllSlots,
+  not used by the editor yet), tested
   against a simulated pedal that applies real commands to real dumps.
 - Web link: a third guarded send path for preset selections and
   user-slot saves. Every operation waits for its own acknowledge (the
