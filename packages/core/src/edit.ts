@@ -1,6 +1,7 @@
 import { findCloneModel, findModel, CLONE_MODULE, type ModelSpec } from './catalog.ts';
 import { setAmpMode, selectModel, setBlockOn, setChain, setParam, validateChain } from './commands.ts';
 import { modelOf, toParam, type Block, type Preset } from './dump.ts';
+import { setPresetVolume } from './slots.ts';
 
 const AMP_MODULE = 3;
 const NR_MODULE = 0;
@@ -11,11 +12,15 @@ export type Edit =
   | { readonly kind: 'on'; readonly module: number; readonly on: boolean }
   /** `clone` selects a captured amp profile; only used to restore a preset that had one. */
   | { readonly kind: 'model'; readonly module: number; readonly code: number; readonly clone?: boolean }
-  | { readonly kind: 'chain'; readonly order: readonly number[] };
+  | { readonly kind: 'chain'; readonly order: readonly number[] }
+  | { readonly kind: 'volume'; readonly value: number };
 
 /** The preset after an edit, as the pedal will hold it. Returns a new object; the input is not changed. */
 export function applyEdit(preset: Preset, edit: Edit): Preset {
   switch (edit.kind) {
+    case 'volume':
+      setPresetVolume(edit.value); // validates 0..100
+      return { ...preset, volume: edit.value };
     case 'chain': {
       validateChain(edit.order);
       const byModule = new Map(preset.chain.map((b) => [b.module, b]));
@@ -47,6 +52,8 @@ export function applyEdit(preset: Preset, edit: Edit): Preset {
 /** The SysEx messages that perform an edit on the pedal, in order. */
 export function editToCommands(preset: Preset, edit: Edit): Uint8Array[] {
   switch (edit.kind) {
+    case 'volume':
+      return [setPresetVolume(edit.value)];
     case 'chain':
       return [setChain(edit.order)];
     case 'on':
@@ -68,7 +75,7 @@ export function editToCommands(preset: Preset, edit: Edit): Uint8Array[] {
 
 /**
  * Edits that turn `from` into `to`: chain first, then models (which reset parameters
- * to their defaults), then on/off, then every parameter that still differs.
+ * to their defaults), then on/off, then every parameter that still differs, then volume.
  */
 export function diffPresets(from: Preset, to: Preset): Edit[] {
   const edits: Edit[] = [];
@@ -94,6 +101,7 @@ export function diffPresets(from: Preset, to: Preset): Edit[] {
       }
     }
   }
+  if (to.volume !== null && to.volume !== from.volume) edits.push({ kind: 'volume', value: to.volume });
   return edits;
 }
 

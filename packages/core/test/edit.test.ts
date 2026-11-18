@@ -107,3 +107,11 @@ test('a model code missing from the catalog is still applied and sent, with no p
   assert.doesNotThrow(() => diffPresets(p08(), after));
   assert.doesNotThrow(() => diffPresets(after, p08()));
 });
+
+test('preset volume is an edit, sent with setPresetVolume and restored by diff', async () => {
+  const { setPresetVolume } = await import('../src/slots.ts');
+  const louder = applyEdit(p08(), { kind: 'volume', value: 80 });
+  assert.equal(louder.volume, 80);
+  assert.deepEqual(hex(editToCommands(p08(), { kind: 'volume', value: 80 })), hex([setPresetVolume(80)]));
+  assert.deepEqual(diffPresets(louder, p08()), [{ kind: 'volume', value: 65 }]);
+});
