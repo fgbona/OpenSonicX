@@ -6,6 +6,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-18
+
+Save to a preset slot, validated on a Pocket Master with firmware V1.3.3:
+save with and without the target backup, and restore from a backup.
+Container image: `ghcr.io/fgbona/pocket-master-editor:v0.3.0` (amd64 and arm64).
+
 ### Added
 
 - Save to a preset slot (phase 3). Save… opens a sheet with the target
@@ -158,7 +164,8 @@ Container image: `ghcr.io/fgbona/pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/pocket-master-editor/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/fgbona/pocket-master-editor/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/fgbona/pocket-master-editor/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/fgbona/pocket-master-editor/releases/tag/v0.1.0
