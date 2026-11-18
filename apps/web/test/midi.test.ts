@@ -239,7 +239,10 @@ test('a preset operation waits until queued edits are written', async () => {
   assert.equal(f.sent.length, 1, 'select waits behind the queued edit');
   mock.timers.tick(20);
   await flush();
-  f.receive(buildFrame([0x14, 0x08, 0x00]));
+  f.receive(buildFrame([0x14, 0x08, 0x00])); // acknowledge of edit 1
+  f.receive(buildFrame([0x14, 0x08, 0x00])); // acknowledge of edit 2
+  await flush();
+  f.receive(buildFrame([0x14, 0x08, 0x00])); // acknowledge of the select
   await op;
   assert.deepEqual(f.sent.slice(1), [toHex(setParam(3, 3, 10)), toHex(selectPreset(1))]);
 });
@@ -253,4 +256,31 @@ test('a port that fails to send rejects the request with a readable error and le
   mock.timers.tick(10_000);
   await flush();
   assert.equal(sends, 1, 'no retry after a send failure');
+});
+
+test('a preset operation waits for the acknowledges of the edits sent before it', async () => {
+  const f = fakes();
+  f.link.edit(setParam(3, 4, 10));
+  let done = false;
+  const select = f.link.presetOperation(selectPreset(1)).then(() => (done = true));
+  await flush();
+  assert.equal(f.sent.length, 1, 'select waits for the edit acknowledge');
+  f.receive(buildFrame([0x14, 0x08, 0x00])); // the edit's acknowledge (the pedal acks every 11 48)
+  await flush();
+  assert.equal(f.sent.length, 2, 'now the select goes out');
+  assert.equal(done, false, "the edit's acknowledge did not answer the select");
+  f.receive(buildFrame([0x14, 0x08, 0x00]));
+  await select;
+});
+
+test('a missing edit acknowledge delays a preset operation by at most 300 ms', async () => {
+  const f = fakes();
+  f.link.edit(setParam(3, 4, 10));
+  const select = f.link.presetOperation(selectPreset(1));
+  await flush();
+  mock.timers.tick(300);
+  await flush();
+  assert.equal(f.sent.length, 2);
+  f.receive(buildFrame([0x14, 0x08, 0x00]));
+  assert.equal(await select, true);
 });

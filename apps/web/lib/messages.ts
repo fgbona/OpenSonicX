@@ -5,6 +5,8 @@
  */
 export const en = {
   'lang.label': 'Language',
+  'theme.toDark': 'Switch to dark theme',
+  'theme.toLight': 'Switch to light theme',
   'status.idle': 'MIDI off',
   'status.requesting': 'Asking permission…',
   'status.ready': 'Not connected',
@@ -104,6 +106,8 @@ export type MessageKey = keyof typeof en;
 
 export const pt: Record<MessageKey, string> = {
   'lang.label': 'Idioma',
+  'theme.toDark': 'Mudar para o tema escuro',
+  'theme.toLight': 'Mudar para o tema claro',
   'status.idle': 'MIDI desligado',
   'status.requesting': 'Pedindo permissão…',
   'status.ready': 'Desconectado',

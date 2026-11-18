@@ -17,6 +17,8 @@ export const EDIT_GAP_MS = 20;
 /** The pedal acknowledges a save within this time or the save counts as failed. */
 const ACK_TIMEOUT_MS = 3000;
 const ACK = { TYPE: 0x14, COMMAND: 0x08 } as const;
+/** The pedal acknowledges every edit too; a preset operation waits this long at most for those. */
+const EDIT_ACK_WAIT_MS = 300;
 
 let nextLogId = 0; // module-wide so log keys stay unique across reconnects
 
@@ -74,6 +76,9 @@ export class PocketMasterLink {
   #queue: readonly { readonly key: string; readonly bytes: Uint8Array }[] = [];
   #pumpTimer: ReturnType<typeof setTimeout> | null = null;
   readonly #drainWaiters = new Set<() => void>();
+  /** Edits sent whose 14 08 acknowledge has not arrived yet; those acknowledges are consumed here. */
+  #editAcksPending = 0;
+  #editAcksSettled: (() => void) | null = null;
   /** `onNotify` gets complete frames no request was waiting for: changes made on the pedal itself. */
   constructor(input: MIDIInput, output: MIDIOutput, onLog: (entry: LogEntry) => void, onNotify: (frame: Frame) => void = () => undefined) {
     this.#input = input;
@@ -137,6 +142,7 @@ export class PocketMasterLink {
     if (this.#closed) throw new LinkClosedError();
     if (!isPresetOperation(bytes)) throw new Error('Blocked: only preset selections and user-slot saves can be sent here.');
     await this.drained();
+    await this.#editAcks();
     if (this.#closed) throw new LinkClosedError();
     // The pedal acknowledges every selection and every save with 14 08 xx (seen on V1.3.3).
     // Waiting for each one keeps a late selection acknowledge from being read as the save's.
@@ -194,6 +200,7 @@ export class PocketMasterLink {
     this.#queue = rest;
     try {
       this.#transmit(next.bytes);
+      this.#editAcksPending += 1;
     } catch (error) {
       // The port is gone: drop the queue so drained() resolves and the next read reports the error.
       console.error('could not send an edit to the pedal', error);
@@ -204,6 +211,21 @@ export class PocketMasterLink {
     }
     if (rest.length === 0) this.#resolveDrained();
     this.#pumpTimer = setTimeout(() => this.#pump(), EDIT_GAP_MS);
+  }
+
+  /** Waits until the edits already sent are acknowledged, at most EDIT_ACK_WAIT_MS. */
+  #editAcks(): Promise<void> {
+    if (this.#editAcksPending === 0) return Promise.resolve();
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => finish(), EDIT_ACK_WAIT_MS);
+      const finish = () => {
+        clearTimeout(timer);
+        this.#editAcksPending = 0; // an edit that is never acknowledged must not swallow a later one
+        this.#editAcksSettled = null;
+        resolve();
+      };
+      this.#editAcksSettled = finish;
+    });
   }
 
   /** Ends every pending wait (they resolve with no reply). */
@@ -260,6 +282,11 @@ export class PocketMasterLink {
     if (!frame.crcOk) return;
     const complete = this.#assembler.feed(frame, performance.now());
     if (!complete) return;
+    if (this.#editAcksPending > 0 && complete.payload[0] === ACK.TYPE && complete.payload[1] === ACK.COMMAND) {
+      this.#editAcksPending -= 1; // an edit's acknowledge: never let it answer a selection or a save
+      if (this.#editAcksPending === 0) this.#editAcksSettled?.();
+      return;
+    }
     // Every waiter sees the frame (two reads may wait for the same reply).
     const consumed = [...this.#listeners].map((listener) => listener(complete)).includes(true);
     if (!consumed) this.#onNotify(complete);

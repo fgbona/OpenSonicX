@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  applyEdit, decodeCurrentPreset, decodePreset, diffPresets, editToCommands, MessageType, Query,
+  applyEdit, decodeCurrentPreset, decodeNotification, decodePreset, diffPresets, editToCommands, MessageType, Query,
   restoreFromBackup, saveToSlot,
   type BackupFile, type Edit, type Frame, type Pedal, type Preset, type Progress, type SaveResult, type SlotBackup,
 } from '@pocket-master/core';
@@ -262,9 +262,30 @@ export function usePocketMaster() {
     [],
   );
 
-  // A preset switched on the pedal: re-read so edits never land on a preset the screen does not show.
+  // The pedal reports what is played on it. A preset switch is re-read so edits never land on a
+  // preset the screen does not show; knobs and block switches update the screen directly.
   notifyRef.current = (f: Frame) => {
-    if (isPresetChange(f) && !busyRef.current) scheduleReread();
+    if (busyRef.current) return; // a save or restore is driving the pedal
+    if (isPresetChange(f)) {
+      scheduleReread();
+      return;
+    }
+    const preset = presetRef.current;
+    const change = preset ? decodeNotification(f.payload, preset) : null;
+    if (!change || !preset) return;
+    if (change.kind === 'reread') {
+      scheduleReread();
+      return;
+    }
+    try {
+      const next = applyEdit(preset, change);
+      editGeneration.current += 1; // a dump already in flight is older than this change
+      presetRef.current = next;
+      patch({ preset: next });
+    } catch (e) {
+      console.error('could not apply a change reported by the pedal; re-reading', e);
+      scheduleReread();
+    }
   };
 
   useEffect(() => {

@@ -3,6 +3,7 @@
 import type { PortOption, Status } from '@/lib/usePocketMaster';
 import type { MessageKey } from '@/lib/i18n';
 import { LanguageSwitch, useI18n } from './I18n';
+import { ThemeToggle } from './ThemeToggle';
 
 interface Props {
   status: Status;
@@ -64,6 +65,7 @@ export function Toolbar(p: Props) {
         <PortSelect label={t('ports.output')} ports={p.outputs} value={p.outputId} onChange={p.onSelectOutput} disabled={linked || p.status === 'idle' || p.status === 'connecting'} />
       </div>
       <div className="actions">
+        <ThemeToggle />
         <LanguageSwitch />
         <span className={`status status-${p.status}`} role="status">
           <span className="status-dot" aria-hidden />
