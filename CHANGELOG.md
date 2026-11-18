@@ -6,6 +6,14 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- User IR slots show the names of the IR files loaded on the pedal (for
+  example "Marshal 80 (User IR 1)") in the chain, the IR card and its
+  model list; an empty slot keeps its generic name. Read once on connect
+  (query 12 20); `decodeSlotNames` also reads captured-profile slots
+  (12 24), tested on the owner's real replies.
+
 ## [0.5.0] - 2026-11-18
 
 Export and import presets as files, validated on a Pocket Master with

@@ -3,17 +3,19 @@
 import { modelOf, modelsFor, type Block, type Edit, type Preset } from '@pocket-master/core';
 import { ParamControl } from './ParamControl';
 import { useI18n } from './I18n';
+import { modelLabel } from '@/lib/modelLabel';
 
 interface Props {
   preset: Preset;
   block: Block;
   editable: boolean;
   onEdit: (edit: Edit) => void;
+  irNames: readonly (string | null)[] | null;
 }
 
 const SINGLE_MODEL = new Set(['nr']);
 
-export function BlockCard({ preset, block, editable, onEdit }: Props) {
+export function BlockCard({ preset, block, editable, onEdit, irNames }: Props) {
   const { t } = useI18n();
   const model = modelOf(preset, block);
   const clone = block.key === 'amp' && preset.ampMode === 'clone';
@@ -44,10 +46,10 @@ export function BlockCard({ preset, block, editable, onEdit }: Props) {
           onChange={(e) => onEdit({ kind: 'model', module: block.module, code: Number(e.target.value) })}
         >
           {clone && <option value="" disabled>{t('block.captured', { model: block.model })}</option>}
-          {choices.map((m) => <option key={m.code} value={m.code}>{m.name}</option>)}
+          {choices.map((m) => <option key={m.code} value={m.code}>{modelLabel(block.key, m.code, m.name, irNames)}</option>)}
         </select>
       ) : (
-        <h3 className="block-model">{block.model}</h3>
+        <h3 className="block-model">{modelLabel(block.key, block.code, block.model, irNames)}</h3>
       )}
       {block.params.length > 0 ? (
         <ul className="params">

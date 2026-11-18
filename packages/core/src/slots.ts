@@ -83,3 +83,32 @@ export function decodeAck(payload: Uint8Array): boolean {
   }
   return payload[2] === 0;
 }
+
+/** Second byte of the user IR and captured-profile name queries and replies. */
+export const SlotNamesQuery = { USER_IRS: 0x20, CAPTURED_PROFILES: 0x24 } as const;
+const SLOT_COUNT = 5;
+const SLOT_HEADER = 7; // 12 kind, then one flag per slot (V1.3.3: 0 loaded, 1 empty)
+const SLOT_RECORD = 16;
+
+export interface SlotName {
+  readonly name: string;
+  readonly empty: boolean;
+}
+
+/** Reply to 12 20 (user IRs) or 12 24 (captured profiles): five slots with a name and an empty flag. */
+export function decodeSlotNames(payload: Uint8Array): SlotName[] {
+  const kinds: number[] = Object.values(SlotNamesQuery);
+  if (payload[0] !== MessageType.GET || !kinds.includes(payload[1] ?? -1) || payload.length < SLOT_HEADER + SLOT_COUNT * SLOT_RECORD) {
+    throw new Error('not a slot-names reply (expected payload 12 20 or 12 24 …)');
+  }
+  return Array.from({ length: SLOT_COUNT }, (_, i) => {
+    const at = SLOT_HEADER + i * SLOT_RECORD;
+    return { name: decodeName(payload.subarray(at, at + NAME_LENGTH)), empty: payload[2 + i] !== 0 };
+  });
+}
+
+/** User IR models are coded 0x0A100000 + slot (0..4); returns the slot, or null for factory cabinets. */
+export function userIrSlot(code: number): number | null {
+  const slot = code - 0x0a100000;
+  return slot >= 0 && slot < SLOT_COUNT ? slot : null;
+}

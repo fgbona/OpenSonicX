@@ -3,6 +3,8 @@ import { MessageType } from './queries.ts';
 
 const NAMES: Readonly<Record<number, string>> = {
   0x10: 'global settings',
+  0x20: 'user IR names',
+  0x24: 'captured profile names',
   0x40: 'preset names',
   0x41: 'edit buffer',
   0x43: 'current preset',
