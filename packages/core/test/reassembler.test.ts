@@ -62,3 +62,11 @@ test('isReply matches on type and command', () => {
   assert.equal(isReply(reply, Query.CURRENT_PRESET), true);
   assert.equal(isReply(reply, Query.EDIT_BUFFER), false);
 });
+
+test('reassembler ignores a packet whose index is outside its set', () => {
+  const r = new Reassembler();
+  // Packets 1..25 plus a bogus index 26 would reach 26 parts with packet 0 missing.
+  dumpFrames.slice(1).forEach((f) => r.feed(f, 0));
+  assert.equal(r.feed({ ...dumpFrames[1]!, index: 26 }, 0), null);
+  assert.equal(r.feed(dumpFrames[0]!, 0), null, 'packet 0 starts a fresh set');
+});
