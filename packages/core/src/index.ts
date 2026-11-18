@@ -6,3 +6,4 @@ export * from './catalog.ts';
 export * from './dump.ts';
 export * from './presets.ts';
 export * from './describe.ts';
+export * from './commands.ts';
