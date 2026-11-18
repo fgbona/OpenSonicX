@@ -3,6 +3,8 @@
 import { encodeValue, type Param, type ParamSpec } from '@pocket-master/core';
 
 interface Props {
+  /** Module of the block, so ids stay unique across blocks that share parameter names. */
+  module: number;
   param: Param;
   spec: ParamSpec | undefined;
   editable: boolean;
@@ -19,8 +21,8 @@ function Readout({ param }: { param: Param }) {
   ) : null;
 }
 
-export function ParamControl({ param, spec, editable, onChange }: Props) {
-  const id = `p-${param.alg}-${param.name}`;
+export function ParamControl({ module, param, spec, editable, onChange }: Props) {
+  const id = `p-${module}-${param.alg}`;
   const send = (input: number | boolean | string) => {
     if (spec) onChange(param.alg, encodeValue(spec, input));
   };

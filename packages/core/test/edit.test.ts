@@ -96,3 +96,14 @@ test('diffPresets restores the original after edits, model before its params', (
   assert.ok(model >= 0 && drvParam > model, 'model is restored before its parameters');
   assert.equal(sound(revert.reduce(applyEdit, edited)), sound(original));
 });
+
+test('a model code missing from the catalog is still applied and sent, with no parameters', () => {
+  const unknown = 0x03ffffff;
+  const after = applyEdit(p08(), { kind: 'model', module: 2, code: unknown });
+  assert.equal(block(after, 'drv').model, '0x03FFFFFF');
+  assert.deepEqual(block(after, 'drv').params, []);
+  assert.deepEqual(hex(editToCommands(p08(), { kind: 'model', module: 2, code: unknown })), hex([selectModel(2, unknown)]));
+  // Revert to a preset whose model the catalog does not know must not throw.
+  assert.doesNotThrow(() => diffPresets(p08(), after));
+  assert.doesNotThrow(() => diffPresets(after, p08()));
+});

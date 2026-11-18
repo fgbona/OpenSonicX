@@ -16,9 +16,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
   - chain reordering by drag and drop or arrow buttons, with
     DRV-AMP-IR-EQ moving as one group.
   Nothing is saved to a preset slot.
-- Restore point and Revert: the first read of a preset is kept, and
-  Revert sends only the edits needed to return to it (chain, then models,
-  then on/off, then parameters).
+- Restore point and Revert: the first read of a preset is kept. Revert
+  re-reads the pedal, so knob turns made on the unit are undone too, then
+  sends only the edits needed to return to it (chain, then models, then
+  on/off, then parameters).
+- A preset switched on the pedal during live edit is detected from its
+  notification and re-read, so edits never land on a preset the screen
+  does not show.
 - `packages/core`: command builders for chain, model, parameter, block
   on/off and amp mode, checked byte for byte against ~7400 captured
   commands; `isAllowedEdit` guard; `encodeValue`; `applyEdit`,
@@ -29,7 +33,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - After a model or chain change the editor re-reads the edit buffer, so
-  the screen shows the defaults the pedal applied.
+  the screen shows the defaults the pedal applied. A dump requested before
+  the latest edit is discarded and read again, so sliders never jump back.
+- A model code the catalog does not know is still applied and shown as
+  hex instead of crashing the page.
 
 ## [0.1.1] - 2026-11-18
 

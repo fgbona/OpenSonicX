@@ -1,4 +1,4 @@
-import { describeMessage, isAllowedEdit, isReadOnly, isReply, parseFrame, queryFrame, Reassembler, toHex, type Frame, type QueryKind } from '@pocket-master/core';
+import { describeMessage, editKey, isAllowedEdit, isReadOnly, isReply, parseFrame, queryFrame, Reassembler, toHex, type Frame, type QueryKind } from '@pocket-master/core';
 
 export interface LogEntry {
   readonly id: number;
@@ -58,7 +58,9 @@ export class PocketMasterLink {
   readonly #output: MIDIOutput;
   readonly #onLog: (entry: LogEntry) => void;
   readonly #assembler = new Reassembler();
-  readonly #listeners = new Set<(frame: Frame) => void>();
+  /** Waiters for a reply; each returns true when it consumed the frame. */
+  readonly #listeners = new Set<(frame: Frame) => boolean>();
+  readonly #onNotify: (frame: Frame) => void;
   /** Resolvers of pending waits, so close() can end them at once. */
   readonly #pending = new Set<() => void>();
   #closed = false;
@@ -66,10 +68,12 @@ export class PocketMasterLink {
   #queue: readonly { readonly key: string; readonly bytes: Uint8Array }[] = [];
   #pumpTimer: ReturnType<typeof setTimeout> | null = null;
   readonly #drainWaiters = new Set<() => void>();
-  constructor(input: MIDIInput, output: MIDIOutput, onLog: (entry: LogEntry) => void) {
+  /** `onNotify` gets complete frames no request was waiting for: changes made on the pedal itself. */
+  constructor(input: MIDIInput, output: MIDIOutput, onLog: (entry: LogEntry) => void, onNotify: (frame: Frame) => void = () => undefined) {
     this.#input = input;
     this.#output = output;
     this.#onLog = onLog;
+    this.#onNotify = onNotify;
     this.#input.onmidimessage = (event) => this.#receive(event);
   }
 
@@ -101,11 +105,12 @@ export class PocketMasterLink {
   /**
    * Queues a live-edit command. The first goes out at once, later ones every EDIT_GAP_MS.
    * A newer edit with the same key replaces the queued one, so a drag sends its latest value.
-   * The replacement goes to the back of the queue.
+   * The replacement goes to the back of the queue. The key comes from the bytes (editKey).
    */
-  edit(key: string, bytes: Uint8Array): void {
+  edit(bytes: Uint8Array): void {
     if (this.#closed) throw new LinkClosedError();
     if (!isAllowedEdit(bytes)) throw new Error('Blocked: only chain, model, parameter and on/off edits can be sent.');
+    const key = editKey(bytes);
     // Drop the pending edit with the same key and append the new one, so it never overtakes
     // something queued after it (a parameter must follow the model change it belongs to).
     this.#queue = [...this.#queue.filter((q) => q.key !== key), { key, bytes }];
@@ -149,8 +154,9 @@ export class PocketMasterLink {
   #waitFor(kind: QueryKind): Promise<Frame | null> {
     return new Promise((resolve) => {
       const listener = (frame: Frame) => {
-        if (!isReply(frame, kind)) return;
+        if (!isReply(frame, kind)) return false;
         done(frame);
+        return true;
       };
       const cancel = () => done(null);
       const timer = setTimeout(cancel, REQUEST_TIMEOUT_MS);
@@ -177,7 +183,10 @@ export class PocketMasterLink {
     }
     if (!frame.crcOk) return;
     const complete = this.#assembler.feed(frame, performance.now());
-    if (complete) this.#listeners.forEach((listener) => listener(complete));
+    if (!complete) return;
+    // Every waiter sees the frame (two reads may wait for the same reply).
+    const consumed = [...this.#listeners].map((listener) => listener(complete)).includes(true);
+    if (!consumed) this.#onNotify(complete);
   }
 
   #log(dir: LogEntry['dir'], bytes: Uint8Array): void {

@@ -52,6 +52,7 @@ export function BlockCard({ preset, block, editable, onEdit }: Props) {
           {block.params.map((p) => (
             <ParamControl
               key={p.alg}
+              module={block.module}
               param={p}
               spec={model?.params.find((s) => s.alg === p.alg)}
               editable={editable}

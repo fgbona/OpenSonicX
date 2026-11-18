@@ -81,21 +81,21 @@ test('pickPocketMaster never falls back to another device', () => {
 });
 
 // --- live edit path -------------------------------------------------------
-import { setParam, setBlockOn } from '@pocket-master/core';
+import { setParam, setBlockOn, setAmpMode, selectModel, editKey } from '@pocket-master/core';
 
 test('edit refuses anything that is not a chain, model, parameter or on/off command', () => {
   const f = fakes();
-  assert.throws(() => f.link.edit('save', buildFrame([0x11, 0x4a, 0, 0, 0, 0])), /Blocked/);
-  assert.throws(() => f.link.edit('query', buildFrame([0x12, 0x41])), /Blocked/);
+  assert.throws(() => f.link.edit(buildFrame([0x11, 0x4a, 0, 0, 0, 0])), /Blocked/);
+  assert.throws(() => f.link.edit(buildFrame([0x12, 0x41])), /Blocked/);
   assert.equal(f.sent.length, 0);
 });
 
 test('edit sends at once, then spaces messages and keeps only the latest per key', async () => {
   const f = fakes();
-  f.link.edit('3:4', setParam(3, 4, 10));
-  f.link.edit('3:4', setParam(3, 4, 11));
-  f.link.edit('3:4', setParam(3, 4, 12));
-  f.link.edit('on:7', setBlockOn(7, true));
+  f.link.edit(setParam(3, 4, 10));
+  f.link.edit(setParam(3, 4, 11));
+  f.link.edit(setParam(3, 4, 12));
+  f.link.edit(setBlockOn(7, true));
   assert.deepEqual(f.sent, [toHex(setParam(3, 4, 10))]);
   mock.timers.tick(20);
   assert.deepEqual(f.sent.slice(1), [toHex(setParam(3, 4, 12))]);
@@ -107,18 +107,18 @@ test('edit sends at once, then spaces messages and keeps only the latest per key
 
 test('edit after close throws and queued edits are dropped', () => {
   const f = fakes();
-  f.link.edit('3:4', setParam(3, 4, 10));
-  f.link.edit('3:4', setParam(3, 4, 11));
+  f.link.edit(setParam(3, 4, 10));
+  f.link.edit(setParam(3, 4, 11));
   f.link.close();
   mock.timers.tick(100);
   assert.equal(f.sent.length, 1);
-  assert.throws(() => f.link.edit('3:4', setParam(3, 4, 12)), LinkClosedError);
+  assert.throws(() => f.link.edit(setParam(3, 4, 12)), LinkClosedError);
 });
 
 test('drained resolves once every queued edit is sent', async () => {
   const f = fakes();
-  f.link.edit('a', setParam(3, 4, 10));
-  f.link.edit('b', setParam(3, 3, 10));
+  f.link.edit(setParam(3, 4, 10));
+  f.link.edit(setParam(3, 3, 10));
   const done = f.link.drained();
   mock.timers.tick(20);
   await done;
@@ -127,12 +127,49 @@ test('drained resolves once every queued edit is sent', async () => {
 
 test('a replaced edit moves behind edits queued after it, so order is kept', () => {
   const f = fakes();
-  f.link.edit('first', setBlockOn(1, true)); // goes out at once
-  f.link.edit('param:2:0', setParam(2, 0, 10));
-  f.link.edit('model:2', buildFrame([0x11, 0x47, 2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 3]));
-  f.link.edit('param:2:0', setParam(2, 0, 20)); // must follow the model change
+  f.link.edit(setBlockOn(1, true)); // goes out at once
+  f.link.edit(setParam(2, 0, 10));
+  f.link.edit(buildFrame([0x11, 0x47, 2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 3]));
+  f.link.edit(setParam(2, 0, 20)); // must follow the model change
   mock.timers.tick(20);
   mock.timers.tick(20);
   assert.equal(f.sent.length, 3);
   assert.equal(f.sent[2], toHex(setParam(2, 0, 20)));
+});
+
+test('editKey keeps amp mode and amp model apart and groups a parameter by module and slot', () => {
+  assert.notEqual(editKey(setAmpMode(false)), editKey(selectModel(3, 0x07000001)));
+  assert.equal(editKey(setParam(3, 4, 10)), editKey(setParam(3, 4, 99)));
+  assert.notEqual(editKey(setParam(3, 4, 10)), editKey(setParam(3, 5, 10)));
+  assert.notEqual(editKey(setParam(3, 4, 10)), editKey(setParam(9, 4, 10)));
+});
+
+test('a quick second amp model choice cannot drop the queued amp mode switch', () => {
+  const f = fakes();
+  f.link.edit(setParam(1, 0, 5)); // busy queue
+  f.link.edit(setAmpMode(false));
+  f.link.edit(selectModel(3, 0x07000001));
+  f.link.edit(selectModel(3, 0x07000002));
+  for (let i = 0; i < 4; i++) mock.timers.tick(20);
+  assert.deepEqual(f.sent.slice(1), [toHex(setAmpMode(false)), toHex(selectModel(3, 0x07000002))]);
+});
+
+test('frames nobody waits for are reported as notifications', () => {
+  const seen: string[] = [];
+  const input = { onmidimessage: null as ((e: { data: Uint8Array }) => void) | null };
+  const link = new PocketMasterLink(input as unknown as MIDIInput, { send: () => undefined } as unknown as MIDIOutput, () => undefined, (fr) => seen.push(toHex(fr.payload)));
+  input.onmidimessage?.({ data: buildFrame([0x12, 0x43, 9, 0]) });
+  assert.deepEqual(seen, ['12 43 09 00']);
+  link.close();
+});
+
+test('a reply that answers a request is not reported as a notification', async () => {
+  const seen: string[] = [];
+  const input = { onmidimessage: null as ((e: { data: Uint8Array }) => void) | null };
+  const link = new PocketMasterLink(input as unknown as MIDIInput, { send: () => undefined } as unknown as MIDIOutput, () => undefined, (fr) => seen.push(toHex(fr.payload)));
+  const pending = link.request(0x43);
+  input.onmidimessage?.({ data: buildFrame([0x12, 0x43, 7, 0]) });
+  await pending;
+  assert.deepEqual(seen, []);
+  link.close();
 });

@@ -37,7 +37,7 @@ export default function EditorPage() {
         {pm.liveEdit && (
           <p className="notice" role="status">
             Live edit is on. Every change goes to the pedal at once, in its edit buffer only. Nothing is saved to a
-            preset slot. Revert brings back what was read when you connected.
+            preset slot. Revert re-reads the pedal and brings back this preset as it was first read.
           </p>
         )}
         {pm.preset ? (

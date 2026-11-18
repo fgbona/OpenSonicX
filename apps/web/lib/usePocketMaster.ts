@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  applyEdit, decodeCurrentPreset, decodePreset, diffPresets, editToCommands, Query, type Edit, type Preset,
+  applyEdit, decodeCurrentPreset, decodePreset, diffPresets, editToCommands, MessageType, Query,
+  type Edit, type Frame, type Preset,
 } from '@pocket-master/core';
 import { LinkClosedError, openMidi, pickPocketMaster, PocketMasterLink, type LogEntry } from './midi';
 
@@ -42,9 +43,18 @@ const toOptions = (ports: Iterable<MIDIPort>): PortOption[] =>
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-/** Queue key: a newer edit with the same key replaces a pending one. */
-const editKey = (e: Edit) =>
-  e.kind === 'param' ? `param:${e.module}:${e.alg}` : e.kind === 'on' ? `on:${e.module}` : e.kind === 'model' ? `model:${e.module}` : 'chain';
+/** True when the pedal itself announced a preset change (footswitch or knob on the unit). */
+const isPresetChange = (f: Frame) => f.payload[0] === MessageType.GET && f.payload[1] === Query.CURRENT_PRESET;
+
+const safeModified = (preset: Preset | null, restorePoint: Preset | null) => {
+  if (!preset || !restorePoint) return false;
+  try {
+    return diffPresets(preset, restorePoint).length > 0;
+  } catch (e) {
+    console.error('could not compare with the restore point', e);
+    return true;
+  }
+};
 
 export function usePocketMaster() {
   const [state, setState] = useState<PocketMasterState>(INITIAL);
@@ -52,9 +62,12 @@ export function usePocketMaster() {
   const link = useRef<PocketMasterLink | null>(null);
   const connecting = useRef(false);
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Edits are computed from the latest preset, not from a stale render.
+  // Edits and Revert work on the latest values, not on a stale render.
   const presetRef = useRef<Preset | null>(null);
-  presetRef.current = state.preset;
+  const restoreRef = useRef<Preset | null>(null);
+  /** Bumped by every edit; a dump requested before the latest edit is stale. */
+  const editGeneration = useRef(0);
+  const notifyRef = useRef<(f: Frame) => void>(() => undefined);
 
   const patch = useCallback((p: Partial<PocketMasterState>) => setState((s) => ({ ...s, ...p })), []);
 
@@ -91,35 +104,45 @@ export function usePocketMaster() {
     }
   }, [patch, refreshPorts]);
 
-  const read = useCallback(async () => {
+  const scheduleReread = useCallback(() => {
+    if (settleTimer.current) clearTimeout(settleTimer.current);
+    settleTimer.current = setTimeout(() => void readRef.current(), SETTLE_MS);
+  }, []);
+
+  /** Reads preset number and edit buffer. Resolves with the pedal's preset, or null if stale or failed. */
+  const read = useCallback(async (): Promise<Preset | null> => {
     const current = link.current;
-    if (!current) return;
+    if (!current) return null;
     patch({ status: 'reading', error: null });
     try {
       await current.drained(); // never read while edits are still on their way
+      const generation = editGeneration.current;
       const index = decodeCurrentPreset((await current.request(Query.CURRENT_PRESET)).payload);
       const preset = decodePreset((await current.request(Query.EDIT_BUFFER)).payload);
-      if (link.current !== current) return;
-      setState((s) => ({
-        ...s,
-        status: 'connected',
-        preset,
-        presetIndex: index,
+      if (link.current !== current) return null;
+      if (editGeneration.current !== generation) {
+        // An edit went out while the dump was in flight: this dump is older than the screen.
+        scheduleReread();
+        return null;
+      }
+      setState((s) => {
         // A new preset on the pedal gets a new restore point; the same preset keeps the first one.
-        restorePoint: s.restorePoint && s.presetIndex === index ? s.restorePoint : preset,
-      }));
+        const restorePoint = s.restorePoint && s.presetIndex === index ? s.restorePoint : preset;
+        restoreRef.current = restorePoint;
+        return { ...s, status: 'connected', preset, presetIndex: index, restorePoint };
+      });
+      presetRef.current = preset;
+      return preset;
     } catch (e) {
       // A read from a link that was closed or replaced must not touch the current state.
-      if (e instanceof LinkClosedError || link.current !== current) return;
+      if (e instanceof LinkClosedError || link.current !== current) return null;
       console.error('read failed', e);
       patch({ status: 'connected', error: message(e) });
+      return null;
     }
-  }, [patch]);
-
-  const scheduleReread = useCallback(() => {
-    if (settleTimer.current) clearTimeout(settleTimer.current);
-    settleTimer.current = setTimeout(() => void read(), SETTLE_MS);
-  }, [read]);
+  }, [patch, scheduleReread]);
+  const readRef = useRef(read);
+  readRef.current = read;
 
   /** Applies edits to the screen at once and queues them for the pedal. */
   const send = useCallback(
@@ -128,10 +151,13 @@ export function usePocketMaster() {
       const preset = presetRef.current;
       if (!current || !preset || edits.length === 0) return;
       try {
-        const next = edits.reduce((p, e) => {
-          editToCommands(p, e).forEach((bytes, i) => current.edit(`${editKey(e)}#${i}`, bytes));
-          return applyEdit(p, e);
-        }, preset);
+        // Validate and build everything first; queue only when the whole list is good.
+        const { next, commands } = edits.reduce(
+          (acc, e) => ({ next: applyEdit(acc.next, e), commands: [...acc.commands, ...editToCommands(acc.next, e)] }),
+          { next: preset, commands: [] as Uint8Array[] },
+        );
+        commands.forEach((bytes) => current.edit(bytes));
+        editGeneration.current += 1;
         presetRef.current = next;
         patch({ preset: next, error: null });
         if (edits.some((e) => e.kind === 'model' || e.kind === 'chain')) scheduleReread();
@@ -151,12 +177,15 @@ export function usePocketMaster() {
     [state.liveEdit, send],
   );
 
-  const revert = useCallback(() => {
-    const preset = presetRef.current;
-    if (!state.liveEdit || !preset || !state.restorePoint) return;
-    send(diffPresets(preset, state.restorePoint));
+  /** Re-reads the pedal first, so Revert also undoes knob turns made on the unit. */
+  const revert = useCallback(async () => {
+    if (!state.liveEdit || !restoreRef.current) return;
+    const fresh = (await read()) ?? presetRef.current;
+    const target = restoreRef.current;
+    if (!fresh || !target) return;
+    send(diffPresets(fresh, target));
     scheduleReread();
-  }, [state.liveEdit, state.restorePoint, send, scheduleReread]);
+  }, [state.liveEdit, read, send, scheduleReread]);
 
   const connect = useCallback(async () => {
     const midi = access.current;
@@ -170,10 +199,12 @@ export function usePocketMaster() {
     connecting.current = true;
     link.current?.close();
     link.current = null;
+    restoreRef.current = null;
+    presetRef.current = null;
     patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false });
     try {
       await Promise.all([input.open(), output.open()]);
-      link.current = new PocketMasterLink(input, output, appendLog);
+      link.current = new PocketMasterLink(input, output, appendLog, (f) => notifyRef.current(f));
       patch({ status: 'connected', error: null });
       await read();
     } catch (e) {
@@ -214,10 +245,12 @@ export function usePocketMaster() {
     [],
   );
 
-  const modified = useMemo(
-    () => (state.preset && state.restorePoint ? diffPresets(state.preset, state.restorePoint).length > 0 : false),
-    [state.preset, state.restorePoint],
-  );
+  // A preset switched on the pedal: re-read so edits never land on a preset the screen does not show.
+  notifyRef.current = (f: Frame) => {
+    if (isPresetChange(f)) scheduleReread();
+  };
+
+  const modified = useMemo(() => safeModified(state.preset, state.restorePoint), [state.preset, state.restorePoint]);
 
   return {
     ...state,
@@ -227,7 +260,7 @@ export function usePocketMaster() {
     disconnect,
     read,
     edit,
-    revert,
+    revert: () => void revert(),
     setLiveEdit: (liveEdit: boolean) => patch({ liveEdit }),
     selectInput: (inputId: string) => patch({ inputId }),
     selectOutput: (outputId: string) => patch({ outputId }),

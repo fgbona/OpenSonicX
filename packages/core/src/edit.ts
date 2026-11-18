@@ -31,12 +31,13 @@ export function applyEdit(preset: Preset, edit: Edit): Preset {
       });
     case 'model': {
       const clone = edit.module === AMP_MODULE && edit.clone === true;
-      const model = requireModel(preset, edit.module, edit.code, clone);
+      // A code the catalog does not know (new firmware) is still applied; its parameters are unknown.
+      const model = findModelFor(preset, edit.module, edit.code, clone);
       const next = mapBlock(preset, edit.module, (b) => ({
         ...b,
         code: edit.code,
-        model: model.name,
-        params: model.params.map((p) => toParam(p, p.default ?? p.min ?? 0)),
+        model: model?.name ?? `0x${edit.code.toString(16).toUpperCase().padStart(8, '0')}`,
+        params: model ? model.params.map((p) => toParam(p, p.default ?? p.min ?? 0)) : [],
       }));
       return edit.module === AMP_MODULE ? { ...next, ampMode: clone ? 'clone' : 'normal' } : next;
     }
@@ -58,7 +59,6 @@ export function editToCommands(preset: Preset, edit: Edit): Uint8Array[] {
     case 'model': {
       if (edit.module === NR_MODULE) throw new Error('NR has a single model (Gate)');
       const clone = edit.module === AMP_MODULE && edit.clone === true;
-      requireModel(preset, edit.module, edit.code, clone);
       if (edit.module !== AMP_MODULE) return [selectModel(edit.module, edit.code)];
       const modeSwitch = (preset.ampMode === 'clone') !== clone ? [setAmpMode(clone)] : [];
       return [...modeSwitch, selectModel(clone ? CLONE_MODULE : AMP_MODULE, edit.code)];
@@ -102,9 +102,8 @@ function mapBlock(preset: Preset, module: number, fn: (b: Block) => Block): Pres
   return { ...preset, chain: preset.chain.map((b) => (b.module === module ? fn(b) : b)) };
 }
 
-function requireModel(preset: Preset, module: number, code: number, clone: boolean): ModelSpec {
+function findModelFor(preset: Preset, module: number, code: number, clone: boolean): ModelSpec | undefined {
+  if (clone) return findCloneModel(code);
   const block = preset.chain.find((b) => b.module === module);
-  const model = clone ? findCloneModel(code) : block && findModel(block.key, code);
-  if (!model) throw new Error(`unknown model 0x${code.toString(16)} for module ${module}`);
-  return model;
+  return block ? findModel(block.key, code) : undefined;
 }

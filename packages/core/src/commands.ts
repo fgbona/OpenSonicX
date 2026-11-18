@@ -68,6 +68,20 @@ export function isAllowedEdit(sysex: Uint8Array): boolean {
   }
 }
 
+/**
+ * Queue key of an edit command, derived from its bytes: command plus module (plus slot for a
+ * parameter). Two commands with the same key set the same thing, so the older one can be dropped.
+ * The amp-mode switch (11 49, module 9) and an amp model (11 47, module 3) never share a key.
+ */
+export function editKey(sysex: Uint8Array): string {
+  const { payload } = parseFrame(sysex);
+  const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
+  const command = payload[1] ?? 0;
+  if (command === EditCommand.CHAIN) return 'chain';
+  const module = view.getUint32(2, true);
+  return command === EditCommand.PARAM ? `${command}:${module}:${view.getUint32(6, true)}` : `${command}:${module}`;
+}
+
 /** Validates a user value against the catalog spec and returns the float the pedal expects. */
 export function encodeValue(spec: ParamSpec, input: number | boolean | string): number {
   if (spec.type === 'switch') return input === true || input === 1 || input === 'on' ? 1 : 0;
