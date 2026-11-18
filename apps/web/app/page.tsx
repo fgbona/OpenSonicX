@@ -61,7 +61,7 @@ export default function EditorPage() {
           />
         )}
         {pm.preset ? (
-          <ChainView preset={pm.preset} presetIndex={pm.presetIndex} editable={pm.liveEdit && pm.busy === null} modified={pm.modified} onEdit={pm.edit} irNames={pm.irNames} />
+          <ChainView preset={pm.preset} presetIndex={pm.presetIndex} editable={pm.liveEdit && pm.busy === null} modified={pm.modified} onEdit={pm.edit} irNames={pm.irNames} profileNames={pm.profileNames} />
         ) : (
           <section className="empty">
             <h1>{t('empty.title')}</h1>

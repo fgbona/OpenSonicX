@@ -68,7 +68,7 @@ test('editToCommands builds the matching set commands', () => {
 test('editToCommands switches amp mode before selecting an amp model in clone mode', () => {
   const clone: Preset = { ...p08(), ampMode: 'clone' };
   const amp = block(p08(), 'amp').code;
-  assert.deepEqual(hex(editToCommands(clone, { kind: 'model', module: 3, code: amp })), hex([setAmpMode(false), selectModel(3, amp)]));
+  assert.deepEqual(hex(editToCommands(clone, { kind: 'model', module: 3, code: amp })), hex([setAmpMode(false), selectModel(3, amp), setBlockOn(4, true)]));
 });
 
 test('editToCommands refuses a model change on NR and an invalid chain', () => {
@@ -114,4 +114,46 @@ test('preset volume is an edit, sent with setPresetVolume and restored by diff',
   assert.equal(louder.volume, 80);
   assert.deepEqual(hex(editToCommands(p08(), { kind: 'volume', value: 80 })), hex([setPresetVolume(80)]));
   assert.deepEqual(diffPresets(louder, p08()), [{ kind: 'volume', value: 65 }]);
+});
+
+test('choosing a captured profile switches amp mode on and selects it in module 9', () => {
+  const profile = modelsFor('clone')[0]!;
+  const edit = { kind: 'model', module: 3, code: profile.code, clone: true } as const;
+  assert.deepEqual(hex(editToCommands(p08(), edit)), hex([setAmpMode(true), selectModel(9, profile.code), setBlockOn(4, false)]));
+  const after = applyEdit(p08(), edit);
+  assert.equal(after.ampMode, 'clone');
+  assert.equal(block(after, 'amp').model, profile.name);
+});
+
+test('choosing a captured profile also turns IR off, as the unit does when a profile is picked on it', () => {
+  const profile = modelsFor('clone')[0]!;
+  const edit = { kind: 'model', module: 3, code: profile.code, clone: true } as const;
+  assert.equal(block(p08(), 'ir').on, true);
+  assert.deepEqual(hex(editToCommands(p08(), edit)), hex([setAmpMode(true), selectModel(9, profile.code), setBlockOn(4, false)]));
+  assert.equal(block(applyEdit(p08(), edit), 'ir').on, false);
+});
+
+test('leaving clone mode for an amp model turns IR back on, as the unit does', () => {
+  const profile = modelsFor('clone')[0]!;
+  const amp = block(p08(), 'amp').code;
+  const withProfile = applyEdit(p08(), { kind: 'model', module: 3, code: profile.code, clone: true });
+  assert.equal(block(withProfile, 'ir').on, false);
+  assert.deepEqual(hex(editToCommands(withProfile, { kind: 'model', module: 3, code: amp })), hex([setAmpMode(false), selectModel(3, amp), setBlockOn(4, true)]));
+  assert.equal(block(applyEdit(withProfile, { kind: 'model', module: 3, code: amp }), 'ir').on, true);
+});
+
+test('changing from one amp model to another leaves IR as it is', () => {
+  const other = modelsFor('amp').find((m) => m.code !== block(p08(), 'amp').code)!;
+  const irOff = applyEdit(p08(), { kind: 'on', module: 4, on: false });
+  assert.deepEqual(hex(editToCommands(irOff, { kind: 'model', module: 3, code: other.code })), hex([selectModel(3, other.code)]));
+  assert.equal(block(applyEdit(irOff, { kind: 'model', module: 3, code: other.code }), 'ir').on, false);
+});
+
+test('reverting from a profile back to an amp preset restores IR on', () => {
+  const profile = modelsFor('clone')[0]!;
+  const original = p08();
+  const withProfile = applyEdit(original, { kind: 'model', module: 3, code: profile.code, clone: true });
+  const revert = diffPresets(withProfile, original);
+  assert.equal(block(revert.reduce(applyEdit, withProfile), 'ir').on, true, 'IR is back on');
+  assert.equal(sound(revert.reduce(applyEdit, withProfile)), sound(original));
 });

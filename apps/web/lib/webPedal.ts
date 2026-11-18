@@ -12,6 +12,11 @@ export async function readUserIrNames(link: PocketMasterLink): Promise<SlotName[
   return decodeSlotNames((await link.request(Query.USER_IR_NAMES)).payload);
 }
 
+/** Names of the five captured-profile (clone) slots (read only). */
+export async function readProfileNames(link: PocketMasterLink): Promise<SlotName[]> {
+  return decodeSlotNames((await link.request(Query.CAPTURED_PROFILE_NAMES)).payload);
+}
+
 /** The core Pedal contract over a Web MIDI link. */
 export function webPedal(link: PocketMasterLink): Pedal {
   return {

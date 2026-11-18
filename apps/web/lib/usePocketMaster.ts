@@ -7,7 +7,7 @@ import {
   type BackupFile, type Edit, type Frame, type Pedal, type Preset, type PresetFile, type Progress, type SaveResult, type SlotBackup,
 } from '@pocket-master/core';
 import { LinkClosedError, openMidi, pickPocketMaster, PocketMasterLink, type LogEntry } from './midi';
-import { readUserIrNames, webPedal } from './webPedal';
+import { readProfileNames, readUserIrNames, webPedal } from './webPedal';
 import { downloadBackup, downloadJson, loadBackups, storeBackup } from './backupStore';
 
 export const LOG_LIMIT = 2000;
@@ -46,12 +46,16 @@ export interface PocketMasterState {
   readonly storageWarning: string | null;
   /** Names the owner gave the five user IR slots, null for an empty slot. */
   readonly irNames: readonly (string | null)[] | null;
+  /** Names of the five captured-profile slots, null for an empty slot. */
+  readonly profileNames: readonly (string | null)[] | null;
+  /** The pedal's own "edit buffer differs from the slot" flag (12 45), null until read. */
+  readonly pedalModified: boolean | null;
 }
 
 const INITIAL: PocketMasterState = {
   status: 'idle', error: null, inputs: [], outputs: [], inputId: '', outputId: '',
   preset: null, presetIndex: null, restorePoint: null, liveEdit: false, log: [],
-  busy: null, names: null, backups: [], flowBackups: [], storageWarning: null, irNames: null,
+  busy: null, names: null, backups: [], flowBackups: [], storageWarning: null, irNames: null, profileNames: null, pedalModified: null,
 };
 
 const toOptions = (ports: Iterable<MIDIPort>): PortOption[] =>
@@ -61,6 +65,8 @@ const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /** True when the pedal itself announced a preset change (footswitch or knob on the unit). */
 const isPresetChange = (f: Frame) => f.payload[0] === MessageType.GET && f.payload[1] === Query.CURRENT_PRESET;
+/** The pedal reports 12 45 01 after the first edit and 12 45 00 after a save or a preset load. */
+const modifiedFlag = (f: Frame) => (f.payload[0] === MessageType.GET && f.payload[1] === Query.MODIFIED && f.payload.length >= 3 ? f.payload[2] !== 0 : null);
 
 const safeModified = (preset: Preset | null, restorePoint: Preset | null) => {
   if (!preset || !restorePoint) return false;
@@ -129,7 +135,8 @@ export function usePocketMaster() {
   }, []);
 
   /** Reads preset number and edit buffer. Resolves with the pedal's preset, or null if stale or failed. */
-  const read = useCallback(async (): Promise<Preset | null> => {
+  /** `freshRestorePoint` makes this read the new restore point (after Revert reloads the slot). */
+  const read = useCallback(async (options: { freshRestorePoint?: boolean } = {}): Promise<Preset | null> => {
     const current = link.current;
     if (!current || busyRef.current) return null;
     patch({ status: 'reading', error: null });
@@ -138,6 +145,7 @@ export function usePocketMaster() {
       const generation = editGeneration.current;
       const index = decodeCurrentPreset((await current.request(Query.CURRENT_PRESET)).payload);
       const preset = decodePreset((await current.request(Query.EDIT_BUFFER)).payload);
+      const pedalModified = modifiedFlag(await current.request(Query.MODIFIED));
       if (link.current !== current) return null;
       if (editGeneration.current !== generation) {
         // An edit went out while the dump was in flight: this dump is older than the screen.
@@ -146,9 +154,10 @@ export function usePocketMaster() {
       }
       setState((s) => {
         // A new preset on the pedal gets a new restore point; the same preset keeps the first one.
-        const restorePoint = s.restorePoint && s.presetIndex === index ? s.restorePoint : preset;
+        const keep = !options.freshRestorePoint && s.restorePoint && s.presetIndex === index;
+        const restorePoint = keep ? s.restorePoint : preset;
         restoreRef.current = restorePoint;
-        return { ...s, status: 'connected', preset, presetIndex: index, restorePoint };
+        return { ...s, status: 'connected', preset, presetIndex: index, restorePoint, pedalModified };
       });
       presetRef.current = preset;
       return preset;
@@ -196,15 +205,29 @@ export function usePocketMaster() {
     [state.liveEdit, send],
   );
 
-  /** Re-reads the pedal first, so Revert also undoes knob turns made on the unit. */
+  /**
+   * Reloads the preset from its slot, as switching presets on the unit does: the edit buffer goes
+   * back to exactly what is saved (undecoded fields included), even if it was edited before connecting.
+   */
   const revert = useCallback(async () => {
-    if (!state.liveEdit || !restoreRef.current) return;
-    const fresh = (await read()) ?? presetRef.current;
-    const target = restoreRef.current;
-    if (!fresh || !target) return;
-    send(diffPresets(fresh, target));
-    scheduleReread();
-  }, [state.liveEdit, read, send, scheduleReread]);
+    const current = link.current;
+    const index = state.presetIndex;
+    if (!state.liveEdit || !current || index === null || busyRef.current) return;
+    busyRef.current = true;
+    if (settleTimer.current) clearTimeout(settleTimer.current);
+    patch({ busy: { step: 'Preparing', done: 0, total: 1 }, error: null });
+    try {
+      await current.drained();
+      await webPedal(current).selectPreset(index);
+    } catch (e) {
+      busyRef.current = false;
+      if (!(e instanceof LinkClosedError)) patch({ busy: null, error: message(e) });
+      return;
+    }
+    busyRef.current = false;
+    patch({ busy: null });
+    await read({ freshRestorePoint: true });
+  }, [state.liveEdit, state.presetIndex, read, patch]);
 
   const connect = useCallback(async () => {
     const midi = access.current;
@@ -224,12 +247,14 @@ export function usePocketMaster() {
     try {
       await Promise.all([input.open(), output.open()]);
       link.current = new PocketMasterLink(input, output, appendLog, (f) => notifyRef.current(f));
-      patch({ status: 'connected', error: null, irNames: null });
+      patch({ status: 'connected', error: null, irNames: null, profileNames: null });
       await read();
       // User IR names are only labels: a failure must not spoil the connection.
       try {
-        const slots = await readUserIrNames(link.current);
-        patch({ irNames: slots.map((s) => (s.empty || !s.name ? null : s.name)) });
+        const names = (slots: { name: string; empty: boolean }[]) => slots.map((s) => (s.empty || !s.name ? null : s.name));
+        const irs = await readUserIrNames(link.current);
+        const profiles = await readProfileNames(link.current);
+        patch({ irNames: names(irs), profileNames: names(profiles) });
       } catch (e) {
         if (!(e instanceof LinkClosedError)) console.error('could not read the user IR names', e);
       }
@@ -275,6 +300,11 @@ export function usePocketMaster() {
   // preset the screen does not show; knobs and block switches update the screen directly.
   notifyRef.current = (f: Frame) => {
     if (busyRef.current) return; // a save or restore is driving the pedal
+    const flag = modifiedFlag(f);
+    if (flag !== null) {
+      patch({ pedalModified: flag });
+      return;
+    }
     if (isPresetChange(f)) {
       scheduleReread();
       return;
@@ -431,7 +461,10 @@ export function usePocketMaster() {
     [patch],
   );
 
-  const modified = useMemo(() => safeModified(state.preset, state.restorePoint), [state.preset, state.restorePoint]);
+  const modified = useMemo(
+    () => safeModified(state.preset, state.restorePoint) || state.pedalModified === true,
+    [state.preset, state.restorePoint, state.pedalModified],
+  );
 
   return {
     ...state,

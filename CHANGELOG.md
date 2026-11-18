@@ -6,6 +6,33 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Revert reloads the preset from its slot, like switching presets on the
+  unit, so the edit buffer goes back to exactly what is saved, even if it
+  was edited before the editor connected. The editor also reads and follows
+  the pedal's own "modified" flag (12 45), so Revert is available whenever
+  the pedal says the edit buffer differs from the slot.
+
+### Fixed
+
+- The toolbar's frosted-glass blur never applied in Chrome: the CSS
+  optimiser kept only `-webkit-backdrop-filter` of the pair. The prefixed
+  declaration now comes first, so the standard one survives and text
+  scrolling under the toolbar is blurred instead of showing through.
+
+### Added
+
+- Captured profiles (clone mode) on AMP. The AMP model list groups amp
+  models and the occupied captured-profile slots by name (for example
+  "Randall SA (profile 1)"); choosing a profile switches amp mode on,
+  choosing an amp switches it off. Like the unit's own controls, choosing a
+  profile turns IR off and leaving clone mode turns IR back on (the unit
+  does this only for changes made on it, not over MIDI, so the editor sends
+  it); switching between amp models leaves IR alone. In clone mode the chain and the AMP card show
+  the profile name. Clone decoding is now verified on hardware with the
+  owner's NAM capture.
+
 ## [0.6.0] - 2026-11-18
 
 User IR slots show the names of the loaded IR files, validated on a Pocket
