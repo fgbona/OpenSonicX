@@ -6,6 +6,15 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Portuguese (Brazil) interface. The language follows the browser (any pt
+  locale gets Portuguese, everything else English), a PT/EN switch in the
+  toolbar changes it, and the choice is remembered in this browser. The
+  editor's own error and progress messages are translated; protocol
+  details from the core (SysEx log labels, decoder errors) stay in
+  English.
+
 ### Changed
 
 - Container runtime is Alpine 3.23 with only Alpine's nodejs package (Node

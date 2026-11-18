@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { chainUnits, moveInChain, type Block, type Edit } from '@pocket-master/core';
+import { useI18n } from './I18n';
 
 interface Props {
   chain: readonly Block[];
@@ -11,6 +12,7 @@ interface Props {
 
 /** Signal chain. In live edit, units can be dragged or moved with the arrow buttons; DRV-AMP-IR-EQ move as one. */
 export function ChainStrip({ chain, editable, onEdit }: Props) {
+  const { t } = useI18n();
   const [dragging, setDragging] = useState<number | null>(null);
   const [over, setOver] = useState<number | null>(null);
   const order = chain.map((b) => b.module);
@@ -22,7 +24,7 @@ export function ChainStrip({ chain, editable, onEdit }: Props) {
   };
 
   return (
-    <ol className={`chain${editable ? ' chain-editable' : ''}`} aria-label="Signal chain">
+    <ol className={`chain${editable ? ' chain-editable' : ''}`} aria-label={t('chain.aria')}>
       {units.map((unit, index) => {
         const lead = unit[0] as number;
         const name = unit.map((m) => byModule.get(m)?.label).join('-');
@@ -63,8 +65,8 @@ export function ChainStrip({ chain, editable, onEdit }: Props) {
             })}
             {editable && (
               <span className="chain-move">
-                <button type="button" aria-label={`Move ${name} earlier`} disabled={index === 0} onClick={() => move(lead, index - 1)}>‹</button>
-                <button type="button" aria-label={`Move ${name} later`} disabled={index === units.length - 1} onClick={() => move(lead, index + 1)}>›</button>
+                <button type="button" aria-label={t('chain.earlier', { name })} disabled={index === 0} onClick={() => move(lead, index - 1)}>‹</button>
+                <button type="button" aria-label={t('chain.later', { name })} disabled={index === units.length - 1} onClick={() => move(lead, index + 1)}>›</button>
               </span>
             )}
           </li>

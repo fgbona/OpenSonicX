@@ -1,6 +1,8 @@
 'use client';
 
 import type { PortOption, Status } from '@/lib/usePocketMaster';
+import type { MessageKey } from '@/lib/i18n';
+import { LanguageSwitch, useI18n } from './I18n';
 
 interface Props {
   status: Status;
@@ -24,21 +26,22 @@ interface Props {
   canSave: boolean;
 }
 
-const STATUS_TEXT: Record<Status, string> = {
-  idle: 'MIDI off',
-  requesting: 'Asking permission…',
-  ready: 'Not connected',
-  connecting: 'Connecting…',
-  connected: 'Connected',
-  reading: 'Reading…',
+const STATUS_KEY: Record<Status, MessageKey> = {
+  idle: 'status.idle',
+  requesting: 'status.requesting',
+  ready: 'status.ready',
+  connecting: 'status.connecting',
+  connected: 'status.connected',
+  reading: 'status.reading',
 };
 
 function PortSelect(props: { label: string; ports: readonly PortOption[]; value: string; onChange: (id: string) => void; disabled: boolean }) {
+  const { t } = useI18n();
   return (
     <label className="port">
       <span className="port-label">{props.label}</span>
       <select value={props.value} onChange={(e) => props.onChange(e.target.value)} disabled={props.disabled || props.ports.length === 0}>
-        {props.ports.length === 0 && <option value="">No ports</option>}
+        {props.ports.length === 0 && <option value="">{t('ports.none')}</option>}
         {props.ports.map((p) => (
           <option key={p.id} value={p.id}>{p.name}</option>
         ))}
@@ -48,6 +51,7 @@ function PortSelect(props: { label: string; ports: readonly PortOption[]; value:
 }
 
 export function Toolbar(p: Props) {
+  const { t } = useI18n();
   const linked = p.status === 'connected' || p.status === 'reading';
   return (
     <header className="toolbar">
@@ -56,20 +60,21 @@ export function Toolbar(p: Props) {
         <span>Pocket Master Editor</span>
       </div>
       <div className="ports">
-        <PortSelect label="Input" ports={p.inputs} value={p.inputId} onChange={p.onSelectInput} disabled={linked || p.status === 'idle' || p.status === 'connecting'} />
-        <PortSelect label="Output" ports={p.outputs} value={p.outputId} onChange={p.onSelectOutput} disabled={linked || p.status === 'idle' || p.status === 'connecting'} />
+        <PortSelect label={t('ports.input')} ports={p.inputs} value={p.inputId} onChange={p.onSelectInput} disabled={linked || p.status === 'idle' || p.status === 'connecting'} />
+        <PortSelect label={t('ports.output')} ports={p.outputs} value={p.outputId} onChange={p.onSelectOutput} disabled={linked || p.status === 'idle' || p.status === 'connecting'} />
       </div>
       <div className="actions">
+        <LanguageSwitch />
         <span className={`status status-${p.status}`} role="status">
           <span className="status-dot" aria-hidden />
-          {STATUS_TEXT[p.status]}
+          {t(STATUS_KEY[p.status])}
         </span>
         {p.status === 'idle' || p.status === 'requesting' ? (
-          <button className="btn btn-primary" onClick={p.onEnable} disabled={p.status === 'requesting'}>Enable MIDI</button>
+          <button className="btn btn-primary" onClick={p.onEnable} disabled={p.status === 'requesting'}>{t('action.enable')}</button>
         ) : linked ? (
           <>
             <label className="live-toggle">
-              <span>Live edit</span>
+              <span>{t('live.label')}</span>
               <button
                 type="button"
                 role="switch"
@@ -81,14 +86,14 @@ export function Toolbar(p: Props) {
               </button>
             </label>
             {p.liveEdit && (
-              <button className="btn" onClick={p.onRevert} disabled={!p.modified}>Revert</button>
+              <button className="btn" onClick={p.onRevert} disabled={!p.modified}>{t('action.revert')}</button>
             )}
-            <button className="btn" onClick={p.onSave} disabled={p.busy || !p.canSave}>Save…</button>
-            <button className="btn btn-primary" onClick={p.onRead} disabled={p.status === 'reading' || p.busy}>Read</button>
-            <button className="btn" onClick={p.onDisconnect} disabled={p.busy}>Disconnect</button>
+            <button className="btn" onClick={p.onSave} disabled={p.busy || !p.canSave}>{t('action.save')}</button>
+            <button className="btn btn-primary" onClick={p.onRead} disabled={p.status === 'reading' || p.busy}>{t('action.read')}</button>
+            <button className="btn" onClick={p.onDisconnect} disabled={p.busy}>{t('action.disconnect')}</button>
           </>
         ) : (
-          <button className="btn btn-primary" onClick={p.onConnect} disabled={!p.inputId || !p.outputId || p.status === 'connecting'}>Connect</button>
+          <button className="btn btn-primary" onClick={p.onConnect} disabled={!p.inputId || !p.outputId || p.status === 'connecting'}>{t('action.connect')}</button>
         )}
       </div>
     </header>

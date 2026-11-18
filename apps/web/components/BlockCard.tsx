@@ -2,6 +2,7 @@
 
 import { modelOf, modelsFor, type Block, type Edit, type Preset } from '@pocket-master/core';
 import { ParamControl } from './ParamControl';
+import { useI18n } from './I18n';
 
 interface Props {
   preset: Preset;
@@ -13,6 +14,7 @@ interface Props {
 const SINGLE_MODEL = new Set(['nr']);
 
 export function BlockCard({ preset, block, editable, onEdit }: Props) {
+  const { t } = useI18n();
   const model = modelOf(preset, block);
   const clone = block.key === 'amp' && preset.ampMode === 'clone';
   const choices = SINGLE_MODEL.has(block.key) ? [] : modelsFor(block.key);
@@ -25,23 +27,23 @@ export function BlockCard({ preset, block, editable, onEdit }: Props) {
             type="button"
             className={`pill pill-button ${block.on ? 'pill-on' : 'pill-off'}`}
             aria-pressed={block.on}
-            aria-label={`${block.label} ${block.on ? 'on' : 'off'}`}
+            aria-label={t(block.on ? 'block.onAria' : 'block.offAria', { block: block.label })}
             onClick={() => onEdit({ kind: 'on', module: block.module, on: !block.on })}
           >
-            {block.on ? 'On' : 'Off'}
+            {block.on ? t('block.on') : t('block.off')}
           </button>
         ) : (
-          <span className={`pill ${block.on ? 'pill-on' : 'pill-off'}`}>{block.on ? 'On' : 'Off'}</span>
+          <span className={`pill ${block.on ? 'pill-on' : 'pill-off'}`}>{block.on ? t('block.on') : t('block.off')}</span>
         )}
       </header>
       {editable && choices.length > 0 ? (
         <select
           className="block-model block-model-select"
-          aria-label={`${block.label} model`}
+          aria-label={t('block.modelAria', { block: block.label })}
           value={clone ? '' : block.code}
           onChange={(e) => onEdit({ kind: 'model', module: block.module, code: Number(e.target.value) })}
         >
-          {clone && <option value="" disabled>{block.model} (captured)</option>}
+          {clone && <option value="" disabled>{t('block.captured', { model: block.model })}</option>}
           {choices.map((m) => <option key={m.code} value={m.code}>{m.name}</option>)}
         </select>
       ) : (
@@ -61,7 +63,7 @@ export function BlockCard({ preset, block, editable, onEdit }: Props) {
           ))}
         </ul>
       ) : (
-        <p className="muted small">No parameters in the catalog for this model.</p>
+        <p className="muted small">{t('block.noParams')}</p>
       )}
     </article>
   );

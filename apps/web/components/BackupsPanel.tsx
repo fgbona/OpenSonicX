@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { parseBackupFile, type BackupFile, type Progress, type SlotBackup } from '@pocket-master/core';
 import { Dialog } from './Dialog';
 import { FlowBackups } from './FlowBackups';
+import { useI18n } from './I18n';
 import { ProgressBar } from './ProgressBar';
 
 interface Props {
@@ -19,11 +20,12 @@ interface Props {
   onError: (message: string) => void;
 }
 
-const when = (iso: string) => new Date(iso).toLocaleString();
+const when = (iso: string, lang: string) => new Date(iso).toLocaleString(lang === 'pt' ? 'pt-BR' : 'en');
 
 export function BackupsPanel({ backups, connected, busy, error, flowBackups, storageWarning, onDownload, onImport, onRestore, onError }: Props) {
   const [pending, setPending] = useState<SlotBackup | null>(null);
   const [done, setDone] = useState(false);
+  const { t, te, lang } = useI18n();
 
   const importFile = async (input: HTMLInputElement) => {
     const file = input.files?.[0];
@@ -37,34 +39,34 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
   };
 
   return (
-    <section className="panel" aria-label="Backups">
+    <section className="panel" aria-label={t('backups.title')}>
       <header className="panel-head">
-        <h2>Backups <span className="muted">{backups.length}</span></h2>
+        <h2>{t('backups.title')} <span className="muted">{backups.length}</span></h2>
         <label className="btn btn-small file-button">
-          Import file
+          {t('backups.import')}
           <input type="file" accept="application/json,.json" onChange={(e) => void importFile(e.currentTarget)} />
         </label>
       </header>
       {backups.length === 0 ? (
-        <p className="muted small panel-empty">Backups appear here after the first save. Each one is also downloaded as a file.</p>
+        <p className="muted small panel-empty">{t('backups.empty')}</p>
       ) : (
         <ul className="backups">
           {backups.map((b) => (
             <li key={`${b.kind}-${b.createdAt}`} className="backup">
               <details>
                 <summary>
-                  <span className="backup-kind">{b.kind === 'session' ? 'All user presets' : `${b.slots[0]?.label} “${b.slots[0]?.name}”`}</span>
-                  <span className="muted small">{when(b.createdAt)} · {b.slots.length} slot{b.slots.length === 1 ? '' : 's'}</span>
+                  <span className="backup-kind">{b.kind === 'session' ? t('backups.all') : `${b.slots[0]?.label} “${b.slots[0]?.name}”`}</span>
+                  <span className="muted small">{when(b.createdAt, lang)} · {b.slots.length === 1 ? t('backups.oneSlot') : t('backups.slots', { count: b.slots.length })}</span>
                 </summary>
                 <div className="backup-actions">
-                  <button type="button" className="btn btn-small" onClick={() => onDownload(b)}>Download file</button>
+                  <button type="button" className="btn btn-small" onClick={() => onDownload(b)}>{t('backups.download')}</button>
                 </div>
                 <ul className="backup-slots">
                   {b.slots.map((s) => (
                     <li key={s.index}>
-                      <span>{s.label} · {s.name || 'unnamed'}</span>
+                      <span>{s.label} · {s.name || t('backups.unnamed')}</span>
                       <button type="button" className="btn btn-small" disabled={!connected || busy !== null} onClick={() => { setDone(false); setPending(s); }}>
-                        Restore to {s.label}
+                        {t('backups.restoreTo', { slot: s.label })}
                       </button>
                     </li>
                   ))}
@@ -74,29 +76,26 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
           ))}
         </ul>
       )}
-      <Dialog open={pending !== null} title={pending ? `Restore ${pending.label}` : 'Restore'} onClose={() => setPending(null)} locked={busy !== null}>
+      <Dialog open={pending !== null} title={t('restore.title', { slot: pending?.label ?? '' })} onClose={() => setPending(null)} locked={busy !== null}>
         {busy ? (
           <ProgressBar progress={busy} />
         ) : done ? (
           <>
-            <p>{pending?.label} is back to “{pending?.name}”, checked on the pedal.</p>
+            <p>{t('restore.done', { slot: pending?.label ?? '', name: pending?.name ?? '' })}</p>
             <FlowBackups backups={flowBackups} warning={storageWarning} onDownload={onDownload} />
-            <div className="sheet-actions"><button className="btn btn-primary" onClick={() => setPending(null)}>Done</button></div>
+            <div className="sheet-actions"><button className="btn btn-primary" onClick={() => setPending(null)}>{t('action.done')}</button></div>
           </>
         ) : pending ? (
           <>
             <div className="sheet-note">
-              <p><strong>{pending.label} will be overwritten with the backup “{pending.name}”.</strong></p>
-              <p>
-                What {pending.label} holds now is backed up first. The pedal loads {pending.label}, so unsaved edits on the
-                loaded preset are discarded. Settings the editor does not decode yet (such as tempo) are not restored.
-              </p>
+              <p><strong>{t('restore.overwrite', { slot: pending.label, name: pending.name })}</strong></p>
+              <p>{t('restore.note', { slot: pending.label })}</p>
             </div>
-            {error && <p className="alert" role="alert">{error}</p>}
+            {error && <p className="alert" role="alert">{te(error)}</p>}
             {error && flowBackups.length > 0 && <FlowBackups backups={flowBackups} warning={storageWarning} onDownload={onDownload} />}
             <div className="sheet-actions">
-              <button className="btn" onClick={() => setPending(null)}>Cancel</button>
-              <button className="btn btn-danger" onClick={async () => { if (await onRestore(pending)) setDone(true); }}>Back up and restore</button>
+              <button className="btn" onClick={() => setPending(null)}>{t('action.cancel')}</button>
+              <button className="btn btn-danger" onClick={async () => { if (await onRestore(pending)) setDone(true); }}>{t('restore.submit')}</button>
             </div>
           </>
         ) : null}

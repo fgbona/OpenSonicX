@@ -2,6 +2,7 @@
 
 import { memo, useEffect, useRef, useState } from 'react';
 import type { LogEntry } from '@/lib/midi';
+import { useI18n } from './I18n';
 
 const time = (ms: number) => {
   const d = new Date(ms);
@@ -24,6 +25,7 @@ const LogLine = memo(function LogLine({ entry }: { entry: LogEntry }) {
 });
 
 export function SysexLog({ log, onClear }: { log: readonly LogEntry[]; onClear: () => void }) {
+  const { t } = useI18n();
   const body = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
 
@@ -46,14 +48,14 @@ export function SysexLog({ log, onClear }: { log: readonly LogEntry[]; onClear: 
   return (
     <section className="log" aria-label="SysEx log">
       <header className="log-head">
-        <h2>SysEx log <span className="muted">{log.length}</span></h2>
+        <h2>{t('log.title')} <span className="muted">{log.length}</span></h2>
         <div className="log-actions">
-          <button className="btn btn-small" onClick={copy} disabled={log.length === 0}>{copied ? 'Copied' : 'Copy'}</button>
-          <button className="btn btn-small" onClick={onClear} disabled={log.length === 0}>Clear</button>
+          <button className="btn btn-small" onClick={copy} disabled={log.length === 0}>{copied ? t('log.copied') : t('log.copy')}</button>
+          <button className="btn btn-small" onClick={onClear} disabled={log.length === 0}>{t('log.clear')}</button>
         </div>
       </header>
       <div ref={body} className="log-body" role="log" aria-live="off">
-        {log.length === 0 && <p className="muted small log-empty">Every SysEx message sent and received appears here in hex.</p>}
+        {log.length === 0 && <p className="muted small log-empty">{t('log.empty')}</p>}
         {log.map((e) => <LogLine key={e.id} entry={e} />)}
       </div>
     </section>

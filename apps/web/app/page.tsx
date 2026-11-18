@@ -7,15 +7,13 @@ import { SaveDialog } from '@/components/SaveDialog';
 import { SysexLog } from '@/components/SysexLog';
 import { Toolbar } from '@/components/Toolbar';
 import { usePocketMaster } from '@/lib/usePocketMaster';
+import { useI18n } from '@/components/I18n';
 
-const STEPS = [
-  'Connect the Pocket Master by USB and switch it on.',
-  'Click Enable MIDI and allow MIDI device access.',
-  'Pick the Pocket Master ports and click Connect.',
-];
+const STEPS = ['empty.step1', 'empty.step2', 'empty.step3'] as const;
 
 export default function EditorPage() {
   const pm = usePocketMaster();
+  const { t, te } = useI18n();
   const [saveOpen, setSaveOpen] = useState(false);
   const connected = pm.status === 'connected' || pm.status === 'reading';
   return (
@@ -45,21 +43,20 @@ export default function EditorPage() {
         canSave={pm.preset !== null}
       />
       <main className="main">
-        {pm.error && <p className="alert" role="alert">{pm.error}</p>}
+        {pm.error && <p className="alert" role="alert">{te(pm.error)}</p>}
         {pm.liveEdit && (
           <p className="notice" role="status">
-            Live edit is on. Every change goes to the pedal at once, in its edit buffer only. Nothing is saved to a
-            preset slot. Revert re-reads the pedal and brings back this preset as it was first read.
+            {t('live.notice')}
           </p>
         )}
         {pm.preset ? (
           <ChainView preset={pm.preset} presetIndex={pm.presetIndex} editable={pm.liveEdit && pm.busy === null} modified={pm.modified} onEdit={pm.edit} />
         ) : (
           <section className="empty">
-            <h1>Read your Pocket Master</h1>
-            <p className="muted">Read the edit buffer, then turn on Live edit to change the sound from here.</p>
-            <ol className="steps">{STEPS.map((s) => <li key={s}>{s}</li>)}</ol>
-            <p className="muted small">Works in Chrome, Edge and Opera on desktop.</p>
+            <h1>{t('empty.title')}</h1>
+            <p className="muted">{t('empty.subtitle')}</p>
+            <ol className="steps">{STEPS.map((s) => <li key={s}>{t(s)}</li>)}</ol>
+            <p className="muted small">{t('empty.browsers')}</p>
           </section>
         )}
         <BackupsPanel

@@ -86,6 +86,12 @@ button, select { font: inherit; color: inherit; }
 }
 .port select:disabled { opacity: 0.5; }
 .actions { display: flex; align-items: center; gap: 10px; }
+.lang-switch { display: inline-flex; padding: 2px; border-radius: 8px; background: var(--fill); }
+.lang-switch button {
+  padding: 3px 8px; border: none; border-radius: 6px; background: transparent; cursor: pointer;
+  font-size: 0.75rem; font-weight: 600; color: var(--label-2);
+}
+.lang-switch button.lang-on { background: var(--surface); color: var(--label); box-shadow: var(--shadow); }
 
 .status { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8125rem; color: var(--label-2); }
 .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gray); }
