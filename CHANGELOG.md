@@ -6,6 +6,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-18
+
+Portuguese interface, the screen follows the pedal, a theme button and a
+half-size container image. Validated on a Pocket Master with firmware V1.3.3.
+Container image: `ghcr.io/fgbona/pocket-master-editor:v0.4.0` (amd64 and arm64).
+
 ### Added
 
 - The screen follows the pedal: knobs turned and blocks switched on the
@@ -13,21 +19,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - Light/dark theme button in the toolbar. Without a choice the page
   follows the system; the choice is remembered in this browser and applied
   before the page paints.
-
-### Fixed
-
-- The pedal acknowledges every edit too (14 08 00, seen on hardware); the
-  link consumes those acknowledges and a selection or save waits for them,
-  so a late edit acknowledge can never answer a preset operation.
-
-### Added
-
 - Portuguese (Brazil) interface. The language follows the browser (any pt
   locale gets Portuguese, everything else English), a PT/EN switch in the
   toolbar changes it, and the choice is remembered in this browser. The
   editor's own error and progress messages are translated; protocol
   details from the core (SysEx log labels, decoder errors) stay in
   English.
+- App icon (favicon).
 
 ### Changed
 
@@ -42,15 +40,14 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The pedal acknowledges every edit too (14 08 00, seen on hardware); the
+  link consumes those acknowledges and a selection or save waits for them,
+  so a late edit acknowledge can never answer a preset operation.
 - A packet whose index is outside its set no longer crashes reassembly.
 - Short dump records are reported in words ("record 0x3003 is too short");
   the optional volume record may still be absent.
 - A MIDI port that fails to send (cable pulled) rejects with a readable
   error and leaves no timer or listener behind, on all three send paths.
-
-### Added
-
-- App icon (favicon).
 
 ## [0.3.0] - 2026-11-18
 
@@ -210,7 +207,8 @@ Container image: `ghcr.io/fgbona/pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/pocket-master-editor/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/fgbona/pocket-master-editor/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/fgbona/pocket-master-editor/compare/v0.1.0...v0.1.1
