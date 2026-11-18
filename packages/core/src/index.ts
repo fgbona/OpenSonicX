@@ -10,3 +10,4 @@ export * from './commands.ts';
 export * from './edit.ts';
 export * from './chain.ts';
 export * from './slots.ts';
+export * from './backup.ts';
