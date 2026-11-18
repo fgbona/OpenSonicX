@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  applyEdit, decodeCurrentPreset, decodeNotification, decodePreset, diffPresets, editToCommands, MessageType, Query,
-  restoreFromBackup, saveToSlot,
-  type BackupFile, type Edit, type Frame, type Pedal, type Preset, type Progress, type SaveResult, type SlotBackup,
+  applyEdit, decodeCurrentPreset, fromHex, decodeNotification, decodePreset, diffPresets, editToCommands, MessageType, Query,
+  loadIntoEditBuffer, presetFile, presetLabel, restoreFromBackup, saveToSlot,
+  type BackupFile, type Edit, type Frame, type Pedal, type Preset, type PresetFile, type Progress, type SaveResult, type SlotBackup,
 } from '@pocket-master/core';
 import { LinkClosedError, openMidi, pickPocketMaster, PocketMasterLink, type LogEntry } from './midi';
 import { webPedal } from './webPedal';
-import { downloadBackup, loadBackups, storeBackup } from './backupStore';
+import { downloadBackup, downloadJson, loadBackups, storeBackup } from './backupStore';
 
 export const LOG_LIMIT = 2000;
 /** After a model or chain change the pedal applies defaults; re-read once it settles. */
@@ -356,6 +356,53 @@ export function usePocketMaster() {
     [runFlow, keepBackup],
   );
 
+  /** Re-reads the edit buffer from the pedal and hands it over as a preset file. */
+  const exportPreset = useCallback(async () => {
+    const current = link.current;
+    if (!current || busyRef.current) return;
+    try {
+      await current.drained();
+      const pedal = webPedal(current);
+      const [payload, index] = [await pedal.readEditBuffer(), await pedal.readCurrentIndex()];
+      const names = await pedal.readNames();
+      const name = (names[index] ?? '').trim();
+      const file = presetFile(payload, name);
+      const safe = (name || presetLabel(index)).replace(/[^A-Za-z0-9_-]+/g, '_');
+      downloadJson(file, `pocket-master-${presetLabel(index)}-${safe}.json`);
+    } catch (e) {
+      if (!(e instanceof LinkClosedError)) patch({ error: message(e) });
+    }
+  }, [patch]);
+
+  /** Loads a preset file into the edit buffer (nothing is saved); Revert still brings back the old one. */
+  const importPreset = useCallback(
+    async (file: PresetFile) => {
+      const current = link.current;
+      if (!current || busyRef.current) return false;
+      busyRef.current = true;
+      if (settleTimer.current) clearTimeout(settleTimer.current);
+      patch({ busy: { step: 'Preparing', done: 0, total: 1 }, error: null });
+      let failure: string | null = null;
+      try {
+        await current.drained();
+        const loaded = await loadIntoEditBuffer(webPedal(current), decodePreset(fromHex(file.payload)));
+        editGeneration.current += 1;
+        presetRef.current = loaded;
+        busyRef.current = false;
+        patch({ busy: null, preset: loaded });
+        return true;
+      } catch (e) {
+        console.error('import failed', e);
+        failure = e instanceof LinkClosedError ? 'The connection to the pedal was closed during the save.' : message(e);
+      }
+      busyRef.current = false;
+      if (link.current === current) await readRef.current();
+      patch({ busy: null, error: failure });
+      return false;
+    },
+    [patch],
+  );
+
   const loadNames = useCallback(async () => {
     const current = link.current;
     if (!current || busyRef.current) return;
@@ -390,6 +437,8 @@ export function usePocketMaster() {
     restore,
     loadNames,
     importBackup,
+    exportPreset: () => void exportPreset(),
+    importPreset,
     downloadBackup,
     setLiveEdit: (liveEdit: boolean) => patch({ liveEdit }),
     selectInput: (inputId: string) => patch({ inputId }),

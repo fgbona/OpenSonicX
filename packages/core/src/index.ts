@@ -12,3 +12,4 @@ export * from './chain.ts';
 export * from './slots.ts';
 export * from './backup.ts';
 export * from './notify.ts';
+export * from './preset-file.ts';

@@ -26,6 +26,10 @@ const EXACT: ReadonlyArray<[string, MessageKey]> = [
   [en['error.closedDuringSave'], 'error.closedDuringSave'],
   [en['error.storage'], 'error.storage'],
   [en['error.storageImport'], 'error.storageImport'],
+  // Raised by @pocket-master/core when a preset file is read.
+  ['not a Pocket Master preset file', 'error.notPresetFile'],
+  ['not a Pocket Master preset file (invalid JSON)', 'error.notPresetFile'],
+  ['the preset file is damaged and cannot be read', 'error.damagedPresetFile'],
 ];
 const OPEN_PORTS_PREFIX = 'Could not open the ports: ';
 

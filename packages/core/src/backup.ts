@@ -70,7 +70,7 @@ async function readSlot(pedal: Pedal, index: number, name: string): Promise<Slot
 }
 
 /** Brings the edit buffer to `target` by diff and checks it took. */
-async function applyPreset(pedal: Pedal, target: Preset): Promise<void> {
+export async function applyPreset(pedal: Pedal, target: Preset): Promise<void> {
   const fresh = decodePreset(await pedal.readEditBuffer());
   const { commands } = diffPresets(fresh, target).reduce(
     (acc, e) => ({ state: applyEdit(acc.state, e), commands: [...acc.commands, ...editToCommands(acc.state, e)] }),
@@ -150,7 +150,7 @@ type SaveOptions = FlowOptions & {
  * diff would select the model again, which resets its knobs to the pedal's defaults, and nothing
  * could notice. Refuse instead of silently changing the sound.
  */
-function requireKnownModels(preset: Preset): void {
+export function requireKnownModels(preset: Preset): void {
   const unknown = preset.chain.find((b) => modelOf(preset, b) === undefined);
   if (unknown) {
     const code = `0x${unknown.code.toString(16).toUpperCase().padStart(8, '0')}`;

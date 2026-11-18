@@ -48,12 +48,16 @@ export function backupFileName(file: BackupFile): string {
   return `pocket-master-backup-${what}-${stamp}.json`;
 }
 
-/** Hands the visitor the backup as a file. Call it from a click: Chrome blocks repeated downloads without one. */
-export function downloadBackup(file: BackupFile): void {
-  const url = URL.createObjectURL(new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' }));
+/** Hands the visitor a JSON file. Call it from a click: Chrome blocks repeated downloads without one. */
+export function downloadJson(data: unknown, fileName: string): void {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
   const a = document.createElement('a');
   a.href = url;
-  a.download = backupFileName(file);
+  a.download = fileName;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+export function downloadBackup(file: BackupFile): void {
+  downloadJson(file, backupFileName(file));
 }
