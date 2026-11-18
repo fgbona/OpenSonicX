@@ -66,6 +66,8 @@ export default function EditorPage() {
           connected={connected}
           busy={pm.busy}
           error={pm.error}
+          flowBackups={pm.flowBackups}
+          storageWarning={pm.storageWarning}
           onDownload={pm.downloadBackup}
           onImport={pm.importBackup}
           onRestore={pm.restore}
@@ -79,6 +81,9 @@ export default function EditorPage() {
           hasSessionBackup={pm.sessionBackup !== null}
           busy={pm.busy}
           error={pm.error}
+          flowBackups={pm.flowBackups}
+          storageWarning={pm.storageWarning}
+          onDownload={pm.downloadBackup}
           onSave={pm.save}
           onClose={() => setSaveOpen(false)}
         />

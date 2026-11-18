@@ -23,19 +23,23 @@ export function loadBackups(): BackupFile[] {
   }
 }
 
-/** Adds a backup and returns the new list. Keeps the last 3 session and 20 slot backups. */
-export function storeBackup(list: readonly BackupFile[], file: BackupFile): BackupFile[] {
-  const next = [file, ...list];
+/**
+ * Adds a backup (once) and returns the new list and whether the browser kept it.
+ * Keeps the last 3 session and 20 slot backups.
+ */
+export function storeBackup(list: readonly BackupFile[], file: BackupFile): { list: BackupFile[]; stored: boolean } {
+  const same = (b: BackupFile) => b.kind === file.kind && b.createdAt === file.createdAt;
+  const next = [file, ...list.filter((b) => !same(b))];
   const sessions = next.filter((b) => b.kind === 'session').slice(0, KEEP_SESSIONS);
   const slots = next.filter((b) => b.kind === 'slot').slice(0, KEEP_SLOTS);
   const kept = next.filter((b) => sessions.includes(b) || slots.includes(b));
   try {
     localStorage.setItem(KEY, JSON.stringify(kept));
+    return { list: kept, stored: true };
   } catch (error) {
-    // The downloaded file is the primary copy; storage is a convenience.
     console.error('could not store the backup in this browser', error);
+    return { list: kept, stored: false };
   }
-  return kept;
 }
 
 export function backupFileName(file: BackupFile): string {
@@ -44,7 +48,7 @@ export function backupFileName(file: BackupFile): string {
   return `pocket-master-backup-${what}-${stamp}.json`;
 }
 
-/** Hands the visitor the backup as a file. */
+/** Hands the visitor the backup as a file. Call it from a click: Chrome blocks repeated downloads without one. */
 export function downloadBackup(file: BackupFile): void {
   const url = URL.createObjectURL(new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' }));
   const a = document.createElement('a');

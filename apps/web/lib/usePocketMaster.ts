@@ -42,12 +42,16 @@ export interface PocketMasterState {
   readonly backups: readonly BackupFile[];
   /** Full backup of P01..P50 taken in this connection, before its first save. */
   readonly sessionBackup: BackupFile | null;
+  /** Backups taken by the last save or restore, offered for download when it ends. */
+  readonly flowBackups: readonly BackupFile[];
+  /** Set when the browser could not keep a backup; the user must download it. */
+  readonly storageWarning: string | null;
 }
 
 const INITIAL: PocketMasterState = {
   status: 'idle', error: null, inputs: [], outputs: [], inputId: '', outputId: '',
   preset: null, presetIndex: null, restorePoint: null, liveEdit: false, log: [],
-  busy: null, names: null, backups: [], sessionBackup: null,
+  busy: null, names: null, backups: [], sessionBackup: null, flowBackups: [], storageWarning: null,
 };
 
 const toOptions = (ports: Iterable<MIDIPort>): PortOption[] =>
@@ -274,12 +278,18 @@ export function usePocketMaster() {
 
   const keepBackup = useCallback(
     (file: BackupFile) => {
-      downloadBackup(file);
-      backupsRef.current = storeBackup(backupsRef.current, file);
+      const { list, stored } = storeBackup(backupsRef.current, file);
+      backupsRef.current = list;
       if (file.kind === 'session') sessionRef.current = file;
-      patch({ backups: backupsRef.current, sessionBackup: sessionRef.current });
+      setState((s) => ({
+        ...s,
+        backups: list,
+        sessionBackup: sessionRef.current,
+        flowBackups: [...s.flowBackups, file],
+        storageWarning: stored ? s.storageWarning : 'This browser could not keep the backup. Download it now and keep the file.',
+      }));
     },
-    [patch],
+    [],
   );
 
   /** Runs a save or restore flow with live edit paused; on success the saved preset is the new restore point. */
@@ -289,7 +299,8 @@ export function usePocketMaster() {
       if (!current || busyRef.current) return false;
       busyRef.current = true;
       if (settleTimer.current) clearTimeout(settleTimer.current);
-      patch({ busy: { step: 'Preparing', done: 0, total: 1 }, error: null });
+      patch({ busy: { step: 'Preparing', done: 0, total: 1 }, error: null, flowBackups: [] });
+      let failure: string | null = null;
       try {
         await current.drained();
         const pedal = webPedal(current);
@@ -298,17 +309,18 @@ export function usePocketMaster() {
         editGeneration.current += 1;
         presetRef.current = result.saved;
         restoreRef.current = result.saved;
+        busyRef.current = false;
         patch({ busy: null, preset: result.saved, presetIndex: target, restorePoint: result.saved, names });
         return true;
       } catch (e) {
-        if (e instanceof LinkClosedError) return false;
         console.error('save flow failed', e);
-        patch({ busy: null, error: message(e) });
-        return false;
-      } finally {
-        busyRef.current = false;
-        if (link.current === current) void readRef.current();
+        failure = e instanceof LinkClosedError ? 'The connection to the pedal was closed during the save.' : message(e);
       }
+      busyRef.current = false;
+      // Re-sync the screen with the pedal first; the error is set after, so the read cannot clear it.
+      if (link.current === current) await readRef.current();
+      patch({ busy: null, error: failure });
+      return false;
     },
     [patch],
   );
@@ -341,8 +353,9 @@ export function usePocketMaster() {
 
   const importBackup = useCallback(
     (file: BackupFile) => {
-      backupsRef.current = storeBackup(backupsRef.current, file);
-      patch({ backups: backupsRef.current });
+      const { list, stored } = storeBackup(backupsRef.current, file);
+      backupsRef.current = list;
+      patch({ backups: list, storageWarning: stored ? null : 'This browser could not keep the imported backup; keep the file.' });
     },
     [patch],
   );

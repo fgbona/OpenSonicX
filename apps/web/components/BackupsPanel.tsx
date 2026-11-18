@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { parseBackupFile, type BackupFile, type Progress, type SlotBackup } from '@pocket-master/core';
 import { Dialog } from './Dialog';
+import { FlowBackups } from './FlowBackups';
 import { ProgressBar } from './ProgressBar';
 
 interface Props {
@@ -10,6 +11,8 @@ interface Props {
   connected: boolean;
   busy: Progress | null;
   error: string | null;
+  flowBackups: readonly BackupFile[];
+  storageWarning: string | null;
   onDownload: (file: BackupFile) => void;
   onImport: (file: BackupFile) => void;
   onRestore: (slot: SlotBackup) => Promise<boolean>;
@@ -18,7 +21,7 @@ interface Props {
 
 const when = (iso: string) => new Date(iso).toLocaleString();
 
-export function BackupsPanel({ backups, connected, busy, error, onDownload, onImport, onRestore, onError }: Props) {
+export function BackupsPanel({ backups, connected, busy, error, flowBackups, storageWarning, onDownload, onImport, onRestore, onError }: Props) {
   const [pending, setPending] = useState<SlotBackup | null>(null);
   const [done, setDone] = useState(false);
 
@@ -52,8 +55,10 @@ export function BackupsPanel({ backups, connected, busy, error, onDownload, onIm
                 <summary>
                   <span className="backup-kind">{b.kind === 'session' ? 'All user presets' : `${b.slots[0]?.label} “${b.slots[0]?.name}”`}</span>
                   <span className="muted small">{when(b.createdAt)} · {b.slots.length} slot{b.slots.length === 1 ? '' : 's'}</span>
-                  <button type="button" className="btn btn-small" onClick={(e) => { e.preventDefault(); onDownload(b); }}>Download</button>
                 </summary>
+                <div className="backup-actions">
+                  <button type="button" className="btn btn-small" onClick={() => onDownload(b)}>Download file</button>
+                </div>
                 <ul className="backup-slots">
                   {b.slots.map((s) => (
                     <li key={s.index}>
@@ -75,6 +80,7 @@ export function BackupsPanel({ backups, connected, busy, error, onDownload, onIm
         ) : done ? (
           <>
             <p>{pending?.label} is back to “{pending?.name}”, checked on the pedal.</p>
+            <FlowBackups backups={flowBackups} warning={storageWarning} onDownload={onDownload} />
             <div className="sheet-actions"><button className="btn btn-primary" onClick={() => setPending(null)}>Done</button></div>
           </>
         ) : pending ? (
@@ -87,6 +93,7 @@ export function BackupsPanel({ backups, connected, busy, error, onDownload, onIm
               </p>
             </div>
             {error && <p className="alert" role="alert">{error}</p>}
+            {error && flowBackups.length > 0 && <FlowBackups backups={flowBackups} warning={storageWarning} onDownload={onDownload} />}
             <div className="sheet-actions">
               <button className="btn" onClick={() => setPending(null)}>Cancel</button>
               <button className="btn btn-danger" onClick={async () => { if (await onRestore(pending)) setDone(true); }}>Back up and restore</button>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 
 interface Props {
   open: boolean;
@@ -14,6 +14,7 @@ interface Props {
 /** Native modal <dialog>: focus trap, Escape and backdrop handling come from the browser. */
 export function Dialog({ open, title, onClose, locked = false, children }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -24,17 +25,26 @@ export function Dialog({ open, title, onClose, locked = false, children }: Props
     <dialog
       ref={ref}
       className="sheet"
-      aria-label={title}
+      aria-labelledby={titleId}
+      onClose={() => {
+        // The browser can close a modal on its own (a second Escape). Keep it open while locked,
+        // otherwise tell the parent so its state matches.
+        if (locked && ref.current && !ref.current.open) ref.current.showModal();
+        else if (open) onClose();
+      }}
       onCancel={(e) => {
         e.preventDefault();
         if (!locked) onClose();
       }}
       onClick={(e) => {
-        if (!locked && e.target === ref.current) onClose();
+        // Only a click on the backdrop closes it, not one on the sheet's own padding.
+        const box = ref.current?.getBoundingClientRect();
+        const outside = box && (e.clientX < box.left || e.clientX > box.right || e.clientY < box.top || e.clientY > box.bottom);
+        if (!locked && e.target === ref.current && outside) onClose();
       }}
     >
-      <h2 className="sheet-title">{title}</h2>
-      {children}
+      <h2 className="sheet-title" id={titleId}>{title}</h2>
+      <div aria-live="polite">{children}</div>
     </dialog>
   );
 }

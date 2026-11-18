@@ -15,8 +15,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
   - backs up the target slot before every save;
   - puts your unsaved edits back on the loaded preset after each backup;
   then saves, requires the pedal's acknowledge and checks the name and
-  content of the slot. Backups are downloaded as JSON files and kept in
-  the browser (last 3 full and 20 slot backups).
+  content of the slot. Backups are kept in the browser (last 3 full and
+  20 slot backups) and offered as JSON downloads when the save ends,
+  also when it fails. A warning appears if the browser cannot keep them.
+- A save is refused when the pedal's preset no longer matches the screen
+  (knob turned on the unit) or uses a model the editor does not know.
 - Backups panel: download any backup, import a backup file, and restore a
   slot from a backup (what the slot holds is backed up first). Settings
   the editor does not decode yet, such as the probable tempo, are not
