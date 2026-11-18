@@ -115,3 +115,16 @@ test('a dump without the optional volume record still decodes', () => {
   assert.equal(preset.volume, null);
   assert.equal(preset.chain.length, 9);
 });
+
+test('a real clone-mode preset decodes: AMP is the captured profile and IR is off', () => {
+  const r = new Reassembler();
+  const rx = readCapture('clone-capture.txt').filter((m) => m.dir === 'RX');
+  const dump = rx.map((m) => r.feed(parseFrame(m.bytes), 0)).find((f) => f?.payload[1] === 0x41)!;
+  const preset = decodePreset(dump.payload);
+  assert.equal(preset.ampMode, 'clone');
+  const amp = block(preset.chain, 'amp');
+  assert.equal(amp.model, 'User Profile 1');
+  assert.equal(amp.code, 0x0f000000, 'the pedal reports category 0x0F for captured profiles');
+  assert.deepEqual(amp.params.map((x) => x.name), ['Gain', 'Vol', 'Bass', 'Middle', 'Treble']);
+  assert.equal(block(preset.chain, 'ir').on, false, 'the pedal turns IR off for a captured profile');
+});

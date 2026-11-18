@@ -115,3 +115,12 @@ test('preset volume is an edit, sent with setPresetVolume and restored by diff',
   assert.deepEqual(hex(editToCommands(p08(), { kind: 'volume', value: 80 })), hex([setPresetVolume(80)]));
   assert.deepEqual(diffPresets(louder, p08()), [{ kind: 'volume', value: 65 }]);
 });
+
+test('choosing a captured profile switches amp mode on and selects it in module 9', () => {
+  const profile = modelsFor('clone')[0]!;
+  const edit = { kind: 'model', module: 3, code: profile.code, clone: true } as const;
+  assert.deepEqual(hex(editToCommands(p08(), edit)), hex([setAmpMode(true), selectModel(9, profile.code)]));
+  const after = applyEdit(p08(), edit);
+  assert.equal(after.ampMode, 'clone');
+  assert.equal(block(after, 'amp').model, profile.name);
+});
