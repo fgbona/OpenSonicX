@@ -78,3 +78,9 @@ test('decodeAck reads ok and failure', () => {
   assert.equal(decodeAck(Uint8Array.from([0x14, 0x08, 0x01])), false);
   assert.throws(() => decodeAck(Uint8Array.from([0x12, 0x43, 0])), /acknowledge/);
 });
+
+test('encodeName refuses leading or trailing spaces, which the pedal would not keep', () => {
+  assert.throws(() => encodeName('Lead '), /spaces/);
+  assert.throws(() => encodeName(' Lead'), /spaces/);
+  assert.doesNotThrow(() => encodeName('My Lead'));
+});

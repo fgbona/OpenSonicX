@@ -6,7 +6,7 @@
  * discards unsaved edits. Every flow therefore carries the edits: it returns to the slot that was
  * loaded and sends the diff that brings the edit buffer back to the edited preset.
  */
-import { decodePreset, type Preset } from './dump.ts';
+import { decodePreset, modelOf, type Preset } from './dump.ts';
 import { diffPresets, editToCommands, applyEdit } from './edit.ts';
 import { fromHex, toHex } from './hex.ts';
 import { presetLabel, USER_PRESETS } from './presets.ts';
@@ -87,7 +87,13 @@ async function carryEdits<T>(pedal: Pedal, original: number, edited: Preset | nu
   try {
     result = await fn();
   } catch (error) {
-    await restoreLoaded(pedal, original, edited).catch((e) => console.error('could not return to the original preset', e));
+    try {
+      await restoreLoaded(pedal, original, edited);
+    } catch (restoreError) {
+      console.error('could not return to the original preset', restoreError);
+      const reason = error instanceof Error ? error.message : String(error);
+      throw new Error(`${reason}. The pedal may not be back on ${presetLabel(original)}, and unsaved edits may be lost.`);
+    }
     throw error;
   }
   await restoreLoaded(pedal, original, edited);
@@ -128,19 +134,41 @@ export interface SaveResult {
   readonly targetBackup: BackupFile;
 }
 
+type SaveOptions = FlowOptions & { target: number; name: string; sessionBackup: BackupFile | null };
+
 /**
- * Saves the edited preset to user slot `target` under `name`:
- * session backup (when missing) → target backup → save → verify name and content.
+ * A block whose model the catalog does not know decodes without parameters. Re-creating it by
+ * diff would select the model again, which resets its knobs to the pedal's defaults, and nothing
+ * could notice. Refuse instead of silently changing the sound.
  */
-export async function saveToSlot(
-  pedal: Pedal,
-  options: FlowOptions & { target: number; name: string; edited: Preset | null; sessionBackup: BackupFile | null },
-): Promise<SaveResult> {
-  const { target, name } = options;
-  savePreset(target, name); // validates slot and name before anything is sent
-  const now = options.now ?? (() => new Date());
+function requireKnownModels(preset: Preset): void {
+  const unknown = preset.chain.find((b) => modelOf(preset, b) === undefined);
+  if (unknown) {
+    const code = `0x${unknown.code.toString(16).toUpperCase().padStart(8, '0')}`;
+    throw new Error(`${unknown.label} uses model ${code}, which this editor does not know yet; saving it would reset that block's settings`);
+  }
+}
+
+/**
+ * Saves the pedal's edit buffer to user slot `target` under `name`:
+ * session backup (when missing) → target backup → save → verify name and content.
+ * `edited` is what the screen shows; the save is refused when the pedal no longer matches it
+ * (for example after a knob was turned on the unit), so nothing is saved that the user did not see.
+ */
+export async function saveToSlot(pedal: Pedal, options: SaveOptions & { edited: Preset | null }): Promise<SaveResult> {
+  savePreset(options.target, options.name); // validates slot and name before anything is sent
   const original = await pedal.readCurrentIndex();
-  const edited = options.edited ?? decodePreset(await pedal.readEditBuffer());
+  const onPedal = decodePreset(await pedal.readEditBuffer());
+  if (options.edited && diffPresets(onPedal, options.edited).length > 0) {
+    throw new Error("the pedal's preset differs from the screen (a knob turned on the unit?); click Read, check, then save");
+  }
+  requireKnownModels(onPedal);
+  return saveEdited(pedal, options, original, onPedal);
+}
+
+async function saveEdited(pedal: Pedal, options: SaveOptions, original: number, edited: Preset): Promise<SaveResult> {
+  const { target, name } = options;
+  const now = options.now ?? (() => new Date());
 
   const sessionBackup = options.sessionBackup ?? (await backupAllSlots(pedal, { ...options, edited }));
 
@@ -173,9 +201,14 @@ export async function restoreFromBackup(
   slot: SlotBackup,
   options: FlowOptions & { sessionBackup: BackupFile | null },
 ): Promise<SaveResult> {
+  const name = slot.name || slot.label;
+  savePreset(slot.index, name); // validates before the selection discards anything
   const preset = decodePreset(fromHex(slot.payload));
+  requireKnownModels(preset);
   await pedal.selectPreset(slot.index);
-  return saveToSlot(pedal, { ...options, target: slot.index, name: slot.name || slot.label, edited: preset });
+  const loaded = await pedal.readCurrentIndex();
+  if (loaded !== slot.index) throw new Error(`asked for ${slot.label} but the pedal loaded ${presetLabel(loaded)}; nothing was restored`);
+  return saveEdited(pedal, { ...options, target: slot.index, name }, slot.index, preset);
 }
 
 /** Parses and checks a backup file. Throws a readable error for anything that is not one. */
@@ -187,13 +220,16 @@ export function parseBackupFile(text: string): BackupFile {
     throw new Error('not a Pocket Master backup file (invalid JSON)');
   }
   const file = data as Partial<BackupFile>;
-  if (file?.format !== 'pocket-master-backup' || file.version !== 1 || !Array.isArray(file.slots)) {
+  const validKind = file?.kind === 'session' || file?.kind === 'slot';
+  const validTime = typeof file?.createdAt === 'string' && !Number.isNaN(Date.parse(file.createdAt));
+  if (file?.format !== 'pocket-master-backup' || file.version !== 1 || !Array.isArray(file.slots) || !validKind || !validTime) {
     throw new Error('not a Pocket Master backup file');
   }
   for (const s of file.slots) {
-    const label = typeof s?.index === 'number' && s.index >= 0 && s.index < USER_PRESETS ? presetLabel(s.index) : '?';
+    const label = Number.isInteger(s?.index) && s.index >= 0 && s.index < USER_PRESETS ? presetLabel(s.index) : '?';
     try {
       if (label === '?' || typeof s.name !== 'string' || typeof s.payload !== 'string') throw new Error('bad fields');
+      if (s.name !== '') savePreset(s.index, s.name); // the name must be one the pedal accepts
       decodePreset(fromHex(s.payload));
     } catch {
       throw new Error(`backup file is damaged: slot ${label} cannot be read`);

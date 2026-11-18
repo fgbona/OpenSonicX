@@ -28,6 +28,7 @@ export function encodeName(name: string): number[] {
   if (name.length < 1 || name.length > NAME_LENGTH) throw new Error(`preset names are 1..${NAME_LENGTH} characters`);
   const codes = Array.from(name, (c) => c.charCodeAt(0));
   if (codes.some((c) => c < 0x20 || c > 0x7e)) throw new Error('preset names must be plain ASCII (letters, digits, punctuation)');
+  if (name.trim() !== name) throw new Error('preset names cannot start or end with spaces');
   return [...codes, ...new Array<number>(NAME_LENGTH - codes.length).fill(0)];
 }
 

@@ -110,3 +110,46 @@ test('parseBackupFile accepts a written file and rejects anything else', async (
   const tampered = { ...file, slots: [{ ...file.slots[0]!, payload: '1243' }] };
   assert.throws(() => parseBackupFile(JSON.stringify(tampered)), /slot P01/);
 });
+
+test('an acknowledged save whose name did not change is reported as a failure', async () => {
+  const pedal = new FakePedal({ saveKeepsName: true });
+  await assert.rejects(saveToSlot(pedal, { target: 2, name: 'My Lead', edited: edited(pedal), sessionBackup: null }), /named "MTL-LEAD" instead of "My Lead"/);
+});
+
+test('an acknowledged save whose content differs is reported as a failure', async () => {
+  const pedal = new FakePedal({ saveCorrupts: true });
+  await assert.rejects(saveToSlot(pedal, { target: 2, name: 'My Lead', edited: edited(pedal), sessionBackup: null }), /differs from what was edited/);
+});
+
+test('a save refuses when the pedal no longer matches the screen, before selecting anything', async () => {
+  const pedal = new FakePedal();
+  const screen = applyEdit(decodePreset(pedal.editBuffer), { kind: 'param', module: 3, alg: 4, value: 99 }); // never sent
+  await assert.rejects(saveToSlot(pedal, { target: 2, name: 'x', edited: screen, sessionBackup: null }), /differs from the screen/);
+  assert.deepEqual(pedal.received, []);
+});
+
+test('a preset with a model the catalog does not know is refused before anything is sent', async () => {
+  const pedal = new FakePedal();
+  const unknown = 0x03ffffff;
+  await pedal.sendEdits(editToCommands(decodePreset(pedal.editBuffer), { kind: 'model', module: 2, code: unknown }));
+  const screen = decodePreset(pedal.editBuffer);
+  pedal.received.length = 0;
+  await assert.rejects(saveToSlot(pedal, { target: 2, name: 'x', edited: screen, sessionBackup: null }), /DRV uses model 0x03FFFFFF/);
+  assert.deepEqual(pedal.received, []);
+});
+
+test('restore refuses a damaged slot backup before loading anything', async () => {
+  const pedal = new FakePedal();
+  const file = await backupAllSlots(pedal, { edited: null });
+  pedal.received.length = 0;
+  await assert.rejects(restoreFromBackup(pedal, { ...file.slots[2]!, name: 'Way too long' }, { sessionBackup: file }), /1\.\.10/);
+  assert.deepEqual(pedal.received, []);
+});
+
+test('parseBackupFile checks names, kind and creation time', async () => {
+  const pedal = new FakePedal();
+  const file = await backupAllSlots(pedal, { edited: null });
+  assert.throws(() => parseBackupFile(JSON.stringify({ ...file, kind: 'weird' })), /not a Pocket Master backup/);
+  assert.throws(() => parseBackupFile(JSON.stringify({ ...file, createdAt: 'yesterday' })), /not a Pocket Master backup/);
+  assert.throws(() => parseBackupFile(JSON.stringify({ ...file, slots: [{ ...file.slots[0]!, name: 'Way too long' }] })), /slot P01/);
+});

@@ -37,6 +37,10 @@ export interface FakeOptions {
   nack?: boolean;
   /** The save is never acknowledged. */
   noAck?: boolean;
+  /** The save is acknowledged but writes a different volume into the slot. */
+  saveCorrupts?: boolean;
+  /** The save is acknowledged but the slot keeps its old name. */
+  saveKeepsName?: boolean;
 }
 
 /**
@@ -83,7 +87,8 @@ export class FakePedal implements Pedal {
     if (this.options.noAck) throw new Error('no acknowledge from the pedal');
     if (this.options.nack) return false;
     this.slots[index] = this.editBuffer.slice();
-    this.names[index] = name;
+    if (this.options.saveCorrupts) new DataView(this.slots[index]!.buffer).setUint32(recordAt(this.slots[index]!, TAG.VOLUME), 3, true);
+    if (!this.options.saveKeepsName) this.names[index] = name;
     this.current = index;
     return true;
   }
