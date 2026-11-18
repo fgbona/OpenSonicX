@@ -6,6 +6,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-18
+
+Export and import presets as files, validated on a Pocket Master with
+firmware V1.3.3. Container image: `ghcr.io/fgbona/pocket-master-editor:v0.5.0`
+(amd64 and arm64).
+
 ### Added
 
 - Export and import presets. Export re-reads the edit buffer from the pedal
@@ -216,7 +222,8 @@ Container image: `ghcr.io/fgbona/pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/pocket-master-editor/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/fgbona/pocket-master-editor/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.1.1...v0.2.0
