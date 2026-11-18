@@ -6,6 +6,21 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Revert reloads the preset from its slot, like switching presets on the
+  unit, so the edit buffer goes back to exactly what is saved, even if it
+  was edited before the editor connected. The editor also reads and follows
+  the pedal's own "modified" flag (12 45), so Revert is available whenever
+  the pedal says the edit buffer differs from the slot.
+
+### Fixed
+
+- The toolbar's frosted-glass blur never applied in Chrome: the CSS
+  optimiser kept only `-webkit-backdrop-filter` of the pair. The prefixed
+  declaration now comes first, so the standard one survives and text
+  scrolling under the toolbar is blurred instead of showing through.
+
 ### Added
 
 - Captured profiles (clone mode) on AMP. The AMP model list groups amp
