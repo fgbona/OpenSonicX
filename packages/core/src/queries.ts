@@ -6,6 +6,8 @@ export const MessageType = { SET: 0x11, GET: 0x12, ACK: 0x14 } as const;
 /** Second payload byte of a GET query and of its reply. */
 export const Query = {
   GLOBALS: 0x10,
+  USER_IR_NAMES: 0x20,
+  CAPTURED_PROFILE_NAMES: 0x24,
   PRESET_NAMES: 0x40,
   EDIT_BUFFER: 0x41,
   CURRENT_PRESET: 0x43,

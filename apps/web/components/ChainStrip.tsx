@@ -3,15 +3,17 @@
 import { useState } from 'react';
 import { chainUnits, moveInChain, type Block, type Edit } from '@pocket-master/core';
 import { useI18n } from './I18n';
+import { modelLabel } from '@/lib/modelLabel';
 
 interface Props {
   chain: readonly Block[];
   editable: boolean;
   onEdit: (edit: Edit) => void;
+  irNames: readonly (string | null)[] | null;
 }
 
 /** Signal chain. In live edit, units can be dragged or moved with the arrow buttons; DRV-AMP-IR-EQ move as one. */
-export function ChainStrip({ chain, editable, onEdit }: Props) {
+export function ChainStrip({ chain, editable, onEdit, irNames }: Props) {
   const { t } = useI18n();
   const [dragging, setDragging] = useState<number | null>(null);
   const [over, setOver] = useState<number | null>(null);
@@ -57,9 +59,9 @@ export function ChainStrip({ chain, editable, onEdit }: Props) {
             {unit.map((m) => {
               const b = byModule.get(m) as Block;
               return (
-                <span key={m} className={`chain-node block-${b.key}${b.on ? '' : ' block-off'}`} title={`${b.label}: ${b.model}`}>
+                <span key={m} className={`chain-node block-${b.key}${b.on ? '' : ' block-off'}`} title={`${b.label}: ${modelLabel(b.key, b.code, b.model, irNames)}`}>
                   <span className="chain-label">{b.label}</span>
-                  <span className="chain-model">{b.model}</span>
+                  <span className="chain-model">{modelLabel(b.key, b.code, b.model, irNames)}</span>
                 </span>
               );
             })}

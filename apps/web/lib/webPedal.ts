@@ -1,4 +1,4 @@
-import { decodeCurrentPreset, decodePresetNames, Query, savePreset, selectPreset, type Pedal } from '@pocket-master/core';
+import { decodeCurrentPreset, decodePresetNames, decodeSlotNames, Query, savePreset, selectPreset, type Pedal, type SlotName } from '@pocket-master/core';
 import type { PocketMasterLink } from './midi';
 
 /** After its acknowledge the pedal still needs a moment before it reports the new preset (V1.3.3: ~250 ms works). */
@@ -6,6 +6,11 @@ const SELECT_SETTLE_MS = 250;
 const EDIT_SETTLE_MS = 100;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Names of the five user IR slots (read only). */
+export async function readUserIrNames(link: PocketMasterLink): Promise<SlotName[]> {
+  return decodeSlotNames((await link.request(Query.USER_IR_NAMES)).payload);
+}
 
 /** The core Pedal contract over a Web MIDI link. */
 export function webPedal(link: PocketMasterLink): Pedal {
