@@ -15,3 +15,7 @@ test('decodeCurrentPreset reads the index from the reply', () => {
   assert.equal(decodeCurrentPreset(Uint8Array.from([0x12, 0x43, 0x07, 0x00])), 7);
   assert.throws(() => decodeCurrentPreset(Uint8Array.from([0x12, 0x41, 0x07])), /current-preset/);
 });
+
+test('decodeCurrentPreset rejects an index outside 0..99 with a readable error', () => {
+  assert.throws(() => decodeCurrentPreset(Uint8Array.from([0x12, 0x43, 100, 0])), /unexpected preset index 100/);
+});

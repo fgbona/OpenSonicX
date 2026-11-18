@@ -18,5 +18,7 @@ export function decodeCurrentPreset(payload: Uint8Array): number {
   if (payload[0] !== MessageType.GET || payload[1] !== Query.CURRENT_PRESET || payload.length < 3) {
     throw new Error('not a current-preset reply (expected payload 12 43 …)');
   }
-  return payload[2] as number;
+  const index = payload[2] as number;
+  if (index >= PRESET_COUNT) throw new Error(`the pedal reported an unexpected preset index ${index} (expected 0..${PRESET_COUNT - 1})`);
+  return index;
 }

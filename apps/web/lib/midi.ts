@@ -17,6 +17,13 @@ let nextLogId = 0; // module-wide so log keys stay unique across reconnects
 
 export class MidiUnavailableError extends Error {}
 
+/** Thrown by a request that was pending, or started, after the link was closed. */
+export class LinkClosedError extends Error {
+  constructor() {
+    super('The connection to the pedal was closed.');
+  }
+}
+
 /** Asks the browser for MIDI with SysEx. Throws MidiUnavailableError with a user-facing message. */
 export async function openMidi(): Promise<MIDIAccess> {
   if (typeof navigator === 'undefined' || !('requestMIDIAccess' in navigator)) {
@@ -46,6 +53,9 @@ export class PocketMasterLink {
   readonly #onLog: (entry: LogEntry) => void;
   readonly #assembler = new Reassembler();
   readonly #listeners = new Set<(frame: Frame) => void>();
+  /** Resolvers of pending waits, so close() can end them at once. */
+  readonly #pending = new Set<() => void>();
+  #closed = false;
   constructor(input: MIDIInput, output: MIDIOutput, onLog: (entry: LogEntry) => void) {
     this.#input = input;
     this.#output = output;
@@ -53,23 +63,29 @@ export class PocketMasterLink {
     this.#input.onmidimessage = (event) => this.#receive(event);
   }
 
+  /** Stops listening and cancels pending requests; nothing is sent after this. */
   close(): void {
+    this.#closed = true;
     this.#input.onmidimessage = null;
+    this.#pending.forEach((cancel) => cancel());
     this.#listeners.clear();
   }
 
   /** Sends a query and resolves with the (reassembled) reply. Retries, then rejects with a readable error. */
   async request(kind: QueryKind): Promise<Frame> {
     for (let attempt = 0; attempt <= REQUEST_RETRIES; attempt++) {
+      if (this.#closed) throw new LinkClosedError();
       const reply = this.#waitFor(kind);
       this.#send(queryFrame(kind));
       const frame = await reply;
+      if (this.#closed) throw new LinkClosedError();
       if (frame) return frame;
     }
     throw new Error(`The pedal did not answer query 12 ${kind.toString(16).toUpperCase()} after ${REQUEST_RETRIES + 1} tries.`);
   }
 
   #send(bytes: Uint8Array): void {
+    if (this.#closed) throw new LinkClosedError();
     if (!isReadOnly(bytes)) throw new Error('Blocked: this release only sends read queries to the pedal.');
     this.#log('TX', bytes);
     this.#output.send(bytes);
@@ -81,13 +97,16 @@ export class PocketMasterLink {
         if (!isReply(frame, kind)) return;
         done(frame);
       };
-      const timer = setTimeout(() => done(null), REQUEST_TIMEOUT_MS);
+      const cancel = () => done(null);
+      const timer = setTimeout(cancel, REQUEST_TIMEOUT_MS);
       const done = (frame: Frame | null) => {
         clearTimeout(timer);
         this.#listeners.delete(listener);
+        this.#pending.delete(cancel);
         resolve(frame);
       };
       this.#listeners.add(listener);
+      this.#pending.add(cancel);
     });
   }
 

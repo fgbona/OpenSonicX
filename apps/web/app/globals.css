@@ -90,7 +90,7 @@ button, select { font: inherit; color: inherit; }
 .status { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8125rem; color: var(--label-2); }
 .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gray); }
 .status-connected .status-dot { background: var(--green); }
-.status-reading .status-dot, .status-requesting .status-dot { background: var(--orange); }
+.status-reading .status-dot, .status-requesting .status-dot, .status-connecting .status-dot { background: var(--orange); }
 
 .btn {
   padding: 7px 16px; border: none; border-radius: 980px;

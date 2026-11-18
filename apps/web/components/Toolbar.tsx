@@ -20,6 +20,7 @@ const STATUS_TEXT: Record<Status, string> = {
   idle: 'MIDI off',
   requesting: 'Asking permission…',
   ready: 'Not connected',
+  connecting: 'Connecting…',
   connected: 'Connected',
   reading: 'Reading…',
 };
@@ -47,8 +48,8 @@ export function Toolbar(p: Props) {
         <span>Pocket Master Editor</span>
       </div>
       <div className="ports">
-        <PortSelect label="Input" ports={p.inputs} value={p.inputId} onChange={p.onSelectInput} disabled={linked || p.status === 'idle'} />
-        <PortSelect label="Output" ports={p.outputs} value={p.outputId} onChange={p.onSelectOutput} disabled={linked || p.status === 'idle'} />
+        <PortSelect label="Input" ports={p.inputs} value={p.inputId} onChange={p.onSelectInput} disabled={linked || p.status === 'idle' || p.status === 'connecting'} />
+        <PortSelect label="Output" ports={p.outputs} value={p.outputId} onChange={p.onSelectOutput} disabled={linked || p.status === 'idle' || p.status === 'connecting'} />
       </div>
       <div className="actions">
         <span className={`status status-${p.status}`} role="status">
@@ -63,7 +64,7 @@ export function Toolbar(p: Props) {
             <button className="btn" onClick={p.onDisconnect}>Disconnect</button>
           </>
         ) : (
-          <button className="btn btn-primary" onClick={p.onConnect} disabled={!p.inputId || !p.outputId}>Connect</button>
+          <button className="btn btn-primary" onClick={p.onConnect} disabled={!p.inputId || !p.outputId || p.status === 'connecting'}>Connect</button>
         )}
       </div>
     </header>

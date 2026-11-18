@@ -2,10 +2,15 @@
   "name": "pocket-master-editor",
   "private": true,
   "type": "module",
-  "workspaces": ["packages/*", "apps/*"],
-  "engines": { "node": ">=22.18" },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
   "scripts": {
-    "test": "npm test -w @pocket-master/core",
+    "test": "npm test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "dev": "npm run dev -w @pocket-master/web",
     "build": "npm run build -w @pocket-master/web"

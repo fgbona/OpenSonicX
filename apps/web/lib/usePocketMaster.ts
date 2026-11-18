@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { decodeCurrentPreset, decodePreset, Query, type Preset } from '@pocket-master/core';
-import { openMidi, pickPocketMaster, PocketMasterLink, type LogEntry } from './midi';
+import { LinkClosedError, openMidi, pickPocketMaster, PocketMasterLink, type LogEntry } from './midi';
 
 export const LOG_LIMIT = 2000;
 
-export type Status = 'idle' | 'requesting' | 'ready' | 'connected' | 'reading';
+export type Status = 'idle' | 'requesting' | 'ready' | 'connecting' | 'connected' | 'reading';
 
 export interface PortOption {
   readonly id: string;
@@ -36,6 +36,7 @@ export function usePocketMaster() {
   });
   const access = useRef<MIDIAccess | null>(null);
   const link = useRef<PocketMasterLink | null>(null);
+  const connecting = useRef(false);
   const patch = useCallback((p: Partial<PocketMasterState>) => setState((s) => ({ ...s, ...p })), []);
 
   const appendLog = useCallback(
@@ -52,8 +53,9 @@ export function usePocketMaster() {
       ...s,
       inputs: toOptions(inputs),
       outputs: toOptions(outputs),
-      inputId: inputs.some((p) => p.id === s.inputId) ? s.inputId : (pickPocketMaster(inputs)?.id ?? inputs[0]?.id ?? ''),
-      outputId: outputs.some((p) => p.id === s.outputId) ? s.outputId : (pickPocketMaster(outputs)?.id ?? outputs[0]?.id ?? ''),
+      // Never preselect another device: Connect would send Pocket Master SysEx to it.
+      inputId: inputs.some((p) => p.id === s.inputId) ? s.inputId : (pickPocketMaster(inputs)?.id ?? ''),
+      outputId: outputs.some((p) => p.id === s.outputId) ? s.outputId : (pickPocketMaster(outputs)?.id ?? ''),
     }));
   }, []);
 
@@ -77,8 +79,10 @@ export function usePocketMaster() {
     try {
       const index = decodeCurrentPreset((await current.request(Query.CURRENT_PRESET)).payload);
       const preset = decodePreset((await current.request(Query.EDIT_BUFFER)).payload);
-      patch({ status: 'connected', preset, presetIndex: index });
+      if (link.current === current) patch({ status: 'connected', preset, presetIndex: index });
     } catch (e) {
+      // A read from a link that was closed or replaced must not touch the current state.
+      if (e instanceof LinkClosedError || link.current !== current) return;
       console.error('read failed', e);
       patch({ status: 'connected', error: message(e) });
     }
@@ -92,7 +96,11 @@ export function usePocketMaster() {
       patch({ error: 'Choose an input and an output port first.' });
       return;
     }
+    if (connecting.current) return; // a double click must not open a second link on the same ports
+    connecting.current = true;
     link.current?.close();
+    link.current = null;
+    patch({ status: 'connecting', error: null });
     try {
       await Promise.all([input.open(), output.open()]);
       link.current = new PocketMasterLink(input, output, appendLog);
@@ -102,6 +110,8 @@ export function usePocketMaster() {
       console.error('connect failed', e);
       link.current = null;
       patch({ status: 'ready', error: `Could not open the ports: ${message(e)}` });
+    } finally {
+      connecting.current = false;
     }
   }, [state.inputId, state.outputId, patch, appendLog, read]);
 

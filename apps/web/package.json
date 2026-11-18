@@ -7,7 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --test-timeout=5000 'test/**/*.test.ts'"
   },
   "dependencies": {
     "@pocket-master/core": "*",
