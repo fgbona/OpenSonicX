@@ -17,6 +17,8 @@ const AMP_MODULE = 3;
 
 export interface Param {
   readonly name: string;
+  /** Parameter slot inside the module (0..7); what a set-parameter command addresses. */
+  readonly alg: number;
   readonly kind: 'number' | 'switch' | 'select';
   readonly value: number;
   readonly display: string;
@@ -84,12 +86,20 @@ function decodeParams(model: ModelSpec | undefined, view: DataView, module: numb
   if (!model) return [];
   return model.params
     .filter((p) => view.byteLength >= PARAM_STRIDE * module + 4 * p.alg + 4)
-    .map((p) => {
-      const value = view.getFloat32(PARAM_STRIDE * module + 4 * p.alg, true);
-      const kind = p.type ?? 'number';
-      const range = kind === 'number' ? { min: p.min ?? 0, max: p.max ?? 100 } : {};
-      return { name: p.name, kind, value: round(value, decimals(p)), display: formatValue(p, value), ...range };
-    });
+    .map((p) => toParam(p, view.getFloat32(PARAM_STRIDE * module + 4 * p.alg, true)));
+}
+
+/** A decoded parameter for a catalog spec and a raw value. */
+export function toParam(p: ParamSpec, value: number): Param {
+  const kind = p.type ?? 'number';
+  const range = kind === 'number' ? { min: p.min ?? 0, max: p.max ?? 100 } : {};
+  return { name: p.name, alg: p.alg, kind, value: round(value, decimals(p)), display: formatValue(p, value), ...range };
+}
+
+/** Catalog model of a block in a preset; AMP in clone mode resolves to a captured profile. */
+export function modelOf(preset: Preset, block: Block): ModelSpec | undefined {
+  if (block.module === AMP_MODULE && preset.ampMode === 'clone') return findCloneModel(block.code);
+  return findModel(block.key, block.code);
 }
 
 export function formatValue(p: ParamSpec, value: number): string {
