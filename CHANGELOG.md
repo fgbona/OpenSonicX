@@ -6,6 +6,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-18
+
+Live edit, validated on a Pocket Master with firmware V1.3.3: parameters,
+block on/off, model changes, chain order, Revert (including knob turns made
+on the unit) and preset changes from the footswitch.
+Container image: `ghcr.io/fgbona/pocket-master-editor:v0.2.0` (amd64 and arm64).
+
 ### Added
 
 - Live edit (phase 2). A Live edit switch, off by default, turns the
@@ -32,6 +39,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- GitHub Actions bumped: upload-artifact v7, download-artifact v8,
+  login-action v4, build-push-action v7, setup-qemu-action v4 (the
+  Dependabot updates, applied together and exercised by this release).
 - After a model or chain change the editor re-reads the edit buffer, so
   the screen shows the defaults the pedal applied. A dump requested before
   the latest edit is discarded and read again, so sliders never jump back.
@@ -114,6 +124,7 @@ Container image: `ghcr.io/fgbona/pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/pocket-master-editor/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/fgbona/pocket-master-editor/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/fgbona/pocket-master-editor/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/fgbona/pocket-master-editor/releases/tag/v0.1.0
