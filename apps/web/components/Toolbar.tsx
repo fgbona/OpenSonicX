@@ -18,6 +18,8 @@ interface Props {
   modified: boolean;
   onLiveEdit: (on: boolean) => void;
   onRevert: () => void;
+  onSave: () => void;
+  busy: boolean;
 }
 
 const STATUS_TEXT: Record<Status, string> = {
@@ -79,8 +81,9 @@ export function Toolbar(p: Props) {
             {p.liveEdit && (
               <button className="btn" onClick={p.onRevert} disabled={!p.modified}>Revert</button>
             )}
-            <button className="btn btn-primary" onClick={p.onRead} disabled={p.status === 'reading'}>Read</button>
-            <button className="btn" onClick={p.onDisconnect}>Disconnect</button>
+            <button className="btn" onClick={p.onSave} disabled={p.busy}>Save…</button>
+            <button className="btn btn-primary" onClick={p.onRead} disabled={p.status === 'reading' || p.busy}>Read</button>
+            <button className="btn" onClick={p.onDisconnect} disabled={p.busy}>Disconnect</button>
           </>
         ) : (
           <button className="btn btn-primary" onClick={p.onConnect} disabled={!p.inputId || !p.outputId || p.status === 'connecting'}>Connect</button>

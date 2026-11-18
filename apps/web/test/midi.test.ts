@@ -173,3 +173,53 @@ test('a reply that answers a request is not reported as a notification', async (
   assert.deepEqual(seen, []);
   link.close();
 });
+
+// --- preset operations ------------------------------------------------------
+import { selectPreset, savePreset } from '@pocket-master/core';
+
+test('presetOperation refuses anything but a selection or a user-slot save', async () => {
+  const f = fakes();
+  await assert.rejects(f.link.presetOperation(setParam(3, 4, 50)), /Blocked/);
+  await assert.rejects(f.link.presetOperation(buildFrame([0x12, 0x41])), /Blocked/);
+  assert.equal(f.sent.length, 0);
+});
+
+test('a selection is sent once and does not wait for an acknowledge', async () => {
+  const f = fakes();
+  await f.link.presetOperation(selectPreset(2));
+  assert.deepEqual(f.sent, [toHex(selectPreset(2))]);
+});
+
+test('a save resolves with the acknowledge and is never re-sent', async () => {
+  const f = fakes();
+  const ok = f.link.presetOperation(savePreset(2, 'Lead'));
+  await flush();
+  f.receive(buildFrame([0x14, 0x08, 0x00]));
+  assert.equal(await ok, true);
+  const failed = f.link.presetOperation(savePreset(2, 'Lead'));
+  await flush();
+  f.receive(buildFrame([0x14, 0x08, 0x01]));
+  assert.equal(await failed, false);
+  assert.equal(f.sent.length, 2);
+});
+
+test('a save without acknowledge fails after 3 s and is not retried', async () => {
+  const f = fakes();
+  const outcome = assert.rejects(f.link.presetOperation(savePreset(2, 'Lead')), /no acknowledge/);
+  await flush();
+  mock.timers.tick(3000);
+  await outcome;
+  assert.equal(f.sent.length, 1);
+});
+
+test('a preset operation waits until queued edits are written', async () => {
+  const f = fakes();
+  f.link.edit(setParam(3, 4, 10));
+  f.link.edit(setParam(3, 3, 10));
+  const op = f.link.presetOperation(selectPreset(1));
+  await flush();
+  assert.equal(f.sent.length, 1, 'select waits behind the queued edit');
+  mock.timers.tick(20);
+  await op;
+  assert.deepEqual(f.sent.slice(1), [toHex(setParam(3, 3, 10)), toHex(selectPreset(1))]);
+});

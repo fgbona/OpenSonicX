@@ -1,4 +1,4 @@
-import { describeMessage, editKey, isAllowedEdit, isReadOnly, isReply, parseFrame, queryFrame, Reassembler, toHex, type Frame, type QueryKind } from '@pocket-master/core';
+import { decodeAck, describeMessage, editKey, isAllowedEdit, isPresetOperation, isReadOnly, PresetCommand, isReply, parseFrame, queryFrame, Reassembler, toHex, type Frame, type QueryKind } from '@pocket-master/core';
 
 export interface LogEntry {
   readonly id: number;
@@ -14,6 +14,9 @@ const REQUEST_TIMEOUT_MS = 1500;
 const REQUEST_RETRIES = 2; // USB MIDI occasionally drops a packet of a multi-packet reply
 /** Spacing between edit messages so a slider drag cannot flood the pedal. */
 export const EDIT_GAP_MS = 20;
+/** The pedal acknowledges a save within this time or the save counts as failed. */
+const ACK_TIMEOUT_MS = 3000;
+const ACK = { TYPE: 0x14, COMMAND: 0x08 } as const;
 
 let nextLogId = 0; // module-wide so log keys stay unique across reconnects
 
@@ -49,9 +52,9 @@ export function pickPocketMaster<T extends MIDIPort>(ports: readonly T[]): T | u
 }
 
 /**
- * Link to a Pocket Master. Logs every SysEx in both directions. Two send paths, both guarded:
+ * Link to a Pocket Master. Logs every SysEx in both directions. Three send paths, each guarded:
  * request() sends GET queries only; edit() sends live-edit commands only (chain, model, parameter,
- * on/off), never save, preset select or globals.
+ * on/off, preset volume); presetOperation() sends only preset selections and user-slot saves.
  */
 export class PocketMasterLink {
   readonly #input: MIDIInput;
@@ -115,6 +118,45 @@ export class PocketMasterLink {
     // something queued after it (a parameter must follow the model change it belongs to).
     this.#queue = [...this.#queue.filter((q) => q.key !== key), { key, bytes }];
     if (!this.#pumpTimer) this.#pump();
+  }
+
+  /**
+   * Selects a preset or saves to a user slot, after queued edits are written. A save resolves with
+   * the pedal's acknowledge (true ok, false failed) and is never re-sent; no acknowledge rejects.
+   */
+  async presetOperation(bytes: Uint8Array): Promise<boolean> {
+    if (this.#closed) throw new LinkClosedError();
+    if (!isPresetOperation(bytes)) throw new Error('Blocked: only preset selections and user-slot saves can be sent here.');
+    await this.drained();
+    if (this.#closed) throw new LinkClosedError();
+    const isSave = parseFrame(bytes).payload[1] === PresetCommand.SAVE;
+    const ack = isSave ? this.#waitForAck() : null;
+    this.#transmit(bytes);
+    if (!ack) return true;
+    const frame = await ack;
+    if (this.#closed) throw new LinkClosedError();
+    if (!frame) throw new Error('The pedal sent no acknowledge for the save; treat it as not saved.');
+    return decodeAck(frame.payload);
+  }
+
+  #waitForAck(): Promise<Frame | null> {
+    return new Promise((resolve) => {
+      const listener = (frame: Frame) => {
+        if (frame.payload[0] !== ACK.TYPE || frame.payload[1] !== ACK.COMMAND) return false;
+        done(frame);
+        return true;
+      };
+      const cancel = () => done(null);
+      const timer = setTimeout(cancel, ACK_TIMEOUT_MS);
+      const done = (frame: Frame | null) => {
+        clearTimeout(timer);
+        this.#listeners.delete(listener);
+        this.#pending.delete(cancel);
+        resolve(frame);
+      };
+      this.#listeners.add(listener);
+      this.#pending.add(cancel);
+    });
   }
 
   /** Resolves once every queued edit has been written to the port. */

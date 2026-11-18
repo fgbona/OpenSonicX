@@ -1,6 +1,9 @@
 'use client';
 
+import { useState } from 'react';
+import { BackupsPanel } from '@/components/BackupsPanel';
 import { ChainView } from '@/components/ChainView';
+import { SaveDialog } from '@/components/SaveDialog';
 import { SysexLog } from '@/components/SysexLog';
 import { Toolbar } from '@/components/Toolbar';
 import { usePocketMaster } from '@/lib/usePocketMaster';
@@ -13,6 +16,8 @@ const STEPS = [
 
 export default function EditorPage() {
   const pm = usePocketMaster();
+  const [saveOpen, setSaveOpen] = useState(false);
+  const connected = pm.status === 'connected' || pm.status === 'reading';
   return (
     <>
       <Toolbar
@@ -31,6 +36,12 @@ export default function EditorPage() {
         modified={pm.modified}
         onLiveEdit={pm.setLiveEdit}
         onRevert={pm.revert}
+        onSave={() => {
+          pm.clearError();
+          setSaveOpen(true);
+          void pm.loadNames();
+        }}
+        busy={pm.busy !== null}
       />
       <main className="main">
         {pm.error && <p className="alert" role="alert">{pm.error}</p>}
@@ -41,7 +52,7 @@ export default function EditorPage() {
           </p>
         )}
         {pm.preset ? (
-          <ChainView preset={pm.preset} presetIndex={pm.presetIndex} editable={pm.liveEdit} modified={pm.modified} onEdit={pm.edit} />
+          <ChainView preset={pm.preset} presetIndex={pm.presetIndex} editable={pm.liveEdit && pm.busy === null} modified={pm.modified} onEdit={pm.edit} />
         ) : (
           <section className="empty">
             <h1>Read your Pocket Master</h1>
@@ -50,7 +61,27 @@ export default function EditorPage() {
             <p className="muted small">Works in Chrome, Edge and Opera on desktop.</p>
           </section>
         )}
+        <BackupsPanel
+          backups={pm.backups}
+          connected={connected}
+          busy={pm.busy}
+          error={pm.error}
+          onDownload={pm.downloadBackup}
+          onImport={pm.importBackup}
+          onRestore={pm.restore}
+          onError={pm.showError}
+        />
         <SysexLog log={pm.log} onClear={pm.clearLog} />
+        <SaveDialog
+          open={saveOpen}
+          presetIndex={pm.presetIndex}
+          names={pm.names}
+          hasSessionBackup={pm.sessionBackup !== null}
+          busy={pm.busy}
+          error={pm.error}
+          onSave={pm.save}
+          onClose={() => setSaveOpen(false)}
+        />
       </main>
     </>
   );
