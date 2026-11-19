@@ -1,26 +1,57 @@
 {
-  "name": "@pocket-master/mcp",
+  "name": "sonicake-pocket-master-mcp",
   "version": "0.10.0",
-  "private": true,
-  "description": "MCP server for the Sonicake Pocket Master: read, edit and save presets from an AI assistant over USB MIDI.",
-  "type": "module",
-  "license": "MIT",
-  "bin": {
-    "pocket-master-mcp": "./src/server.ts"
+  "description": "Unofficial MCP server for the Sonicake Pocket Master: let an AI assistant build tones from a record, edit and save presets over USB MIDI.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "sonicake",
+    "pocket-master",
+    "guitar",
+    "midi",
+    "sysex",
+    "claude"
+  ],
+  "homepage": "https://github.com/fgbona/pocket-master-editor#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fgbona/pocket-master-editor.git",
+    "directory": "apps/mcp"
   },
+  "bugs": "https://github.com/fgbona/pocket-master-editor/issues",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "os": [
+    "darwin",
+    "linux"
+  ],
+  "bin": {
+    "sonicake-pocket-master-mcp": "dist/server.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "start": "node src/server.ts",
+    "build": "esbuild src/server.ts --bundle --platform=node --format=esm --target=node22 --outfile=dist/server.js --external:@julusian/midi --external:@modelcontextprotocol/sdk --external:zod",
+    "prepack": "npm run build",
     "test": "node --test --test-timeout=5000 'test/**/*.test.ts'",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "@julusian/midi": "3.8.1",
     "@modelcontextprotocol/sdk": "1.32.2",
-    "@pocket-master/core": "*",
     "zod": "4.6.7"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "@pocket-master/core": "*",
+    "esbuild": "0.28.2"
   }
 }

@@ -74,11 +74,13 @@ pedal must be plugged into the machine running the assistant. macOS and
 Linux (x64, arm64) are supported.
 
 ```sh
-npm install
-claude mcp add pocket-master -- node "$PWD/apps/mcp/src/server.ts"
+claude mcp add pocket-master -- npx -y sonicake-pocket-master-mcp
 ```
 
-For other MCP clients, run `node apps/mcp/src/server.ts` as a stdio server.
+The package is [`sonicake-pocket-master-mcp`](https://www.npmjs.com/package/sonicake-pocket-master-mcp)
+(unofficial). For other MCP clients, run `npx -y sonicake-pocket-master-mcp` as
+a stdio server. From a clone of this repository, use
+`node apps/mcp/src/server.ts` instead.
 Close the web editor's connection first if both would talk to the pedal at
 the same time.
 

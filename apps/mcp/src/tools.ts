@@ -1,8 +1,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import packageJson from '../package.json' with { type: 'json' };
 import type { Session } from './session.ts';
 
-const VERSION = '0.10.0';
+const { version: VERSION } = packageJson;
 
 const block = z.string().describe('Block label: NR, FX1, DRV, AMP, IR, EQ, FX2, DLY or RVB');
 const slot = z.string().describe('Preset label, e.g. "P09" (user presets are P01..P50, factory presets F01..F50)');

@@ -1,10 +1,11 @@
-import { Input, Output } from '@julusian/midi';
 import { linkPedal, MessageType, PocketMasterLink, Query, readProfileNames, readUserIrNames, type LogEntry, type SlotName } from '@pocket-master/core';
 import type { Connection, PedalIO } from './session.ts';
 
 const PORT_NAME = /pocket\s*master/i;
 
-function portIndex(port: Input | Output, kind: string): number {
+type Port = { getPortCount(): number; getPortName(index: number): string };
+
+function portIndex(port: Port, kind: string): number {
   const names = Array.from({ length: port.getPortCount() }, (_, i) => port.getPortName(i));
   const index = names.findIndex((name) => PORT_NAME.test(name));
   if (index < 0) {
@@ -15,8 +16,12 @@ function portIndex(port: Input | Output, kind: string): number {
 
 const loadedNames = (slots: SlotName[]) => slots.map((s) => (s.empty || !s.name ? null : s.name));
 
-/** Opens the pedal's USB MIDI ports and the guarded core link over them. */
-export function connectPocketMaster(onLog: (entry: LogEntry) => void = () => undefined): Connection {
+/**
+ * Opens the pedal's USB MIDI ports and the guarded core link over them. The native MIDI library
+ * loads on the first call, so the server starts (and lists its tools) even where MIDI is missing.
+ */
+export async function connectPocketMaster(onLog: (entry: LogEntry) => void = () => undefined): Promise<Connection> {
+  const { Input, Output } = await import('@julusian/midi');
   const input = new Input();
   const output = new Output();
   let receiver: ((bytes: Uint8Array) => void) | null = null;
