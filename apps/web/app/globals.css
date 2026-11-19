@@ -308,6 +308,52 @@ button, select { font: inherit; color: inherit; }
 .file-button.is-disabled { opacity: 0.4; pointer-events: none; }
 .backup-actions { padding: 0 16px 8px; }
 
+/* Preset meta: BPM with tap tempo */
+.bpm { display: inline-flex; align-items: center; gap: 6px; }
+.bpm-input { width: 3.4em; padding: 2px 6px; border: 0; border-radius: var(--radius-small); background: var(--fill); color: var(--label); font: inherit; text-align: center; }
+
+/* Footswitch on a block */
+.block-head-end { display: inline-flex; align-items: center; gap: 6px; }
+.fs-select { padding: 1px 4px; border: 0; border-radius: 980px; background: var(--fill); color: var(--label-2); font: inherit; font-size: 0.6875rem; font-weight: 600; }
+.pill-fs { background: color-mix(in srgb, var(--blue) 16%, transparent); color: var(--blue); }
+
+/* Preset list */
+.preset-filter { padding: 4px 10px; border: 0; border-radius: var(--radius-small); background: var(--fill); color: var(--label); font: inherit; font-size: 0.8125rem; }
+.preset-list { list-style: none; margin: 0; padding: 8px; display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 4px; max-height: 260px; overflow: auto; }
+.preset-item { width: 100%; text-align: left; padding: 6px 10px; border: 0; border-radius: var(--radius-small); background: transparent; color: var(--label); font: inherit; font-size: 0.875rem; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.preset-item:hover:not(:disabled) { background: var(--fill); }
+.preset-item.is-current { background: color-mix(in srgb, var(--blue) 14%, transparent); }
+.preset-item:disabled { opacity: 0.5; cursor: default; }
+.preset-item-label { font-weight: 600; color: var(--label-2); margin-right: 4px; }
+
+/* Pedal slots */
+.slots-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; padding: 12px 16px 16px; }
+.slots-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.slots-head h3 { font-size: 0.875rem; font-weight: 600; }
+.slots { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 0.875rem; }
+.slot-n { display: inline-block; width: 1.4em; color: var(--label-3); font-weight: 600; }
+
+/* TONE3000 */
+.t3k-mark { font-weight: 800; letter-spacing: 0.06em; }
+.t3k-body { padding: 12px 16px 16px; display: grid; gap: 12px; }
+.t3k-body p { margin: 0; }
+.t3k-search { display: flex; flex-wrap: wrap; gap: 8px; }
+.t3k-search input, .t3k-search select { padding: 6px 10px; border: 0; border-radius: var(--radius-small); background: var(--fill); color: var(--label); font: inherit; font-size: 0.875rem; }
+.t3k-search input { flex: 1 1 220px; }
+.t3k-results { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.t3k-tone { display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: center; padding: 8px; border-radius: var(--radius-small); background: var(--surface-2); }
+.t3k-image { width: 56px; height: 56px; border-radius: var(--radius-small); object-fit: cover; background: var(--fill); }
+.t3k-info { display: grid; gap: 2px; min-width: 0; }
+.t3k-info strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t3k-desc { color: var(--label-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.t3k-login { display: grid; gap: 6px; }
+
+/* Install dialog */
+.check { display: flex; gap: 8px; align-items: flex-start; font-size: 0.875rem; }
+.install-stage { display: flex; align-items: center; gap: 8px; font-size: 0.875rem; }
+.spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--fill-strong); border-top-color: var(--blue); animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* SysEx log */
 .log { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
 .log-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 0.5px solid var(--separator); }
@@ -333,6 +379,7 @@ button, select { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   .sheet[open] { animation: none; }
   .btn, .switch, .switch-knob, .chain-unit, .chain-move, .param-slider::-webkit-slider-thumb { transition: none; }
+  .spinner { animation-duration: 2.4s; }
 }
 @media (prefers-reduced-transparency: reduce) {
   .toolbar { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }

@@ -28,6 +28,21 @@ export function BlockCard({ preset, block, editable, onEdit, irNames, profileNam
     <article className={`block block-${block.key}${block.on ? '' : ' block-off'}`}>
       <header className="block-head">
         <span className="block-label">{block.label}</span>
+        <span className="block-head-end">
+        {editable ? (
+          <select
+            className="fs-select"
+            aria-label={t('block.footswitchAria', { block: block.label })}
+            value={block.footswitch ?? ''}
+            onChange={(e) => onEdit({ kind: 'footswitch', module: block.module, footswitch: e.target.value === '' ? null : (e.target.value as 'fs1' | 'fs2') })}
+          >
+            <option value="">FS —</option>
+            <option value="fs1">FS1</option>
+            <option value="fs2">FS2</option>
+          </select>
+        ) : (
+          block.footswitch && <span className="pill pill-fs">{block.footswitch.toUpperCase()}</span>
+        )}
         {editable ? (
           <button
             type="button"
@@ -41,6 +56,7 @@ export function BlockCard({ preset, block, editable, onEdit, irNames, profileNam
         ) : (
           <span className={`pill ${block.on ? 'pill-on' : 'pill-off'}`}>{block.on ? t('block.on') : t('block.off')}</span>
         )}
+        </span>
       </header>
       {editable && block.key === 'amp' ? (
         <select

@@ -7,3 +7,5 @@ coverage/
 *.tsbuildinfo
 next-env.d.ts
 .DS_Store
+.env*.local
+apps/web/public/convert-worker.js

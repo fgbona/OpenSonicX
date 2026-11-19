@@ -29,6 +29,9 @@ RUN --mount=type=cache,target=/root/.npm npm ci --ignore-scripts
 
 FROM deps AS build
 ENV NEXT_TELEMETRY_DISABLED=1
+# TONE3000 publishable key (safe in client code); empty leaves the TONE3000 panel off.
+ARG NEXT_PUBLIC_TONE3000_CLIENT_ID=
+ENV NEXT_PUBLIC_TONE3000_CLIENT_ID=${NEXT_PUBLIC_TONE3000_CLIENT_ID}
 COPY packages ./packages
 COPY apps ./apps
 COPY tsconfig.base.json ./

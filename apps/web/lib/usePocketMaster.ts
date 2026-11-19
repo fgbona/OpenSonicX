@@ -136,9 +136,10 @@ export function usePocketMaster() {
 
   /** Reads preset number and edit buffer. Resolves with the pedal's preset, or null if stale or failed. */
   /** `freshRestorePoint` makes this read the new restore point (after Revert reloads the slot). */
-  const read = useCallback(async (options: { freshRestorePoint?: boolean } = {}): Promise<Preset | null> => {
+  /** `locked`: the caller holds the exclusive lock (busyRef) and reads as part of its operation. */
+  const read = useCallback(async (options: { freshRestorePoint?: boolean; locked?: boolean } = {}): Promise<Preset | null> => {
     const current = link.current;
-    if (!current || busyRef.current) return null;
+    if (!current || (busyRef.current && !options.locked)) return null;
     patch({ status: 'reading', error: null });
     try {
       await current.drained(); // never read while edits are still on their way
@@ -229,6 +230,20 @@ export function usePocketMaster() {
     await read({ freshRestorePoint: true });
   }, [state.liveEdit, state.presetIndex, read, patch]);
 
+  /** Re-reads the user IR and captured-profile slot names; they are only labels, so a failure is logged. */
+  const refreshSlotNames = useCallback(async () => {
+    const current = link.current;
+    if (!current) return;
+    try {
+      const names = (slots: { name: string; empty: boolean }[]) => slots.map((s) => (s.empty || !s.name ? null : s.name));
+      const irs = await readUserIrNames(current);
+      const profiles = await readProfileNames(current);
+      if (link.current === current) patch({ irNames: names(irs), profileNames: names(profiles) });
+    } catch (e) {
+      if (!(e instanceof LinkClosedError)) console.error('could not read the slot names', e);
+    }
+  }, [patch]);
+
   const connect = useCallback(async () => {
     const midi = access.current;
     const input = midi?.inputs.get(state.inputId);
@@ -249,15 +264,7 @@ export function usePocketMaster() {
       link.current = new PocketMasterLink(webMidiPort(input, output), appendLog, (f) => notifyRef.current(f));
       patch({ status: 'connected', error: null, irNames: null, profileNames: null });
       await read();
-      // User IR names are only labels: a failure must not spoil the connection.
-      try {
-        const names = (slots: { name: string; empty: boolean }[]) => slots.map((s) => (s.empty || !s.name ? null : s.name));
-        const irs = await readUserIrNames(link.current);
-        const profiles = await readProfileNames(link.current);
-        patch({ irNames: names(irs), profileNames: names(profiles) });
-      } catch (e) {
-        if (!(e instanceof LinkClosedError)) console.error('could not read the user IR names', e);
-      }
+      await refreshSlotNames();
     } catch (e) {
       console.error('connect failed', e);
       link.current = null;
@@ -265,7 +272,49 @@ export function usePocketMaster() {
     } finally {
       connecting.current = false;
     }
-  }, [state.inputId, state.outputId, patch, appendLog, read]);
+  }, [state.inputId, state.outputId, patch, appendLog, read, refreshSlotNames]);
+
+  /**
+   * Runs `run` alone on the link (no edits or automatic re-reads meanwhile), then re-reads the slot
+   * names and the preset. Resolves with its result, or null when it failed (the error is shown).
+   */
+  const exclusive = useCallback(async <T,>(step: string, run: (current: PocketMasterLink) => Promise<T>): Promise<T | null> => {
+    const current = link.current;
+    if (!current) {
+      patch({ error: 'Connect the pedal first.' });
+      return null;
+    }
+    if (busyRef.current) {
+      patch({ error: 'The pedal is busy with another operation; try again when it ends.' });
+      return null;
+    }
+    busyRef.current = true;
+    if (settleTimer.current) clearTimeout(settleTimer.current);
+    patch({ busy: { step, done: 0, total: 1 }, error: null });
+    let result: T | null = null;
+    let failure: string | null = null;
+    try {
+      await current.drained();
+      result = await run(current);
+    } catch (e) {
+      failure = e instanceof LinkClosedError ? 'The connection to the pedal was closed during the operation.' : message(e);
+    }
+    // The follow-up reads still hold the lock, so nothing else talks to the pedal in between.
+    try {
+      await refreshSlotNames();
+      await read({ locked: true });
+    } finally {
+      busyRef.current = false;
+      // read() clears the error, so the operation's own failure is shown after it.
+      patch({ busy: null, ...(failure ? { error: failure } : {}) });
+    }
+    return failure ? null : result;
+  }, [patch, read, refreshSlotNames]);
+
+  /** Loads another preset, like turning the preset knob; unsaved edits on the pedal are lost. */
+  const loadPreset = useCallback(async (index: number) => {
+    await exclusive('Loading', (current) => linkPedal(current).selectPreset(index));
+  }, [exclusive]);
 
   const disconnect = useCallback(() => {
     if (settleTimer.current) clearTimeout(settleTimer.current);
@@ -478,6 +527,9 @@ export function usePocketMaster() {
     save,
     restore,
     loadNames,
+    loadPreset: (index: number) => void loadPreset(index),
+    exclusive,
+    refreshSlotNames,
     importBackup,
     exportPreset: () => void exportPreset(),
     importPreset,
