@@ -1,10 +1,13 @@
 import type { Frame } from './frame.ts';
 
-/** A multi-packet reply arrives within ~0.1 s; older partial sets are stale. */
+/**
+ * A partial set with no new packet for this long is stale. Counted from the last packet: over USB
+ * a reply takes ~0.1 s, over Bluetooth ~90 ms a packet (a 21-packet name list takes ~2 s).
+ */
 export const PARTIAL_TTL_MS = 1000;
 
 interface PartialSet {
-  readonly startedAt: number;
+  readonly lastAt: number;
   readonly parts: ReadonlyMap<number, Frame>;
 }
 
@@ -19,11 +22,11 @@ export class Reassembler {
     if (frame.total <= 1) return frame;
     if (frame.index >= frame.total) return null; // malformed packet: never let it count towards a set
     const current = this.#pending.get(frame.total);
-    const restart = !current || frame.index === 0 || now - current.startedAt > PARTIAL_TTL_MS;
-    const base = restart ? { startedAt: now, parts: new Map<number, Frame>() } : current;
+    const restart = !current || frame.index === 0 || now - current.lastAt > PARTIAL_TTL_MS;
+    const base = restart ? { lastAt: now, parts: new Map<number, Frame>() } : current;
     const parts = new Map(base.parts).set(frame.index, frame);
     if (parts.size < frame.total) {
-      this.#pending.set(frame.total, { startedAt: base.startedAt, parts });
+      this.#pending.set(frame.total, { lastAt: now, parts });
       return null;
     }
     this.#pending.delete(frame.total);

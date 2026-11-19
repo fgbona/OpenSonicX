@@ -388,6 +388,8 @@ button, select { font: inherit; color: inherit; }
 .segmented button:disabled { opacity: 0.4; cursor: default; }
 .sidebar-banks { display: grid; grid-template-columns: 1fr 1fr; }
 .sidebar-toggle { display: none; }
+/* The read button takes the list's row; keep it a normal button instead of filling the column. */
+.sidebar > .btn { align-self: start; }
 
 /* Preset header with volume and BPM */
 .preset-title { font-weight: 600; color: var(--label-2); letter-spacing: -0.02em; }

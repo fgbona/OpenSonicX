@@ -77,6 +77,8 @@ export class PocketMasterLink {
   readonly #drainWaiters = new Set<() => void>();
   /** Edits sent whose 14 08 acknowledge has not arrived yet; those acknowledges are consumed here. */
   #editAcksPending = 0;
+  /** Timeout restarts of the requests waiting for a reply, called as its packets arrive. */
+  #progress = new Set<() => void>();
   #editAcksSettled: (() => void) | null = null;
   /** `onNotify` gets complete frames no request was waiting for: changes made on the pedal itself. */
   constructor(port: MidiPort, onLog: (entry: LogEntry) => void, onNotify: (frame: Frame) => void = () => undefined) {
@@ -321,6 +323,7 @@ export class PocketMasterLink {
     this.#port.send(bytes);
   }
 
+  /** Waits for the reply; every packet of a multi-packet reply still arriving restarts the timeout. */
   #waitFor(kind: QueryKind): Promise<Frame | null> {
     return new Promise((resolve) => {
       const listener = (frame: Frame) => {
@@ -329,15 +332,21 @@ export class PocketMasterLink {
         return true;
       };
       const cancel = () => done(null);
-      const timer = setTimeout(cancel, REQUEST_TIMEOUT_MS);
+      let timer = setTimeout(cancel, REQUEST_TIMEOUT_MS);
+      const progress = () => {
+        clearTimeout(timer);
+        timer = setTimeout(cancel, REQUEST_TIMEOUT_MS);
+      };
       const done = (frame: Frame | null) => {
         clearTimeout(timer);
         this.#listeners.delete(listener);
         this.#pending.delete(cancel);
+        this.#progress.delete(progress);
         resolve(frame);
       };
       this.#listeners.add(listener);
       this.#pending.add(cancel);
+      this.#progress.add(progress);
     });
   }
 
@@ -352,7 +361,11 @@ export class PocketMasterLink {
     }
     if (!frame.crcOk) return;
     const complete = this.#assembler.feed(frame, performance.now());
-    if (!complete) return;
+    if (!complete) {
+      // ponytail: any partial packet keeps every waiter alive; replies are read one kind at a time
+      if (frame.total > 1) this.#progress.forEach((keepWaiting) => keepWaiting());
+      return;
+    }
     if (this.#editAcksPending > 0 && complete.payload[0] === ACK.TYPE && complete.payload[1] === ACK.COMMAND) {
       this.#editAcksPending -= 1; // an edit's acknowledge: never let it answer a selection or a save
       if (this.#editAcksPending === 0) this.#editAcksSettled?.();

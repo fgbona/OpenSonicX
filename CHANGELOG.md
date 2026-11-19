@@ -8,6 +8,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Over Bluetooth the preset names never loaded: the 21-packet reply takes
+  about 2 s (~90 ms a packet), longer than the 1.5 s request timeout and
+  the reassembler's 1 s window, so each try was dropped just before its
+  last packet and re-sent. The window now counts from the last packet, and
+  every packet still arriving restarts the request's timeout. The presets
+  sidebar's "Read names" button no longer stretches over the column.
 - BPM is no longer shown or offered as a control. The pedal (V1.3.3)
   ignores SonicMaster's `11 42 02 20 …` tempo write and five variants of
   it (lengths 1/2/4, u8, u32, float32) while a volume write on the same
