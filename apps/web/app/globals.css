@@ -331,6 +331,8 @@ button, select { font: inherit; color: inherit; }
 .slots-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .slots-head h3 { font-size: 0.875rem; font-weight: 600; }
 .slots { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 0.875rem; }
+.slot { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.slot-rename { padding: 1px 8px; }
 .slot-n { display: inline-block; width: 1.4em; color: var(--label-3); font-weight: 600; }
 
 /* TONE3000 */

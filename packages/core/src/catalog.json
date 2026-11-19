@@ -197,7 +197,8 @@
       "max": 10,
       "step": 0.1,
       "unit": "Hz",
-      "default": 0.5
+      "default": 0.5,
+      "syncedBy": 6
      },
      {
       "name": "Vol",
@@ -286,7 +287,8 @@
       "max": 10,
       "step": 0.1,
       "unit": "Hz",
-      "default": 0.5
+      "default": 0.5,
+      "syncedBy": 3
      },
      {
       "name": "Tone",
@@ -324,7 +326,8 @@
       "max": 10,
       "step": 0.1,
       "unit": "Hz",
-      "default": 0.5
+      "default": 0.5,
+      "syncedBy": 3
      },
      {
       "name": "Vol",
@@ -362,7 +365,8 @@
       "max": 10,
       "step": 0.1,
       "unit": "Hz",
-      "default": 0.5
+      "default": 0.5,
+      "syncedBy": 4
      },
      {
       "name": "P.Delay",
@@ -400,7 +404,8 @@
       "max": 10,
       "step": 0.1,
       "unit": "Hz",
-      "default": 0.5
+      "default": 0.5,
+      "syncedBy": 1
      },
      {
       "name": "Sync",
@@ -430,7 +435,8 @@
       "max": 10,
       "step": 0.1,
       "unit": "Hz",
-      "default": 0.5
+      "default": 0.5,
+      "syncedBy": 2
      },
      {
       "name": "Sync",
@@ -460,7 +466,8 @@
       "max": 10,
       "step": 0.1,
       "unit": "Hz",
-      "default": 0.5
+      "default": 0.5,
+      "syncedBy": 2
      },
      {
       "name": "Sync",
@@ -490,7 +497,8 @@
       "max": 10,
       "step": 0.1,
       "unit": "Hz",
-      "default": 0.5
+      "default": 0.5,
+      "syncedBy": 2
      },
      {
       "name": "Sync",
@@ -520,7 +528,8 @@
       "max": 10,
       "step": 0.1,
       "unit": "Hz",
-      "default": 0.5
+      "default": 0.5,
+      "syncedBy": 3
      },
      {
       "name": "Vol",
@@ -558,7 +567,8 @@
       "max": 10,
       "step": 0.1,
       "unit": "Hz",
-      "default": 0.5
+      "default": 0.5,
+      "syncedBy": 3
      },
      {
       "name": "Vol",
@@ -2620,7 +2630,8 @@
       "max": 10,
       "step": 0.1,
       "unit": "Hz",
-      "default": 0.5
+      "default": 0.5,
+      "syncedBy": 6
      },
      {
       "name": "Vol",
@@ -2819,7 +2830,8 @@
       "max": 10,
       "step": 0.1,
       "unit": "Hz",
-      "default": 0.5
+      "default": 0.5,
+      "syncedBy": 3
      },
      {
       "name": "Tone",
@@ -2857,7 +2869,8 @@
       "max": 10,
       "step": 0.1,
       "unit": "Hz",
-      "default": 0.5
+      "default": 0.5,
+      "syncedBy": 3
      },
      {
       "name": "Vol",
@@ -2895,7 +2908,8 @@
       "max": 10,
       "step": 0.1,
       "unit": "Hz",
-      "default": 0.5
+      "default": 0.5,
+      "syncedBy": 4
      },
      {
       "name": "P.Delay",
@@ -2933,7 +2947,8 @@
       "max": 10,
       "step": 0.1,
       "unit": "Hz",
-      "default": 0.5
+      "default": 0.5,
+      "syncedBy": 1
      },
      {
       "name": "Sync",
@@ -2963,7 +2978,8 @@
       "max": 10,
       "step": 0.1,
       "unit": "Hz",
-      "default": 0.5
+      "default": 0.5,
+      "syncedBy": 2
      },
      {
       "name": "Sync",
@@ -2993,7 +3009,8 @@
       "max": 10,
       "step": 0.1,
       "unit": "Hz",
-      "default": 0.5
+      "default": 0.5,
+      "syncedBy": 2
      },
      {
       "name": "Sync",
@@ -3023,7 +3040,8 @@
       "max": 10,
       "step": 0.1,
       "unit": "Hz",
-      "default": 0.5
+      "default": 0.5,
+      "syncedBy": 2
      },
      {
       "name": "Sync",
@@ -3053,7 +3071,8 @@
       "max": 10,
       "step": 0.1,
       "unit": "Hz",
-      "default": 0.5
+      "default": 0.5,
+      "syncedBy": 3
      },
      {
       "name": "Vol",
@@ -3091,7 +3110,8 @@
       "max": 10,
       "step": 0.1,
       "unit": "Hz",
-      "default": 0.5
+      "default": 0.5,
+      "syncedBy": 3
      },
      {
       "name": "Vol",
@@ -3139,7 +3159,8 @@
       "max": 1000,
       "step": 1,
       "unit": "ms",
-      "default": 500
+      "default": 500,
+      "syncedBy": 3
      },
      {
       "name": "F.Back",
@@ -3221,7 +3242,8 @@
       "max": 1000,
       "step": 1,
       "unit": "ms",
-      "default": 500
+      "default": 500,
+      "syncedBy": 3
      },
      {
       "name": "F.Back",
@@ -3265,7 +3287,8 @@
       "max": 1000,
       "step": 1,
       "unit": "ms",
-      "default": 500
+      "default": 500,
+      "syncedBy": 3
      },
      {
       "name": "F.Back",
@@ -3309,7 +3332,8 @@
       "max": 1000,
       "step": 1,
       "unit": "ms",
-      "default": 500
+      "default": 500,
+      "syncedBy": 3
      },
      {
       "name": "F.Back",
@@ -3353,7 +3377,8 @@
       "max": 500,
       "step": 1,
       "unit": "ms",
-      "default": 500
+      "default": 500,
+      "syncedBy": 3
      },
      {
       "name": "F.Back",
@@ -3397,7 +3422,8 @@
       "max": 1000,
       "step": 1,
       "unit": "ms",
-      "default": 500
+      "default": 500,
+      "syncedBy": 3
      },
      {
       "name": "F.Back",
@@ -3441,7 +3467,8 @@
       "max": 1000,
       "step": 1,
       "unit": "ms",
-      "default": 500
+      "default": 500,
+      "syncedBy": 6
      },
      {
       "name": "F.Back",
@@ -3501,7 +3528,8 @@
       "max": 500,
       "step": 1,
       "unit": "ms",
-      "default": 500
+      "default": 500,
+      "syncedBy": 3
      },
      {
       "name": "F.Back",

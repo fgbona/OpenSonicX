@@ -19,6 +19,7 @@ function setup(start = 8, options: ConstructorParameters<typeof FakePedal>[0] = 
     readModified: async () => false,
     uploadIr: async (slot: number, name: string, wav: Uint8Array) => { uploads.push({ slot, name, bytes: wav.length }); irNames[slot] = name; },
     uploadProfile: async (slot: number, name: string) => { uploads.push({ slot, name, bytes: -1 }); profileNames[slot] = name; },
+    renameSlot: async (kind: 'ir' | 'profile', slot: number, name: string) => { (kind === 'ir' ? irNames : profileNames)[slot] = name; uploads.push({ slot, name, bytes: -2 }); },
   });
   let opened = 0;
   let closed = 0;
@@ -380,4 +381,21 @@ test('load_nam converts a capture from the nams folder', async () => {
   await t.session.loadNam({ file: 'My AC30.nam', slot: 3, confirm: 'PROFILE3' });
   assert.deepEqual(t.uploads.map(({ slot, name }) => [slot, name]), [[2, 'My AC30']]);
   await assert.rejects(t.session.loadNam({ file: '../escape.nam', slot: 3, confirm: 'PROFILE3' }), /inside .*nams/);
+});
+
+test('rename_slot renames a loaded slot and refuses an empty one', async () => {
+  const { session, uploads } = setup();
+  assert.match(await session.renameSlot({ kind: 'ir', slot: 1, name: 'Mesa 4x12' }), /from "Mesa OS" to "Mesa 4x12"/);
+  assert.deepEqual(uploads.map(({ slot, name }) => [slot, name]), [[0, 'Mesa 4x12']]);
+  await assert.rejects(session.renameSlot({ kind: 'profile', slot: 2, name: 'X' }), /slot 2 is empty/);
+  await assert.rejects(session.renameSlot({ kind: 'ir', slot: 1, name: 'eleven chars' }), /1\.\.10 characters/);
+});
+
+test('with Sync on, edit_preset sets a delay Time by note division', async () => {
+  const { session, fake } = setup();
+  await session.edit([{ kind: 'parameter', block: 'dly', parameter: 'sync', value: true }]);
+  const text = await session.edit([{ kind: 'parameter', block: 'dly', parameter: 'time', value: '1/8D' }]);
+  assert.match(text, /Time 1\/8D/);
+  await assert.rejects(session.edit([{ kind: 'parameter', block: 'dly', parameter: 'time', value: 400 }]), /Time options: 1\/1/);
+  assert.ok(fake.received.length > 0);
 });

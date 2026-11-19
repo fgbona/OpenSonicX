@@ -1,6 +1,6 @@
 'use client';
 
-import { type Block, blockModelLabel, type Edit, modelLabel, modelOf, modelsFor, type Preset } from '@pocket-master/core';
+import { type Block, blockModelLabel, type Edit, FOOTSWITCH_CAPACITY, modelLabel, modelOf, modelsFor, paramSpecFor, type Preset } from '@pocket-master/core';
 import { ParamControl } from './ParamControl';
 import { useI18n } from './I18n';
 import { modelValue, parseModelValue, profileChoices } from '@/lib/ampChoices';
@@ -37,8 +37,11 @@ export function BlockCard({ preset, block, editable, onEdit, irNames, profileNam
             onChange={(e) => onEdit({ kind: 'footswitch', module: block.module, footswitch: e.target.value === '' ? null : (e.target.value as 'fs1' | 'fs2') })}
           >
             <option value="">FS —</option>
-            <option value="fs1">FS1</option>
-            <option value="fs2">FS2</option>
+            {(['fs1', 'fs2'] as const).map((fs) => (
+              <option key={fs} value={fs} disabled={block.footswitch !== fs && preset.chain.filter((b) => b.footswitch === fs).length >= FOOTSWITCH_CAPACITY}>
+                {fs.toUpperCase()}
+              </option>
+            ))}
           </select>
         ) : (
           block.footswitch && <span className="pill pill-fs">{block.footswitch.toUpperCase()}</span>
@@ -97,7 +100,7 @@ export function BlockCard({ preset, block, editable, onEdit, irNames, profileNam
               key={p.alg}
               module={block.module}
               param={p}
-              spec={model?.params.find((s) => s.alg === p.alg)}
+              spec={paramSpecFor(preset, block, p.alg)}
               editable={editable}
               onChange={(alg, value) => onEdit({ kind: 'param', module: block.module, alg, value })}
             />

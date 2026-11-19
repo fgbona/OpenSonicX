@@ -22,6 +22,7 @@ export function decodeNotification(payload: Uint8Array, preset: Preset): Notific
   const command = payload[1];
 
   if (command === EditCommand.MODEL) return { kind: 'reread' }; // the pedal applies model defaults; read them
+  if (command === EditCommand.FOOTSWITCH) return { kind: 'reread' }; // a footswitch assignment changed on the unit
 
   if (command === EditCommand.BLOCK_ON && payload.length >= 10) {
     const module = view.getUint32(2, true);

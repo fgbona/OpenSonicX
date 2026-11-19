@@ -11,7 +11,7 @@ import { createServer } from '../src/tools.ts';
 
 async function connected() {
   const fake = new FakePedal({}, 8);
-  const io: PedalIO = Object.assign(fake, { readSlotNames: async () => ({ irNames: null, profileNames: null }), readModified: async () => null, uploadIr: async () => undefined, uploadProfile: async () => undefined });
+  const io: PedalIO = Object.assign(fake, { readSlotNames: async () => ({ irNames: null, profileNames: null }), readModified: async () => null, uploadIr: async () => undefined, uploadProfile: async () => undefined, renameSlot: async () => undefined });
   const dir = mkdtempSync(join(tmpdir(), 'pm-tools-'));
   const session = new Session(() => ({ io, close: () => undefined }), { backups: join(dir, 'b'), presets: join(dir, 'p'), irs: join(dir, 'i'), nams: join(dir, 'n') });
   const [a, b] = InMemoryTransport.createLinkedPair();
@@ -28,7 +28,7 @@ test('the server lists every tool, marking reads read-only and slot writes destr
   const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
   assert.deepEqual(Object.keys(byName).sort(), [
     'edit_preset', 'export_preset', 'get_preset', 'import_preset', 'install_tone', 'list_models', 'list_preset_files', 'list_presets',
-    'load_ir', 'load_nam', 'restore_backup', 'revert_preset', 'save_preset', 'search_tone3000', 'select_preset', 'tone3000_login',
+    'load_ir', 'load_nam', 'rename_slot', 'restore_backup', 'revert_preset', 'save_preset', 'search_tone3000', 'select_preset', 'tone3000_login',
   ]);
   for (const name of ['get_preset', 'list_presets', 'list_models']) assert.equal(byName[name]!.annotations?.readOnlyHint, true, name);
   for (const name of ['save_preset', 'restore_backup', 'load_ir', 'load_nam', 'install_tone']) assert.equal(byName[name]!.annotations?.destructiveHint, true, name);
@@ -67,7 +67,7 @@ test('list_models works without a block', async () => {
 
 test('every tool call reports how long it took on the pedal', async () => {
   const fake = new FakePedal({}, 8);
-  const io: PedalIO = Object.assign(fake, { readSlotNames: async () => ({ irNames: null, profileNames: null }), readModified: async () => null, uploadIr: async () => undefined, uploadProfile: async () => undefined });
+  const io: PedalIO = Object.assign(fake, { readSlotNames: async () => ({ irNames: null, profileNames: null }), readModified: async () => null, uploadIr: async () => undefined, uploadProfile: async () => undefined, renameSlot: async () => undefined });
   const dir = mkdtempSync(join(tmpdir(), 'pm-timing-'));
   const session = new Session(() => ({ io, close: () => undefined }), { backups: join(dir, 'b'), presets: join(dir, 'p'), irs: join(dir, 'i'), nams: join(dir, 'n') });
   const timings: { tool: string; ms: number; ok: boolean }[] = [];

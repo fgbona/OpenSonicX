@@ -1,5 +1,6 @@
 import { blockByModule, findCloneModel, findModel, CLONE_MODULE, type ModelSpec, type ParamSpec } from './catalog.ts';
 import type { Footswitch } from './commands.ts';
+import { effectiveSpec } from './sync.ts';
 import { MessageType, Query } from './queries.ts';
 import { toHex } from './hex.ts';
 
@@ -108,7 +109,10 @@ function decodeParams(model: ModelSpec | undefined, view: DataView, module: numb
   if (!model) return [];
   return model.params
     .filter((p) => view.byteLength >= PARAM_STRIDE * module + 4 * p.alg + 4)
-    .map((p) => toParam(p, view.getFloat32(PARAM_STRIDE * module + 4 * p.alg, true)));
+    .map((p) => {
+      const raw = (alg: number) => (view.byteLength >= PARAM_STRIDE * module + 4 * alg + 4 ? view.getFloat32(PARAM_STRIDE * module + 4 * alg, true) : undefined);
+      return toParam(effectiveSpec(p, raw), raw(p.alg)!);
+    });
 }
 
 /** A decoded parameter for a catalog spec and a raw value. */
