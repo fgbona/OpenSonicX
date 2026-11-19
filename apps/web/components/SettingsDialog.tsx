@@ -139,8 +139,8 @@ export function SettingsDialog({ open, onClose, exclusive, writeGlobal, busy, er
             <h3>{t('settings.device')}</h3>
             <label className="settings-row">
               <span className="settings-label">{t('settings.backlight')}</span>
-              <input type="range" className="param-slider" min={0} max={10} value={values.backlight ?? 0} disabled={off}
-                onChange={(e) => set('backlight', Number(e.target.value))} style={{ '--fill': `${(values.backlight ?? 0) * 10}%` } as React.CSSProperties} />
+              <input type="range" className="param-slider" min={0} max={100} value={values.backlight ?? 0} disabled={off}
+                onChange={(e) => set('backlight', Number(e.target.value))} style={{ '--fill': `${values.backlight ?? 0}%` } as React.CSSProperties} />
               <span className="param-value">{values.backlight ?? '—'}</span>
             </label>
             {SWITCHES.map(({ key, label }) => (

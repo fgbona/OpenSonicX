@@ -47,7 +47,8 @@ export const GLOBAL_SETTINGS = {
   mode: { address: [0x04, 0x04], ...FLAG },
   reamp: { address: [0x06, 0x04], ...FLAG },
   expFsType: { address: [0x01, 0x05], min: 0, max: 2 },
-  backlight: { address: [0x03, 0x02], min: 0, max: 10 },
+  // 0..100: the unit reports 100 at full brightness (SonicMaster's dialog stops at 10).
+  backlight: { address: [0x03, 0x02], min: 0, max: 100 },
   eco: { address: [0x04, 0x02], ...FLAG },
   powerConfirm: { address: [0x05, 0x02], ...FLAG },
   battOnly: { address: [0x06, 0x02], ...FLAG },

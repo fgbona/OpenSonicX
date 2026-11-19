@@ -6,6 +6,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Backlight in Global options runs 0..100, as the unit reports it; it was
+  capped at 10 (taken from SonicMaster), so moving the slider set a full
+  backlight down to 10.
+
 ### Added
 
 - Bluetooth: "Connect via Bluetooth" links the editor to the pedal over
