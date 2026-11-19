@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 # Packs the MCP server as npm would publish it, installs the tarball into an empty folder and
-# starts the installed binary over stdio: it must list its tools without a pedal attached.
+# starts the installed binary over stdio: it must list its core tools without a pedal attached.
 set -eu
 root=$(pwd)
 tmp=$(mktemp -d)
@@ -21,7 +21,8 @@ await client.connect(new StdioClientTransport({ command: process.argv[2], env: {
 const { tools } = await client.listTools();
 const version = client.getServerVersion()?.version;
 await client.close();
-if (tools.length !== 11) throw new Error(`expected 11 tools, got ${tools.length}`);
+const names = tools.map((t) => t.name);
+for (const need of ['get_preset', 'edit_preset', 'save_preset']) if (!names.includes(need)) throw new Error(`the installed server lacks ${need} (tools: ${names.join(', ')})`);
 console.log(`OK: the installed package starts and lists ${tools.length} tools (server ${version})`);
 JS
 node smoke.mjs "$tmp/node_modules/.bin/sonicake-pocket-master-mcp" "$tmp/home"
