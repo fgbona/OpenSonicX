@@ -6,6 +6,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-19
+
+MCP server (preview): an AI assistant can read and edit the pedal's presets
+in conversation. Container image: `ghcr.io/fgbona/pocket-master-editor:v0.8.0`
+(amd64 and arm64; the image serves the web editor).
+
 ### Added
 
 - MCP server (`apps/mcp`, preview): an AI assistant can read the loaded
@@ -13,8 +19,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
   models including user IRs and captured profiles, chain order, volume),
   load and revert presets, export and import preset files, and save to a
   user slot with a confirmation and a backup file, which `restore_backup`
-  undoes. Reading verified on a V1.3.3 unit over USB; writes are tested
-  against the simulated pedal.
+  undoes. Reading, live edits and revert verified on a V1.3.3 unit over
+  USB; save, restore and preset files are tested against the simulated
+  pedal.
 - Core resolves blocks, parameters, models and preset labels by name, never
   guessing: unknown or ambiguous names fail with the valid choices.
 
@@ -293,7 +300,8 @@ Container image: `ghcr.io/fgbona/pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/pocket-master-editor/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/fgbona/pocket-master-editor/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.4.0...v0.5.0
