@@ -13,7 +13,19 @@ export interface Tone3000Store {
   save(tokens: Tokens): Promise<void>;
 }
 
-export function fileTone3000Store(home: string, fetch: typeof globalThis.fetch = globalThis.fetch, now: () => number = Date.now): Tone3000Store {
+/**
+ * The editor's own publishable key, written in by the release build (build.mjs, from the
+ * repository variable TONE3000_CLIENT_ID); empty in a development build. It names the app, not
+ * the user: every user still signs in with their own TONE3000 account.
+ */
+const BUNDLED_CLIENT_ID: string = process.env.BUNDLED_TONE3000_CLIENT_ID ?? '';
+
+export function fileTone3000Store(
+  home: string,
+  fetch: typeof globalThis.fetch = globalThis.fetch,
+  now: () => number = Date.now,
+  bundledClientId: string = BUNDLED_CLIENT_ID,
+): Tone3000Store {
   const tokenPath = join(home, 'tone3000-token.json');
   const save = async (tokens: Tokens) => {
     await mkdir(home, { recursive: true });
@@ -30,6 +42,7 @@ export function fileTone3000Store(home: string, fetch: typeof globalThis.fetch =
       .map((l) => l.slice('TONE3000_CLIENT_ID='.length).trim().replace(/^['"]|['"]$/g, ''))
       .filter((v) => v && v !== '...')
       .at(-1) ?? '';
+    if (!value && bundledClientId) return bundledClientId;
     if (!value) {
       throw new Error(`no TONE3000 key: put TONE3000_CLIENT_ID=<publishable key> in ${join(home, 'tone3000.env')} (from tone3000.com/settings)`);
     }

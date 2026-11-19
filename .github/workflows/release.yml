@@ -139,4 +139,7 @@ jobs:
       - run: npm install -g npm@11
       - run: npm ci
       - run: scripts/mcp-pack-smoke.sh
+      # prepack rebuilds with the editor's publishable TONE3000 key (an app id, not a secret).
       - run: npm publish -w sonicake-pocket-master-mcp --provenance --access public
+        env:
+          TONE3000_CLIENT_ID: ${{ vars.TONE3000_CLIENT_ID }}
