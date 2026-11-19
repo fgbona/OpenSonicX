@@ -27,3 +27,15 @@ test('tokens are stored owner-only and refreshed when about to expire', async ()
   now += 3600_000;
   assert.equal(await store.accessToken(), 'NEW');
 });
+
+test('with no env var and no key file, the key bundled at release is used; a key file overrides it', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'pm-t3k-'));
+  delete process.env.TONE3000_CLIENT_ID;
+  const store = fileTone3000Store(home, globalThis.fetch, Date.now, 'bundled-key');
+  assert.equal(await store.clientId(), 'bundled-key');
+  writeFileSync(join(home, 'tone3000.env'), 'TONE3000_CLIENT_ID=own-key\n');
+  assert.equal(await store.clientId(), 'own-key');
+  process.env.TONE3000_CLIENT_ID = 'env-key';
+  assert.equal(await store.clientId(), 'env-key');
+  delete process.env.TONE3000_CLIENT_ID;
+});

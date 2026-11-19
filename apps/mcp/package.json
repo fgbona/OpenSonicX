@@ -42,7 +42,7 @@
   },
   "scripts": {
     "start": "node src/server.ts",
-    "build": "esbuild src/server.ts src/convert-worker.ts --bundle --platform=node --format=esm --target=node22 --outdir=dist --external:@julusian/midi --external:@modelcontextprotocol/sdk --external:zod",
+    "build": "node build.mjs",
     "prepack": "npm run build",
     "test": "node --test --test-timeout=5000 'test/**/*.test.ts'",
     "typecheck": "tsc -p tsconfig.json"

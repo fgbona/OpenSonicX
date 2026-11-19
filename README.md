@@ -123,8 +123,9 @@ Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
   capture into the pedal's captured-profile format (about a minute or more)
   and writes it to a profile slot, or writes an IR to a user IR slot.
   `load_nam` does the same with a `.nam` in `~/.pocket-master-editor/nams`.
-  Put your TONE3000 publishable key in `~/.pocket-master-editor/tone3000.env`
-  as `TONE3000_CLIENT_ID=...` (from tone3000.com/settings). The conversion
+  You sign in with your own TONE3000 account; the package already carries
+  the editor's app key. To use an app key of your own instead, put
+  `TONE3000_CLIENT_ID=...` in `~/.pocket-master-editor/tone3000.env`. The conversion
   downloads a reference DI signal from SonicMaster's repository once (it is
   not part of this project) and checks it by SHA-256.
 - `get_global_settings` and `set_global_settings` read and change the
