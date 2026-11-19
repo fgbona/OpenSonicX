@@ -165,6 +165,7 @@ export const en = {
   'preset.tap': "Tap",
   'preset.tapAria': "Tap tempo",
   'block.footswitchAria': "Footswitch for {block}",
+  'install.unknown': "unknown (names not read)",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -331,4 +332,5 @@ export const pt: Record<MessageKey, string> = {
   'preset.tap': "Tap",
   'preset.tapAria': "Tap tempo",
   'block.footswitchAria': "Footswitch do {block}",
+  'install.unknown': "desconhecido (nomes não lidos)",
 };

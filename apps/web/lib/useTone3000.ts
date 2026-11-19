@@ -43,7 +43,10 @@ export function useTone3000() {
   const tokensRef = useRef<Tokens | null>(null);
   const cancelled = useRef(false);
 
+  const signingIn = useRef(false);
+
   useEffect(() => {
+    cancelled.current = false; // strict mode runs effects twice: undo the first cleanup
     const t = loadTokens();
     tokensRef.current = t;
     setTokens(t);
@@ -71,13 +74,17 @@ export function useTone3000() {
       const fresh = await refreshTokens({ clientId: TONE3000_CLIENT_ID, refreshToken: t.refreshToken });
       save(fresh);
       return fresh.accessToken;
-    } catch {
+    } catch (e) {
+      // A network failure keeps the sign-in for the next try; a refused refresh ends it.
+      if (e instanceof TypeError) throw new Error('Could not reach TONE3000; check the connection and try again.');
       save(null);
       throw new Error('The TONE3000 sign-in expired; sign in again.');
     }
   }, [save]);
 
   const signIn = useCallback(async () => {
+    if (signingIn.current) return;
+    signingIn.current = true;
     setError(null);
     try {
       const start = await startDeviceLogin(TONE3000_CLIENT_ID);
@@ -87,6 +94,7 @@ export function useTone3000() {
     } catch (e) {
       if (!cancelled.current) setError(message(e));
     } finally {
+      signingIn.current = false;
       if (!cancelled.current) setLogin(null);
     }
   }, [save]);

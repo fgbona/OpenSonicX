@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Dialog } from './Dialog';
 import { useI18n } from './I18n';
 import { install, NAME_MAX, slotName, type Exclusive, type InstallSource } from '@/lib/install';
@@ -28,38 +28,51 @@ export function InstallDialog({ sources, irNames, profileNames, exclusive, error
   const [stage, setStage] = useState<Stage>('idle');
   const [probe, setProbe] = useState({ done: 0, total: 5 });
   const [failure, setFailure] = useState<string | null>(null);
+  const [attempted, setAttempted] = useState(false);
+  const [written, setWritten] = useState<{ slot: number; name: string } | null>(null);
   const source = sources?.[pick] ?? null;
   const names = source?.kind === 'ir' ? irNames : profileNames;
+  // Slot names are re-read during and after an install; the defaults come from them only when
+  // the source changes, so a re-read never resets what the user chose.
+  const namesRef = useRef(names);
+  namesRef.current = names;
 
   useEffect(() => {
     if (!sources) return;
     setPick(0);
     setStage('idle');
     setFailure(null);
+    setAttempted(false);
+    setWritten(null);
     setReplace(false);
   }, [sources]);
 
   useEffect(() => {
     if (!source) return;
     setName(slotName(source.name, source.kind));
-    const firstEmpty = (names ?? []).findIndex((n) => n === null);
+    const known = namesRef.current;
+    const firstEmpty = known ? known.findIndex((n) => n === null) : -1;
     setSlot(firstEmpty >= 0 ? firstEmpty + 1 : 1);
     setReplace(false);
-  }, [source, names]);
+  }, [source]);
 
-  const occupied = names?.[slot - 1] ?? null;
+  // Unread slot names count as occupied: the pedal cannot give back what a slot holds.
+  const occupied = names === null ? t('install.unknown') : (names[slot - 1] ?? null);
   const running = stage !== 'idle' && stage !== 'done';
   const canInstall = source !== null && name.trim() !== '' && (occupied === null || replace) && !running;
 
   const run = async () => {
     if (!source) return;
     setFailure(null);
+    setAttempted(true);
     setStage('load');
+    const target = { slot, name: name.trim() };
     try {
-      const ok = await install(source, slot - 1, name.trim(), exclusive, (s) => {
+      const ok = await install(source, target.slot - 1, target.name, exclusive, (s) => {
         setStage(s.stage);
         if (s.stage === 'probe') setProbe({ done: s.done, total: s.total });
       });
+      if (ok) setWritten(target);
       setStage(ok ? 'done' : 'idle');
     } catch (e) {
       setFailure(e instanceof Error ? e.message : String(e));
@@ -75,7 +88,7 @@ export function InstallDialog({ sources, irNames, profileNames, exclusive, error
     <Dialog open={sources !== null} title={t('install.title')} onClose={onClose} locked={running}>
       {!source ? null : stage === 'done' ? (
         <>
-          <p>{t(source.kind === 'ir' ? 'install.doneIr' : 'install.doneProfile', { name: name.trim(), n: slot })}</p>
+          <p>{t(source.kind === 'ir' ? 'install.doneIr' : 'install.doneProfile', { name: written?.name ?? name.trim(), n: written?.slot ?? slot })}</p>
           <div className="sheet-actions"><button className="btn btn-primary" onClick={onClose}>{t('action.done')}</button></div>
         </>
       ) : (
@@ -108,7 +121,7 @@ export function InstallDialog({ sources, irNames, profileNames, exclusive, error
           )}
           {source.kind === 'profile' && <p className="muted small">{t('install.slowNote')}</p>}
           {running && <p className="install-stage" role="status"><span className="spinner" aria-hidden="true" /> {stageText}</p>}
-          {(failure ?? (stage === 'idle' ? error : null)) && <p className="alert" role="alert">{te(failure ?? error ?? '')}</p>}
+          {(failure ?? (attempted && stage === 'idle' ? error : null)) && <p className="alert" role="alert">{te(failure ?? error ?? '')}</p>}
           <div className="sheet-actions">
             <button className="btn" onClick={onClose} disabled={running}>{t('action.cancel')}</button>
             <button className={`btn ${occupied ? 'btn-danger' : 'btn-primary'}`} onClick={() => void run()} disabled={!canInstall}>{t('install.submit')}</button>
