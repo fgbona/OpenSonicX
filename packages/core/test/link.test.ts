@@ -390,3 +390,17 @@ test('factoryReset sends only the reset command, after queued edits', async () =
   await done;
   assert.deepEqual(f.sent, [setGlobal('backlight', 5), factoryReset()].map(toHex));
 });
+
+test('a slow multi-packet reply keeps the request alive while its packets arrive (Bluetooth)', async () => {
+  const f = fakes();
+  const names = 0x40;
+  const pending = f.link.request(names);
+  const body = [0x12, 0x40, ...new Array(21 * 10 - 2).fill(0)];
+  for (let i = 0; i < 21; i++) {
+    mock.timers.tick(90); // 21 packets 90 ms apart: 1.9 s, longer than one request timeout
+    f.receive(buildFrame(body.slice(i * 10, i * 10 + 10), 21, i));
+  }
+  const frame = await pending;
+  assert.equal(frame.payload.length, 210);
+  assert.equal(f.sent.length, 1); // never re-sent mid-reply
+});

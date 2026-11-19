@@ -40,6 +40,12 @@ test('reassembler discards a stale partial set', () => {
   assert.equal(r.feed(dumpFrames[25]!, 5000), null);
 });
 
+test('a slow reply (Bluetooth, ~90 ms a packet) still joins: staleness counts from the last packet', () => {
+  const r = new Reassembler();
+  const out = dumpFrames.map((f, i) => r.feed(f, i * 90)); // 26 packets over 2.25 s
+  assert.equal(out[25]?.payload.length, 476);
+});
+
 test('reassembler passes single-packet frames through', () => {
   const f = parseFrame(capture[1]!.bytes);
   assert.equal(new Reassembler().feed(f, 0), f);
