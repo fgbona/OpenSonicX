@@ -53,6 +53,7 @@ export default function EditorPage() {
         busy={pm.busy !== null}
         canSave={pm.preset !== null}
         onSettings={() => { pm.clearError(); setSettingsOpen(true); }}
+        onBluetooth={pm.connectBle}
       />
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} exclusive={pm.exclusive} writeGlobal={pm.writeGlobal}
         busy={pm.busy !== null} error={pm.error} onReset={pm.disconnect} />

@@ -31,7 +31,7 @@ export const en = {
   'empty.step1': 'Connect the Pocket Master by USB and switch it on.',
   'empty.step2': 'Click Enable MIDI and allow MIDI device access.',
   'empty.step3': 'Pick the Pocket Master ports and click Connect.',
-  'empty.browsers': 'Works in Chrome, Edge and Opera on desktop.',
+  'empty.browsers': 'USB works in Chrome, Edge and Opera on desktop; Bluetooth in Chrome and Edge, Android included.',
   'preset.editBuffer': 'Edit buffer',
   'preset.modified': 'modified',
   'preset.fallbackName': 'Preset',
@@ -209,6 +209,7 @@ export const en = {
   'settings.resetType': "Type {word} to confirm",
   'settings.resetWarning': "Every setting and every user preset goes back to factory state, and the pedal restarts. Download a backup first. Type {word} to confirm.",
   'settings.resetConfirm': "Reset the pedal",
+  'action.bluetooth': "Connect via Bluetooth",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -241,7 +242,7 @@ export const pt: Record<MessageKey, string> = {
   'empty.step1': 'Conecte a Pocket Master pelo USB e ligue a pedaleira.',
   'empty.step2': 'Clique em Ativar MIDI e permita o acesso a dispositivos MIDI.',
   'empty.step3': 'Escolha as portas da Pocket Master e clique em Conectar.',
-  'empty.browsers': 'Funciona no Chrome, Edge e Opera no computador.',
+  'empty.browsers': 'USB funciona no Chrome, Edge e Opera no computador; Bluetooth no Chrome e no Edge, inclusive no Android.',
   'preset.editBuffer': 'Edit buffer',
   'preset.modified': 'modificado',
   'preset.fallbackName': 'Preset',
@@ -419,4 +420,5 @@ export const pt: Record<MessageKey, string> = {
   'settings.resetType': "Digite {word} para confirmar",
   'settings.resetWarning': "Todas as configurações e todos os presets de usuário voltam ao estado de fábrica, e o pedal reinicia. Baixe um backup antes. Digite {word} para confirmar.",
   'settings.resetConfirm': "Restaurar o pedal",
+  'action.bluetooth': "Conectar por Bluetooth",
 };

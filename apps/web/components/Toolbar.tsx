@@ -3,6 +3,8 @@
 import type { PortOption, Status } from '@/lib/usePocketMaster';
 import type { MessageKey } from '@/lib/i18n';
 import { LanguageSwitch, useI18n } from './I18n';
+import { useEffect, useState } from 'react';
+import { bluetoothAvailable } from '@/lib/ble';
 import { ThemeToggle } from './ThemeToggle';
 
 interface Props {
@@ -26,6 +28,7 @@ interface Props {
   /** Save needs a preset read from the pedal first. */
   canSave: boolean;
   onSettings: () => void;
+  onBluetooth: () => void;
 }
 
 const STATUS_KEY: Record<Status, MessageKey> = {
@@ -55,6 +58,12 @@ function PortSelect(props: { label: string; ports: readonly PortOption[]; value:
 export function Toolbar(p: Props) {
   const { t } = useI18n();
   const linked = p.status === 'connected' || p.status === 'reading';
+  // Known only in the browser; checked after mount so the server and first render agree.
+  const [bluetooth, setBluetooth] = useState(false);
+  useEffect(() => setBluetooth(bluetoothAvailable()), []);
+  const bluetoothButton = bluetooth && (
+    <button type="button" className="btn" onClick={p.onBluetooth} disabled={p.status === 'connecting'}>{t('action.bluetooth')}</button>
+  );
   return (
     <header className="toolbar">
       <div className="brand">
@@ -73,7 +82,10 @@ export function Toolbar(p: Props) {
           {t(STATUS_KEY[p.status])}
         </span>
         {p.status === 'idle' || p.status === 'requesting' ? (
-          <button className="btn btn-primary" onClick={p.onEnable} disabled={p.status === 'requesting'}>{t('action.enable')}</button>
+          <>
+            {bluetoothButton}
+            <button className="btn btn-primary" onClick={p.onEnable} disabled={p.status === 'requesting'}>{t('action.enable')}</button>
+          </>
         ) : linked ? (
           <>
             <label className="live-toggle">
@@ -102,7 +114,10 @@ export function Toolbar(p: Props) {
             <button className="btn" onClick={p.onDisconnect} disabled={p.busy}>{t('action.disconnect')}</button>
           </>
         ) : (
-          <button className="btn btn-primary" onClick={p.onConnect} disabled={!p.inputId || !p.outputId || p.status === 'connecting'}>{t('action.connect')}</button>
+          <>
+            {bluetoothButton}
+            <button className="btn btn-primary" onClick={p.onConnect} disabled={!p.inputId || !p.outputId || p.status === 'connecting'}>{t('action.connect')}</button>
+          </>
         )}
       </div>
     </header>
