@@ -151,6 +151,19 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
     annotations: READ,
   }, () => reply('list_preset_files', options, () => session.listPresetFiles()));
 
+  server.registerTool('load_ir', {
+    title: 'Load a WAV into a user IR slot',
+    description: 'Writes a cabinet impulse response (WAV) from ~/.pocket-master-editor/irs into user IR slot 1..5 of the pedal (stored as 512 taps at 44.1 kHz). The pedal cannot send an IR back, so the IR a slot held is lost: an occupied slot is only overwritten with replace: true. Only call it when the user asked for that slot. Afterwards choose the slot in the IR block with edit_preset.',
+    inputSchema: {
+      file: z.string().describe('WAV file name inside ~/.pocket-master-editor/irs'),
+      slot: z.number().int().min(1).max(5).describe('User IR slot 1..5'),
+      confirm: z.string().describe('Must be "IR<slot>", e.g. "IR3", confirming the user asked to write that slot'),
+      name: z.string().max(10).optional().describe('Name shown on the pedal, 1..10 ASCII characters; defaults to the file name'),
+      replace: z.boolean().default(false).describe('Overwrite a slot that already holds an IR (it cannot be backed up)'),
+    },
+    annotations: WRITE_SLOT,
+  }, (args) => reply('load_ir', options, () => session.loadIr(args)));
+
   server.registerTool('import_preset', {
     title: 'Load a preset file',
     description: 'Loads a preset file from ~/.pocket-master-editor/presets into the edit buffer with live edits (nothing is saved).',

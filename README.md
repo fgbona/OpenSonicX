@@ -86,7 +86,7 @@ the same time.
 
 Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
 `select_preset`, `revert_preset`, `save_preset`, `restore_backup`,
-`export_preset`, `import_preset`.
+`export_preset`, `list_preset_files`, `import_preset`, `load_ir`.
 
 - Blocks, parameters and models are named as on the pedal; user IRs and
   captured profiles go by the names of the files you loaded. The server
@@ -97,6 +97,9 @@ Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
 - Edits only change the edit buffer. `save_preset` overwrites a user slot
   only with `confirm` repeating that slot (e.g. `"P12"`), and first backs the
   slot up to `~/.pocket-master-editor/backups`; `restore_backup` undoes it.
+- `load_ir` writes a WAV impulse response from `~/.pocket-master-editor/irs`
+  into a user IR slot. The pedal cannot send an IR back, so an occupied slot
+  is only overwritten when you say so; keep the WAVs you load.
 - Tones you like can be kept: say "keep this tone" and the assistant exports
   it with notes (e.g. which record it matches). `list_preset_files` shows
   them, and asking for the same tone again loads it at once instead of

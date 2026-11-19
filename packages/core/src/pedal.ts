@@ -1,4 +1,5 @@
 import type { Pedal } from './backup.ts';
+import { irSamplesFromWav, irUploadBlob, UploadDomain } from './ir-upload.ts';
 import type { PocketMasterLink } from './link.ts';
 import { decodeCurrentPreset } from './presets.ts';
 import { Query } from './queries.ts';
@@ -47,4 +48,19 @@ export function linkPedal(link: PocketMasterLink): Pedal {
       return link.presetOperation(savePreset(index, name));
     },
   };
+}
+
+/**
+ * Writes a WAV into user IR `slot` (0..4) as the official tool does: open the edit session, read
+ * the IR names (the IR context), upload, then read the names again to check the slot took the name.
+ * The pedal cannot send an IR back, so what the slot held before is lost.
+ */
+export async function uploadUserIr(link: PocketMasterLink, slot: number, name: string, wav: Uint8Array): Promise<SlotName[]> {
+  const blob = irUploadBlob(slot, name, irSamplesFromWav(wav)); // validates before anything is sent
+  await link.enterSession();
+  await readUserIrNames(link);
+  await link.upload(blob, UploadDomain.IR);
+  const names = await readUserIrNames(link);
+  if (names[slot]?.name !== name) throw new Error(`the IR was written, but User IR ${slot + 1} reports the name "${names[slot]?.name ?? ''}" instead of "${name}"`);
+  return names;
 }

@@ -2,7 +2,7 @@ import { constants } from 'node:fs';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import {
-  applyEdit, blockModelLabel, findCloneModel, modelInfo, modelsFor, chainUnits, decodePreset, editToCommands, encodeValue, fromHex, loadIntoEditBuffer,
+  applyEdit, blockModelLabel, IR_SLOTS, irSamplesFromWav, irUploadBlob, findCloneModel, modelInfo, modelsFor, chainUnits, decodePreset, editToCommands, encodeValue, fromHex, loadIntoEditBuffer,
   modelChoices, moveInChain, parseBackupFile, parsePresetFile, parsePresetLabel, presetFile, presetLabel,
   resolveBlock, resolveModel, resolveParam, restoreFromBackup, saveToSlot,
   type BackupFile, type Edit, type Footswitch, type ParamSpec, type Pedal, type Preset, type SlotNames,
@@ -13,6 +13,8 @@ export interface PedalIO extends Pedal {
   readSlotNames(): Promise<SlotNames>;
   /** The pedal's own "edit buffer differs from the slot" flag, null when unknown. */
   readModified(): Promise<boolean | null>;
+  /** Writes a WAV into user IR `slot` (0..4) under `name`; resolves once it is in the pedal's memory. */
+  uploadIr(slot: number, name: string, wav: Uint8Array): Promise<void>;
 }
 
 export interface Connection {
@@ -34,6 +36,8 @@ export type Change =
 export interface Folders {
   readonly backups: string;
   readonly presets: string;
+  /** WAV impulse responses that load_ir reads. */
+  readonly irs: string;
 }
 
 /**
@@ -221,6 +225,30 @@ export class Session {
     return lines.length > 0 ? `Preset files in ${folder}:\n${lines.join('\n')}` : `No preset files yet in ${folder}.`;
   }
 
+  /**
+   * Loads a WAV from the irs folder into user IR `slot` (1..5). The pedal cannot send an IR back,
+   * so a slot that already holds one is only overwritten with `replace`.
+   */
+  async loadIr(options: { file: string; slot: number; confirm: string; name?: string; replace?: boolean }): Promise<string> {
+    const { slot } = options;
+    if (!Number.isInteger(slot) || slot < 1 || slot > IR_SLOTS) throw new Error(`slot must be 1..${IR_SLOTS}`);
+    requireConfirm(options.confirm, `IR${slot}`);
+    const path = inside(this.#folders.irs, options.file);
+    const wav = new Uint8Array(await readFile(path));
+    const name = (options.name ?? defaultIrName(options.file)).trim();
+    irUploadBlob(slot - 1, name, irSamplesFromWav(wav)); // checks the WAV and the name before connecting
+    return this.#use(async (io) => {
+      const current = (await this.#slots(io)).irNames?.[slot - 1] ?? null;
+      if (current !== null && !options.replace) {
+        throw new Error(`User IR ${slot} holds "${current}", which cannot be backed up from the pedal; keep its WAV, then pass replace: true to overwrite it`);
+      }
+      await io.uploadIr(slot - 1, name, wav);
+      const names = (await this.#slots(io)).irNames ?? [];
+      const list = names.map((n, i) => `User IR ${i + 1}: ${n ?? '(empty)'}`).join('\n');
+      return `Loaded "${name}" into User IR ${slot}${current ? ` (replacing "${current}")` : ''}. Pick it in the IR block with edit_preset.\n\n${list}`;
+    });
+  }
+
   importPreset(file: string): Promise<string> {
     return this.#use(async (io) => {
       const preset = parsePresetFile(await readFile(inside(this.#folders.presets, file), 'utf8'));
@@ -277,6 +305,13 @@ function typedValue(spec: ParamSpec, value: number | boolean | string): number |
   if (typeof value === 'number') return value;
   if (text && Number.isFinite(Number(text))) return Number(text);
   throw new Error(`${spec.name} needs a number`);
+}
+
+/** File name without folder and extension, as printable ASCII, at most 10 characters. */
+function defaultIrName(file: string): string {
+  const base = file.split(/[\\/]/).pop() ?? file;
+  const stem = base.replace(/\.[^.]+$/, '');
+  return stem.replace(/[^\x20-\x7e]/g, '_').slice(0, 10).trim() || 'User IR';
 }
 
 const safe = (name: string) => name.replace(/[^A-Za-z0-9_-]+/g, '_') || 'preset';

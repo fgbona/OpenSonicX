@@ -282,3 +282,84 @@ test('a missing edit acknowledge delays a preset operation by at most 300 ms', a
   f.receive(buildFrame([0x14, 0x08, 0x00]));
   assert.equal(await select, true);
 });
+
+// --- uploads -----------------------------------------------------------------
+import { irRenameBlob, UploadDomain } from '../src/ir-upload.ts';
+
+const uploadAck = () => buildFrame([0x14, 0x08, 0x00]);
+const flashWritten = (domain: number) => buildFrame([0x12, 0x1b, domain, 0, 0, 0]);
+
+test('an upload sends each chunk after the previous one is acknowledged, and ends on the flash-write notice', async () => {
+  const f = fakes();
+  const blob = irRenameBlob(0, 'Holy'); // 22 bytes: two chunks
+  let done = false;
+  const upload = f.link.upload(blob, UploadDomain.IR).then(() => { done = true; });
+  await flush();
+  assert.equal(f.sent.length, 1);
+  f.receive(uploadAck());
+  await flush();
+  assert.equal(f.sent.length, 2);
+  f.receive(uploadAck());
+  await flush();
+  assert.equal(done, false, 'acknowledged is not yet written');
+  f.receive(flashWritten(UploadDomain.PROFILE));
+  await flush();
+  assert.equal(done, false, 'a notice for another domain does not count');
+  f.receive(flashWritten(UploadDomain.IR));
+  await upload;
+  assert.equal(f.sent.length, 2);
+});
+
+test('a chunk without acknowledge is sent again, then the upload fails after ten tries', async () => {
+  const f = fakes();
+  const outcome = assert.rejects(f.link.upload(irRenameBlob(0, 'X'), UploadDomain.IR), /no acknowledge for chunk 1 of 2/);
+  for (let i = 0; i < 10; i++) {
+    await flush();
+    mock.timers.tick(1200);
+  }
+  await outcome;
+  assert.equal(f.sent.length, 10);
+  assert.equal(new Set(f.sent).size, 1, 'always the same chunk');
+});
+
+test('a refused chunk stops the upload at once', async () => {
+  const f = fakes();
+  const outcome = assert.rejects(f.link.upload(irRenameBlob(0, 'X'), UploadDomain.IR), /refused chunk 1 of 2/);
+  await flush();
+  f.receive(buildFrame([0x14, 0x08, 0x01]));
+  await outcome;
+  assert.equal(f.sent.length, 1);
+});
+
+test('without the flash-write notice the upload fails and says it was not saved', async () => {
+  const f = fakes();
+  const outcome = assert.rejects(f.link.upload(irRenameBlob(0, 'X'), UploadDomain.IR), /not saved.*off and on/);
+  for (let i = 0; i < 2; i++) {
+    await flush();
+    f.receive(uploadAck());
+  }
+  await flush();
+  mock.timers.tick(5000);
+  await outcome;
+});
+
+test('the upload path only carries upload blobs for that domain', async () => {
+  const f = fakes();
+  await assert.rejects(f.link.upload(Uint8Array.of(0x11, 0x4a, 0, 0, 0, 0), UploadDomain.IR), /Blocked/);
+  await assert.rejects(f.link.upload(Uint8Array.of(0x11, 0x23, 0, 0, 0x10, 0x0a), UploadDomain.IR), /Blocked/);
+  assert.equal(f.sent.length, 0);
+});
+
+test('entering the edit session sends 12 30 and goes on after any reply or one second', async () => {
+  const f = fakes();
+  const first = f.link.enterSession();
+  await flush();
+  assert.deepEqual(f.sent, [toHex(buildFrame([0x12, 0x30]))]);
+  f.receive(buildFrame([0x12, 0x30, 1, 0]));
+  await first;
+  const second = f.link.enterSession();
+  await flush();
+  mock.timers.tick(1000);
+  await second;
+  assert.equal(f.sent.length, 2);
+});
