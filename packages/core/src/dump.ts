@@ -1,4 +1,5 @@
 import { blockByModule, findCloneModel, findModel, CLONE_MODULE, type ModelSpec, type ParamSpec } from './catalog.ts';
+import type { Footswitch } from './commands.ts';
 import { MessageType, Query } from './queries.ts';
 import { toHex } from './hex.ts';
 
@@ -7,11 +8,13 @@ import { toHex } from './hex.ts';
  *   12 41, uint16 0x00ff, uint16 header_len, header records, groups...
  *   record = uint16 tag, uint16 length, data. A group is a record whose data are records.
  */
-const Tag = { VOLUME: 0x2001, STATES: 0x3001, CHAIN: 0x3002, EFFECTS: 0x3003, PARAMS: 0x3004 } as const;
+const Tag = { VOLUME: 0x2001, BPM: 0x2002, STATES: 0x3001, CHAIN: 0x3002, EFFECTS: 0x3003, PARAMS: 0x3004 } as const;
+/** Group holding the two footswitch masks (u32 FS1, u32 FS2; bit n = module n). Layout from SonicMaster (MIT). */
+const FOOTSWITCH_GROUP = 0x0003;
 const REQUIRED = [Tag.STATES, Tag.CHAIN, Tag.EFFECTS, Tag.PARAMS];
 /** Smallest record sizes the decoder reads: mask, 9 chain bytes, 10 codes, 10 x 8 floats. */
 const MIN_SIZE: ReadonlyMap<number, number> = new Map([
-  [Tag.STATES, 4], [Tag.CHAIN, 9], [Tag.EFFECTS, 40], [Tag.PARAMS, 320], [Tag.VOLUME, 4],
+  [Tag.STATES, 4], [Tag.CHAIN, 9], [Tag.EFFECTS, 40], [Tag.PARAMS, 320], [Tag.VOLUME, 4], [Tag.BPM, 4],
 ]);
 const MODULE_COUNT = 9;
 const PARAM_STRIDE = 32; // 8 x float32 per module
@@ -36,6 +39,8 @@ export interface Block {
   readonly label: string;
   readonly module: number;
   readonly on: boolean;
+  /** Footswitch that toggles this block, or null. */
+  readonly footswitch: Footswitch | null;
   /** Model name, or the effect code in hex when the catalog does not know it. */
   readonly model: string;
   readonly code: number;
@@ -44,6 +49,8 @@ export interface Block {
 
 export interface Preset {
   readonly volume: number | null;
+  /** Tempo, 40..260; null when the dump has no BPM record. */
+  readonly bpm: number | null;
   readonly ampMode: 'normal' | 'clone';
   /** Blocks in signal-chain order. */
   readonly chain: readonly Block[];
@@ -53,7 +60,7 @@ export function decodePreset(payload: Uint8Array): Preset {
   if (payload[0] !== MessageType.GET || payload[1] !== Query.EDIT_BUFFER || payload.length < 6) {
     throw new Error('not an edit-buffer dump (expected payload 12 41 …)');
   }
-  const tags = readTags(payload);
+  const { tags, groups } = readDump(payload);
   const missing = REQUIRED.filter((t) => !tags.has(t));
   if (missing.length > 0) {
     throw new Error(`edit-buffer dump is missing records ${missing.map((t) => '0x' + t.toString(16)).join(', ')}`);
@@ -70,6 +77,11 @@ export function decodePreset(payload: Uint8Array): Preset {
   const ampMode = (mask >> AMP_MODE_BIT) & 1 ? 'clone' : 'normal';
   const order = readChain(tags.get(Tag.CHAIN) as Uint8Array);
   const volume = tags.has(Tag.VOLUME) ? view(Tag.VOLUME).getUint32(0, true) : null;
+  const bpm = tags.has(Tag.BPM) ? view(Tag.BPM).getUint32(0, true) : null;
+  const switches = groups.get(FOOTSWITCH_GROUP);
+  const masks = switches && switches.length >= 8 ? [dataView(switches).getUint32(0, true), dataView(switches).getUint32(4, true)] : [0, 0];
+  const footswitchOf = (module: number): Footswitch | null =>
+    (masks[0]! >> module) & 1 ? 'fs1' : (masks[1]! >> module) & 1 ? 'fs2' : null;
 
   const chain = order.map((module) => {
     // ponytail: in clone mode the AMP slot is read from module 9 (code and params); not yet verified on hardware.
@@ -83,12 +95,13 @@ export function decodePreset(payload: Uint8Array): Preset {
       label: spec?.label ?? key.toUpperCase(),
       module,
       on: ((mask >> module) & 1) === 1,
+      footswitch: footswitchOf(module),
       model: model?.name ?? `0x${code.toString(16).toUpperCase().padStart(8, '0')}`,
       code,
       params: decodeParams(model, params, source),
     };
   });
-  return { volume, ampMode, chain };
+  return { volume, bpm, ampMode, chain };
 }
 
 function decodeParams(model: ModelSpec | undefined, view: DataView, module: number): Param[] {
@@ -134,13 +147,15 @@ function readChain(data: Uint8Array): number[] {
   return order;
 }
 
-function readTags(payload: Uint8Array): Map<number, Uint8Array> {
+function readDump(payload: Uint8Array): { tags: Map<number, Uint8Array>; groups: Map<number, Uint8Array> } {
   const headerLen = dataView(payload).getUint16(4, true);
   const tags = new Map<number, Uint8Array>();
+  const groups = new Map<number, Uint8Array>();
   for (const group of records(payload, 6 + headerLen, payload.length)) {
+    groups.set(group.tag, group.data);
     for (const rec of records(group.data, 0, group.data.length)) tags.set(rec.tag, rec.data);
   }
-  return tags;
+  return { tags, groups };
 }
 
 function records(buf: Uint8Array, start: number, end: number): { tag: number; data: Uint8Array }[] {

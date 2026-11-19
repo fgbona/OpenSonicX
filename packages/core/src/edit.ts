@@ -1,7 +1,10 @@
 import { findCloneModel, findModel, CLONE_MODULE, type ModelSpec } from './catalog.ts';
-import { setAmpMode, selectModel, setBlockOn, setChain, setParam, validateChain } from './commands.ts';
+import { setAmpMode, selectModel, setBlockOn, setChain, setFootswitch, setParam, validateChain, type Footswitch } from './commands.ts';
 import { modelOf, toParam, type Block, type Preset } from './dump.ts';
-import { setPresetVolume } from './slots.ts';
+import { setPresetBpm, setPresetVolume } from './slots.ts';
+
+/** The most blocks one footswitch can toggle. */
+export const FOOTSWITCH_CAPACITY = 3;
 
 const AMP_MODULE = 3;
 const IR_MODULE = 4;
@@ -14,7 +17,10 @@ export type Edit =
   /** `clone` selects a captured amp profile; only used to restore a preset that had one. */
   | { readonly kind: 'model'; readonly module: number; readonly code: number; readonly clone?: boolean }
   | { readonly kind: 'chain'; readonly order: readonly number[] }
-  | { readonly kind: 'volume'; readonly value: number };
+  | { readonly kind: 'volume'; readonly value: number }
+  | { readonly kind: 'bpm'; readonly value: number }
+  /** Puts a block on FS1 or FS2, or (null) on none. */
+  | { readonly kind: 'footswitch'; readonly module: number; readonly footswitch: Footswitch | null };
 
 /** The preset after an edit, as the pedal will hold it. Returns a new object; the input is not changed. */
 export function applyEdit(preset: Preset, edit: Edit): Preset {
@@ -22,6 +28,11 @@ export function applyEdit(preset: Preset, edit: Edit): Preset {
     case 'volume':
       setPresetVolume(edit.value); // validates 0..100
       return { ...preset, volume: edit.value };
+    case 'bpm':
+      setPresetBpm(edit.value); // validates the range
+      return { ...preset, bpm: edit.value };
+    case 'footswitch':
+      return mapBlock(preset, edit.module, (b) => ({ ...b, footswitch: edit.footswitch }));
     case 'chain': {
       validateChain(edit.order);
       const byModule = new Map(preset.chain.map((b) => [b.module, b]));
@@ -61,6 +72,10 @@ export function editToCommands(preset: Preset, edit: Edit): Uint8Array[] {
   switch (edit.kind) {
     case 'volume':
       return [setPresetVolume(edit.value)];
+    case 'bpm':
+      return [setPresetBpm(edit.value)];
+    case 'footswitch':
+      return footswitchCommands(preset, edit.module, edit.footswitch);
     case 'chain':
       return [setChain(edit.order)];
     case 'on':
@@ -84,7 +99,8 @@ export function editToCommands(preset: Preset, edit: Edit): Uint8Array[] {
 
 /**
  * Edits that turn `from` into `to`: chain first, then models (which reset parameters
- * to their defaults), then on/off, then every parameter that still differs, then volume.
+ * to their defaults), then on/off, then every parameter that still differs, then volume, BPM
+ * and footswitches.
  */
 export function diffPresets(from: Preset, to: Preset): Edit[] {
   const edits: Edit[] = [];
@@ -111,7 +127,33 @@ export function diffPresets(from: Preset, to: Preset): Edit[] {
     }
   }
   if (to.volume !== null && to.volume !== from.volume) edits.push({ kind: 'volume', value: to.volume });
+  if (to.bpm !== null && to.bpm !== from.bpm) edits.push({ kind: 'bpm', value: to.bpm });
+  // Footswitches: first take blocks off the switches they leave, then add, so a switch never
+  // holds more than FOOTSWITCH_CAPACITY blocks on the way.
+  const moving = afterModels.chain.filter((b) => (target.get(b.module) as Block).footswitch !== b.footswitch);
+  for (const b of moving) if (b.footswitch !== null) edits.push({ kind: 'footswitch', module: b.module, footswitch: null });
+  for (const b of moving) {
+    const want = (target.get(b.module) as Block).footswitch;
+    if (want !== null) edits.push({ kind: 'footswitch', module: b.module, footswitch: want });
+  }
   return edits;
+}
+
+/** Adds the block to the target switch (if any) first, then takes it off the one it leaves. */
+function footswitchCommands(preset: Preset, module: number, target: Footswitch | null): Uint8Array[] {
+  const block = preset.chain.find((b) => b.module === module);
+  if (!block) throw new Error(`no block with module ${module}`);
+  if (block.footswitch === target) return [];
+  if (target !== null) {
+    const used = preset.chain.filter((b) => b.footswitch === target).length;
+    if (used >= FOOTSWITCH_CAPACITY) {
+      throw new Error(`${target.toUpperCase()} already switches ${FOOTSWITCH_CAPACITY} blocks; take one off it first`);
+    }
+  }
+  return [
+    ...(target !== null ? [setFootswitch(target, module, true)] : []),
+    ...(block.footswitch !== null ? [setFootswitch(block.footswitch, module, false)] : []),
+  ];
 }
 
 function mapBlock(preset: Preset, module: number, fn: (b: Block) => Block): Preset {

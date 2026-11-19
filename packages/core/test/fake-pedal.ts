@@ -5,7 +5,9 @@ import { decodePresetNames } from '../src/slots.ts';
 import type { Pedal } from '../src/backup.ts';
 import { readCapture } from './capture.ts';
 
-const TAG = { VOLUME: 0x2001, STATES: 0x3001, CHAIN: 0x3002, EFFECTS: 0x3003, PARAMS: 0x3004 } as const;
+const TAG = { VOLUME: 0x2001, BPM: 0x2002, STATES: 0x3001, CHAIN: 0x3002, EFFECTS: 0x3003, PARAMS: 0x3004 } as const;
+/** The footswitch group (two u32 masks) is the dump's last group. */
+const footswitchMasks = (dump: Uint8Array) => dump.length - 8;
 
 /** Real P08 edit-buffer payload and the owner's 100 real preset names. */
 export function realP08(): Uint8Array {
@@ -118,7 +120,15 @@ export class FakePedal implements Pedal {
     } else if (cmd === 0x44) {
       this.editBuffer.set(p.subarray(2, 11), recordAt(this.editBuffer, TAG.CHAIN));
     } else if (cmd === 0x42) {
-      v.setUint32(recordAt(this.editBuffer, TAG.VOLUME), p[6]!, true);
+      const field = p[2];
+      if (field === 1) v.setUint32(recordAt(this.editBuffer, TAG.VOLUME), p[6]!, true);
+      else if (field === 2) v.setUint32(recordAt(this.editBuffer, TAG.BPM), p[6]! | (p[7]! << 8), true);
+      else throw new Error(`fake pedal: unexpected preset field ${field}`);
+    } else if (cmd === 0x4d) {
+      const at = footswitchMasks(this.editBuffer) + 4 * p[2]!;
+      const bit = 1 << p[3]!;
+      const mask = v.getUint32(at, true);
+      v.setUint32(at, p[4] ? mask | bit : mask & ~bit, true);
     } else {
       throw new Error(`fake pedal: unexpected command ${cmd}`);
     }

@@ -5,7 +5,7 @@ import {
   applyEdit, blockModelLabel, findCloneModel, modelInfo, modelsFor, chainUnits, decodePreset, editToCommands, encodeValue, fromHex, loadIntoEditBuffer,
   modelChoices, moveInChain, parseBackupFile, parsePresetFile, parsePresetLabel, presetFile, presetLabel,
   resolveBlock, resolveModel, resolveParam, restoreFromBackup, saveToSlot,
-  type BackupFile, type Edit, type ParamSpec, type Pedal, type Preset, type SlotNames,
+  type BackupFile, type Edit, type Footswitch, type ParamSpec, type Pedal, type Preset, type SlotNames,
 } from '@pocket-master/core';
 
 /** What the session needs from the pedal: the core Pedal contract plus two read-only queries. */
@@ -26,7 +26,10 @@ export type Change =
   | { readonly kind: 'block'; readonly block: string; readonly on: boolean }
   | { readonly kind: 'model'; readonly block: string; readonly model: string }
   | { readonly kind: 'move'; readonly block: string; readonly position: number }
-  | { readonly kind: 'volume'; readonly value: number };
+  | { readonly kind: 'volume'; readonly value: number }
+  | { readonly kind: 'bpm'; readonly value: number }
+  /** FS1, FS2 or none, in any case. */
+  | { readonly kind: 'footswitch'; readonly block: string; readonly switch: string };
 
 export interface Folders {
   readonly backups: string;
@@ -280,6 +283,7 @@ const safe = (name: string) => name.replace(/[^A-Za-z0-9_-]+/g, '_') || 'preset'
 
 function toEdit(preset: Preset, change: Change, slots: SlotNames): Edit {
   if (change.kind === 'volume') return { kind: 'volume', value: change.value };
+  if (change.kind === 'bpm') return { kind: 'bpm', value: change.value };
   const block = resolveBlock(preset, change.block);
   switch (change.kind) {
     case 'parameter': {
@@ -288,6 +292,8 @@ function toEdit(preset: Preset, change: Change, slots: SlotNames): Edit {
     }
     case 'block':
       return { kind: 'on', module: block.module, on: change.on };
+    case 'footswitch':
+      return { kind: 'footswitch', module: block.module, footswitch: parseFootswitch(change.switch) };
     case 'model': {
       const model = resolveModel(block.key, change.model, slots);
       return { kind: 'model', module: block.module, code: model.code, clone: model.clone };
@@ -303,10 +309,18 @@ function toEdit(preset: Preset, change: Change, slots: SlotNames): Edit {
   }
 }
 
+function parseFootswitch(input: string): Footswitch | null {
+  const key = input.trim().toLowerCase();
+  if (key === 'fs1' || key === 'fs2') return key;
+  if (key === 'none' || key === '') return null;
+  throw new Error(`switch must be FS1, FS2 or none, got "${input}"`);
+}
+
 function formatPreset(index: number, name: string, preset: Preset, slots: SlotNames, modified: boolean | null): string {
   const head = [
     `${presetLabel(index)} "${name}"`,
     `volume ${preset.volume ?? '?'}`,
+    `bpm ${preset.bpm ?? '?'}`,
     `amp mode: ${preset.ampMode === 'clone' ? 'captured profile' : 'amp model'}`,
     `unsaved changes: ${modified === null ? 'unknown' : modified ? 'yes' : 'no'}`,
   ].join(' · ');
@@ -315,7 +329,8 @@ function formatPreset(index: number, name: string, preset: Preset, slots: SlotNa
   const blocks = preset.chain.map((b) => {
     const model = blockModelLabel(b, preset.ampMode, slots.irNames, slots.profileNames);
     const params = b.params.map((p) => `${p.name} ${p.display}`).join(', ');
-    return `${b.label.padEnd(width)}  ${b.on ? 'on ' : 'off'}  ${model}${params ? `: ${params}` : ''}`;
+    const footswitch = b.footswitch ? `[${b.footswitch.toUpperCase()}] ` : '';
+    return `${b.label.padEnd(width)}  ${b.on ? 'on ' : 'off'}  ${footswitch}${model}${params ? `: ${params}` : ''}`;
   });
   return [head, chain, ...blocks].join('\n');
 }

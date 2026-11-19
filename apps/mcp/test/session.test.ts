@@ -225,3 +225,30 @@ test('exported tones keep notes and are listed, so an approved tone is reused in
   const list = await session.listPresetFiles();
   assert.match(list, /black-album\.json: ".*" — Metallica - Black Album rhythm, approved by ear/);
 });
+
+test('edit sets the BPM and puts blocks on footswitches; get_preset shows both', async () => {
+  const { session, fake } = setup();
+  const text = await session.edit([
+    { kind: 'bpm', value: 96 },
+    { kind: 'footswitch', block: 'DLY', switch: 'FS1' },
+    { kind: 'footswitch', block: 'rvb', switch: 'fs2' },
+  ]);
+  const preset = decodePreset(fake.editBuffer);
+  assert.equal(preset.bpm, 96);
+  assert.equal(preset.chain.find((b) => b.key === 'dly')!.footswitch, 'fs1');
+  assert.match(text, /· bpm 96 ·/);
+  assert.match(text, /\nDLY +(on|off) +\[FS1\] Analog/);
+  await session.edit([{ kind: 'footswitch', block: 'dly', switch: 'none' }]);
+  assert.equal(decodePreset(fake.editBuffer).chain.find((b) => b.key === 'dly')!.footswitch, null);
+});
+
+test('a BPM out of range or a full switch fails before anything is sent', async () => {
+  const { session, fake } = setup();
+  const before = fake.received.length;
+  await assert.rejects(session.edit([{ kind: 'bpm', value: 300 }]), /BPM must be 40\.\.260/);
+  await session.edit([{ kind: 'footswitch', block: 'nr', switch: 'FS1' }, { kind: 'footswitch', block: 'fx1', switch: 'FS1' }, { kind: 'footswitch', block: 'dly', switch: 'FS1' }]);
+  const sent = fake.received.length;
+  await assert.rejects(session.edit([{ kind: 'footswitch', block: 'rvb', switch: 'FS1' }]), /FS1 already switches 3 blocks/);
+  assert.equal(fake.received.length, sent);
+  assert.ok(sent > before);
+});
