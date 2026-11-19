@@ -1,4 +1,4 @@
-import { linkPedal, MessageType, PocketMasterLink, Query, readProfileNames, readUserIrNames, uploadUserIr, type LogEntry, type SlotName } from '@pocket-master/core';
+import { linkPedal, MessageType, PocketMasterLink, Query, readProfileNames, readUserIrNames, uploadUserIr, uploadUserProfile, type LogEntry, type SlotName } from '@pocket-master/core';
 import type { Connection, PedalIO } from './session.ts';
 
 const PORT_NAME = /pocket\s*master/i;
@@ -50,6 +50,9 @@ export async function connectPocketMaster(onLog: (entry: LogEntry) => void = () 
     },
     async uploadIr(slot, name, wav) {
       await uploadUserIr(link, slot, name, wav);
+    },
+    async uploadProfile(slot, name, arrays) {
+      await uploadUserProfile(link, slot, name, arrays);
     },
     async readModified() {
       const { payload } = await link.request(Query.MODIFIED);

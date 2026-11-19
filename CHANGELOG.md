@@ -36,6 +36,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
   DI is downloaded at use and checked by SHA-256; it is not distributed.
 - Slot names are read from the full 16-byte record, so captured-profile
   names up to 15 characters are no longer cut at 10.
+- TONE3000 in the MCP: `tone3000_login` (device sign-in, token kept
+  owner-only in `~/.pocket-master-editor`), `search_tone3000`,
+  `install_tone` (NAM capture -> converted -> profile slot, or IR -> user
+  IR slot; `confirm` and `replace` as for other slot writes) and
+  `load_nam` for local captures. Conversions run the five probe passes in
+  parallel worker threads. Core has a TONE3000 client (PKCE for the
+  browser, device authorization, search, models, download).
 - Protocol knowledge ported from SonicMaster (MIT, credited in NOTICE).
   Reading the BPM is confirmed on the owner's unit; the new writes are
   tested on the simulated pedal and still need a test on the unit.
