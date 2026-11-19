@@ -77,6 +77,8 @@ export class PocketMasterLink {
   readonly #drainWaiters = new Set<() => void>();
   /** Edits sent whose 14 08 acknowledge has not arrived yet; those acknowledges are consumed here. */
   #editAcksPending = 0;
+  #requests: Promise<unknown> = Promise.resolve();
+  #inFlight = 0;
   /** Timeout restarts of the requests waiting for a reply, called as its packets arrive. */
   #progress = new Set<() => void>();
   #editAcksSettled: (() => void) | null = null;
@@ -100,8 +102,23 @@ export class PocketMasterLink {
     this.#listeners.clear();
   }
 
-  /** Sends a query and resolves with the (reassembled) reply. Retries, then rejects with a readable error. */
-  async request(kind: QueryKind): Promise<Frame> {
+  /**
+   * Sends a query and resolves with the (reassembled) reply. Retries, then rejects with a readable
+   * error. Queries go out one at a time: replies are matched by kind and joined by packet count,
+   * so two in flight could mix (a slow Bluetooth names reply overlapping the preset read).
+   */
+  request(kind: QueryKind): Promise<Frame> {
+    // Idle: send now, synchronously, as before. Otherwise wait for every query ahead, queued or
+    // running (counted together, so a third query cannot slip in between two).
+    const idle = this.#inFlight === 0;
+    this.#inFlight += 1;
+    const start = () => this.#requestNow(kind).finally(() => { this.#inFlight -= 1; });
+    const run = idle ? start() : this.#requests.then(start);
+    this.#requests = run.catch(() => undefined); // a failed query never blocks the next one
+    return run;
+  }
+
+  async #requestNow(kind: QueryKind): Promise<Frame> {
     for (let attempt = 0; attempt <= REQUEST_RETRIES; attempt++) {
       if (this.#closed) throw new LinkClosedError();
       const reply = this.#waitFor(kind);

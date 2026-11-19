@@ -372,6 +372,29 @@ export function usePocketMaster() {
     return failure ? null : result;
   }, [patch, read, refreshSlotNames]);
 
+  /**
+   * Factory reset, then disconnect: the pedal reboots and drops the link, so there is nothing to
+   * re-read (the exclusive() follow-up reads would only time out against it). True once sent.
+   */
+  const factoryReset = useCallback(async (): Promise<boolean> => {
+    const current = link.current;
+    if (!current || busyRef.current) return false;
+    busyRef.current = true;
+    if (settleTimer.current) clearTimeout(settleTimer.current);
+    patch({ busy: { step: 'Factory reset', done: 0, total: 1 }, error: null });
+    try {
+      await current.factoryReset();
+      return true;
+    } catch (e) {
+      console.error('factory reset failed', e);
+      patch({ error: `Factory reset was not sent: ${message(e)}` });
+      return false;
+    } finally {
+      busyRef.current = false;
+      patch({ busy: null });
+    }
+  }, [patch]);
+
   /** Loads another preset, like turning the preset knob; unsaved edits on the pedal are lost. */
   const loadPreset = useCallback(async (index: number) => {
     await exclusive('Loading', (current) => linkPedal(current).selectPreset(index));
@@ -595,6 +618,7 @@ export function usePocketMaster() {
     loadPreset: (index: number) => void loadPreset(index),
     exclusive,
     writeGlobal,
+    factoryReset,
     refreshSlotNames,
     importBackup,
     exportPreset: () => void exportPreset(),

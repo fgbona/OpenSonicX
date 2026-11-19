@@ -89,7 +89,8 @@ export function editKey(sysex: Uint8Array): string {
   const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
   const command = payload[1] ?? 0;
   if (command === EditCommand.CHAIN) return 'chain';
-  if (isGlobalWrite(payload)) return `global:${payload[1]}:${payload[2]}:${payload[3]}`;
+  // A setting is keyed by its address (11 11 a0 a1), a target by register and slot (11 16|17 sub).
+  if (isGlobalWrite(payload)) return payload[1] === 0x11 ? `global:${payload[2]}:${payload[3]}` : `target:${payload[1]}:${payload[2]}`;
   // 11 42 <field>: field 1 is the preset volume, 2 the BPM; each has its own key.
   if (command === EditCommand.PRESET_FIELD) return `field:${payload[2]}`;
   if (command === EditCommand.FOOTSWITCH) return `footswitch:${payload[2]}:${payload[3]}`;

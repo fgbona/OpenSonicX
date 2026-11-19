@@ -21,6 +21,9 @@ const GLOBALS = (() => {
   return Uint8Array.from(p);
 })();
 const fakeLink = { request: async () => ({ payload: GLOBALS }), factoryReset: async () => undefined } as unknown as PocketMasterLink;
+// Module-level, so its identity is stable: the dialog's read effect depends on it.
+const fakeExclusive = <T,>(_step: string, run: (link: PocketMasterLink) => Promise<T>) => run(fakeLink);
+const fakeReset = async () => true;
 
 export default function Preview() {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -41,8 +44,8 @@ export default function Preview() {
       <main className="main">
         <label className="muted small"><input type="checkbox" checked={editable} onChange={(e) => setEditable(e.target.checked)} /> live edit (preview only)</label>
         <button type="button" className="btn" onClick={() => setSettingsOpen(true)}>Global options</button>
-        <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} exclusive={(_step, run) => run(fakeLink)}
-          writeGlobal={(b) => console.info('preview global write', b)} busy={false} error={null} onReset={() => undefined} />
+        <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} exclusive={fakeExclusive}
+          writeGlobal={(b) => console.info('preview global write', b)} busy={false} error={null} factoryReset={fakeReset} onReset={() => undefined} />
         <ChainView preset={preset} presetIndex={current} presetName={NAMES[current] ?? null} editable={editable} modified={false} onEdit={onEdit}
           irNames={['Mesa OS', null, null, null, null]} profileNames={['Randall SA', null, null, null, null]} />
       </main>

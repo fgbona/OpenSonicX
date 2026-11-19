@@ -45,3 +45,12 @@ test('the globals dump decodes at the offsets SonicMaster bound', () => {
   assert.equal(decodeGlobals(Uint8Array.from([0x12, 0x41, ...p.slice(2)])), null);
   assert.equal(buildFrame([0x12, 0x10]).length > 0, true);
 });
+
+test('queued target writes keep only the latest value per slot; settings keep one per address', async () => {
+  const { editKey } = await import('../src/commands.ts');
+  assert.equal(editKey(setExpFsTarget('fs1', 2)), editKey(setExpFsTarget('fs1', 5)));
+  assert.notEqual(editKey(setExpFsTarget('fs1', 2)), editKey(setExpFsTarget('fs2', 2)));
+  assert.notEqual(editKey(setExpFsTarget('exp', 1)), editKey(setExpFsTarget('fs', 1)));
+  assert.equal(editKey(setGlobal('inputLevel', 1)), editKey(setGlobal('inputLevel', -3)));
+  assert.notEqual(editKey(setGlobal('inputLevel', 1)), editKey(setGlobal('fxRecLevel', 1)));
+});
