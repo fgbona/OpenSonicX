@@ -22,6 +22,9 @@ test('global writes match the captured frames byte for byte', () => {
 test('global writes refuse values out of range', () => {
   assert.throws(() => setGlobal('inputLevel', 21), /-20\.\.20/);
   assert.throws(() => setGlobal('masterVolume', 1.5), /0\.\.100/);
+  // The unit reports 100 (owner's pedal, 2026-11-19), so the range is 0..100, not SonicMaster's 0..10.
+  assert.doesNotThrow(() => setGlobal('backlight', 100));
+  assert.throws(() => setGlobal('backlight', 101), /0\.\.100/);
   assert.throws(() => setExpFsTarget('fs', 18), /0\.\.17/);
   assert.throws(() => setExpFsTarget('exp', 8), /0\.\.7/);
 });

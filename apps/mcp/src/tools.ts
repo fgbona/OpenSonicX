@@ -191,7 +191,7 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
       inputLevel: level.optional(), fxRecLevel: level.optional(), monitorLevel: level.optional(), btRecLevel: level.optional(),
       mode: flag.optional(), reamp: flag.optional(), eco: flag.optional(), powerConfirm: flag.optional(), battOnly: flag.optional(),
       expFsType: z.number().int().min(0).max(2).optional(),
-      backlight: z.number().int().min(0).max(10).optional(),
+      backlight: z.number().int().min(0).max(100).optional(),
       expTarget: z.string().optional(), fsTarget: z.string().optional(), fs1Target: z.string().optional(), fs2Target: z.string().optional(),
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
