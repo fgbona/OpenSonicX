@@ -175,6 +175,28 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   }, (args) => reply('rename_slot', options, () => session.renameSlot(args)));
 
+  server.registerTool('get_global_settings', {
+    title: 'Get global settings',
+    description: 'Device-wide settings that are not part of any preset: master volume, input/FX-rec/monitor/BT-rec levels, USB recording mode, re-amp, EXP/FS jack type, backlight, ECO.',
+    annotations: READ,
+  }, () => reply('get_global_settings', options, () => session.getGlobals()));
+
+  const level = z.number().int().min(-20).max(20);
+  const flag = z.number().int().min(0).max(1);
+  server.registerTool('set_global_settings', {
+    title: 'Change global settings',
+    description: 'Changes device-wide settings (they affect every preset and are kept by the pedal at once). Levels are dB -20..20; mode 0 dry / 1 wet; expFsType 0 expression pedal, 1 single footswitch, 2 dual footswitch; targets by name (expression: VOL, FX1, DRV, AMP, IR, FX2, DLY, RVB; footswitch: Preset-, Preset+, Tap Tempo, NR, FX1, DRV, AMP, IR, EQ, FX2, DLY, RVB, CTRL 1, CTRL 2, Drum, REC/Play, Loop Stop, Tuner). Ask the user before changing these. Factory reset is not available here.',
+    inputSchema: {
+      masterVolume: z.number().int().min(0).max(100).optional(),
+      inputLevel: level.optional(), fxRecLevel: level.optional(), monitorLevel: level.optional(), btRecLevel: level.optional(),
+      mode: flag.optional(), reamp: flag.optional(), eco: flag.optional(), powerConfirm: flag.optional(), battOnly: flag.optional(),
+      expFsType: z.number().int().min(0).max(2).optional(),
+      backlight: z.number().int().min(0).max(10).optional(),
+      expTarget: z.string().optional(), fsTarget: z.string().optional(), fs1Target: z.string().optional(), fs2Target: z.string().optional(),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  }, (args) => reply('set_global_settings', options, () => session.setGlobals(args)));
+
   server.registerTool('load_nam', {
     title: 'Convert a NAM capture into a profile slot',
     description: 'Converts a NAM capture (.nam, WaveNet) from ~/.pocket-master-editor/nams into the pedal\'s captured-profile format and writes it to profile slot 1..5; takes about one to a few minutes. The pedal cannot send a profile back, so an occupied slot is only overwritten with replace: true. Only when the user asked for that slot. Afterwards pick it on AMP with edit_preset.',

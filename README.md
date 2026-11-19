@@ -101,7 +101,8 @@ the same time.
 Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
 `select_preset`, `revert_preset`, `save_preset`, `restore_backup`,
 `export_preset`, `list_preset_files`, `import_preset`, `load_ir`, `load_nam`,
-`tone3000_login`, `search_tone3000`, `install_tone`.
+`tone3000_login`, `search_tone3000`, `install_tone`, `rename_slot`,
+`get_global_settings`, `set_global_settings`.
 
 - Blocks, parameters and models are named as on the pedal; user IRs and
   captured profiles go by the names of the files you loaded. The server
@@ -126,6 +127,11 @@ Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
   as `TONE3000_CLIENT_ID=...` (from tone3000.com/settings). The conversion
   downloads a reference DI signal from SonicMaster's repository once (it is
   not part of this project) and checks it by SHA-256.
+- `get_global_settings` and `set_global_settings` read and change the
+  device-wide options (master volume, input/FX-rec/monitor/BT-rec levels,
+  USB recording, re-amp, EXP/FS jack and its targets, backlight, ECO,
+  power-off confirm, battery only). They affect every preset. Factory reset
+  is only in the web editor, behind a typed confirmation.
 - Tones you like can be kept: say "keep this tone" and the assistant exports
   it with notes (e.g. which record it matches). `list_preset_files` shows
   them, and asking for the same tone again loads it at once instead of
