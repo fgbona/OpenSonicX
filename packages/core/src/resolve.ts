@@ -1,6 +1,7 @@
 import { modelsFor, type ParamSpec } from './catalog.ts';
 import { modelOf, type Block, type Preset } from './dump.ts';
 import { modelInfo } from './model-info.ts';
+import { effectiveSpec } from './sync.ts';
 import { USER_PRESETS } from './presets.ts';
 import { userIrSlot } from './slots.ts';
 
@@ -61,7 +62,9 @@ export function resolveBlock(preset: Preset, input: string): Block {
 export function resolveParam(preset: Preset, block: Block, input: string): ParamSpec {
   const params = modelOf(preset, block)?.params ?? [];
   if (params.length === 0) throw new Error(`${block.label} has an unknown model (${block.model}); its parameters cannot be set by name`);
-  return pick('parameter', input, params.map((p) => ({ names: [p.name], value: p, label: p.name })));
+  const spec = pick('parameter', input, params.map((p) => ({ names: [p.name], value: p, label: p.name })));
+  // As the pedal reads the slot now: a synced Time or Rate takes a note division.
+  return effectiveSpec(spec, (alg) => block.params.find((p) => p.alg === alg)?.value);
 }
 
 /** Every model a block can take: catalog names, user IRs by their file names, AMP adds loaded profiles. */

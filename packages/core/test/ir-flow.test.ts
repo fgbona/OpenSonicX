@@ -31,6 +31,11 @@ function pedalPort(options: { commit?: boolean } = {}) {
       log.push(`chunk ${f.index + 1}/${f.total}`);
       reply(buildFrame([0x14, 0x08, 0x00]));
       const blob = upload.feed(f, 0);
+      if (blob && blob.payload[0] === 0x11 && (blob.payload[1] === 0x22 || blob.payload[1] === 0x26)) {
+        const profile = blob.payload[1] === 0x26;
+        (profile ? profiles : names)[blob.payload[2]!] = new TextDecoder().decode(blob.payload.subarray(6, 22)).replace(/\0+$/, '');
+        setTimeout(() => receiver?.(buildFrame([0x12, 0x1b, profile ? 0x03 : 0x04, 0, 0, 0])), 5);
+      }
       if (blob && blob.payload[0] === 0x11 && (blob.payload[1] === 0x21 || blob.payload[1] === 0x25)) {
         const profile = blob.payload[1] === 0x25;
         (profile ? profiles : names)[blob.payload[6]!] = new TextDecoder().decode(blob.payload.subarray(10, profile ? 25 : 20)).replace(/\0+$/, '');
@@ -80,4 +85,16 @@ test('uploading a converted capture writes the profile slot and checks its new n
   assert.equal(names[2]?.name, 'GK 250ML clone');
   assert.deepEqual(pedal.log.slice(0, 3), ['session', 'profiles', 'chunk 1/146']);
   assert.equal(pedal.log.at(-1), 'profiles');
+});
+
+test('renaming a user IR or a profile slot sends the short rename blob and checks the new name', async () => {
+  const { renameUserIr, renameUserProfile } = await import('../src/pedal.ts');
+  const pedal = pedalPort();
+  const link = new PocketMasterLink(pedal.port, () => undefined);
+  const irs = await renameUserIr(link, 0, 'Mesa 4x12');
+  assert.equal(irs[0]?.name, 'Mesa 4x12');
+  const profiles = await renameUserProfile(link, 0, 'Randall Lead');
+  link.close();
+  assert.equal(profiles[0]?.name, 'Randall Lead');
+  assert.deepEqual(pedal.log.filter((l) => l.startsWith('chunk')), ['chunk 1/2', 'chunk 2/2', 'chunk 1/2', 'chunk 2/2']);
 });

@@ -164,6 +164,17 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
     annotations: WRITE_SLOT,
   }, (args) => reply('load_ir', options, () => session.loadIr(args)));
 
+  server.registerTool('rename_slot', {
+    title: 'Rename a user IR or profile slot',
+    description: 'Renames a loaded user IR (name 1..10 characters) or captured profile (1..15) on the pedal; the IR or profile itself is not changed.',
+    inputSchema: {
+      kind: z.enum(['ir', 'profile']),
+      slot: z.number().int().min(1).max(5),
+      name: z.string().min(1).max(15),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  }, (args) => reply('rename_slot', options, () => session.renameSlot(args)));
+
   server.registerTool('load_nam', {
     title: 'Convert a NAM capture into a profile slot',
     description: 'Converts a NAM capture (.nam, WaveNet) from ~/.pocket-master-editor/nams into the pedal\'s captured-profile format and writes it to profile slot 1..5; takes about one to a few minutes. The pedal cannot send a profile back, so an occupied slot is only overwritten with replace: true. Only when the user asked for that slot. Afterwards pick it on AMP with edit_preset.',

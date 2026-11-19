@@ -1,6 +1,7 @@
 import { findCloneModel, findModel, CLONE_MODULE, type ModelSpec } from './catalog.ts';
 import { setAmpMode, selectModel, setBlockOn, setChain, setFootswitch, setParam, validateChain, type Footswitch } from './commands.ts';
 import { modelOf, toParam, type Block, type Preset } from './dump.ts';
+import { effectiveSpec } from './sync.ts';
 import { setPresetBpm, setPresetVolume } from './slots.ts';
 
 /** The most blocks one footswitch can toggle. */
@@ -42,9 +43,19 @@ export function applyEdit(preset: Preset, edit: Edit): Preset {
       return mapBlock(preset, edit.module, (b) => ({ ...b, on: edit.on }));
     case 'param':
       return mapBlock(preset, edit.module, (b) => {
-        const spec = modelOf(preset, b)?.params.find((p) => p.alg === edit.alg);
+        const specs = modelOf(preset, b)?.params ?? [];
+        const spec = specs.find((p) => p.alg === edit.alg);
         if (!spec) throw new Error(`${b.label} (${b.model}) has no parameter in slot ${edit.alg}`);
-        return { ...b, params: b.params.map((p) => (p.alg === edit.alg ? toParam(spec, edit.value) : p)) };
+        // Values after the edit, so a Sync switch changes how its Time or Rate reads at once.
+        const value = (alg: number) => (alg === edit.alg ? edit.value : b.params.find((p) => p.alg === alg)?.value);
+        return {
+          ...b,
+          params: b.params.map((p) => {
+            const s = specs.find((x) => x.alg === p.alg);
+            if (!s || (p.alg !== edit.alg && s.syncedBy !== edit.alg)) return p;
+            return toParam(effectiveSpec(s, value), value(p.alg)!);
+          }),
+        };
       });
     case 'model': {
       const clone = edit.module === AMP_MODULE && edit.clone === true;

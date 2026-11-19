@@ -166,6 +166,9 @@ export const en = {
   'preset.tapAria': "Tap tempo",
   'block.footswitchAria': "Footswitch for {block}",
   'install.unknown': "unknown (names not read)",
+  'slots.rename': "Rename",
+  'slots.renameTitle': "Rename the slot",
+  'slots.renameSubmit': "Rename",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -333,4 +336,7 @@ export const pt: Record<MessageKey, string> = {
   'preset.tapAria': "Tap tempo",
   'block.footswitchAria': "Footswitch do {block}",
   'install.unknown': "desconhecido (nomes não lidos)",
+  'slots.rename': "Renomear",
+  'slots.renameTitle': "Renomear o slot",
+  'slots.renameSubmit': "Renomear",
 };

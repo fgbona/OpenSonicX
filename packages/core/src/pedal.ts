@@ -1,7 +1,7 @@
 import type { Pedal } from './backup.ts';
 import type { CloArrays } from './clo/generate.ts';
-import { profileUploadBlob } from './clo/codec.ts';
-import { irSamplesFromWav, irUploadBlob, UploadDomain } from './ir-upload.ts';
+import { profileRenameBlob, profileUploadBlob } from './clo/codec.ts';
+import { irRenameBlob, irSamplesFromWav, irUploadBlob, UploadDomain } from './ir-upload.ts';
 import type { PocketMasterLink } from './link.ts';
 import { decodeCurrentPreset } from './presets.ts';
 import { Query } from './queries.ts';
@@ -81,3 +81,20 @@ export async function uploadUserProfile(link: PocketMasterLink, slot: number, na
   if (names[slot]?.name !== name) throw new Error(`the profile was written, but slot ${slot + 1} reports the name "${names[slot]?.name ?? ''}" instead of "${name}"`);
   return names;
 }
+
+async function renameSlot(link: PocketMasterLink, kind: 'ir' | 'profile', slot: number, name: string): Promise<SlotName[]> {
+  const blob = kind === 'ir' ? irRenameBlob(slot, name) : profileRenameBlob(slot, name); // validates first
+  const readNames = kind === 'ir' ? readUserIrNames : readProfileNames;
+  await link.enterSession();
+  await readNames(link);
+  await link.upload(blob, kind === 'ir' ? UploadDomain.IR : UploadDomain.PROFILE);
+  const names = await readNames(link);
+  if (names[slot]?.name !== name) throw new Error(`renamed, but slot ${slot + 1} reports "${names[slot]?.name ?? ''}" instead of "${name}"`);
+  return names;
+}
+
+/** Renames user IR `slot` (0..4) to `name` (1..10 characters); the IR itself is untouched. */
+export const renameUserIr = (link: PocketMasterLink, slot: number, name: string) => renameSlot(link, 'ir', slot, name);
+
+/** Renames profile `slot` (0..4) to `name` (1..15 characters); the profile itself is untouched. */
+export const renameUserProfile = (link: PocketMasterLink, slot: number, name: string) => renameSlot(link, 'profile', slot, name);

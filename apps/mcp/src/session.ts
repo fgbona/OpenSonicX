@@ -19,6 +19,8 @@ export interface PedalIO extends Pedal {
   uploadIr(slot: number, name: string, wav: Uint8Array): Promise<void>;
   /** Writes converted capture arrays into profile `slot` (0..4) under `name` (1..15 characters). */
   uploadProfile(slot: number, name: string, arrays: CloArrays): Promise<void>;
+  /** Renames a user IR or profile slot (0..4); what the slot holds is untouched. */
+  renameSlot(kind: 'ir' | 'profile', slot: number, name: string): Promise<void>;
 }
 
 /** The TONE3000 API calls the session uses; injectable for tests. */
@@ -375,6 +377,21 @@ export class Session {
     const token = await this.#tone3000().store.accessToken();
     if (!token) throw new Error(this.#login ? 'the TONE3000 sign-in is not approved yet; open the link from tone3000_login first' : 'not signed in to TONE3000; call tone3000_login first');
     return token;
+  }
+
+  /** Renames user IR (1..10 characters) or captured-profile (1..15) slot 1..5. */
+  async renameSlot(options: { kind: 'ir' | 'profile'; slot: number; name: string }): Promise<string> {
+    const { kind, slot } = options;
+    if (!Number.isInteger(slot) || slot < 1 || slot > 5) throw new Error('slot must be 1..5');
+    const name = options.name.trim();
+    if (kind === 'ir') irUploadBlob(slot - 1, name, new Int32Array(512)); // checks the name
+    else profileUploadBlob(slot - 1, name, { arrayA: new Float32Array(128), arrayB: new Float32Array(2048), gains: [1, 1, 1, 1] });
+    return this.#use(async (io) => {
+      const before = (await this.#slots(io))[kind === 'ir' ? 'irNames' : 'profileNames']?.[slot - 1] ?? null;
+      if (before === null) throw new Error(`${kind === 'ir' ? 'User IR' : 'Profile'} slot ${slot} is empty; nothing to rename`);
+      await io.renameSlot(kind, slot - 1, name);
+      return `Renamed ${kind === 'ir' ? 'user IR' : 'profile'} slot ${slot} from "${before}" to "${name}".`;
+    });
   }
 
   importPreset(file: string): Promise<string> {

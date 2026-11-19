@@ -11,6 +11,8 @@ export interface ParamSpec {
   readonly unit?: string;
   readonly type?: 'switch' | 'select';
   readonly options?: readonly string[];
+  /** Slot of the Sync switch that turns this Time or Rate into a note division. */
+  readonly syncedBy?: number;
 }
 
 export interface ModelSpec {
