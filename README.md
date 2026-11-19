@@ -4,6 +4,9 @@ A free, open-source browser editor for the **Sonicake Pocket Master** guitar
 multi-effects pedal, over USB MIDI. No install and no driver: open the page in
 Chrome, Edge or Opera, plug the pedal in, and read your preset.
 
+Unofficial: not affiliated with or endorsed by Sonicake. Product names are
+trademarks of their owners, used only to describe the modeled gear.
+
 > **Status: preview.** Reading, live editing and saving to preset slots work.
 > Every save backs up the slot it overwrites, unless you opt out for that save.
 
@@ -45,7 +48,7 @@ npm run dev       # editor at http://localhost:3000
 In a container, from the published image:
 
 ```sh
-docker run --rm -p 3000:3000 ghcr.io/fgbona/pocket-master-editor:latest
+docker run --rm -p 3000:3000 ghcr.io/fgbona/sonicake-pocket-master-editor:latest
 ```
 
 Or build it yourself:
@@ -122,7 +125,7 @@ the reference the tests check against.
 
 ## Releases
 
-Each version is a git tag, a [GitHub release](https://github.com/fgbona/pocket-master-editor/releases)
+Each version is a git tag, a [GitHub release](https://github.com/fgbona/sonicake-pocket-master-editor/releases)
 and a container image in the GitHub Container Registry. Changes are listed in
 [CHANGELOG.md](CHANGELOG.md). Versions below 1.0 are previews.
 
