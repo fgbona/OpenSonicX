@@ -101,7 +101,7 @@ export function createServer(session: Session): McpServer {
     title: 'Restore a backed-up slot',
     description: 'Writes a slot from a backup file back to its slot, under its backed-up name. What it overwrites is backed up first. Loads that slot, so unsaved edits are lost.',
     inputSchema: {
-      file: z.string().describe('Path of a backup file returned by save_preset or restore_backup'),
+      file: z.string().describe('Backup file returned by save_preset or restore_backup (inside ~/.pocket-master-editor/backups)'),
       slot: slot.optional().describe('Which slot of the backup, when it holds several'),
       confirm: z.string().describe('Must repeat the slot label being restored, e.g. "P03"'),
     },
@@ -110,14 +110,14 @@ export function createServer(session: Session): McpServer {
 
   server.registerTool('export_preset', {
     title: 'Export the loaded preset to a file',
-    description: 'Writes the edit buffer to a preset file (JSON, the same format as the web editor). Never overwrites a file. Relative paths go under ~/.pocket-master-editor/presets.',
+    description: 'Writes the edit buffer to a preset file (JSON, the same format as the web editor) inside ~/.pocket-master-editor/presets. Never overwrites a file.',
     inputSchema: { file: z.string().optional().describe('File path; omitted, a name is made from the preset label and name') },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   }, ({ file }) => reply(() => session.exportPreset(file)));
 
   server.registerTool('import_preset', {
     title: 'Load a preset file',
-    description: 'Loads a preset file into the edit buffer with live edits (nothing is saved). Relative paths are read from ~/.pocket-master-editor/presets.',
+    description: 'Loads a preset file from ~/.pocket-master-editor/presets into the edit buffer with live edits (nothing is saved).',
     inputSchema: { file: z.string().describe('Preset file path') },
     annotations: LIVE,
   }, ({ file }) => reply(() => session.importPreset(file)));

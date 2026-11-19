@@ -123,15 +123,14 @@ test('restore writes a backed-up slot back, after backing up what it overwrites'
 
 test('export writes the edit buffer to a preset file and never overwrites one', async () => {
   const { session, dir } = setup();
-  const file = join(dir, 'mine.json');
-  await session.exportPreset(file);
-  assert.equal(JSON.parse(readFileSync(file, 'utf8')).format, 'pocket-master-preset');
-  await assert.rejects(session.exportPreset(file), /already exists/);
+  await session.exportPreset('mine.json');
+  assert.equal(JSON.parse(readFileSync(join(dir, 'presets', 'mine.json'), 'utf8')).format, 'pocket-master-preset');
+  await assert.rejects(session.exportPreset('mine.json'), /already exists/);
 });
 
 test('import loads a preset file into the edit buffer without saving it', async () => {
   const { session, fake, dir } = setup();
-  const file = join(dir, 'p08.json');
+  const file = 'p08.json';
   await session.exportPreset(file);
   await session.select('P03');
   await session.importPreset(file);
@@ -142,9 +141,9 @@ test('import loads a preset file into the edit buffer without saving it', async 
 
 test('import refuses a file that is not a preset', async () => {
   const { session, dir } = setup();
-  const file = join(dir, 'x.json');
-  writeFileSync(file, '{"hello":1}');
-  await assert.rejects(session.importPreset(file), /not a Pocket Master preset file/);
+  await session.exportPreset('seed.json'); // creates the presets folder
+  writeFileSync(join(dir, 'presets', 'x.json'), '{"hello":1}');
+  await assert.rejects(session.importPreset('x.json'), /not a Pocket Master preset file/);
 });
 
 test('listModels shows user IRs and captured profiles by their loaded names', async () => {
@@ -172,4 +171,40 @@ test('a save the pedal refuses still keeps the backup file, and the error says w
   const { session, dir } = setup(8, { nack: true });
   await assert.rejects(session.save({ slot: 'P03', name: 'CRUNCH', confirm: 'P03' }), /save failed.*backup kept: .*P03\.json/);
   assert.equal(readdirSync(join(dir, 'backups')).length, 1);
+});
+
+test('a backup that cannot be written stops the save before the slot is touched', async () => {
+  const { session, fake, dir } = setup();
+  writeFileSync(join(dir, 'backups'), 'not a folder');
+  const old = fake.slots[2]!.slice();
+  await assert.rejects(session.save({ slot: 'P03', name: 'CRUNCH', confirm: 'P03' }));
+  assert.equal(fake.received.some((r) => r.startsWith('save')), false);
+  assert.deepEqual(fake.slots[2], old);
+});
+
+test('a value of the wrong type for the parameter is refused, not coerced', async () => {
+  const { session, fake } = setup();
+  await session.edit([{ kind: 'model', block: 'fx2', model: 'Boost' }]);
+  const before = fake.received.length;
+  await assert.rejects(session.edit([{ kind: 'parameter', block: 'fx2', parameter: '+3dB', value: 'yes' }]), /\+3dB is a switch/);
+  await assert.rejects(session.edit([{ kind: 'parameter', block: 'amp', parameter: 'gain', value: '' }]), /Gain needs a number/);
+  await assert.rejects(session.edit([{ kind: 'parameter', block: 'amp', parameter: 'gain', value: true }]), /Gain needs a number/);
+  assert.equal(fake.received.length, before);
+  await session.edit([{ kind: 'parameter', block: 'fx2', parameter: '+3dB', value: 'OFF' }]);
+});
+
+test('files stay inside the editor folders', async () => {
+  const { session, dir } = setup();
+  await assert.rejects(session.exportPreset('../escape.json'), /inside .*presets/);
+  await assert.rejects(session.exportPreset(join(dir, 'abs.json')), /inside .*presets/);
+  await assert.rejects(session.importPreset('/etc/hosts'), /inside .*presets/);
+  await assert.rejects(session.restore({ file: '/etc/hosts', confirm: 'P03' }), /inside .*backups/);
+  await session.exportPreset('sub/ok.json');
+});
+
+test('names changed on the pedal show up on the next call', async () => {
+  const { session, fake } = setup();
+  await session.describe();
+  fake.names[8] = 'RENAMED';
+  assert.match(await session.describe(), /^P09 "RENAMED"/);
 });

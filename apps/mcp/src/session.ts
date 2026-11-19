@@ -1,11 +1,11 @@
 import { constants } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import {
   applyEdit, blockModelLabel, chainUnits, decodePreset, editToCommands, encodeValue, fromHex, loadIntoEditBuffer,
   modelChoices, moveInChain, parseBackupFile, parsePresetFile, parsePresetLabel, presetFile, presetLabel,
   resolveBlock, resolveModel, resolveParam, restoreFromBackup, saveToSlot,
-  type BackupFile, type Edit, type Pedal, type Preset, type SlotNames,
+  type BackupFile, type Edit, type ParamSpec, type Pedal, type Preset, type SlotNames,
 } from '@pocket-master/core';
 
 /** What the session needs from the pedal: the core Pedal contract plus two read-only queries. */
@@ -41,8 +41,6 @@ export class Session {
   readonly #connect: () => Connection | Promise<Connection>;
   readonly #folders: Folders;
   #queue: Promise<unknown> = Promise.resolve();
-  #names: string[] | null = null;
-  #slotNames: SlotNames | null = null;
 
   constructor(connect: () => Connection | Promise<Connection>, folders: Folders) {
     this.#connect = connect;
@@ -62,14 +60,13 @@ export class Session {
     return call;
   }
 
-  async #slots(io: PedalIO): Promise<SlotNames> {
-    this.#slotNames ??= await io.readSlotNames();
-    return this.#slotNames;
+  // Names are read on every call: they can change on the pedal or in the web editor between calls.
+  #slots(io: PedalIO): Promise<SlotNames> {
+    return io.readSlotNames();
   }
 
-  async #presetNames(io: PedalIO, fresh = false): Promise<string[]> {
-    if (fresh || !this.#names) this.#names = await io.readNames();
-    return this.#names;
+  #presetNames(io: PedalIO): Promise<string[]> {
+    return io.readNames();
   }
 
   async #describe(io: PedalIO): Promise<string> {
@@ -87,7 +84,7 @@ export class Session {
 
   listPresets(): Promise<string> {
     return this.#use(async (io) => {
-      const names = await this.#presetNames(io, true);
+      const names = await this.#presetNames(io);
       return names.map((name, i) => `${presetLabel(i)} ${name}`).join('\n');
     });
   }
@@ -140,14 +137,13 @@ export class Session {
     return this.#use(async (io) => {
       const { paths } = await this.#keepingBackups((onBackup) =>
         saveToSlot(io, { target, name: options.name, backup: options.backup !== false, edited: null, onBackup }));
-      this.#names = null;
       const note = paths.map((path) => `\nBackup of the old ${label}: ${path}`).join('');
       return `Saved ${label} "${options.name}".${note}\n\n${await this.#describe(io)}`;
     });
   }
 
   async restore(options: { file: string; slot?: string; confirm: string }): Promise<string> {
-    const backup = parseBackupFile(await readFile(options.file, 'utf8'));
+    const backup = parseBackupFile(await readFile(inside(this.#folders.backups, options.file), 'utf8'));
     const wanted = options.slot === undefined ? null : parsePresetLabel(options.slot);
     const slots = backup.slots.filter((s) => wanted === null || s.index === wanted);
     if (slots.length !== 1) {
@@ -157,31 +153,36 @@ export class Session {
     requireConfirm(options.confirm, slot.label);
     return this.#use(async (io) => {
       const { paths } = await this.#keepingBackups((onBackup) => restoreFromBackup(io, slot, { onBackup }));
-      this.#names = null;
       const note = paths.map((path) => `\nBackup of what it replaced: ${path}`).join('');
       return `Restored ${slot.label} "${slot.name}".${note}\n\n${await this.#describe(io)}`;
     });
   }
 
-  /** Writes each backup to disk as soon as the flow makes it, so it is kept even when a later step fails. */
-  async #keepingBackups<T>(run: (onBackup: (file: BackupFile) => void) => Promise<T>): Promise<{ result: T; paths: string[] }> {
-    const writes: Promise<string>[] = [];
+  /** Collects the path of every backup the flow stores; the flow waits for each before writing the slot. */
+  async #keepingBackups(run: (onBackup: (file: BackupFile) => Promise<void>) => Promise<unknown>): Promise<{ paths: string[] }> {
+    const paths: string[] = [];
     try {
-      const result = await run((file) => void writes.push(this.#writeBackup(file)));
-      return { result, paths: await Promise.all(writes) };
+      await run(async (file) => void paths.push(await this.#writeBackup(file)));
     } catch (error) {
-      const kept = (await Promise.allSettled(writes)).flatMap((w) => (w.status === 'fulfilled' ? [w.value] : []));
-      if (kept.length === 0) throw error;
-      throw new Error(`${error instanceof Error ? error.message : String(error)} (backup kept: ${kept.join(', ')})`, { cause: error });
+      if (paths.length === 0) throw error;
+      throw new Error(`${error instanceof Error ? error.message : String(error)} (backup kept: ${paths.join(', ')})`, { cause: error });
     }
+    return { paths };
   }
 
   async #writeBackup(file: BackupFile): Promise<string> {
     const slots = file.slots.map((s) => s.label).join('-');
-    const path = join(this.#folders.backups, `${file.createdAt.replace(/[:.]/g, '-')}-${slots}.json`);
+    const base = join(this.#folders.backups, `${file.createdAt.replace(/[:.]/g, '-')}-${slots}`);
     await mkdir(this.#folders.backups, { recursive: true });
-    await writeFile(path, JSON.stringify(file, null, 2), { flag: 'wx' });
-    return path;
+    for (let n = 1; ; n++) {
+      const path = n === 1 ? `${base}.json` : `${base}-${n}.json`;
+      try {
+        await writeFile(path, JSON.stringify(file, null, 2), { flag: 'wx' }); // never replaces an older backup
+        return path;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST' || n >= 100) throw error;
+      }
+    }
   }
 
   exportPreset(file?: string): Promise<string> {
@@ -189,7 +190,7 @@ export class Session {
       const index = await io.readCurrentIndex();
       const name = (await this.#presetNames(io))[index] ?? '';
       const payload = await io.readEditBuffer();
-      const path = file ? resolve(this.#folders.presets, file) : join(this.#folders.presets, `${presetLabel(index)}-${safe(name)}-${Date.now()}.json`);
+      const path = file ? inside(this.#folders.presets, file) : join(this.#folders.presets, `${presetLabel(index)}-${safe(name)}-${Date.now()}.json`);
       await mkdir(resolve(path, '..'), { recursive: true });
       try {
         await writeFile(path, JSON.stringify(presetFile(payload, name), null, 2), { flag: constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY });
@@ -203,7 +204,7 @@ export class Session {
 
   importPreset(file: string): Promise<string> {
     return this.#use(async (io) => {
-      const preset = parsePresetFile(await readFile(resolve(this.#folders.presets, file), 'utf8'));
+      const preset = parsePresetFile(await readFile(inside(this.#folders.presets, file), 'utf8'));
       await loadIntoEditBuffer(io, decodePreset(fromHex(preset.payload)));
       return `Loaded "${preset.name}" into the edit buffer (not saved).\n\n${await this.#describe(io)}`;
     });
@@ -214,6 +215,33 @@ function requireConfirm(confirm: string, label: string): void {
   if (confirm.trim().toUpperCase() !== label) throw new Error(`confirm must be "${label}" to write that slot`);
 }
 
+/** `file` resolved against `folder`; refused when it would land outside it. */
+function inside(folder: string, file: string): string {
+  const path = resolve(folder, file);
+  const rel = relative(folder, path);
+  if (rel === '' || rel.startsWith('..') || isAbsolute(rel)) throw new Error(`the file must be inside ${folder}`);
+  return path;
+}
+
+/** The value as the parameter's type expects it; refuses anything that would have to be guessed. */
+function typedValue(spec: ParamSpec, value: number | boolean | string): number | boolean | string {
+  const text = typeof value === 'string' ? value.trim() : null;
+  if (spec.type === 'switch') {
+    if (typeof value === 'boolean') return value;
+    if (text?.toLowerCase() === 'on' || text?.toLowerCase() === 'off') return text.toLowerCase() === 'on';
+    throw new Error(`${spec.name} is a switch: use true/false or "on"/"off"`);
+  }
+  if (spec.type === 'select') {
+    const options = spec.options ?? [];
+    const index = text === null ? (typeof value === 'number' ? value : -1) : options.findIndex((o) => o.toLowerCase() === text.toLowerCase());
+    if (index < 0) throw new Error(`${spec.name} options: ${options.join(', ')}`);
+    return index;
+  }
+  if (typeof value === 'number') return value;
+  if (text && Number.isFinite(Number(text))) return Number(text);
+  throw new Error(`${spec.name} needs a number`);
+}
+
 const safe = (name: string) => name.replace(/[^A-Za-z0-9_-]+/g, '_') || 'preset';
 
 function toEdit(preset: Preset, change: Change, slots: SlotNames): Edit {
@@ -222,7 +250,7 @@ function toEdit(preset: Preset, change: Change, slots: SlotNames): Edit {
   switch (change.kind) {
     case 'parameter': {
       const spec = resolveParam(preset, block, change.parameter);
-      return { kind: 'param', module: block.module, alg: spec.alg, value: encodeValue(spec, change.value) };
+      return { kind: 'param', module: block.module, alg: spec.alg, value: encodeValue(spec, typedValue(spec, change.value)) };
     }
     case 'block':
       return { kind: 'on', module: block.module, on: change.on };

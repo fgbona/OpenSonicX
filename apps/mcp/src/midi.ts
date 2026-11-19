@@ -25,6 +25,8 @@ export function connectPocketMaster(onLog: (entry: LogEntry) => void = () => und
     input.off('messageBuffer', onMessage);
     input.closePort();
     output.closePort();
+    input.destroy(); // a new pair is opened per call: free the native clients too
+    output.destroy();
   };
   try {
     input.ignoreTypes(false, true, true); // SysEx is ignored by default; the pedal speaks nothing else

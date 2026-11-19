@@ -24,6 +24,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
   moved from the web app to core, behind a two-function MIDI port, so the
   web editor and the MCP server run the same tested code.
 
+### Fixed
+
+- Save and restore now wait for the backup to be stored before the slot is
+  overwritten, and stop when it cannot be stored. Before, the web editor
+  started the save while the backup was still being kept.
+
 ## [0.7.0] - 2026-11-18
 
 Captured profiles (clone mode) on AMP, validated on a Pocket Master with

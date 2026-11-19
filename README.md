@@ -94,7 +94,8 @@ Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
   slot up to `~/.pocket-master-editor/backups`; `restore_backup` undoes it.
 - Preset files use the same format as the web editor's Export/Import and
   live in `~/.pocket-master-editor/presets` (set `POCKET_MASTER_HOME` to
-  move both folders).
+  move both folders). The server reads and writes files only inside these
+  folders.
 
 ## Protocol
 

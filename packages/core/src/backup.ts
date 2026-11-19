@@ -49,8 +49,11 @@ export interface Progress {
 
 interface FlowOptions {
   onProgress?: (p: Progress) => void;
-  /** Called as soon as a backup exists, so it is kept even if a later step fails. */
-  onBackup?: (file: BackupFile) => void;
+  /**
+   * Stores a backup as soon as it exists. Awaited before anything is overwritten, so a backup that
+   * cannot be stored stops the flow instead of letting it write without one.
+   */
+  onBackup?: (file: BackupFile) => unknown;
   now?: () => Date;
 }
 
@@ -128,7 +131,7 @@ export async function backupAllSlots(
     return out;
   });
   const file = backupFile('session', slots, now);
-  options.onBackup?.(file);
+  await options.onBackup?.(file);
   return file;
 }
 
@@ -185,7 +188,7 @@ async function saveEdited(pedal: Pedal, options: SaveOptions, original: number, 
     const names = await pedal.readNames();
     const slot = await carryEdits(pedal, original, edited, () => readSlot(pedal, target, names[target] ?? ''));
     targetBackup = backupFile('slot', [slot], now);
-    options.onBackup?.(targetBackup);
+    await options.onBackup?.(targetBackup);
   }
 
   options.onProgress?.({ step: `Saving ${presetLabel(target)}`, done: 1, total: 3 });
