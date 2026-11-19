@@ -15,3 +15,4 @@ export * from './notify.ts';
 export * from './preset-file.ts';
 export * from './link.ts';
 export * from './pedal.ts';
+export * from './resolve.ts';
