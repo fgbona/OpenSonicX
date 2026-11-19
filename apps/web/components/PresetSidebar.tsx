@@ -22,6 +22,8 @@ export function PresetSidebar({ names, current, modified, disabled, onReadNames,
   const [bank, setBank] = useState<Bank>(current !== null && current >= USER_PRESETS ? 'factory' : 'user');
   const [filter, setFilter] = useState('');
   const [pending, setPending] = useState<number | null>(null);
+  // Phone width only: the list folds behind a button showing the current preset.
+  const [open, setOpen] = useState(false);
   const shown = useMemo(() => {
     const f = filter.trim().toLowerCase();
     return (names ?? []).map((name, i) => ({ i, name, label: presetLabel(i) }))
@@ -31,12 +33,16 @@ export function PresetSidebar({ names, current, modified, disabled, onReadNames,
 
   const choose = (i: number) => {
     if (i === current) return;
+    setOpen(false);
     if (modified) setPending(i);
     else onLoad(i);
   };
 
   return (
-    <aside className="sidebar" aria-label={t('presets.title')}>
+    <aside className={`sidebar${open ? ' is-open' : ''}`} aria-label={t('presets.title')}>
+      <button type="button" className="sidebar-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span>{t('presets.title')}{current !== null ? ` · ${presetLabel(current)} ${names?.[current] ?? ''}` : ''}</span>
+      </button>
       <div className="segmented sidebar-banks" role="tablist">
         {(['factory', 'user'] as const).map((b) => (
           <button key={b} type="button" role="tab" aria-selected={bank === b} className={bank === b ? 'is-on' : ''} onClick={() => setBank(b)}>
