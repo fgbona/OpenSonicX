@@ -6,6 +6,24 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-18
+
+Captured profiles (clone mode) on AMP, validated on a Pocket Master with
+firmware V1.3.3 and a NAM capture. Container image:
+`ghcr.io/fgbona/pocket-master-editor:v0.7.0` (amd64 and arm64).
+
+### Added
+
+- Captured profiles (clone mode) on AMP. The AMP model list groups amp
+  models and the occupied captured-profile slots by name (for example
+  "Randall SA (profile 1)"); choosing a profile switches amp mode on,
+  choosing an amp switches it off. Like the unit's own controls, choosing a
+  profile turns IR off and leaving clone mode turns IR back on (the unit
+  does this only for changes made on it, not over MIDI, so the editor sends
+  it); switching between amp models leaves IR alone. In clone mode the chain and the AMP card show
+  the profile name. Clone decoding is now verified on hardware with the
+  owner's NAM capture.
+
 ### Changed
 
 - Revert reloads the preset from its slot, like switching presets on the
@@ -20,18 +38,6 @@ and the project uses [Semantic Versioning](https://semver.org/).
   optimiser kept only `-webkit-backdrop-filter` of the pair. The prefixed
   declaration now comes first, so the standard one survives and text
   scrolling under the toolbar is blurred instead of showing through.
-
-### Added
-
-- Captured profiles (clone mode) on AMP. The AMP model list groups amp
-  models and the occupied captured-profile slots by name (for example
-  "Randall SA (profile 1)"); choosing a profile switches amp mode on,
-  choosing an amp switches it off. Like the unit's own controls, choosing a
-  profile turns IR off and leaving clone mode turns IR back on (the unit
-  does this only for changes made on it, not over MIDI, so the editor sends
-  it); switching between amp models leaves IR alone. In clone mode the chain and the AMP card show
-  the profile name. Clone decoding is now verified on hardware with the
-  owner's NAM capture.
 
 ## [0.6.0] - 2026-11-18
 
@@ -263,7 +269,8 @@ Container image: `ghcr.io/fgbona/pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/pocket-master-editor/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/fgbona/pocket-master-editor/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.3.0...v0.4.0
