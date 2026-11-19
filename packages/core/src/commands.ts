@@ -3,7 +3,7 @@ import { MessageType } from './queries.ts';
 import { CLONE_MODULE, type ParamSpec } from './catalog.ts';
 
 /** Second payload byte of the set commands the live editor may send. */
-export const EditCommand = { VOLUME: 0x42, CHAIN: 0x44, MODEL: 0x47, PARAM: 0x48, BLOCK_ON: 0x49 } as const;
+export const EditCommand = { PRESET_FIELD: 0x42, CHAIN: 0x44, MODEL: 0x47, PARAM: 0x48, BLOCK_ON: 0x49, FOOTSWITCH: 0x4d } as const;
 const ALLOWED_EDITS: ReadonlySet<number> = new Set(Object.values(EditCommand));
 
 const MODULE_COUNT = 9;
@@ -78,9 +78,24 @@ export function editKey(sysex: Uint8Array): string {
   const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
   const command = payload[1] ?? 0;
   if (command === EditCommand.CHAIN) return 'chain';
-  if (command === EditCommand.VOLUME) return 'volume';
+  // 11 42 <field>: field 1 is the preset volume, 2 the BPM; each has its own key.
+  if (command === EditCommand.PRESET_FIELD) return `field:${payload[2]}`;
+  if (command === EditCommand.FOOTSWITCH) return `footswitch:${payload[2]}:${payload[3]}`;
   const module = view.getUint32(2, true);
   return command === EditCommand.PARAM ? `${command}:${module}:${view.getUint32(6, true)}` : `${command}:${module}`;
+}
+
+export type Footswitch = 'fs1' | 'fs2';
+
+/**
+ * Adds a block to, or removes it from, one footswitch: `11 4D <switch> <module> <on>`, switch 0 for
+ * FS1 and 1 for FS2. It toggles one membership; moving a block to the other switch takes two.
+ * Protocol from SonicMaster (github.com/skyggedans/SonicMaster, MIT), checked there against
+ * captured writes; not yet sent from this editor to a unit.
+ */
+export function setFootswitch(footswitch: Footswitch, module: number, on: boolean): Uint8Array {
+  if (!Number.isInteger(module) || module < 0 || module >= MODULE_COUNT) throw new Error(`module must be 0..${MODULE_COUNT - 1}`);
+  return buildFrame([MessageType.SET, EditCommand.FOOTSWITCH, footswitch === 'fs2' ? 1 : 0, module, on ? 1 : 0]);
 }
 
 /** Validates a user value against the catalog spec and returns the float the pedal expects. */

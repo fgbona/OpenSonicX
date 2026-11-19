@@ -6,6 +6,21 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Preset BPM (40–260) and footswitches. The core reads the BPM (dump
+  record 0x2002) and which blocks FS1 and FS2 toggle, and can change both
+  as live edits: `11 42 02 …` for the tempo, `11 4D <switch> <module>
+  <on>` per footswitch membership, at most three blocks per switch.
+  Revert, restore and preset files carry them, and a block moving between
+  switches is added to the new one before it leaves the old.
+- The MCP's `edit_preset` takes `bpm` and `footswitch` changes, and
+  `get_preset` shows the tempo and each block's switch.
+- Sync (modulation and delay) and Trail (delay) switches in the catalog.
+- Protocol knowledge ported from SonicMaster (MIT, credited in NOTICE).
+  Reading the BPM is confirmed on the owner's unit; the new writes are
+  tested on the simulated pedal and still need a test on the unit.
+
 ## [0.11.0] - 2026-11-19
 
 The MCP server on npm: `npx -y sonicake-pocket-master-mcp`, published by CI

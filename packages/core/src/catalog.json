@@ -1,5 +1,5 @@
 {
- "_source": "Copied from github.com/voronkovd/pocket-master-mcp (MIT), src/pocket_master_mcp/data/device_map.json, which derives it from PocketEdit (github.com/suckyble/PocketEdit). See NOTICE.",
+ "_source": "Copied from github.com/voronkovd/pocket-master-mcp (MIT), src/pocket_master_mcp/data/device_map.json, which derives it from PocketEdit (github.com/suckyble/PocketEdit). See NOTICE. Sync and Trail switches added from SonicMaster (github.com/skyggedans/SonicMaster, MIT, effect_library.json at 931a68f).",
  "blocks": [
   {
    "key": "nr",
@@ -230,6 +230,12 @@
       "max": 100,
       "step": 1,
       "default": 60
+     },
+     {
+      "name": "Sync",
+      "alg": 6,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -289,6 +295,12 @@
       "max": 100,
       "step": 1,
       "default": 50
+     },
+     {
+      "name": "Sync",
+      "alg": 3,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -321,6 +333,12 @@
       "max": 100,
       "step": 1,
       "default": 50
+     },
+     {
+      "name": "Sync",
+      "alg": 3,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -361,6 +379,12 @@
       "max": 100,
       "step": 1,
       "default": 50
+     },
+     {
+      "name": "Sync",
+      "alg": 4,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -377,6 +401,12 @@
       "step": 0.1,
       "unit": "Hz",
       "default": 0.5
+     },
+     {
+      "name": "Sync",
+      "alg": 1,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -401,6 +431,12 @@
       "step": 0.1,
       "unit": "Hz",
       "default": 0.5
+     },
+     {
+      "name": "Sync",
+      "alg": 2,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -425,6 +461,12 @@
       "step": 0.1,
       "unit": "Hz",
       "default": 0.5
+     },
+     {
+      "name": "Sync",
+      "alg": 2,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -449,6 +491,12 @@
       "step": 0.1,
       "unit": "Hz",
       "default": 0.5
+     },
+     {
+      "name": "Sync",
+      "alg": 2,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -481,6 +529,12 @@
       "max": 100,
       "step": 1,
       "default": 50
+     },
+     {
+      "name": "Sync",
+      "alg": 3,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -513,6 +567,12 @@
       "max": 100,
       "step": 1,
       "default": 50
+     },
+     {
+      "name": "Sync",
+      "alg": 3,
+      "type": "switch",
+      "default": 0
      },
      {
       "name": "Bias",
@@ -2593,6 +2653,12 @@
       "max": 100,
       "step": 1,
       "default": 60
+     },
+     {
+      "name": "Sync",
+      "alg": 6,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -2762,6 +2828,12 @@
       "max": 100,
       "step": 1,
       "default": 50
+     },
+     {
+      "name": "Sync",
+      "alg": 3,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -2794,6 +2866,12 @@
       "max": 100,
       "step": 1,
       "default": 50
+     },
+     {
+      "name": "Sync",
+      "alg": 3,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -2834,6 +2912,12 @@
       "max": 100,
       "step": 1,
       "default": 50
+     },
+     {
+      "name": "Sync",
+      "alg": 4,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -2850,6 +2934,12 @@
       "step": 0.1,
       "unit": "Hz",
       "default": 0.5
+     },
+     {
+      "name": "Sync",
+      "alg": 1,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -2874,6 +2964,12 @@
       "step": 0.1,
       "unit": "Hz",
       "default": 0.5
+     },
+     {
+      "name": "Sync",
+      "alg": 2,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -2898,6 +2994,12 @@
       "step": 0.1,
       "unit": "Hz",
       "default": 0.5
+     },
+     {
+      "name": "Sync",
+      "alg": 2,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -2922,6 +3024,12 @@
       "step": 0.1,
       "unit": "Hz",
       "default": 0.5
+     },
+     {
+      "name": "Sync",
+      "alg": 2,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -2954,6 +3062,12 @@
       "max": 100,
       "step": 1,
       "default": 50
+     },
+     {
+      "name": "Sync",
+      "alg": 3,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -2986,6 +3100,12 @@
       "max": 100,
       "step": 1,
       "default": 50
+     },
+     {
+      "name": "Sync",
+      "alg": 3,
+      "type": "switch",
+      "default": 0
      },
      {
       "name": "Bias",
@@ -3028,6 +3148,18 @@
       "max": 100,
       "step": 1,
       "default": 30
+     },
+     {
+      "name": "Sync",
+      "alg": 3,
+      "type": "switch",
+      "default": 0
+     },
+     {
+      "name": "Trail",
+      "alg": 4,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -3060,6 +3192,12 @@
       "max": 100,
       "step": 1,
       "default": 30
+     },
+     {
+      "name": "Trail",
+      "alg": 4,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -3092,6 +3230,18 @@
       "max": 100,
       "step": 1,
       "default": 30
+     },
+     {
+      "name": "Sync",
+      "alg": 3,
+      "type": "switch",
+      "default": 0
+     },
+     {
+      "name": "Trail",
+      "alg": 4,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -3124,6 +3274,18 @@
       "max": 100,
       "step": 1,
       "default": 30
+     },
+     {
+      "name": "Sync",
+      "alg": 3,
+      "type": "switch",
+      "default": 0
+     },
+     {
+      "name": "Trail",
+      "alg": 4,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -3156,6 +3318,18 @@
       "max": 100,
       "step": 1,
       "default": 30
+     },
+     {
+      "name": "Sync",
+      "alg": 3,
+      "type": "switch",
+      "default": 0
+     },
+     {
+      "name": "Trail",
+      "alg": 4,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -3188,6 +3362,18 @@
       "max": 100,
       "step": 1,
       "default": 30
+     },
+     {
+      "name": "Sync",
+      "alg": 3,
+      "type": "switch",
+      "default": 0
+     },
+     {
+      "name": "Trail",
+      "alg": 4,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -3220,6 +3406,18 @@
       "max": 100,
       "step": 1,
       "default": 30
+     },
+     {
+      "name": "Sync",
+      "alg": 3,
+      "type": "switch",
+      "default": 0
+     },
+     {
+      "name": "Trail",
+      "alg": 4,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -3268,6 +3466,18 @@
       "max": 100,
       "step": 1,
       "default": 50
+     },
+     {
+      "name": "Trail",
+      "alg": 5,
+      "type": "switch",
+      "default": 0
+     },
+     {
+      "name": "Sync",
+      "alg": 6,
+      "type": "switch",
+      "default": 0
      }
     ]
    },
@@ -3300,6 +3510,18 @@
       "max": 100,
       "step": 1,
       "default": 30
+     },
+     {
+      "name": "Sync",
+      "alg": 3,
+      "type": "switch",
+      "default": 0
+     },
+     {
+      "name": "Trail",
+      "alg": 4,
+      "type": "switch",
+      "default": 0
      }
     ]
    }
