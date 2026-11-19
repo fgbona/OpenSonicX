@@ -6,8 +6,8 @@ import {
   loadIntoEditBuffer, presetFile, presetLabel, restoreFromBackup, saveToSlot,
   type BackupFile, type Edit, type Frame, type Pedal, type Preset, type PresetFile, type Progress, type SaveResult, type SlotBackup,
 } from '@pocket-master/core';
-import { LinkClosedError, openMidi, pickPocketMaster, PocketMasterLink, type LogEntry } from './midi';
-import { readProfileNames, readUserIrNames, webPedal } from './webPedal';
+import { LinkClosedError, linkPedal, PocketMasterLink, readProfileNames, readUserIrNames, type LogEntry } from '@pocket-master/core';
+import { openMidi, pickPocketMaster, webMidiPort } from './midi';
 import { downloadBackup, downloadJson, loadBackups, storeBackup } from './backupStore';
 
 export const LOG_LIMIT = 2000;
@@ -218,7 +218,7 @@ export function usePocketMaster() {
     patch({ busy: { step: 'Preparing', done: 0, total: 1 }, error: null });
     try {
       await current.drained();
-      await webPedal(current).selectPreset(index);
+      await linkPedal(current).selectPreset(index);
     } catch (e) {
       busyRef.current = false;
       if (!(e instanceof LinkClosedError)) patch({ busy: null, error: message(e) });
@@ -246,7 +246,7 @@ export function usePocketMaster() {
     patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false, names: null });
     try {
       await Promise.all([input.open(), output.open()]);
-      link.current = new PocketMasterLink(input, output, appendLog, (f) => notifyRef.current(f));
+      link.current = new PocketMasterLink(webMidiPort(input, output), appendLog, (f) => notifyRef.current(f));
       patch({ status: 'connected', error: null, irNames: null, profileNames: null });
       await read();
       // User IR names are only labels: a failure must not spoil the connection.
@@ -357,7 +357,7 @@ export function usePocketMaster() {
       let failure: string | null = null;
       try {
         await current.drained();
-        const pedal = webPedal(current);
+        const pedal = linkPedal(current);
         const result = await flow(pedal, (busy) => patch({ busy }));
         const names = await pedal.readNames();
         editGeneration.current += 1;
@@ -401,7 +401,7 @@ export function usePocketMaster() {
     if (!current || busyRef.current) return;
     try {
       await current.drained();
-      const pedal = webPedal(current);
+      const pedal = linkPedal(current);
       const [payload, index] = [await pedal.readEditBuffer(), await pedal.readCurrentIndex()];
       const names = await pedal.readNames();
       const name = (names[index] ?? '').trim();
@@ -424,7 +424,7 @@ export function usePocketMaster() {
       let failure: string | null = null;
       try {
         await current.drained();
-        const loaded = await loadIntoEditBuffer(webPedal(current), decodePreset(fromHex(file.payload)));
+        const loaded = await loadIntoEditBuffer(linkPedal(current), decodePreset(fromHex(file.payload)));
         editGeneration.current += 1;
         presetRef.current = loaded;
         busyRef.current = false;
@@ -446,7 +446,7 @@ export function usePocketMaster() {
     const current = link.current;
     if (!current || busyRef.current) return;
     try {
-      patch({ names: await webPedal(current).readNames() });
+      patch({ names: await linkPedal(current).readNames() });
     } catch (e) {
       if (!(e instanceof LinkClosedError)) patch({ error: message(e) });
     }
