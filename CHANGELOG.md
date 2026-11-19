@@ -8,6 +8,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Phone layout: the presets list folds behind a button showing the
+  current preset, the main column no longer widens the page past the
+  screen (the chain strip scrolls inside it), smaller pedal tiles, and on
+  touch screens the chain's move arrows stay visible, since touch has no
+  hover and no HTML drag and drop.
 - MCP `get_global_settings` and `set_global_settings`: the device-wide
   options in words, and changes by value or target name (validated before
   anything is sent; the jack type is written before its targets). Factory
