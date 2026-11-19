@@ -1,0 +1,174 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import {
+  EXP_TARGETS, FS_TARGETS, type GlobalSetting, type GlobalSettings, readGlobals, setExpFsTarget, setGlobal, type PocketMasterLink,
+} from '@pocket-master/core';
+import { Dialog } from './Dialog';
+import { Knob } from './Knob';
+import { useI18n } from './I18n';
+import type { Exclusive } from '@/lib/install';
+import type { MessageKey } from '@/lib/i18n';
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  exclusive: Exclusive;
+  writeGlobal: (bytes: Uint8Array) => void;
+  busy: boolean;
+  /** The hook's last error, shown inside the dialog so a failed read or write is not hidden behind it. */
+  error: string | null;
+  /** Called after a factory reset was sent: the pedal reboots and the link is gone. */
+  onReset: () => void;
+}
+
+/** Values the dump does not report start unknown (null) and show as unset until written. */
+type Values = { [K in GlobalSetting]: number | null } & { target1: number | null; target2: number | null };
+
+const LEVELS: readonly { key: GlobalSetting; label: MessageKey }[] = [
+  { key: 'inputLevel', label: 'settings.input' },
+  { key: 'fxRecLevel', label: 'settings.fxRec' },
+  { key: 'monitorLevel', label: 'settings.monitor' },
+  { key: 'btRecLevel', label: 'settings.btRec' },
+];
+const SWITCHES: readonly { key: GlobalSetting; label: MessageKey }[] = [
+  { key: 'eco', label: 'settings.eco' },
+  { key: 'powerConfirm', label: 'settings.powerConfirm' },
+  { key: 'battOnly', label: 'settings.battOnly' },
+];
+const RESET_WORD = 'RESET';
+
+function fromDump(g: GlobalSettings): Values {
+  return { ...g, powerConfirm: null, battOnly: null, target1: null, target2: null };
+}
+
+function Segmented({ label, value, options, disabled, onChange }: { label: string; value: number | null; options: readonly string[]; disabled: boolean; onChange: (v: number) => void }) {
+  return (
+    <div className="settings-row">
+      <span className="settings-label">{label}</span>
+      <span className="segmented" role="radiogroup" aria-label={label}>
+        {options.map((o, i) => (
+          <button key={o} type="button" role="radio" aria-checked={value === i} className={value === i ? 'is-on' : ''} disabled={disabled} onClick={() => onChange(i)}>{o}</button>
+        ))}
+      </span>
+    </div>
+  );
+}
+
+/** Global Options: device-wide levels, USB mode, EXP/FS, display and power, factory reset. */
+export function SettingsDialog({ open, onClose, exclusive, writeGlobal, busy, error, onReset }: Props) {
+  const { t } = useI18n();
+  const [values, setValues] = useState<Values | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [typed, setTyped] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    setValues(null);
+    setConfirming(false);
+    setTyped('');
+    void exclusive('Reading settings', (link: PocketMasterLink) => readGlobals(link)).then((g) => {
+      if (g) setValues(fromDump(g));
+    });
+  }, [open, exclusive]);
+
+  const set = (key: GlobalSetting, value: number) => {
+    if (!values) return;
+    setValues({ ...values, [key]: value });
+    writeGlobal(setGlobal(key, value));
+  };
+  const setTarget = (which: 'target1' | 'target2', value: number) => {
+    if (!values) return;
+    const type = values.expFsType ?? 0;
+    const slot = type === 0 ? 'exp' : type === 1 ? 'fs' : which === 'target1' ? 'fs1' : 'fs2';
+    setValues({ ...values, [which]: value });
+    writeGlobal(setExpFsTarget(slot, value));
+  };
+  const reset = async () => {
+    const sent = await exclusive('Factory reset', async (link: PocketMasterLink) => { await link.factoryReset(); return true; });
+    if (sent) {
+      onClose();
+      onReset();
+    }
+  };
+  const off = busy || values === null;
+  const targets = (values?.expFsType ?? 0) === 0 ? EXP_TARGETS : FS_TARGETS;
+  const targetSelect = (which: 'target1' | 'target2', label: string) => (
+    <label className="settings-row">
+      <span className="settings-label">{label}</span>
+      <select className="param-select" value={values?.[which] ?? ''} disabled={off} onChange={(e) => setTarget(which, Number(e.target.value))}>
+        <option value="" disabled>{t('settings.unset')}</option>
+        {targets.map((name, i) => <option key={name} value={i}>{name}</option>)}
+      </select>
+    </label>
+  );
+
+  return (
+    <Dialog open={open} title={t('settings.title')} onClose={onClose} locked={busy}>
+      {values === null ? (
+        <p className="muted">{busy ? t('settings.reading') : t('settings.unreadable')}</p>
+      ) : (
+        <div className="settings">
+          <section className="settings-group" aria-label={t('settings.levels')}>
+            <h3>{t('settings.levels')}</h3>
+            <div className="settings-knobs">
+              <Knob label={t('settings.master')} value={values.masterVolume ?? 0} min={0} max={100} display={String(values.masterVolume ?? 0)} disabled={off} onChange={(v) => set('masterVolume', v)} />
+              {LEVELS.map(({ key, label }) => (
+                <Knob key={key} label={t(label)} value={values[key] ?? 0} min={-20} max={20} defaultValue={0}
+                  display={`${(values[key] ?? 0) > 0 ? '+' : ''}${values[key] ?? 0} dB`} disabled={off} onChange={(v) => set(key, v)} />
+              ))}
+            </div>
+          </section>
+          <section className="settings-group">
+            <h3>{t('settings.usb')}</h3>
+            <Segmented label={t('settings.mode')} value={values.mode} options={[t('settings.dry'), t('settings.wet')]} disabled={off} onChange={(v) => set('mode', v)} />
+            <Segmented label={t('settings.reamp')} value={values.reamp} options={[t('block.off'), t('block.on')]} disabled={off} onChange={(v) => set('reamp', v)} />
+          </section>
+          <section className="settings-group">
+            <h3>{t('settings.expFs')}</h3>
+            <Segmented label={t('settings.type')} value={values.expFsType} options={['EXP', 'Single FS', 'Dual FS']} disabled={off}
+              onChange={(v) => { setValues({ ...values, expFsType: v, target1: null, target2: null }); writeGlobal(setGlobal('expFsType', v)); }} />
+            {values.expFsType === 2 ? (
+              <>
+                {targetSelect('target1', t('settings.func1'))}
+                {targetSelect('target2', t('settings.func2'))}
+              </>
+            ) : targetSelect('target1', t('settings.target'))}
+          </section>
+          <section className="settings-group">
+            <h3>{t('settings.device')}</h3>
+            <label className="settings-row">
+              <span className="settings-label">{t('settings.backlight')}</span>
+              <input type="range" className="param-slider" min={0} max={10} value={values.backlight ?? 0} disabled={off}
+                onChange={(e) => set('backlight', Number(e.target.value))} style={{ '--fill': `${(values.backlight ?? 0) * 10}%` } as React.CSSProperties} />
+              <span className="param-value">{values.backlight ?? '—'}</span>
+            </label>
+            {SWITCHES.map(({ key, label }) => (
+              <Segmented key={key} label={t(label)} value={values[key]} options={[t('block.off'), t('block.on')]} disabled={off} onChange={(v) => set(key, v)} />
+            ))}
+            <p className="muted small">{t('settings.writeOnly')}</p>
+          </section>
+          <section className="settings-group settings-danger">
+            <h3>{t('settings.reset')}</h3>
+            {!confirming ? (
+              <button type="button" className="btn btn-danger" disabled={busy} onClick={() => setConfirming(true)}>{t('settings.reset')}</button>
+            ) : (
+              <>
+                <p className="small">{t('settings.resetWarning', { word: RESET_WORD })}</p>
+                <div className="sheet-actions">
+                  <input value={typed} aria-label={t('settings.resetType', { word: RESET_WORD })} placeholder={RESET_WORD} onChange={(e) => setTyped(e.target.value)} />
+                  <button type="button" className="btn" onClick={() => { setConfirming(false); setTyped(''); }}>{t('action.cancel')}</button>
+                  <button type="button" className="btn btn-danger" disabled={busy || typed !== RESET_WORD} onClick={() => void reset()}>{t('settings.resetConfirm')}</button>
+                </div>
+              </>
+            )}
+          </section>
+        </div>
+      )}
+      {error && !busy && <p className="alert" role="alert">{error}</p>}
+      <div className="sheet-actions">
+        <button type="button" className="btn btn-primary" onClick={onClose} disabled={busy}>{t('action.done')}</button>
+      </div>
+    </Dialog>
+  );
+}

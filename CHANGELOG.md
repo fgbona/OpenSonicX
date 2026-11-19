@@ -8,6 +8,22 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Global options (gear in the toolbar): master volume and the input,
+  FX-rec, monitor and BT-rec levels as knobs, USB recording dry/wet and
+  re-amp, the EXP/FS jack type and its targets, backlight, ECO, power-off
+  confirm, battery-only, and a factory reset that asks for RESET typed
+  out. The core reads the 12 10 dump (`readGlobals`) and builds the writes
+  (`setGlobal`, `setExpFsTarget`, `factoryReset`), ported from SonicMaster
+  and checked byte for byte against the official app's captured frames;
+  they go through the edit queue, and the reset has its own link method.
+- Editor layout closer to SonicMaster, in this editor's design: a presets
+  sidebar with Factory/User banks and search; the chain as pedal tiles
+  with an original drawing per block, an on/off LED and the footswitch
+  badge; one block editor with rotary knobs (drag, wheel, arrows,
+  double-click to default), the model list, "Based on" text, an FS
+  None/FS1/FS2 control and delay Time from the BPM; preset volume and BPM
+  as knobs with tap tempo. A development-only `/preview` page renders it
+  from a stored dump without a pedal.
 - Preset BPM (40–260) and footswitches. The core reads the BPM (dump
   record 0x2002) and which blocks FS1 and FS2 toggle, and can change both
   as live edits: `11 42 02 …` for the tempo, `11 4D <switch> <module>

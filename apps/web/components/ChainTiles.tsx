@@ -2,19 +2,26 @@
 
 import { useState } from 'react';
 import { type Block, blockModelLabel, chainUnits, type Edit, moveInChain } from '@pocket-master/core';
+import { ModuleIcon } from './ModuleIcon';
 import { useI18n } from './I18n';
 
 interface Props {
   chain: readonly Block[];
   editable: boolean;
+  selected: number;
+  onSelect: (module: number) => void;
   onEdit: (edit: Edit) => void;
   irNames: readonly (string | null)[] | null;
   profileNames: readonly (string | null)[] | null;
   ampMode: 'normal' | 'clone';
 }
 
-/** Signal chain. In live edit, units can be dragged or moved with the arrow buttons; DRV-AMP-IR-EQ move as one. */
-export function ChainStrip({ chain, editable, onEdit, irNames, profileNames, ampMode }: Props) {
+/**
+ * The signal chain as pedals: drawing, label, model, an on/off LED and the footswitch badge. A
+ * click selects the block for the editor; in live edit units drag (or move with the arrows), and
+ * DRV-AMP-IR-EQ move together.
+ */
+export function ChainTiles({ chain, editable, selected, onSelect, onEdit, irNames, profileNames, ampMode }: Props) {
   const { t } = useI18n();
   const [dragging, setDragging] = useState<number | null>(null);
   const [over, setOver] = useState<number | null>(null);
@@ -27,24 +34,21 @@ export function ChainStrip({ chain, editable, onEdit, irNames, profileNames, amp
   };
 
   return (
-    <ol className={`chain${editable ? ' chain-editable' : ''}`} aria-label={t('chain.aria')}>
+    <ol className={`tiles${editable ? ' tiles-editable' : ''}`} aria-label={t('chain.aria')}>
       {units.map((unit, index) => {
         const lead = unit[0] as number;
         const name = unit.map((m) => byModule.get(m)?.label).join('-');
         return (
           <li
             key={lead}
-            className={`chain-unit${unit.length > 1 ? ' chain-group' : ''}${dragging === lead ? ' chain-dragging' : ''}${over === index && dragging !== null ? ' chain-over' : ''}`}
+            className={`tile-unit${unit.length > 1 ? ' tile-group' : ''}${dragging === lead ? ' tile-dragging' : ''}${over === index && dragging !== null ? ' tile-over' : ''}`}
             draggable={editable}
             onDragStart={(e) => {
               setDragging(lead);
               e.dataTransfer.effectAllowed = 'move';
               e.dataTransfer.setData('text/plain', String(lead));
             }}
-            onDragEnd={() => {
-              setDragging(null);
-              setOver(null);
-            }}
+            onDragEnd={() => { setDragging(null); setOver(null); }}
             onDragOver={(e) => {
               if (dragging === null) return;
               e.preventDefault();
@@ -59,15 +63,29 @@ export function ChainStrip({ chain, editable, onEdit, irNames, profileNames, amp
           >
             {unit.map((m) => {
               const b = byModule.get(m) as Block;
+              const model = blockModelLabel(b, ampMode, irNames, profileNames);
               return (
-                <span key={m} className={`chain-node block-${b.key}${b.on ? '' : ' block-off'}`} title={`${b.label}: ${blockModelLabel(b, ampMode, irNames, profileNames)}`}>
-                  <span className="chain-label">{b.label}</span>
-                  <span className="chain-model">{blockModelLabel(b, ampMode, irNames, profileNames)}</span>
-                </span>
+                <div key={m} className={`tile block-${b.key}${b.on ? '' : ' tile-off'}${selected === m ? ' tile-selected' : ''}`}>
+                  <button type="button" className="tile-body" aria-pressed={selected === m} aria-label={t('tile.select', { block: b.label, model })} onClick={() => onSelect(m)}>
+                    {b.footswitch && <span className="tile-fs">{b.footswitch.toUpperCase()}</span>}
+                    <ModuleIcon blockKey={b.key} />
+                    <span className="tile-label">{b.label}</span>
+                    <span className="tile-model">{model}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`tile-led${b.on ? ' is-on' : ''}`}
+                    role="switch"
+                    aria-checked={b.on}
+                    aria-label={t(b.on ? 'block.onAria' : 'block.offAria', { block: b.label })}
+                    disabled={!editable}
+                    onClick={() => onEdit({ kind: 'on', module: b.module, on: !b.on })}
+                  />
+                </div>
               );
             })}
             {editable && (
-              <span className="chain-move">
+              <span className="tile-move">
                 <button type="button" aria-label={t('chain.earlier', { name })} disabled={index === 0} onClick={() => move(lead, index - 1)}>‹</button>
                 <button type="button" aria-label={t('chain.later', { name })} disabled={index === units.length - 1} onClick={() => move(lead, index + 1)}>›</button>
               </span>

@@ -281,6 +281,19 @@ export function usePocketMaster() {
    * Runs `run` alone on the link (no edits or automatic re-reads meanwhile), then re-reads the slot
    * names and the preset. Resolves with its result, or null when it failed (the error is shown).
    */
+  /** A device-wide setting write (setGlobal / setExpFsTarget bytes); queued like an edit. */
+  const writeGlobal = useCallback((bytes: Uint8Array) => {
+    const current = link.current;
+    if (!current || busyRef.current) return;
+    try {
+      current.edit(bytes);
+    } catch (e) {
+      if (e instanceof LinkClosedError) return;
+      console.error('global setting write failed', e);
+      patch({ error: message(e) });
+    }
+  }, [patch]);
+
   const exclusive = useCallback(async <T,>(step: string, run: (current: PocketMasterLink) => Promise<T>): Promise<T | null> => {
     const current = link.current;
     if (!current) {
@@ -532,6 +545,7 @@ export function usePocketMaster() {
     loadNames,
     loadPreset: (index: number) => void loadPreset(index),
     exclusive,
+    writeGlobal,
     refreshSlotNames,
     importBackup,
     exportPreset: () => void exportPreset(),

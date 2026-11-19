@@ -1,4 +1,5 @@
-import { editKey, isAllowedEdit } from './commands.ts';
+import { editKey, isAllowedEdit, isAllowedGlobalWrite } from './commands.ts';
+import { factoryReset } from './globals.ts';
 import { describeMessage } from './describe.ts';
 import { parseFrame, type Frame } from './frame.ts';
 import { toHex } from './hex.ts';
@@ -123,12 +124,28 @@ export class PocketMasterLink {
    */
   edit(bytes: Uint8Array): void {
     if (this.#closed) throw new LinkClosedError();
-    if (!isAllowedEdit(bytes)) throw new Error('Blocked: only chain, model, parameter and on/off edits can be sent.');
+    if (!isAllowedEdit(bytes) && !isAllowedGlobalWrite(bytes)) throw new Error('Blocked: only chain, model, parameter, on/off and global-setting edits can be sent.');
     const key = editKey(bytes);
     // Drop the pending edit with the same key and append the new one, so it never overtakes
     // something queued after it (a parameter must follow the model change it belongs to).
     this.#queue = [...this.#queue.filter((q) => q.key !== key), { key, bytes }];
     if (!this.#pumpTimer) this.#pump();
+  }
+
+  /**
+   * Factory reset, after queued edits are written: every setting and preset returns to factory
+   * state and the pedal reboots, so the link drops. Nothing waits for a reply.
+   */
+  async factoryReset(): Promise<void> {
+    if (this.#closed) throw new LinkClosedError();
+    await this.drained();
+    await this.#editAcks();
+    if (this.#closed) throw new LinkClosedError();
+    try {
+      this.#transmit(factoryReset());
+    } catch (error) {
+      throw sendError(error);
+    }
   }
 
   /**

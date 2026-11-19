@@ -1,3 +1,4 @@
+import { decodeGlobals, type GlobalSettings } from './globals.ts';
 import type { Pedal } from './backup.ts';
 import type { CloArrays } from './clo/generate.ts';
 import { profileRenameBlob, profileUploadBlob } from './clo/codec.ts';
@@ -16,6 +17,13 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 /** Names of the five user IR slots (read only). */
 export async function readUserIrNames(link: PocketMasterLink): Promise<SlotName[]> {
   return decodeSlotNames((await link.request(Query.USER_IR_NAMES)).payload);
+}
+
+/** Device-wide settings; throws when the reply is not one the decoder knows. */
+export async function readGlobals(link: PocketMasterLink): Promise<GlobalSettings> {
+  const globals = decodeGlobals((await link.request(Query.GLOBALS)).payload);
+  if (!globals) throw new Error('The pedal answered the settings query with a reply this editor cannot read.');
+  return globals;
 }
 
 /** Names of the five captured-profile (clone) slots (read only). */

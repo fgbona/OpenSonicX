@@ -42,7 +42,11 @@ packages/core/src/catalog.json, and the user IR upload: WAV conversion, blob,
 chunked transport, edit session and flash-write notice
 (packages/core/src/ir-upload.ts, link.ts, pedal.ts), and the NAM capture to
 clone-model converter, the .clo format and the profile upload
-(packages/core/src/clo/, pedal.ts). Its license:
+(packages/core/src/clo/, pedal.ts), the tempo-sync note divisions
+(packages/core/src/sync.ts), and the device-wide settings: dump offsets,
+setting addresses, EXP/FS target registers and factory reset
+(packages/core/src/globals.ts). The editor's block drawings are original and
+do not use SonicMaster's or Sonicake's icons. Its license:
 
 MIT License
 
