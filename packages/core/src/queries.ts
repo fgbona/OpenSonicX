@@ -12,6 +12,8 @@ export const Query = {
   EDIT_BUFFER: 0x41,
   CURRENT_PRESET: 0x43,
   MODIFIED: 0x45,
+  /** Opens the edit session; the pedal only writes user IRs to memory after it (SonicMaster). */
+  SESSION: 0x30,
 } as const;
 export type QueryKind = (typeof Query)[keyof typeof Query];
 

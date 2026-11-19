@@ -2,7 +2,8 @@ import { editKey, isAllowedEdit } from './commands.ts';
 import { describeMessage } from './describe.ts';
 import { parseFrame, type Frame } from './frame.ts';
 import { toHex } from './hex.ts';
-import { isReadOnly, isReply, queryFrame, type QueryKind } from './queries.ts';
+import { isReadOnly, isReply, MessageType, Query, queryFrame, type QueryKind } from './queries.ts';
+import { chunkFrames, isUploadBlob, type UploadDomain } from './ir-upload.ts';
 import { Reassembler } from './reassembler.ts';
 import { decodeAck, isPresetOperation, PresetCommand } from './slots.ts';
 
@@ -34,6 +35,13 @@ const ACK_TIMEOUT_MS = 3000;
 const ACK = { TYPE: 0x14, COMMAND: 0x08 } as const;
 /** The pedal acknowledges every edit too; a preset operation waits this long at most for those. */
 const EDIT_ACK_WAIT_MS = 300;
+/** Upload chunks: the pedal sometimes drops one acknowledge, so a chunk is sent again (SonicMaster). */
+const UPLOAD_ACK_TIMEOUT_MS = 1200;
+const UPLOAD_TRIES = 10;
+/** After the last chunk the pedal writes flash (2-3 s) and then sends 12 1B <domain>. */
+const FLASH_WRITE_TIMEOUT_MS = 5000;
+const FLASH_WRITTEN = 0x1b;
+const SESSION_TIMEOUT_MS = 1000;
 
 let nextLogId = 0; // module-wide so log keys stay unique across reconnects
 
@@ -154,15 +162,73 @@ export class PocketMasterLink {
     return decodeAck(frame.payload);
   }
 
-  #waitForAck(): Promise<Frame | null> {
+  /**
+   * Writes an upload blob (a user IR or its new name) in acknowledged chunks, then waits until
+   * the pedal reports the flash write. Resolves only when the blob is in the pedal's memory.
+   */
+  async upload(blob: Uint8Array, domain: UploadDomain): Promise<void> {
+    if (this.#closed) throw new LinkClosedError();
+    if (!isUploadBlob(blob, domain)) throw new Error('Blocked: only user IR uploads and renames can be sent on the upload path.');
+    await this.drained();
+    await this.#editAcks();
+    const frames = chunkFrames(blob);
+    for (const [i, frame] of frames.entries()) {
+      let ack: Frame | null = null;
+      for (let attempt = 0; attempt < UPLOAD_TRIES && !ack; attempt++) {
+        const reply = this.#waitForAck(UPLOAD_ACK_TIMEOUT_MS);
+        try {
+          this.#transmit(frame);
+        } catch (error) {
+          this.#cancelWaits();
+          await reply;
+          throw sendError(error);
+        }
+        ack = await reply;
+        if (this.#closed) throw new LinkClosedError();
+      }
+      const which = `chunk ${i + 1} of ${frames.length}`;
+      if (!ack) throw new Error(`The pedal sent no acknowledge for ${which}; the upload stopped and nothing was saved.`);
+      if (!decodeAck(ack.payload)) throw new Error(`The pedal refused ${which}; the upload stopped and nothing was saved.`);
+    }
+    const written = await this.#waitForFrame(
+      (f) => f.payload[0] === MessageType.GET && f.payload[1] === FLASH_WRITTEN && f.payload[2] === domain,
+      FLASH_WRITE_TIMEOUT_MS,
+    );
+    if (this.#closed) throw new LinkClosedError();
+    if (!written) {
+      throw new Error('The pedal took the upload but did not write it to memory, so it is not saved. Switch the pedal off and on, then try again.');
+    }
+  }
+
+  /** Sends 12 30, which opens the edit session, and goes on after any reply or one second. */
+  async enterSession(): Promise<void> {
+    if (this.#closed) throw new LinkClosedError();
+    const reply = this.#waitForFrame((f) => f.payload[0] === MessageType.GET, SESSION_TIMEOUT_MS);
+    try {
+      this.#send(queryFrame(Query.SESSION));
+    } catch (error) {
+      this.#cancelWaits();
+      await reply;
+      throw sendError(error);
+    }
+    await reply;
+    if (this.#closed) throw new LinkClosedError();
+  }
+
+  #waitForAck(timeoutMs = ACK_TIMEOUT_MS): Promise<Frame | null> {
+    return this.#waitForFrame((frame) => frame.payload[0] === ACK.TYPE && frame.payload[1] === ACK.COMMAND, timeoutMs);
+  }
+
+  /** Resolves with the first complete frame `match` accepts (consuming it), or null after `timeoutMs`. */
+  #waitForFrame(match: (frame: Frame) => boolean, timeoutMs: number): Promise<Frame | null> {
     return new Promise((resolve) => {
       const listener = (frame: Frame) => {
-        if (frame.payload[0] !== ACK.TYPE || frame.payload[1] !== ACK.COMMAND) return false;
+        if (!match(frame)) return false;
         done(frame);
         return true;
       };
       const cancel = () => done(null);
-      const timer = setTimeout(cancel, ACK_TIMEOUT_MS);
+      const timer = setTimeout(cancel, timeoutMs);
       const done = (frame: Frame | null) => {
         clearTimeout(timer);
         this.#listeners.delete(listener);

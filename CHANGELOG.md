@@ -17,6 +17,16 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - The MCP's `edit_preset` takes `bpm` and `footswitch` changes, and
   `get_preset` shows the tempo and each block's switch.
 - Sync (modulation and delay) and Trail (delay) switches in the catalog.
+- User IR upload. The core turns a WAV (PCM 8/16/24/32-bit or float, any
+  channels and rate) into the pedal's 512 taps at 44.1 kHz and sends it in
+  acknowledged 19-byte chunks on a new guarded upload path, after opening
+  the edit session (12 30); it only reports success once the pedal
+  announces the flash write (12 1B 04), and checks the slot's new name.
+  The MCP's `load_ir` writes a WAV from `~/.pocket-master-editor/irs`
+  into user IR 1..5, needs `confirm` ("IR3") and refuses to overwrite a
+  loaded IR without `replace`, because the pedal cannot send it back.
+  Clearing a slot is left out: it leaves the pedal refusing IR writes
+  until a power cycle.
 - Protocol knowledge ported from SonicMaster (MIT, credited in NOTICE).
   Reading the BPM is confirmed on the owner's unit; the new writes are
   tested on the simulated pedal and still need a test on the unit.

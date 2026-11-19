@@ -9,7 +9,7 @@ import { createServer } from './tools.ts';
 
 // stdout carries the MCP protocol: everything else goes to stderr.
 const home = process.env.POCKET_MASTER_HOME ?? join(homedir(), '.pocket-master-editor');
-const session = new Session(() => connectPocketMaster(), { backups: join(home, 'backups'), presets: join(home, 'presets') });
+const session = new Session(() => connectPocketMaster(), { backups: join(home, 'backups'), presets: join(home, 'presets'), irs: join(home, 'irs') });
 // One line per tool call: how long it spent on the pedal, to tell pedal time from the assistant's thinking.
 const timings = join(home, 'timings.log');
 await mkdir(home, { recursive: true });

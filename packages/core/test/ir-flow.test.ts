@@ -1,0 +1,69 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { buildFrame, parseFrame } from '../src/frame.ts';
+import { PocketMasterLink, type MidiPort } from '../src/link.ts';
+import { uploadUserIr } from '../src/pedal.ts';
+import { Reassembler } from '../src/reassembler.ts';
+
+/** 12 20 reply: one flag per slot (0 loaded, 1 empty), then 16-byte names. */
+function irNamesReply(names: (string | null)[]): Uint8Array {
+  const payload = [0x12, 0x20, ...names.map((n) => (n ? 0 : 1))];
+  for (const n of names) payload.push(...Array.from({ length: 16 }, (_, i) => (n && i < n.length ? n.charCodeAt(i) : 0)));
+  return buildFrame(payload);
+}
+
+/** A port that answers like the pedal: session and name queries, acknowledges chunks, reports the flash write. */
+function pedalPort(options: { commit?: boolean } = {}) {
+  const names: (string | null)[] = ['Mesa OS', null, null, null, null];
+  const log: string[] = [];
+  const upload = new Reassembler();
+  let receiver: ((bytes: Uint8Array) => void) | null = null;
+  const reply = (bytes: Uint8Array) => queueMicrotask(() => receiver?.(bytes));
+  const port: MidiPort = {
+    listen: (r) => void (receiver = r),
+    send: (bytes) => {
+      const f = parseFrame(bytes);
+      const [type, cmd] = f.payload;
+      if (type === 0x12 && cmd === 0x30) { log.push('session'); reply(buildFrame([0x12, 0x30, 0x01])); return; }
+      if (type === 0x12 && cmd === 0x20) { log.push('names'); reply(irNamesReply(names)); return; }
+      log.push(`chunk ${f.index + 1}/${f.total}`);
+      reply(buildFrame([0x14, 0x08, 0x00]));
+      const blob = upload.feed(f, 0);
+      if (blob && blob.payload[0] === 0x11 && blob.payload[1] === 0x21) {
+        names[blob.payload[6]!] = new TextDecoder().decode(blob.payload.subarray(10, 20)).replace(/\0+$/, '');
+        if (options.commit !== false) setTimeout(() => receiver?.(buildFrame([0x12, 0x1b, 0x04, 0, 0, 0])), 5);
+      }
+    },
+  };
+  return { port, log, names };
+}
+
+function wav(): Uint8Array {
+  const buf = new Uint8Array(46);
+  const v = new DataView(buf.buffer);
+  const tag = (at: number, s: string) => [...s].forEach((c, i) => v.setUint8(at + i, c.charCodeAt(0)));
+  tag(0, 'RIFF'); v.setUint32(4, 38, true); tag(8, 'WAVE'); tag(12, 'fmt '); v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 44100, true); v.setUint32(28, 88200, true);
+  v.setUint16(32, 2, true); v.setUint16(34, 16, true); tag(36, 'data'); v.setUint32(40, 2, true); v.setInt16(44, 12345, true);
+  return buf;
+}
+
+test('uploading a user IR opens the session, reads the names, sends every chunk and checks the new name', async () => {
+  const pedal = pedalPort();
+  const link = new PocketMasterLink(pedal.port, () => undefined);
+  const names = await uploadUserIr(link, 1, 'V30 Cab', wav());
+  link.close();
+  assert.equal(names[1]?.name, 'V30 Cab');
+  assert.deepEqual(pedal.log.slice(0, 3), ['session', 'names', 'chunk 1/112']);
+  assert.equal(pedal.log.filter((l) => l.startsWith('chunk')).length, 112);
+  assert.equal(pedal.log.at(-1), 'names');
+});
+
+test('an upload the pedal does not write fails, and a bad WAV fails before anything is sent', async () => {
+  const pedal = pedalPort({ commit: false });
+  const link = new PocketMasterLink(pedal.port, () => undefined);
+  await assert.rejects(uploadUserIr(link, 1, 'X', new Uint8Array(10)), /not a WAV file/);
+  assert.deepEqual(pedal.log, []);
+  await assert.rejects(uploadUserIr(link, 1, 'X', wav()), /not saved/);
+  link.close();
+});

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { decodePreset, modelsFor, parseBackupFile } from '@pocket-master/core';
@@ -11,7 +11,13 @@ const SLOT_NAMES = { irNames: ['Mesa OS', null, null, null, null], profileNames:
 
 function setup(start = 8, options: ConstructorParameters<typeof FakePedal>[0] = {}) {
   const fake = new FakePedal(options, start);
-  const io: PedalIO = Object.assign(fake, { readSlotNames: async () => SLOT_NAMES, readModified: async () => false });
+  const irNames = [...SLOT_NAMES.irNames];
+  const uploads: { slot: number; name: string; bytes: number }[] = [];
+  const io: PedalIO = Object.assign(fake, {
+    readSlotNames: async () => ({ irNames: [...irNames], profileNames: SLOT_NAMES.profileNames }),
+    readModified: async () => false,
+    uploadIr: async (slot: number, name: string, wav: Uint8Array) => { uploads.push({ slot, name, bytes: wav.length }); irNames[slot] = name; },
+  });
   let opened = 0;
   let closed = 0;
   let maxOpenAtOnce = 0;
@@ -22,9 +28,9 @@ function setup(start = 8, options: ConstructorParameters<typeof FakePedal>[0] = 
     await new Promise((r) => setImmediate(r)); // let a concurrent call try to get in
     return { io, close: () => void closed++ };
   };
-  const session = new Session(connect, { backups: join(dir, 'backups'), presets: join(dir, 'presets') });
+  const session = new Session(connect, { backups: join(dir, 'backups'), presets: join(dir, 'presets'), irs: join(dir, 'irs') });
   const block = (key: string) => decodePreset(fake.editBuffer).chain.find((b) => b.key === key)!;
-  return { fake, session, dir, block, counts: () => ({ opened, closed, maxOpenAtOnce }) };
+  return { fake, session, dir, block, uploads, counts: () => ({ opened, closed, maxOpenAtOnce }) };
 }
 
 test('describe names the preset and lists every block with its model and values', async () => {
@@ -251,4 +257,48 @@ test('a BPM out of range or a full switch fails before anything is sent', async 
   await assert.rejects(session.edit([{ kind: 'footswitch', block: 'rvb', switch: 'FS1' }]), /FS1 already switches 3 blocks/);
   assert.equal(fake.received.length, sent);
   assert.ok(sent > before);
+});
+
+
+/** A tiny valid 16-bit mono WAV. */
+function tinyWav(): Uint8Array {
+  const buf = new Uint8Array(48);
+  const v = new DataView(buf.buffer);
+  const tag = (at: number, s: string) => [...s].forEach((c, i) => v.setUint8(at + i, c.charCodeAt(0)));
+  tag(0, 'RIFF'); v.setUint32(4, 40, true); tag(8, 'WAVE'); tag(12, 'fmt '); v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 44100, true); v.setUint32(28, 88200, true);
+  v.setUint16(32, 2, true); v.setUint16(34, 16, true); tag(36, 'data'); v.setUint32(40, 4, true); v.setInt16(44, 20000, true);
+  return buf;
+}
+function putIr(dir: string, name: string, bytes = tinyWav()) {
+  mkdirSync(join(dir, 'irs'), { recursive: true });
+  writeFileSync(join(dir, 'irs', name), bytes);
+}
+
+test('load_ir puts a WAV from the irs folder into an empty user IR slot, named after the file', async () => {
+  const { session, dir, uploads } = setup();
+  putIr(dir, 'V30 Cab.wav');
+  const text = await session.loadIr({ file: 'V30 Cab.wav', slot: 2, confirm: 'IR2' });
+  assert.deepEqual(uploads.map(({ slot, name }) => [slot, name]), [[1, 'V30 Cab']]);
+  assert.match(text, /Loaded "V30 Cab" into User IR 2/);
+});
+
+test('load_ir needs the slot confirmed and refuses to overwrite a loaded IR unless asked to', async () => {
+  const { session, dir, uploads } = setup();
+  putIr(dir, 'new.wav');
+  await assert.rejects(session.loadIr({ file: 'new.wav', slot: 1, confirm: 'yes' }), /confirm must be "IR1"/);
+  await assert.rejects(session.loadIr({ file: 'new.wav', slot: 1, confirm: 'IR1' }), /User IR 1 holds "Mesa OS".*cannot be backed up.*replace/);
+  assert.equal(uploads.length, 0);
+  await session.loadIr({ file: 'new.wav', slot: 1, confirm: 'IR1', replace: true, name: 'Fresh' });
+  assert.deepEqual(uploads.map(({ slot, name }) => [slot, name]), [[0, 'Fresh']]);
+});
+
+test('load_ir checks the WAV and the folder before anything is sent', async () => {
+  const { session, dir, uploads } = setup();
+  putIr(dir, 'broken.wav', new TextEncoder().encode('not audio at all'));
+  await assert.rejects(session.loadIr({ file: 'broken.wav', slot: 3, confirm: 'IR3' }), /not a WAV file/);
+  await assert.rejects(session.loadIr({ file: '/etc/hosts', slot: 3, confirm: 'IR3' }), /inside .*irs/);
+  await assert.rejects(session.loadIr({ file: 'missing.wav', slot: 3, confirm: 'IR3' }), /ENOENT|no such file/);
+  await assert.rejects(session.loadIr({ file: 'x.wav', slot: 6, confirm: 'IR6' }), /slot must be 1\.\.5/);
+  assert.equal(uploads.length, 0);
 });
