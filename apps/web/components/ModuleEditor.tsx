@@ -1,8 +1,8 @@
 'use client';
 
 import {
-  type Block, blockModelLabel, delayMs, type Edit, encodeValue, FOOTSWITCH_CAPACITY, modelInfo, modelLabel, modelOf, modelsFor,
-  paramSpecFor, type Preset, TAP_DIVISIONS,
+  type Block, blockModelLabel, type Edit, encodeValue, FOOTSWITCH_CAPACITY, modelInfo, modelLabel, modelOf, modelsFor,
+  paramSpecFor, type Preset,
 } from '@pocket-master/core';
 import { Knob } from './Knob';
 import { ModuleIcon } from './ModuleIcon';
@@ -34,7 +34,6 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
     const spec = paramSpecFor(preset, block, alg);
     if (spec) onEdit({ kind: 'param', module: block.module, alg, value: encodeValue(spec, input) });
   };
-  const time = block.key === 'dly' ? block.params.find((p) => p.name === 'Time' && p.kind === 'number') : undefined;
 
   return (
     <section className={`editor block-${block.key}${block.on ? '' : ' editor-off'}`} aria-label={t('editor.aria', { block: block.label })}>
@@ -113,17 +112,6 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
               </div>
             );
           })}
-        </div>
-      )}
-      {time && editable && preset.bpm !== null && (
-        <div className="editor-tap" role="group" aria-label={t('editor.timeFromBpm', { bpm: preset.bpm })}>
-          <span className="muted small">{t('editor.timeFromBpm', { bpm: preset.bpm })}</span>
-          {TAP_DIVISIONS.map((d) => (
-            <button key={d.label} type="button" className="btn btn-small"
-              onClick={() => send(time.alg, Math.min(time.max ?? 1000, Math.max(time.min ?? 20, delayMs(preset.bpm!, d.multiplier))))}>
-              {d.label}
-            </button>
-          ))}
         </div>
       )}
       {(info?.basedOn || info?.about) && (

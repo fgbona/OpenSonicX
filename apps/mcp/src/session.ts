@@ -56,7 +56,6 @@ export type Change =
   | { readonly kind: 'model'; readonly block: string; readonly model: string }
   | { readonly kind: 'move'; readonly block: string; readonly position: number }
   | { readonly kind: 'volume'; readonly value: number }
-  | { readonly kind: 'bpm'; readonly value: number }
   /** FS1, FS2 or none, in any case. */
   | { readonly kind: 'footswitch'; readonly block: string; readonly switch: string };
 
@@ -484,7 +483,6 @@ const safe = (name: string) => name.replace(/[^A-Za-z0-9_-]+/g, '_') || 'preset'
 
 function toEdit(preset: Preset, change: Change, slots: SlotNames): Edit {
   if (change.kind === 'volume') return { kind: 'volume', value: change.value };
-  if (change.kind === 'bpm') return { kind: 'bpm', value: change.value };
   const block = resolveBlock(preset, change.block);
   switch (change.kind) {
     case 'parameter': {
@@ -521,7 +519,6 @@ function formatPreset(index: number, name: string, preset: Preset, slots: SlotNa
   const head = [
     `${presetLabel(index)} "${name}"`,
     `volume ${preset.volume ?? '?'}`,
-    `bpm ${preset.bpm ?? '?'}`,
     `amp mode: ${preset.ampMode === 'clone' ? 'captured profile' : 'amp model'}`,
     `unsaved changes: ${modified === null ? 'unknown' : modified ? 'yes' : 'no'}`,
   ].join(' · ');

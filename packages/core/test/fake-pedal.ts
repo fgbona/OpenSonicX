@@ -43,6 +43,8 @@ export interface FakeOptions {
   saveCorrupts?: boolean;
   /** The save is acknowledged but the slot keeps its old name. */
   saveKeepsName?: boolean;
+  /** The BPM write is acknowledged but ignored, as firmware V1.3.3 does. */
+  ignoresBpm?: boolean;
 }
 
 /**
