@@ -6,6 +6,15 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-19
+
+The MCP server builds tones from a reference. Validated by the owner on a
+V1.3.3 unit through Claude Code: "Black Album" saved to P50 and an Iron
+Maiden "Stranger in a Strange Land" tone saved to P49, then refined and
+saved again, each save backing up the slot it replaced. Container image:
+`ghcr.io/fgbona/pocket-master-editor:v0.9.0` (amd64 and arm64; the image
+serves the web editor).
+
 ### Added
 
 - The MCP server knows what every model is: `list_models` (now also
@@ -312,7 +321,8 @@ Container image: `ghcr.io/fgbona/pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/pocket-master-editor/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/fgbona/pocket-master-editor/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.5.0...v0.6.0
