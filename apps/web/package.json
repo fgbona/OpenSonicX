@@ -4,7 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:worker": "esbuild lib/convert.worker.ts --bundle --format=esm --target=es2022 --outfile=public/convert-worker.js --log-level=warning",
+    "predev": "npm run build:worker",
     "dev": "next dev",
+    "prebuild": "npm run build:worker",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
@@ -20,6 +23,7 @@
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "esbuild": "0.28.2"
   }
 }

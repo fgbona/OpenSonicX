@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { presetLabel, type Edit, type Preset } from '@pocket-master/core';
 import { BlockCard } from './BlockCard';
+import { BpmControl } from './BpmControl';
 import { ChainStrip } from './ChainStrip';
 import { useI18n } from './I18n';
 
@@ -26,6 +27,7 @@ export const ChainView = memo(function ChainView({ preset, presetIndex, editable
         </div>
         <dl className="preset-meta">
           <div><dt>{t('preset.volume')}</dt><dd>{preset.volume ?? '—'}</dd></div>
+          <div><dt>{t('preset.bpm')}</dt><dd><BpmControl bpm={preset.bpm} editable={editable} onChange={(value) => onEdit({ kind: 'bpm', value })} /></dd></div>
           <div><dt>{t('preset.ampMode')}</dt><dd>{preset.ampMode === 'clone' ? t('preset.ampCaptured') : t('preset.ampModel')}</dd></div>
           <div><dt>{t('preset.access')}</dt><dd>{editable ? t('live.label') : t('preset.readOnly')}</dd></div>
         </dl>

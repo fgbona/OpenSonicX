@@ -43,6 +43,14 @@ and the project uses [Semantic Versioning](https://semver.org/).
   `load_nam` for local captures. Conversions run the five probe passes in
   parallel worker threads. Core has a TONE3000 client (PKCE for the
   browser, device authorization, search, models, download).
+- Web editor, closer to SonicMaster's features in our design: a preset
+  list with filter and an unsaved-changes guard, BPM with tap tempo, a
+  footswitch selector per block, a pedal-slots panel (load a .nam into a
+  profile slot, converted in web workers, or a WAV into a user IR slot),
+  and a TONE3000 panel (device sign-in, search, install a capture or IR).
+  The conversion worker is bundled with esbuild into
+  `public/convert-worker.js`, as Turbopack ships `new Worker(new URL(…))`
+  sources unbundled.
 - Protocol knowledge ported from SonicMaster (MIT, credited in NOTICE).
   Reading the BPM is confirmed on the owner's unit; the new writes are
   tested on the simulated pedal and still need a test on the unit.

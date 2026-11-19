@@ -5,6 +5,9 @@ import { BackupsPanel } from '@/components/BackupsPanel';
 import { ChainView } from '@/components/ChainView';
 import { SaveDialog } from '@/components/SaveDialog';
 import { PresetFiles } from '@/components/PresetFiles';
+import { PresetList } from '@/components/PresetList';
+import { SlotsPanel } from '@/components/SlotsPanel';
+import { Tone3000Panel } from '@/components/Tone3000Panel';
 import { SysexLog } from '@/components/SysexLog';
 import { Toolbar } from '@/components/Toolbar';
 import { usePocketMaster } from '@/lib/usePocketMaster';
@@ -69,6 +72,13 @@ export default function EditorPage() {
             <ol className="steps">{STEPS.map((s) => <li key={s}>{t(s)}</li>)}</ol>
             <p className="muted small">{t('empty.browsers')}</p>
           </section>
+        )}
+        {connected && (
+          <>
+            <PresetList names={pm.names} current={pm.presetIndex} modified={pm.modified} disabled={pm.busy !== null} onReadNames={() => void pm.loadNames()} onLoad={pm.loadPreset} />
+            <Tone3000Panel connected={connected} busy={pm.busy !== null} irNames={pm.irNames} profileNames={pm.profileNames} exclusive={pm.exclusive} error={pm.error} />
+            <SlotsPanel connected={connected} busy={pm.busy !== null} irNames={pm.irNames} profileNames={pm.profileNames} exclusive={pm.exclusive} error={pm.error} />
+          </>
         )}
         <BackupsPanel
           backups={pm.backups}

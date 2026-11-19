@@ -22,6 +22,17 @@ trademarks of their owners, used only to describe the modeled gear.
 - Saves to a user slot (P01..P50), backing up the slot it overwrites
   first (you can skip that per save). Backups can be downloaded and
   restored from the Backups panel.
+- Lists all 100 presets with a filter and loads one, asking first when the
+  current one has unsaved changes.
+- Preset BPM with tap tempo, and the footswitch (FS1/FS2) of each block.
+- Loads a NAM capture (`.nam`) into a captured-profile slot, converting it
+  in the browser, and a WAV into a user IR slot.
+- Searches [TONE3000](https://www.tone3000.com) and installs a capture or IR
+  on the pedal in one go (sign in with a code you approve on the site). The
+  site needs a TONE3000 publishable key at build time:
+  `NEXT_PUBLIC_TONE3000_CLIENT_ID` (in `apps/web/.env.local` for
+  `npm run dev`; the `TONE3000_CLIENT_ID` repository variable for the
+  release image).
 - Logs every SysEx message sent and received, in hex, with a label.
 
 Tested on firmware **V1.3.3** over USB.
