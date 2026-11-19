@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { modelLabel } from '../lib/modelLabel.ts';
+import { modelLabel } from '../src/model-label.ts';
 
 const irs = ['Marshal 80', null, 'Marshall W', 'Holy Grail', 'V30UK Md 4'];
 
@@ -16,7 +16,7 @@ test('an empty slot, unknown names, factory cabinets and other blocks keep the c
   assert.equal(modelLabel('drv', 0x0a100000, 'Scream', irs), 'Scream');
 });
 
-import { blockModelLabel } from '../lib/modelLabel.ts';
+import { blockModelLabel } from '../src/model-label.ts';
 
 test('in clone mode the AMP shows the captured profile name', () => {
   const amp = { key: 'amp', code: 0x0f000000, model: 'User Profile 1' };

@@ -23,6 +23,7 @@ ENV NPM_CONFIG_AUDIT=false \
 COPY package.json package-lock.json ./
 COPY packages/core/package.json packages/core/
 COPY apps/web/package.json apps/web/
+COPY apps/mcp/package.json apps/mcp/
 # --ignore-scripts: no dependency lifecycle scripts run during the build.
 RUN --mount=type=cache,target=/root/.npm npm ci --ignore-scripts
 

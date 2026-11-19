@@ -1,0 +1,26 @@
+{
+  "name": "@pocket-master/mcp",
+  "version": "0.7.0",
+  "private": true,
+  "description": "MCP server for the Sonicake Pocket Master: read, edit and save presets from an AI assistant over USB MIDI.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "pocket-master-mcp": "./src/server.ts"
+  },
+  "scripts": {
+    "start": "node src/server.ts",
+    "test": "node --test --test-timeout=5000 'test/**/*.test.ts'",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@julusian/midi": "3.8.1",
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "@pocket-master/core": "*",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2"
+  }
+}

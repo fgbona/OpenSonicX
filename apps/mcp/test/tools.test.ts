@@ -1,0 +1,60 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { FakePedal } from '../../../packages/core/test/fake-pedal.ts';
+import { Session, type PedalIO } from '../src/session.ts';
+import { createServer } from '../src/tools.ts';
+
+async function connected() {
+  const fake = new FakePedal({}, 8);
+  const io: PedalIO = Object.assign(fake, { readSlotNames: async () => ({ irNames: null, profileNames: null }), readModified: async () => null });
+  const dir = mkdtempSync(join(tmpdir(), 'pm-tools-'));
+  const session = new Session(() => ({ io, close: () => undefined }), { backups: join(dir, 'b'), presets: join(dir, 'p') });
+  const [a, b] = InMemoryTransport.createLinkedPair();
+  const client = new Client({ name: 'test', version: '0' });
+  await Promise.all([createServer(session).connect(a), client.connect(b)]);
+  return { client, fake };
+}
+
+const text = (r: unknown) => (r as { content: { text: string }[] }).content.map((c) => c.text).join('\n');
+
+test('the server lists every tool, marking reads read-only and slot writes destructive', async () => {
+  const { client } = await connected();
+  const { tools } = await client.listTools();
+  const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
+  assert.deepEqual(Object.keys(byName).sort(), [
+    'edit_preset', 'export_preset', 'get_preset', 'import_preset', 'list_models', 'list_presets',
+    'restore_backup', 'revert_preset', 'save_preset', 'select_preset',
+  ]);
+  for (const name of ['get_preset', 'list_presets', 'list_models']) assert.equal(byName[name]!.annotations?.readOnlyHint, true, name);
+  for (const name of ['save_preset', 'restore_backup']) assert.equal(byName[name]!.annotations?.destructiveHint, true, name);
+  assert.equal(byName['edit_preset']!.annotations?.destructiveHint, false);
+});
+
+test('get_preset returns the preset as text', async () => {
+  const { client, fake } = await connected();
+  const result = await client.callTool({ name: 'get_preset', arguments: {} });
+  assert.match(text(result), new RegExp(`^P09 "${fake.names[8]}"`));
+});
+
+test('edit_preset changes the pedal and a bad name comes back as a readable tool error', async () => {
+  const { client, fake } = await connected();
+  const ok = await client.callTool({ name: 'edit_preset', arguments: { changes: [{ kind: 'parameter', block: 'AMP', parameter: 'Gain', value: 66 }] } });
+  assert.match(text(ok), /Gain 66/);
+  const before = fake.received.length;
+  const bad = await client.callTool({ name: 'edit_preset', arguments: { changes: [{ kind: 'block', block: 'WAH', on: true }] } });
+  assert.equal(bad.isError, true);
+  assert.match(text(bad), /No block "WAH"\. Blocks: /);
+  assert.equal(fake.received.length, before);
+});
+
+test('save_preset cannot be called without confirm', async () => {
+  const { client, fake } = await connected();
+  const result = await client.callTool({ name: 'save_preset', arguments: { slot: 'P03', name: 'X' } });
+  assert.equal(result.isError, true);
+  assert.equal(fake.received.some((r) => r.startsWith('save')), false);
+});

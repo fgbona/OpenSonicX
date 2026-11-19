@@ -1,0 +1,259 @@
+import { constants } from 'node:fs';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
+import {
+  applyEdit, blockModelLabel, chainUnits, decodePreset, editToCommands, encodeValue, fromHex, loadIntoEditBuffer,
+  modelChoices, moveInChain, parseBackupFile, parsePresetFile, parsePresetLabel, presetFile, presetLabel,
+  resolveBlock, resolveModel, resolveParam, restoreFromBackup, saveToSlot,
+  type BackupFile, type Edit, type Pedal, type Preset, type SlotNames,
+} from '@pocket-master/core';
+
+/** What the session needs from the pedal: the core Pedal contract plus two read-only queries. */
+export interface PedalIO extends Pedal {
+  readSlotNames(): Promise<SlotNames>;
+  /** The pedal's own "edit buffer differs from the slot" flag, null when unknown. */
+  readModified(): Promise<boolean | null>;
+}
+
+export interface Connection {
+  readonly io: PedalIO;
+  close(): void;
+}
+
+/** A change named the way a musician says it. */
+export type Change =
+  | { readonly kind: 'parameter'; readonly block: string; readonly parameter: string; readonly value: number | boolean | string }
+  | { readonly kind: 'block'; readonly block: string; readonly on: boolean }
+  | { readonly kind: 'model'; readonly block: string; readonly model: string }
+  | { readonly kind: 'move'; readonly block: string; readonly position: number }
+  | { readonly kind: 'volume'; readonly value: number };
+
+export interface Folders {
+  readonly backups: string;
+  readonly presets: string;
+}
+
+/**
+ * The pedal as the MCP tools see it. Every call opens its own connection and closes it, so an
+ * unplugged pedal or the web editor in between never leaves stale state; calls run one at a time.
+ */
+export class Session {
+  readonly #connect: () => Connection | Promise<Connection>;
+  readonly #folders: Folders;
+  #queue: Promise<unknown> = Promise.resolve();
+  #names: string[] | null = null;
+  #slotNames: SlotNames | null = null;
+
+  constructor(connect: () => Connection | Promise<Connection>, folders: Folders) {
+    this.#connect = connect;
+    this.#folders = folders;
+  }
+
+  #use<T>(run: (io: PedalIO) => Promise<T>): Promise<T> {
+    const call = this.#queue.then(async () => {
+      const connection = await this.#connect();
+      try {
+        return await run(connection.io);
+      } finally {
+        connection.close();
+      }
+    });
+    this.#queue = call.catch(() => undefined);
+    return call;
+  }
+
+  async #slots(io: PedalIO): Promise<SlotNames> {
+    this.#slotNames ??= await io.readSlotNames();
+    return this.#slotNames;
+  }
+
+  async #presetNames(io: PedalIO, fresh = false): Promise<string[]> {
+    if (fresh || !this.#names) this.#names = await io.readNames();
+    return this.#names;
+  }
+
+  async #describe(io: PedalIO): Promise<string> {
+    const index = await io.readCurrentIndex();
+    const preset = decodePreset(await io.readEditBuffer());
+    const names = await this.#presetNames(io);
+    const slots = await this.#slots(io);
+    const modified = await io.readModified();
+    return formatPreset(index, names[index] ?? '', preset, slots, modified);
+  }
+
+  describe(): Promise<string> {
+    return this.#use((io) => this.#describe(io));
+  }
+
+  listPresets(): Promise<string> {
+    return this.#use(async (io) => {
+      const names = await this.#presetNames(io, true);
+      return names.map((name, i) => `${presetLabel(i)} ${name}`).join('\n');
+    });
+  }
+
+  listModels(block: string): Promise<string> {
+    return this.#use(async (io) => {
+      const preset = decodePreset(await io.readEditBuffer());
+      const target = resolveBlock(preset, block);
+      const choices = modelChoices(target.key, await this.#slots(io));
+      return `${target.label} models:\n${choices.map((c) => `- ${c.name}${c.clone ? ' (captured profile)' : ''}`).join('\n')}`;
+    });
+  }
+
+  /** Checks every change against the preset before anything is sent, then sends them in order. */
+  edit(changes: readonly Change[]): Promise<string> {
+    return this.#use(async (io) => {
+      const slots = await this.#slots(io);
+      let preset = decodePreset(await io.readEditBuffer());
+      const commands: Uint8Array[] = [];
+      for (const change of changes) {
+        const edit = toEdit(preset, change, slots);
+        commands.push(...editToCommands(preset, edit));
+        preset = applyEdit(preset, edit);
+      }
+      await io.sendEdits(commands);
+      return this.#describe(io);
+    });
+  }
+
+  async select(label: string): Promise<string> {
+    const index = parsePresetLabel(label);
+    return this.#use(async (io) => {
+      await io.selectPreset(index);
+      return this.#describe(io);
+    });
+  }
+
+  /** Reloads the loaded preset from its slot, discarding unsaved edits. */
+  revert(): Promise<string> {
+    return this.#use(async (io) => {
+      await io.selectPreset(await io.readCurrentIndex());
+      return this.#describe(io);
+    });
+  }
+
+  async save(options: { slot: string; name: string; confirm: string; backup?: boolean }): Promise<string> {
+    const target = parsePresetLabel(options.slot);
+    const label = presetLabel(target);
+    requireConfirm(options.confirm, label);
+    return this.#use(async (io) => {
+      const { paths } = await this.#keepingBackups((onBackup) =>
+        saveToSlot(io, { target, name: options.name, backup: options.backup !== false, edited: null, onBackup }));
+      this.#names = null;
+      const note = paths.map((path) => `\nBackup of the old ${label}: ${path}`).join('');
+      return `Saved ${label} "${options.name}".${note}\n\n${await this.#describe(io)}`;
+    });
+  }
+
+  async restore(options: { file: string; slot?: string; confirm: string }): Promise<string> {
+    const backup = parseBackupFile(await readFile(options.file, 'utf8'));
+    const wanted = options.slot === undefined ? null : parsePresetLabel(options.slot);
+    const slots = backup.slots.filter((s) => wanted === null || s.index === wanted);
+    if (slots.length !== 1) {
+      throw new Error(`the backup holds ${backup.slots.map((s) => s.label).join(', ')}; name the one to restore with slot`);
+    }
+    const slot = slots[0]!;
+    requireConfirm(options.confirm, slot.label);
+    return this.#use(async (io) => {
+      const { paths } = await this.#keepingBackups((onBackup) => restoreFromBackup(io, slot, { onBackup }));
+      this.#names = null;
+      const note = paths.map((path) => `\nBackup of what it replaced: ${path}`).join('');
+      return `Restored ${slot.label} "${slot.name}".${note}\n\n${await this.#describe(io)}`;
+    });
+  }
+
+  /** Writes each backup to disk as soon as the flow makes it, so it is kept even when a later step fails. */
+  async #keepingBackups<T>(run: (onBackup: (file: BackupFile) => void) => Promise<T>): Promise<{ result: T; paths: string[] }> {
+    const writes: Promise<string>[] = [];
+    try {
+      const result = await run((file) => void writes.push(this.#writeBackup(file)));
+      return { result, paths: await Promise.all(writes) };
+    } catch (error) {
+      const kept = (await Promise.allSettled(writes)).flatMap((w) => (w.status === 'fulfilled' ? [w.value] : []));
+      if (kept.length === 0) throw error;
+      throw new Error(`${error instanceof Error ? error.message : String(error)} (backup kept: ${kept.join(', ')})`, { cause: error });
+    }
+  }
+
+  async #writeBackup(file: BackupFile): Promise<string> {
+    const slots = file.slots.map((s) => s.label).join('-');
+    const path = join(this.#folders.backups, `${file.createdAt.replace(/[:.]/g, '-')}-${slots}.json`);
+    await mkdir(this.#folders.backups, { recursive: true });
+    await writeFile(path, JSON.stringify(file, null, 2), { flag: 'wx' });
+    return path;
+  }
+
+  exportPreset(file?: string): Promise<string> {
+    return this.#use(async (io) => {
+      const index = await io.readCurrentIndex();
+      const name = (await this.#presetNames(io))[index] ?? '';
+      const payload = await io.readEditBuffer();
+      const path = file ? resolve(this.#folders.presets, file) : join(this.#folders.presets, `${presetLabel(index)}-${safe(name)}-${Date.now()}.json`);
+      await mkdir(resolve(path, '..'), { recursive: true });
+      try {
+        await writeFile(path, JSON.stringify(presetFile(payload, name), null, 2), { flag: constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY });
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'EEXIST') throw new Error(`${path} already exists; choose another file name`);
+        throw error;
+      }
+      return `Exported ${presetLabel(index)} "${name}" to ${path}`;
+    });
+  }
+
+  importPreset(file: string): Promise<string> {
+    return this.#use(async (io) => {
+      const preset = parsePresetFile(await readFile(resolve(this.#folders.presets, file), 'utf8'));
+      await loadIntoEditBuffer(io, decodePreset(fromHex(preset.payload)));
+      return `Loaded "${preset.name}" into the edit buffer (not saved).\n\n${await this.#describe(io)}`;
+    });
+  }
+}
+
+function requireConfirm(confirm: string, label: string): void {
+  if (confirm.trim().toUpperCase() !== label) throw new Error(`confirm must be "${label}" to write that slot`);
+}
+
+const safe = (name: string) => name.replace(/[^A-Za-z0-9_-]+/g, '_') || 'preset';
+
+function toEdit(preset: Preset, change: Change, slots: SlotNames): Edit {
+  if (change.kind === 'volume') return { kind: 'volume', value: change.value };
+  const block = resolveBlock(preset, change.block);
+  switch (change.kind) {
+    case 'parameter': {
+      const spec = resolveParam(preset, block, change.parameter);
+      return { kind: 'param', module: block.module, alg: spec.alg, value: encodeValue(spec, change.value) };
+    }
+    case 'block':
+      return { kind: 'on', module: block.module, on: change.on };
+    case 'model': {
+      const model = resolveModel(block.key, change.model, slots);
+      return { kind: 'model', module: block.module, code: model.code, clone: model.clone };
+    }
+    case 'move': {
+      const order = preset.chain.map((b) => b.module);
+      const units = chainUnits(order).length;
+      if (!Number.isInteger(change.position) || change.position < 1 || change.position > units) {
+        throw new Error(`position must be 1..${units} (DRV, AMP, IR and EQ move together)`);
+      }
+      return { kind: 'chain', order: moveInChain(order, block.module, change.position - 1) };
+    }
+  }
+}
+
+function formatPreset(index: number, name: string, preset: Preset, slots: SlotNames, modified: boolean | null): string {
+  const head = [
+    `${presetLabel(index)} "${name}"`,
+    `volume ${preset.volume ?? '?'}`,
+    `amp mode: ${preset.ampMode === 'clone' ? 'captured profile' : 'amp model'}`,
+    `unsaved changes: ${modified === null ? 'unknown' : modified ? 'yes' : 'no'}`,
+  ].join(' · ');
+  const chain = `Chain: ${preset.chain.map((b) => b.label).join(' → ')}`;
+  const width = Math.max(...preset.chain.map((b) => b.label.length));
+  const blocks = preset.chain.map((b) => {
+    const model = blockModelLabel(b, preset.ampMode, slots.irNames, slots.profileNames);
+    const params = b.params.map((p) => `${p.name} ${p.display}`).join(', ');
+    return `${b.label.padEnd(width)}  ${b.on ? 'on ' : 'off'}  ${model}${params ? `: ${params}` : ''}`;
+  });
+  return [head, chain, ...blocks].join('\n');
+}

@@ -6,6 +6,24 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- MCP server (`apps/mcp`, preview): an AI assistant can read the loaded
+  preset, list presets and models, edit by name (parameters, block on/off,
+  models including user IRs and captured profiles, chain order, volume),
+  load and revert presets, export and import preset files, and save to a
+  user slot with a confirmation and a backup file, which `restore_backup`
+  undoes. Reading verified on a V1.3.3 unit over USB; writes are tested
+  against the simulated pedal.
+- Core resolves blocks, parameters, models and preset labels by name, never
+  guessing: unknown or ambiguous names fail with the valid choices.
+
+### Changed
+
+- The guarded link to the pedal, the pedal adapter and the model labels
+  moved from the web app to core, behind a two-function MIDI port, so the
+  web editor and the MCP server run the same tested code.
+
 ## [0.7.0] - 2026-11-18
 
 Captured profiles (clone mode) on AMP, validated on a Pocket Master with
