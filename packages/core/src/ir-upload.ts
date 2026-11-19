@@ -32,6 +32,7 @@ export type UploadDomain = (typeof UploadDomain)[keyof typeof UploadDomain];
 /** Magic of each blob the upload path may carry, per domain. */
 const UPLOAD_MAGIC: Readonly<Record<number, readonly (readonly [number, number])[]>> = {
   [UploadDomain.IR]: [[0x11, 0x21], [0x11, 0x22]],
+  [UploadDomain.PROFILE]: [[0x11, 0x25], [0x11, 0x26]],
 };
 
 export function isUploadBlob(blob: Uint8Array, domain: UploadDomain): boolean {

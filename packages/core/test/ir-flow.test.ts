@@ -2,12 +2,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildFrame, parseFrame } from '../src/frame.ts';
 import { PocketMasterLink, type MidiPort } from '../src/link.ts';
-import { uploadUserIr } from '../src/pedal.ts';
+import { uploadUserIr, uploadUserProfile } from '../src/pedal.ts';
 import { Reassembler } from '../src/reassembler.ts';
 
-/** 12 20 reply: one flag per slot (0 loaded, 1 empty), then 16-byte names. */
-function irNamesReply(names: (string | null)[]): Uint8Array {
-  const payload = [0x12, 0x20, ...names.map((n) => (n ? 0 : 1))];
+/** 12 20 / 12 24 reply: one flag per slot (0 loaded, 1 empty), then 16-byte names. */
+function slotNamesReply(kind: number, names: (string | null)[]): Uint8Array {
+  const payload = [0x12, kind, ...names.map((n) => (n ? 0 : 1))];
   for (const n of names) payload.push(...Array.from({ length: 16 }, (_, i) => (n && i < n.length ? n.charCodeAt(i) : 0)));
   return buildFrame(payload);
 }
@@ -15,6 +15,7 @@ function irNamesReply(names: (string | null)[]): Uint8Array {
 /** A port that answers like the pedal: session and name queries, acknowledges chunks, reports the flash write. */
 function pedalPort(options: { commit?: boolean } = {}) {
   const names: (string | null)[] = ['Mesa OS', null, null, null, null];
+  const profiles: (string | null)[] = ['Randall SA', null, null, null, null];
   const log: string[] = [];
   const upload = new Reassembler();
   let receiver: ((bytes: Uint8Array) => void) | null = null;
@@ -25,17 +26,19 @@ function pedalPort(options: { commit?: boolean } = {}) {
       const f = parseFrame(bytes);
       const [type, cmd] = f.payload;
       if (type === 0x12 && cmd === 0x30) { log.push('session'); reply(buildFrame([0x12, 0x30, 0x01])); return; }
-      if (type === 0x12 && cmd === 0x20) { log.push('names'); reply(irNamesReply(names)); return; }
+      if (type === 0x12 && cmd === 0x20) { log.push('names'); reply(slotNamesReply(0x20, names)); return; }
+      if (type === 0x12 && cmd === 0x24) { log.push('profiles'); reply(slotNamesReply(0x24, profiles)); return; }
       log.push(`chunk ${f.index + 1}/${f.total}`);
       reply(buildFrame([0x14, 0x08, 0x00]));
       const blob = upload.feed(f, 0);
-      if (blob && blob.payload[0] === 0x11 && blob.payload[1] === 0x21) {
-        names[blob.payload[6]!] = new TextDecoder().decode(blob.payload.subarray(10, 20)).replace(/\0+$/, '');
-        if (options.commit !== false) setTimeout(() => receiver?.(buildFrame([0x12, 0x1b, 0x04, 0, 0, 0])), 5);
+      if (blob && blob.payload[0] === 0x11 && (blob.payload[1] === 0x21 || blob.payload[1] === 0x25)) {
+        const profile = blob.payload[1] === 0x25;
+        (profile ? profiles : names)[blob.payload[6]!] = new TextDecoder().decode(blob.payload.subarray(10, profile ? 25 : 20)).replace(/\0+$/, '');
+        if (options.commit !== false) setTimeout(() => receiver?.(buildFrame([0x12, 0x1b, profile ? 0x03 : 0x04, 0, 0, 0])), 5);
       }
     },
   };
-  return { port, log, names };
+  return { port, log, names, profiles };
 }
 
 function wav(): Uint8Array {
@@ -66,4 +69,15 @@ test('an upload the pedal does not write fails, and a bad WAV fails before anyth
   assert.deepEqual(pedal.log, []);
   await assert.rejects(uploadUserIr(link, 1, 'X', wav()), /not saved/);
   link.close();
+});
+
+test('uploading a converted capture writes the profile slot and checks its new name', async () => {
+  const pedal = pedalPort();
+  const link = new PocketMasterLink(pedal.port, () => undefined);
+  const arrays = { arrayA: new Float32Array(128), arrayB: new Float32Array(2048), gains: [1, 1, 1, 1] as const };
+  const names = await uploadUserProfile(link, 2, 'GK 250ML clone', arrays);
+  link.close();
+  assert.equal(names[2]?.name, 'GK 250ML clone');
+  assert.deepEqual(pedal.log.slice(0, 3), ['session', 'profiles', 'chunk 1/146']);
+  assert.equal(pedal.log.at(-1), 'profiles');
 });
