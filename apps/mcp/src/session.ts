@@ -1,5 +1,5 @@
 import { constants } from 'node:fs';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import {
   applyEdit, blockModelLabel, findCloneModel, modelInfo, modelsFor, chainUnits, decodePreset, editToCommands, encodeValue, fromHex, loadIntoEditBuffer,
@@ -186,7 +186,7 @@ export class Session {
     }
   }
 
-  exportPreset(file?: string): Promise<string> {
+  exportPreset(file?: string, notes?: string): Promise<string> {
     return this.#use(async (io) => {
       const index = await io.readCurrentIndex();
       const name = (await this.#presetNames(io))[index] ?? '';
@@ -194,13 +194,28 @@ export class Session {
       const path = file ? inside(this.#folders.presets, file) : join(this.#folders.presets, `${presetLabel(index)}-${safe(name)}-${Date.now()}.json`);
       await mkdir(resolve(path, '..'), { recursive: true });
       try {
-        await writeFile(path, JSON.stringify(presetFile(payload, name), null, 2), { flag: constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY });
+        await writeFile(path, JSON.stringify(presetFile(payload, name, undefined, notes), null, 2), { flag: constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY });
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === 'EEXIST') throw new Error(`${path} already exists; choose another file name`);
         throw error;
       }
       return `Exported ${presetLabel(index)} "${name}" to ${path}`;
     });
+  }
+
+  /** The preset files in the presets folder, with their notes: the library of approved tones. */
+  async listPresetFiles(): Promise<string> {
+    const folder = this.#folders.presets;
+    const names = (await readdir(folder, { recursive: true }).catch(() => [] as string[])).filter((n) => n.endsWith('.json')).sort();
+    const lines = await Promise.all(names.map(async (file) => {
+      try {
+        const preset = parsePresetFile(await readFile(join(folder, file), 'utf8'));
+        return `- ${file}: "${preset.name}"${preset.notes ? ` — ${preset.notes}` : ''} (${preset.createdAt.slice(0, 10)})`;
+      } catch {
+        return `- ${file}: not a readable preset file`;
+      }
+    }));
+    return lines.length > 0 ? `Preset files in ${folder}:\n${lines.join('\n')}` : `No preset files yet in ${folder}.`;
   }
 
   importPreset(file: string): Promise<string> {

@@ -27,7 +27,7 @@ test('the server lists every tool, marking reads read-only and slot writes destr
   const { tools } = await client.listTools();
   const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
   assert.deepEqual(Object.keys(byName).sort(), [
-    'edit_preset', 'export_preset', 'get_preset', 'import_preset', 'list_models', 'list_presets',
+    'edit_preset', 'export_preset', 'get_preset', 'import_preset', 'list_models', 'list_preset_files', 'list_presets',
     'restore_backup', 'revert_preset', 'save_preset', 'select_preset',
   ]);
   for (const name of ['get_preset', 'list_presets', 'list_models']) assert.equal(byName[name]!.annotations?.readOnlyHint, true, name);
@@ -63,4 +63,25 @@ test('list_models works without a block', async () => {
   const { client } = await connected();
   const result = await client.callTool({ name: 'list_models', arguments: {} });
   assert.match(text(result), /AMP models:[\s\S]*Calif DualM: based on Mesa\/Boogie/);
+});
+
+test('every tool call reports how long it took on the pedal', async () => {
+  const fake = new FakePedal({}, 8);
+  const io: PedalIO = Object.assign(fake, { readSlotNames: async () => ({ irNames: null, profileNames: null }), readModified: async () => null });
+  const dir = mkdtempSync(join(tmpdir(), 'pm-timing-'));
+  const session = new Session(() => ({ io, close: () => undefined }), { backups: join(dir, 'b'), presets: join(dir, 'p') });
+  const timings: { tool: string; ms: number; ok: boolean }[] = [];
+  const [a, b] = InMemoryTransport.createLinkedPair();
+  const client = new Client({ name: 'test', version: '0' });
+  await Promise.all([createServer(session, { onTiming: (t) => void timings.push(t) }).connect(a), client.connect(b)]);
+  await client.callTool({ name: 'get_preset', arguments: {} });
+  await client.callTool({ name: 'edit_preset', arguments: { changes: [{ kind: 'block', block: 'WAH', on: true }] } });
+  assert.deepEqual(timings.map((t) => [t.tool, t.ok]), [['get_preset', true], ['edit_preset', false]]);
+  assert.ok(timings.every((t) => Number.isFinite(t.ms) && t.ms >= 0));
+});
+
+test('list_preset_files is a read-only tool', async () => {
+  const { client } = await connected();
+  const { tools } = await client.listTools();
+  assert.equal(tools.find((t) => t.name === 'list_preset_files')?.annotations?.readOnlyHint, true);
 });

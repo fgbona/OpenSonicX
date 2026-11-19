@@ -6,6 +6,20 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- A library of approved tones: `export_preset` takes notes (e.g. "Metallica
+  - Black Album rhythm, approved by ear") and `list_preset_files` lists the
+  saved tones with them. The assistant checks the library before building
+  a tone from a reference and loads a match instead of rebuilding it.
+  Preset files with notes still open in the web editor.
+- Every MCP tool call is timed and logged to
+  `~/.pocket-master-editor/timings.log`, to tell the pedal's time from the
+  assistant's.
+- The server asks the assistant to keep calls few (edits and saves already
+  return the preset). The README suggests `claude --effort low` for faster
+  tone sessions.
+
 ## [0.9.0] - 2026-11-19
 
 The MCP server builds tones from a reference. Validated by the owner on a

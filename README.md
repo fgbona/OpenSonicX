@@ -95,6 +95,14 @@ Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
 - Edits only change the edit buffer. `save_preset` overwrites a user slot
   only with `confirm` repeating that slot (e.g. `"P12"`), and first backs the
   slot up to `~/.pocket-master-editor/backups`; `restore_backup` undoes it.
+- Tones you like can be kept: say "keep this tone" and the assistant exports
+  it with notes (e.g. which record it matches). `list_preset_files` shows
+  them, and asking for the same tone again loads it at once instead of
+  rebuilding it.
+- Building a tone takes about a minute, almost all of it the assistant's
+  reasoning; the pedal side takes a fraction of a second per call (each call
+  is logged in `~/.pocket-master-editor/timings.log`). For quicker answers,
+  start the session with `claude --effort low`.
 - Preset files use the same format as the web editor's Export/Import and
   live in `~/.pocket-master-editor/presets` (set `POCKET_MASTER_HOME` to
   move both folders). The server reads and writes files only inside these

@@ -217,3 +217,11 @@ test('listModels without a block teaches the whole pedal: gear, description and 
   assert.match(all, /- Scream: based on Ibanez TS-808 Tube Screamer\./);
   assert.match(all, /- Spring: Vintage amp spring reverb\./);
 });
+
+test('exported tones keep notes and are listed, so an approved tone is reused instead of rebuilt', async () => {
+  const { session } = setup();
+  assert.match(await session.listPresetFiles(), /No preset files yet/);
+  await session.exportPreset('black-album.json', 'Metallica - Black Album rhythm, approved by ear');
+  const list = await session.listPresetFiles();
+  assert.match(list, /black-album\.json: ".*" — Metallica - Black Album rhythm, approved by ear/);
+});
