@@ -29,7 +29,7 @@ jobs:
       - name: Tag matches every package.json version
         run: |
           v="${GITHUB_REF_NAME#v}"
-          for f in package.json packages/core/package.json apps/web/package.json; do
+          for f in package.json packages/core/package.json apps/web/package.json apps/mcp/package.json; do
             test "$(node -p "require('./$f').version")" = "$v" || { echo "::error::$f version is not $v"; exit 1; }
           done
       - name: CHANGELOG.md has a section for this version
@@ -116,3 +116,26 @@ jobs:
           else
             gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md $prerelease
           fi
+
+  npm:
+    # Trusted publishing (OIDC): no npm token is stored. Off until the repository variable
+    # NPM_PUBLISH is "true", which is set once the package exists on npm and this workflow is
+    # registered as its trusted publisher.
+    name: Publish the MCP server to npm
+    needs: verify
+    if: vars.NPM_PUBLISH == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm install -g npm@11
+      - run: npm ci
+      - run: scripts/mcp-pack-smoke.sh
+      - run: npm publish -w sonicake-pocket-master-mcp --provenance --access public

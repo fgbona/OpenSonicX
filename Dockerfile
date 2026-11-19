@@ -33,7 +33,7 @@ COPY packages ./packages
 COPY apps ./apps
 COPY tsconfig.base.json ./
 # The image is only produced when the test suite passes.
-RUN npm test && npm run build
+RUN npm test && npm run build -w @pocket-master/web
 # Image optimisation is off (next.config.ts), so sharp and its ~19 MB of native binaries are dead weight.
 RUN rm -rf apps/web/.next/standalone/node_modules/sharp apps/web/.next/standalone/node_modules/@img
 

@@ -6,6 +6,21 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- The MCP server is an npm package, `sonicake-pocket-master-mcp`: one
+  bundled file with the core inside, installable with
+  `npx -y sonicake-pocket-master-mcp`. CI packs it, installs the tarball
+  into an empty folder and starts it on every push; the release workflow
+  publishes it to npm with provenance (trusted publishing, no stored
+  token) once enabled.
+
+### Changed
+
+- The native MIDI library loads on the first call to the pedal, so the
+  server starts and lists its tools even where MIDI is unavailable.
+- The MCP server reports the version from its package.json.
+
 ## [0.10.0] - 2026-11-19
 
 Tool timings and a library of approved tones for the MCP server. Container

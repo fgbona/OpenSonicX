@@ -25,6 +25,8 @@ jobs:
       - run: npm test
       - run: npm run typecheck
       - run: npm run build
+      - name: The MCP package installs and starts
+        run: scripts/mcp-pack-smoke.sh
   container:
     name: Container lint, build, scan and smoke test
     runs-on: ubuntu-latest
