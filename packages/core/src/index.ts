@@ -19,3 +19,8 @@ export * from './resolve.ts';
 export * from './model-label.ts';
 export * from './model-info.ts';
 export * from './ir-upload.ts';
+export * from './clo/nam.ts';
+export * from './clo/generate.ts';
+export * from './clo/codec.ts';
+export * from './clo/reference-di.ts';
+export * from './clo/synthetic-di.ts';

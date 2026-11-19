@@ -168,7 +168,7 @@ export class PocketMasterLink {
    */
   async upload(blob: Uint8Array, domain: UploadDomain): Promise<void> {
     if (this.#closed) throw new LinkClosedError();
-    if (!isUploadBlob(blob, domain)) throw new Error('Blocked: only user IR uploads and renames can be sent on the upload path.');
+    if (!isUploadBlob(blob, domain)) throw new Error('Blocked: only user IR and captured-profile uploads and renames can be sent on the upload path.');
     await this.drained();
     await this.#editAcks();
     const frames = chunkFrames(blob);

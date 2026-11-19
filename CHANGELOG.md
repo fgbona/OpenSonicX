@@ -27,6 +27,15 @@ and the project uses [Semantic Versioning](https://semver.org/).
   loaded IR without `replace`, because the pedal cannot send it back.
   Clearing a slot is left out: it leaves the pedal refusing IR writes
   until a power cycle.
+- NAM capture to captured-profile conversion in TypeScript: .nam parsing
+  (classic WaveNet, v0.7.0 schema, TONE3000 SlimmableContainer), WaveNet
+  inference, the multi-level Wiener-Hammerstein fit of the pedal's clone
+  engine, the .clo format, and the profile upload (11 25, flash-write
+  notice 12 1B 03). Bit-identical to SonicMaster's own DSP on its test
+  capture, with both a synthetic and the real reference DI. The reference
+  DI is downloaded at use and checked by SHA-256; it is not distributed.
+- Slot names are read from the full 16-byte record, so captured-profile
+  names up to 15 characters are no longer cut at 10.
 - Protocol knowledge ported from SonicMaster (MIT, credited in NOTICE).
   Reading the BPM is confirmed on the owner's unit; the new writes are
   tested on the simulated pedal and still need a test on the unit.

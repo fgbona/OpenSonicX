@@ -118,7 +118,7 @@ export function decodeSlotNames(payload: Uint8Array): SlotName[] {
   }
   return Array.from({ length: SLOT_COUNT }, (_, i) => {
     const at = SLOT_HEADER + i * SLOT_RECORD;
-    return { name: decodeName(payload.subarray(at, at + NAME_LENGTH)), empty: payload[2 + i] !== 0 };
+    return { name: decodeName(payload.subarray(at, at + SLOT_RECORD)), empty: payload[2 + i] !== 0 };
   });
 }
 

@@ -40,7 +40,9 @@ footswitch commands and their place in the dump (packages/core/src/slots.ts,
 commands.ts, dump.ts), the Sync and Trail parameters added to
 packages/core/src/catalog.json, and the user IR upload: WAV conversion, blob,
 chunked transport, edit session and flash-write notice
-(packages/core/src/ir-upload.ts, link.ts, pedal.ts). Its license:
+(packages/core/src/ir-upload.ts, link.ts, pedal.ts), and the NAM capture to
+clone-model converter, the .clo format and the profile upload
+(packages/core/src/clo/, pedal.ts). Its license:
 
 MIT License
 
@@ -63,3 +65,14 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+The converter probes captures with a reference DI signal that this project
+does not include or distribute. It is downloaded at the time of use from
+SonicMaster's repository at commit 931a68f and used only if its SHA-256 matches
+(packages/core/src/clo/reference-di.ts). SonicMaster describes it as the same
+signal the official Sonicake tool bundles.
+
+packages/core/test/fixtures/clo/ref_input.nam is SonicMaster's test capture
+(app/rust/tests/fixtures). The *.golden.f32 files next to it are outputs of
+SonicMaster's own clo_dsp.dart, run on that capture and on a synthetic DI, which
+the tests compare against.
