@@ -1,5 +1,8 @@
-import { decodeCurrentPreset, decodePresetNames, decodeSlotNames, Query, savePreset, selectPreset, type Pedal, type SlotName } from '@pocket-master/core';
-import type { PocketMasterLink } from './midi';
+import type { Pedal } from './backup.ts';
+import type { PocketMasterLink } from './link.ts';
+import { decodeCurrentPreset } from './presets.ts';
+import { Query } from './queries.ts';
+import { decodePresetNames, decodeSlotNames, savePreset, selectPreset, type SlotName } from './slots.ts';
 
 /** After its acknowledge the pedal still needs a moment before it reports the new preset (V1.3.3: ~250 ms works). */
 const SELECT_SETTLE_MS = 250;
@@ -17,8 +20,8 @@ export async function readProfileNames(link: PocketMasterLink): Promise<SlotName
   return decodeSlotNames((await link.request(Query.CAPTURED_PROFILE_NAMES)).payload);
 }
 
-/** The core Pedal contract over a Web MIDI link. */
-export function webPedal(link: PocketMasterLink): Pedal {
+/** The Pedal contract (backup, save, restore flows) over a link. */
+export function linkPedal(link: PocketMasterLink): Pedal {
   return {
     async readCurrentIndex() {
       return decodeCurrentPreset((await link.request(Query.CURRENT_PRESET)).payload);

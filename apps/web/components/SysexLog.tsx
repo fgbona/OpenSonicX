@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useEffect, useRef, useState } from 'react';
-import type { LogEntry } from '@/lib/midi';
+import type { LogEntry } from '@pocket-master/core';
 import { useI18n } from './I18n';
 
 const time = (ms: number) => {

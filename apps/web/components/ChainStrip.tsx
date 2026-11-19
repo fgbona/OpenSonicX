@@ -1,9 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { chainUnits, moveInChain, type Block, type Edit } from '@pocket-master/core';
+import { type Block, blockModelLabel, chainUnits, type Edit, moveInChain } from '@pocket-master/core';
 import { useI18n } from './I18n';
-import { blockModelLabel } from '@/lib/modelLabel';
 
 interface Props {
   chain: readonly Block[];

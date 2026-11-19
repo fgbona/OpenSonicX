@@ -1,0 +1,52 @@
+import { Input, Output } from '@julusian/midi';
+import { linkPedal, MessageType, PocketMasterLink, Query, readProfileNames, readUserIrNames, type LogEntry, type SlotName } from '@pocket-master/core';
+import type { Connection, PedalIO } from './session.ts';
+
+const PORT_NAME = /pocket\s*master/i;
+
+function portIndex(port: Input | Output, kind: string): number {
+  const names = Array.from({ length: port.getPortCount() }, (_, i) => port.getPortName(i));
+  const index = names.findIndex((name) => PORT_NAME.test(name));
+  if (index < 0) {
+    throw new Error(`No Pocket Master MIDI ${kind} (found: ${names.join(', ') || 'none'}). Plug the pedal in with a data USB cable, directly rather than through a hub.`);
+  }
+  return index;
+}
+
+const loadedNames = (slots: SlotName[]) => slots.map((s) => (s.empty || !s.name ? null : s.name));
+
+/** Opens the pedal's USB MIDI ports and the guarded core link over them. */
+export function connectPocketMaster(onLog: (entry: LogEntry) => void = () => undefined): Connection {
+  const input = new Input();
+  const output = new Output();
+  let receiver: ((bytes: Uint8Array) => void) | null = null;
+  const onMessage = (_deltaTime: number, message: Buffer) => receiver?.(new Uint8Array(message));
+  const close = () => {
+    input.off('messageBuffer', onMessage);
+    input.closePort();
+    output.closePort();
+    input.destroy(); // a new pair is opened per call: free the native clients too
+    output.destroy();
+  };
+  try {
+    input.ignoreTypes(false, true, true); // SysEx is ignored by default; the pedal speaks nothing else
+    input.on('messageBuffer', onMessage);
+    input.openPort(portIndex(input, 'input'));
+    output.openPort(portIndex(output, 'output'));
+  } catch (error) {
+    close();
+    throw error;
+  }
+  const link = new PocketMasterLink({ send: (bytes) => output.sendMessage(Buffer.from(bytes)), listen: (r) => void (receiver = r) }, onLog);
+  const io: PedalIO = {
+    ...linkPedal(link),
+    async readSlotNames() {
+      return { irNames: loadedNames(await readUserIrNames(link)), profileNames: loadedNames(await readProfileNames(link)) };
+    },
+    async readModified() {
+      const { payload } = await link.request(Query.MODIFIED);
+      return payload[0] === MessageType.GET && payload.length >= 3 ? payload[2] !== 0 : null;
+    },
+  };
+  return { io, close: () => { link.close(); close(); } };
+}

@@ -163,3 +163,18 @@ test('saveToSlot with backup off saves directly: no backup, no extra selection',
   assert.deepEqual(selected, [2], 'only the verify step loads the slot');
   assert.ok(same(decodePreset(pedal.slots[2]!), mine));
 });
+
+test('saveToSlot waits for the backup to be stored and does not save when storing it fails', async () => {
+  const pedal = new FakePedal();
+  const old = pedal.slots[2]!.slice();
+  let stored = false;
+  await saveToSlot(pedal, { target: 2, name: 'OK', edited: null, onBackup: async () => { await new Promise((r) => setImmediate(r)); stored = true; } });
+  assert.equal(stored, true);
+  const failing = new FakePedal();
+  await assert.rejects(
+    saveToSlot(failing, { target: 2, name: 'NOPE', edited: null, onBackup: async () => { throw new Error('disk full'); } }),
+    /disk full/,
+  );
+  assert.equal(failing.received.some((r) => r.startsWith('save')), false, 'nothing saved without a stored backup');
+  assert.deepEqual(failing.slots[2], old);
+});

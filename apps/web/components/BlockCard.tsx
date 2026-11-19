@@ -1,9 +1,8 @@
 'use client';
 
-import { modelOf, modelsFor, type Block, type Edit, type Preset } from '@pocket-master/core';
+import { type Block, blockModelLabel, type Edit, modelLabel, modelOf, modelsFor, type Preset } from '@pocket-master/core';
 import { ParamControl } from './ParamControl';
 import { useI18n } from './I18n';
-import { blockModelLabel, modelLabel } from '@/lib/modelLabel';
 import { modelValue, parseModelValue, profileChoices } from '@/lib/ampChoices';
 
 interface Props {

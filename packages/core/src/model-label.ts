@@ -1,4 +1,4 @@
-import { userIrSlot } from '@pocket-master/core';
+import { userIrSlot } from './slots.ts';
 
 /** A model name for the screen: user IR slots show the name the owner gave the IR file. */
 export function modelLabel(blockKey: string, code: number, catalogName: string, irNames: readonly (string | null)[] | null): string {

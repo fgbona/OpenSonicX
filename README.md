@@ -14,8 +14,8 @@ Chrome, Edge or Opera, plug the pedal in, and read your preset.
 - Live edit (off by default): parameters, block on/off, model per block and
   chain order, sent to the pedal's edit buffer as you move the controls.
   Nothing is saved to a slot.
-- Revert brings the preset back to how it was first read, including knob
-  turns made on the pedal.
+- Revert reloads the preset from its slot, like switching presets on the
+  pedal, so knob turns made on the unit are undone too.
 - Saves to a user slot (P01..P50), backing up the slot it overwrites
   first (you can skip that per save). Backups can be downloaded and
   restored from the Backups panel.
@@ -27,9 +27,9 @@ Tested on firmware **V1.3.3** over USB.
 
 | Path | What it is |
 |---|---|
-| `packages/core` | The SysEx protocol in TypeScript: framing, decoding, model catalog. No browser or MIDI dependency, so the web app and a future MCP server share it. |
+| `packages/core` | The SysEx protocol in TypeScript: framing, decoding, model catalog, the guarded link to the pedal and the save/backup flows. No browser or MIDI dependency, so the web app and the MCP server share it. |
 | `apps/web` | The Next.js editor. Web MIDI runs in the visitor's browser. |
-| `apps/mcp` | Planned: an MCP server on top of `packages/core`. |
+| `apps/mcp` | An MCP server: the same core over native USB MIDI, for AI assistants. |
 | `docs/` | Design notes and plans. |
 
 ## Run it
@@ -61,6 +61,41 @@ The image is Alpine with only the Node binary (no npm, no package manager),
 runs as an unprivileged user and works with a read-only root filesystem. `compose.yaml` applies those restrictions
 and binds the port to localhost only. To serve it publicly, put it behind a
 reverse proxy that terminates HTTPS.
+
+## Use it from an AI assistant (MCP)
+
+> **Preview.** Reading is checked on a pedal; edits and saves are checked
+> against a simulated pedal and still need a test on the real unit.
+
+`apps/mcp` lets an assistant such as Claude read and tweak your sound in
+conversation ("more gain on the amp", "try the Randall profile", "save this
+as P12"). It runs on your computer and talks to the pedal over USB, so the
+pedal must be plugged into the machine running the assistant. macOS and
+Linux (x64, arm64) are supported.
+
+```sh
+npm install
+claude mcp add pocket-master -- node "$PWD/apps/mcp/src/server.ts"
+```
+
+For other MCP clients, run `node apps/mcp/src/server.ts` as a stdio server.
+Close the web editor's connection first if both would talk to the pedal at
+the same time.
+
+Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
+`select_preset`, `revert_preset`, `save_preset`, `restore_backup`,
+`export_preset`, `import_preset`.
+
+- Blocks, parameters and models are named as on the pedal; user IRs and
+  captured profiles go by the names of the files you loaded. A name that is
+  unknown or ambiguous fails with the valid choices, and nothing is sent.
+- Edits only change the edit buffer. `save_preset` overwrites a user slot
+  only with `confirm` repeating that slot (e.g. `"P12"`), and first backs the
+  slot up to `~/.pocket-master-editor/backups`; `restore_backup` undoes it.
+- Preset files use the same format as the web editor's Export/Import and
+  live in `~/.pocket-master-editor/presets` (set `POCKET_MASTER_HOME` to
+  move both folders). The server reads and writes files only inside these
+  folders.
 
 ## Protocol
 
