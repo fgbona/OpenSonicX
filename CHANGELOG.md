@@ -20,6 +20,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The npm package of the MCP carries the editor's TONE3000 publishable
+  key (written in at release from the repository variable), so users only
+  sign in with their own TONE3000 account, as in the web editor; a key in
+  `TONE3000_CLIENT_ID` or `tone3000.env` still overrides it.
 - Bluetooth: "Connect via Bluetooth" links the editor to the pedal over
   BLE MIDI (Web Bluetooth: Chrome and Edge, Android included), with no USB
   cable or MIDI permission. Frames go out whole after the `80 80` header,
