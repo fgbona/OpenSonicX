@@ -35,7 +35,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 The MCP server on npm: `npx -y sonicake-pocket-master-mcp`, published by CI
 with provenance. Container image:
-`ghcr.io/fgbona/pocket-master-editor:v0.11.0` (amd64 and arm64; the image
+`ghcr.io/fgbona/sonicake-pocket-master-editor:v0.11.0` (amd64 and arm64; the image
 serves the web editor).
 
 ### Added
@@ -57,7 +57,7 @@ serves the web editor).
 ## [0.10.0] - 2026-11-19
 
 Tool timings and a library of approved tones for the MCP server. Container
-image: `ghcr.io/fgbona/pocket-master-editor:v0.10.0` (amd64 and arm64; the
+image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.10.0` (amd64 and arm64; the
 image serves the web editor).
 
 ### Added
@@ -80,7 +80,7 @@ The MCP server builds tones from a reference. Validated by the owner on a
 V1.3.3 unit through Claude Code: "Black Album" saved to P50 and an Iron
 Maiden "Stranger in a Strange Land" tone saved to P49, then refined and
 saved again, each save backing up the slot it replaced. Container image:
-`ghcr.io/fgbona/pocket-master-editor:v0.9.0` (amd64 and arm64; the image
+`ghcr.io/fgbona/sonicake-pocket-master-editor:v0.9.0` (amd64 and arm64; the image
 serves the web editor).
 
 ### Added
@@ -98,7 +98,7 @@ serves the web editor).
 ## [0.8.0] - 2026-11-19
 
 MCP server (preview): an AI assistant can read and edit the pedal's presets
-in conversation. Container image: `ghcr.io/fgbona/pocket-master-editor:v0.8.0`
+in conversation. Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.8.0`
 (amd64 and arm64; the image serves the web editor).
 
 ### Added
@@ -130,7 +130,7 @@ in conversation. Container image: `ghcr.io/fgbona/pocket-master-editor:v0.8.0`
 
 Captured profiles (clone mode) on AMP, validated on a Pocket Master with
 firmware V1.3.3 and a NAM capture. Container image:
-`ghcr.io/fgbona/pocket-master-editor:v0.7.0` (amd64 and arm64).
+`ghcr.io/fgbona/sonicake-pocket-master-editor:v0.7.0` (amd64 and arm64).
 
 ### Added
 
@@ -163,7 +163,7 @@ firmware V1.3.3 and a NAM capture. Container image:
 
 User IR slots show the names of the loaded IR files, validated on a Pocket
 Master with firmware V1.3.3. Container image:
-`ghcr.io/fgbona/pocket-master-editor:v0.6.0` (amd64 and arm64).
+`ghcr.io/fgbona/sonicake-pocket-master-editor:v0.6.0` (amd64 and arm64).
 
 ### Added
 
@@ -176,7 +176,7 @@ Master with firmware V1.3.3. Container image:
 ## [0.5.0] - 2026-11-18
 
 Export and import presets as files, validated on a Pocket Master with
-firmware V1.3.3. Container image: `ghcr.io/fgbona/pocket-master-editor:v0.5.0`
+firmware V1.3.3. Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.5.0`
 (amd64 and arm64).
 
 ### Added
@@ -192,7 +192,7 @@ firmware V1.3.3. Container image: `ghcr.io/fgbona/pocket-master-editor:v0.5.0`
 
 Portuguese interface, the screen follows the pedal, a theme button and a
 half-size container image. Validated on a Pocket Master with firmware V1.3.3.
-Container image: `ghcr.io/fgbona/pocket-master-editor:v0.4.0` (amd64 and arm64).
+Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.4.0` (amd64 and arm64).
 
 ### Added
 
@@ -235,7 +235,7 @@ Container image: `ghcr.io/fgbona/pocket-master-editor:v0.4.0` (amd64 and arm64).
 
 Save to a preset slot, validated on a Pocket Master with firmware V1.3.3:
 save with and without the target backup, and restore from a backup.
-Container image: `ghcr.io/fgbona/pocket-master-editor:v0.3.0` (amd64 and arm64).
+Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.3.0` (amd64 and arm64).
 
 ### Added
 
@@ -276,7 +276,7 @@ Container image: `ghcr.io/fgbona/pocket-master-editor:v0.3.0` (amd64 and arm64).
 Live edit, validated on a Pocket Master with firmware V1.3.3: parameters,
 block on/off, model changes, chain order, Revert (including knob turns made
 on the unit) and preset changes from the footswitch.
-Container image: `ghcr.io/fgbona/pocket-master-editor:v0.2.0` (amd64 and arm64).
+Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.2.0` (amd64 and arm64).
 
 ### Added
 
@@ -316,7 +316,7 @@ Container image: `ghcr.io/fgbona/pocket-master-editor:v0.2.0` (amd64 and arm64).
 ## [0.1.1] - 2026-11-18
 
 Hardened container and a release pipeline that tests what it publishes.
-Container image: `ghcr.io/fgbona/pocket-master-editor:v0.1.1` (amd64 and arm64).
+Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.1` (amd64 and arm64).
 
 ### Added
 
@@ -349,7 +349,7 @@ Container image: `ghcr.io/fgbona/pocket-master-editor:v0.1.1` (amd64 and arm64).
 ## [0.1.0] - 2026-11-18
 
 Read-only preview, validated on a Pocket Master with firmware V1.3.3.
-Container image: `ghcr.io/fgbona/pocket-master-editor:v0.1.0`.
+Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 
 ### Added
 
@@ -389,16 +389,16 @@ Container image: `ghcr.io/fgbona/pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/pocket-master-editor/compare/v0.11.0...HEAD
-[0.11.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.10.0...v0.11.0
-[0.10.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.9.0...v0.10.0
-[0.9.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.8.0...v0.9.0
-[0.8.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.7.0...v0.8.0
-[0.7.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.6.0...v0.7.0
-[0.6.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.5.0...v0.6.0
-[0.5.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.4.0...v0.5.0
-[0.4.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.3.0...v0.4.0
-[0.3.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.1.1...v0.2.0
-[0.1.1]: https://github.com/fgbona/pocket-master-editor/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/fgbona/pocket-master-editor/releases/tag/v0.1.0
+[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.10.0...v0.11.0
+[0.10.0]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.9.0...v0.10.0
+[0.9.0]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.8.0...v0.9.0
+[0.8.0]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.7.0...v0.8.0
+[0.7.0]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.6.0...v0.7.0
+[0.6.0]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.1.1...v0.2.0
+[0.1.1]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/fgbona/sonicake-pocket-master-editor/releases/tag/v0.1.0
