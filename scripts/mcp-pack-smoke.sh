@@ -9,6 +9,7 @@ npm pack -w sonicake-pocket-master-mcp --pack-destination "$tmp" --silent > "$tm
 tarball="$tmp/$(cat "$tmp/name")"
 tar -tzf "$tarball" | sort > "$tmp/files"
 grep -qx 'package/dist/server.js' "$tmp/files"
+grep -qx 'package/dist/convert-worker.js' "$tmp/files"
 if grep -q 'package/src/\|package/test/' "$tmp/files"; then echo "sources leaked into the package" >&2; exit 1; fi
 cd "$tmp"
 npm init -y > /dev/null

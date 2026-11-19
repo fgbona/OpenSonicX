@@ -12,11 +12,13 @@ const SLOT_NAMES = { irNames: ['Mesa OS', null, null, null, null], profileNames:
 function setup(start = 8, options: ConstructorParameters<typeof FakePedal>[0] = {}) {
   const fake = new FakePedal(options, start);
   const irNames = [...SLOT_NAMES.irNames];
+  const profileNames = [...SLOT_NAMES.profileNames];
   const uploads: { slot: number; name: string; bytes: number }[] = [];
   const io: PedalIO = Object.assign(fake, {
-    readSlotNames: async () => ({ irNames: [...irNames], profileNames: SLOT_NAMES.profileNames }),
+    readSlotNames: async () => ({ irNames: [...irNames], profileNames: [...profileNames] }),
     readModified: async () => false,
     uploadIr: async (slot: number, name: string, wav: Uint8Array) => { uploads.push({ slot, name, bytes: wav.length }); irNames[slot] = name; },
+    uploadProfile: async (slot: number, name: string) => { uploads.push({ slot, name, bytes: -1 }); profileNames[slot] = name; },
   });
   let opened = 0;
   let closed = 0;
@@ -28,7 +30,7 @@ function setup(start = 8, options: ConstructorParameters<typeof FakePedal>[0] = 
     await new Promise((r) => setImmediate(r)); // let a concurrent call try to get in
     return { io, close: () => void closed++ };
   };
-  const session = new Session(connect, { backups: join(dir, 'backups'), presets: join(dir, 'presets'), irs: join(dir, 'irs') });
+  const session = new Session(connect, { backups: join(dir, 'backups'), presets: join(dir, 'presets'), irs: join(dir, 'irs'), nams: join(dir, 'nams') });
   const block = (key: string) => decodePreset(fake.editBuffer).chain.find((b) => b.key === key)!;
   return { fake, session, dir, block, uploads, counts: () => ({ opened, closed, maxOpenAtOnce }) };
 }
@@ -301,4 +303,81 @@ test('load_ir checks the WAV and the folder before anything is sent', async () =
   await assert.rejects(session.loadIr({ file: 'missing.wav', slot: 3, confirm: 'IR3' }), /ENOENT|no such file/);
   await assert.rejects(session.loadIr({ file: 'x.wav', slot: 6, confirm: 'IR6' }), /slot must be 1\.\.5/);
   assert.equal(uploads.length, 0);
+});
+
+// --- TONE3000 and NAM --------------------------------------------------------
+import type { Tone3000Api } from '../src/session.ts';
+import type { Tone3000Store } from '../src/tone3000-store.ts';
+
+function toneSetup(models: { id: number; name: string; bytes: Uint8Array }[]) {
+  const base = setup();
+  const dir = base.dir;
+  const saved: string[] = [];
+  let token: string | null = null;
+  const store: Tone3000Store = { clientId: async () => 'pk', accessToken: async () => token, save: async (t) => { token = t.accessToken; saved.push(t.accessToken); } };
+  const calls: string[] = [];
+  const api: Tone3000Api = {
+    startDeviceLogin: async () => ({ deviceCode: 'D', userCode: 'ABCD-EFGH', verificationUri: 'https://www.tone3000.com/activate', verificationUriComplete: 'https://www.tone3000.com/activate?code=ABCD-EFGH', expiresIn: 600, interval: 5 }),
+    pollDeviceToken: async () => ({ accessToken: 'AT', refreshToken: 'RT', expiresAt: Date.now() + 3600_000 }),
+    searchTones: async (_t, o) => { calls.push(`search ${o.query} ${o.format}`); return { page: 1, totalPages: 1, total: 1, tones: [{ id: 42, title: 'GK 250ML', gear: 'amp', format: o.format ?? 'nam', makes: ['Gallien-Krueger'], creator: 'tonehead', modelsCount: models.length, downloads: 5, url: 'https://www.tone3000.com/tones/42', image: null, description: 'Somewhere in Time rhythm' }] }; },
+    listModels: async () => models.map(({ id, name }) => ({ id, name, size: 'standard', url: `https://cdn.example/${id}`, architecture: '1' })),
+    downloadModel: async (_t, url) => { calls.push(`download ${url}`); return models.find((m) => url.endsWith(`/${m.id}`))!.bytes; },
+  };
+  const converted: string[] = [];
+  const convert = async (namJson: string) => { converted.push(namJson.slice(0, 20)); return { arrayA: new Float32Array(128), arrayB: new Float32Array(2048), gains: [1, 1, 1, 1] as const }; };
+  const session = new Session(() => ({ io: (base as unknown as { fake: PedalIO }).fake, close: () => undefined }), { backups: join(dir, 'b'), presets: join(dir, 'p'), irs: join(dir, 'irs'), nams: join(dir, 'nams') }, { tone3000: { store, api }, convert });
+  return { ...base, session, saved, calls, converted };
+}
+
+const namBytes = () => readFileSync(new URL('../../../packages/core/test/fixtures/clo/ref_input.nam', import.meta.url));
+
+test('TONE3000 sign-in gives a link and code, then the approved token is kept', async () => {
+  const t = toneSetup([]);
+  await assert.rejects(t.session.searchTone3000({ query: 'gk' }), /call tone3000_login first/);
+  const text = await t.session.tone3000Login();
+  assert.match(text, /activate\?code=ABCD-EFGH.*ABCD-EFGH.*10 minutes/);
+  await new Promise((r) => setImmediate(r));
+  assert.deepEqual(t.saved, ['AT']);
+  assert.match(await t.session.tone3000Login(), /Signed in to TONE3000 already/);
+});
+
+test('search lists tones with id, creator and link', async () => {
+  const t = toneSetup([]);
+  await t.session.tone3000Login();
+  await new Promise((r) => setImmediate(r));
+  const text = await t.session.searchTone3000({ query: 'gallien krueger 250ml' });
+  assert.match(text, /- tone 42: "GK 250ML" by tonehead · amp · Gallien-Krueger · 0 model\(s\).*tones\/42/);
+  assert.deepEqual(t.calls, ['search gallien krueger 250ml nam']);
+});
+
+test('installing a NAM tone converts it and writes the profile slot, after checking the slot', async () => {
+  const t = toneSetup([{ id: 7, name: 'GK 250ML Lead Channel', bytes: namBytes() }]);
+  await t.session.tone3000Login();
+  await new Promise((r) => setImmediate(r));
+  await assert.rejects(t.session.installTone({ toneId: 42, slot: 1, confirm: 'PROFILE1' }), /profile slot 1 holds "Randall SA".*replace/);
+  assert.equal(t.converted.length, 0, 'no conversion for a refused slot');
+  const text = await t.session.installTone({ toneId: 42, slot: 2, confirm: 'PROFILE2' });
+  assert.equal(t.converted.length, 1);
+  assert.deepEqual(t.uploads.map(({ slot, name, bytes }) => [slot, name, bytes]), [[1, 'GK 250ML Lead C', -1]]);
+  assert.match(text, /loaded "GK 250ML Lead C" into profile slot 2/);
+  await assert.rejects(t.session.installTone({ toneId: 42, slot: 3, confirm: 'IR3' }), /confirm must be "PROFILE3"/);
+});
+
+test('installing an IR tone writes a user IR slot, and a tone with several models asks which', async () => {
+  const wavFile = tinyWav();
+  const t = toneSetup([{ id: 8, name: 'V30 4x12', bytes: wavFile }, { id: 9, name: 'Greenback', bytes: wavFile }]);
+  await t.session.tone3000Login();
+  await new Promise((r) => setImmediate(r));
+  await assert.rejects(t.session.installTone({ toneId: 42, slot: 2, confirm: 'IR2' }), /several models; pass modelId:\n- model 8: V30 4x12/);
+  await t.session.installTone({ toneId: 42, modelId: 9, slot: 2, confirm: 'IR2' });
+  assert.deepEqual(t.uploads.map(({ slot, name }) => [slot, name]), [[1, 'Greenback']]);
+});
+
+test('load_nam converts a capture from the nams folder', async () => {
+  const t = toneSetup([]);
+  mkdirSync(join(t.dir, 'nams'), { recursive: true });
+  writeFileSync(join(t.dir, 'nams', 'My AC30.nam'), namBytes());
+  await t.session.loadNam({ file: 'My AC30.nam', slot: 3, confirm: 'PROFILE3' });
+  assert.deepEqual(t.uploads.map(({ slot, name }) => [slot, name]), [[2, 'My AC30']]);
+  await assert.rejects(t.session.loadNam({ file: '../escape.nam', slot: 3, confirm: 'PROFILE3' }), /inside .*nams/);
 });

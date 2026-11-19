@@ -164,6 +164,50 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
     annotations: WRITE_SLOT,
   }, (args) => reply('load_ir', options, () => session.loadIr(args)));
 
+  server.registerTool('load_nam', {
+    title: 'Convert a NAM capture into a profile slot',
+    description: 'Converts a NAM capture (.nam, WaveNet) from ~/.pocket-master-editor/nams into the pedal\'s captured-profile format and writes it to profile slot 1..5; takes about one to a few minutes. The pedal cannot send a profile back, so an occupied slot is only overwritten with replace: true. Only when the user asked for that slot. Afterwards pick it on AMP with edit_preset.',
+    inputSchema: {
+      file: z.string().describe('.nam file name inside ~/.pocket-master-editor/nams'),
+      slot: z.number().int().min(1).max(5).describe('Profile slot 1..5'),
+      confirm: z.string().describe('Must be "PROFILE<slot>", e.g. "PROFILE2"'),
+      name: z.string().max(15).optional().describe('Name shown on the pedal, 1..15 ASCII characters; defaults to the file name'),
+      replace: z.boolean().default(false).describe('Overwrite a slot that already holds a profile (it cannot be backed up)'),
+    },
+    annotations: WRITE_SLOT,
+  }, (args) => reply('load_nam', options, () => session.loadNam(args)));
+
+  server.registerTool('tone3000_login', {
+    title: 'Sign in to TONE3000',
+    description: 'Starts the TONE3000 sign-in: returns a link and a code for the user to approve at tone3000.com; the server keeps the sign-in afterwards. Call it again to check.',
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+  }, () => reply('tone3000_login', options, () => session.tone3000Login()));
+
+  server.registerTool('search_tone3000', {
+    title: 'Search TONE3000',
+    description: 'Searches TONE3000 (tone3000.com), the community library of NAM amp captures and cabinet IRs, e.g. for gear the pedal has no model of (a Gallien-Krueger, a Mark IIC+). Results show the tone id, title, creator and link; credit TONE3000 and the creator when you present them. Needs tone3000_login once.',
+    inputSchema: {
+      query: z.string().min(1).describe('Words to search, e.g. "gallien krueger 250ml"'),
+      format: z.enum(['nam', 'ir']).default('nam').describe('nam for amp captures, ir for cabinet impulse responses'),
+      page: z.number().int().min(1).default(1),
+    },
+    annotations: { ...READ, openWorldHint: true },
+  }, (args) => reply('search_tone3000', options, () => session.searchTone3000(args)));
+
+  server.registerTool('install_tone', {
+    title: 'Install a TONE3000 tone on the pedal',
+    description: 'Downloads a model of a TONE3000 tone and puts it on the pedal: a NAM capture is converted (about one to a few minutes) and written to profile slot 1..5 (confirm "PROFILE<n>"); a cabinet IR is written to user IR slot 1..5 (confirm "IR<n>"). An occupied slot is only overwritten with replace: true, as it cannot be backed up. Only when the user asked for that slot.',
+    inputSchema: {
+      toneId: z.number().int().describe('Tone id from search_tone3000'),
+      modelId: z.number().int().optional().describe('Model id when the tone has several (the error lists them)'),
+      slot: z.number().int().min(1).max(5).describe('Profile slot (NAM) or user IR slot (IR), 1..5'),
+      confirm: z.string().describe('"PROFILE<slot>" for a capture, "IR<slot>" for an IR'),
+      name: z.string().max(15).optional().describe('Name on the pedal; defaults to the model name'),
+      replace: z.boolean().default(false).describe('Overwrite a slot that is not empty'),
+    },
+    annotations: { ...WRITE_SLOT, openWorldHint: true },
+  }, (args) => reply('install_tone', options, () => session.installTone(args)));
+
   server.registerTool('import_preset', {
     title: 'Load a preset file',
     description: 'Loads a preset file from ~/.pocket-master-editor/presets into the edit buffer with live edits (nothing is saved).',

@@ -1,11 +1,13 @@
 import { constants } from 'node:fs';
+import type { Converter } from './convert.ts';
+import type { Tone3000Store } from './tone3000-store.ts';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import {
-  applyEdit, blockModelLabel, IR_SLOTS, irSamplesFromWav, irUploadBlob, findCloneModel, modelInfo, modelsFor, chainUnits, decodePreset, editToCommands, encodeValue, fromHex, loadIntoEditBuffer,
+  applyEdit, blockModelLabel, downloadModel, IR_SLOTS, irSamplesFromWav, irUploadBlob, listModels, parseNam, pollDeviceToken, profileUploadBlob, searchTones, startDeviceLogin, findCloneModel, modelInfo, modelsFor, chainUnits, decodePreset, editToCommands, encodeValue, fromHex, loadIntoEditBuffer,
   modelChoices, moveInChain, parseBackupFile, parsePresetFile, parsePresetLabel, presetFile, presetLabel,
   resolveBlock, resolveModel, resolveParam, restoreFromBackup, saveToSlot,
-  type BackupFile, type Edit, type Footswitch, type ParamSpec, type Pedal, type Preset, type SlotNames,
+  type BackupFile, type CloArrays, type DeviceLogin, type Edit, type Footswitch, type ParamSpec, type Tokens, type Pedal, type Preset, type SlotNames,
 } from '@pocket-master/core';
 
 /** What the session needs from the pedal: the core Pedal contract plus two read-only queries. */
@@ -15,7 +17,25 @@ export interface PedalIO extends Pedal {
   readModified(): Promise<boolean | null>;
   /** Writes a WAV into user IR `slot` (0..4) under `name`; resolves once it is in the pedal's memory. */
   uploadIr(slot: number, name: string, wav: Uint8Array): Promise<void>;
+  /** Writes converted capture arrays into profile `slot` (0..4) under `name` (1..15 characters). */
+  uploadProfile(slot: number, name: string, arrays: CloArrays): Promise<void>;
 }
+
+/** The TONE3000 API calls the session uses; injectable for tests. */
+export interface Tone3000Api {
+  startDeviceLogin: typeof startDeviceLogin;
+  pollDeviceToken: (o: { clientId: string; start: DeviceLogin }) => Promise<Tokens>;
+  searchTones: typeof searchTones;
+  listModels: typeof listModels;
+  downloadModel: typeof downloadModel;
+}
+
+export interface Extras {
+  readonly tone3000?: { readonly store: Tone3000Store; readonly api?: Tone3000Api };
+  readonly convert?: Converter;
+}
+
+const defaultTone3000Api: Tone3000Api = { startDeviceLogin, pollDeviceToken: (o) => pollDeviceToken(o), searchTones, listModels, downloadModel };
 
 export interface Connection {
   readonly io: PedalIO;
@@ -38,6 +58,8 @@ export interface Folders {
   readonly presets: string;
   /** WAV impulse responses that load_ir reads. */
   readonly irs: string;
+  /** .nam captures that load_nam reads. */
+  readonly nams: string;
 }
 
 /**
@@ -49,9 +71,13 @@ export class Session {
   readonly #folders: Folders;
   #queue: Promise<unknown> = Promise.resolve();
 
-  constructor(connect: () => Connection | Promise<Connection>, folders: Folders) {
+  readonly #extras: Extras;
+  #login: { readonly text: string; readonly done: Promise<void> } | null = null;
+
+  constructor(connect: () => Connection | Promise<Connection>, folders: Folders, extras: Extras = {}) {
     this.#connect = connect;
     this.#folders = folders;
+    this.#extras = extras;
   }
 
   #use<T>(run: (io: PedalIO) => Promise<T>): Promise<T> {
@@ -235,7 +261,14 @@ export class Session {
     requireConfirm(options.confirm, `IR${slot}`);
     const path = inside(this.#folders.irs, options.file);
     const wav = new Uint8Array(await readFile(path));
-    const name = (options.name ?? defaultIrName(options.file)).trim();
+    return this.#installIr(wav, { ...options, name: options.name ?? defaultName(options.file, 10, 'User IR') });
+  }
+
+  async #installIr(wav: Uint8Array, options: { slot: number; confirm: string; name: string; replace?: boolean }): Promise<string> {
+    const { slot } = options;
+    if (!Number.isInteger(slot) || slot < 1 || slot > IR_SLOTS) throw new Error(`slot must be 1..${IR_SLOTS}`);
+    requireConfirm(options.confirm, `IR${slot}`);
+    const name = options.name.trim();
     irUploadBlob(slot - 1, name, irSamplesFromWav(wav)); // checks the WAV and the name before connecting
     return this.#use(async (io) => {
       const current = (await this.#slots(io)).irNames?.[slot - 1] ?? null;
@@ -247,6 +280,101 @@ export class Session {
       const list = names.map((n, i) => `User IR ${i + 1}: ${n ?? '(empty)'}`).join('\n');
       return `Loaded "${name}" into User IR ${slot}${current ? ` (replacing "${current}")` : ''}. Pick it in the IR block with edit_preset.\n\n${list}`;
     });
+  }
+
+  /** Signs in to TONE3000 with a code the user approves at tone3000.com; waits in the background. */
+  async tone3000Login(): Promise<string> {
+    const { store, api } = this.#tone3000();
+    if (await store.accessToken()) return 'Signed in to TONE3000 already. Use search_tone3000.';
+    if (this.#login) return this.#login.text;
+    const clientId = await store.clientId();
+    const start = await api.startDeviceLogin(clientId);
+    const text = `Open ${start.verificationUriComplete} (or ${start.verificationUri} and enter the code ${start.userCode}) to sign in to TONE3000; the code works for ${Math.round(start.expiresIn / 60)} minutes. Then use search_tone3000.`;
+    const done = api.pollDeviceToken({ clientId, start })
+      .then((tokens) => store.save(tokens))
+      .catch((error) => console.error('[pocket-master-mcp] TONE3000 sign-in:', error))
+      .finally(() => { this.#login = null; });
+    this.#login = { text, done };
+    return text;
+  }
+
+  /** Searches TONE3000 for captures (format nam) or cabinet IRs (format ir). */
+  async searchTone3000(options: { query: string; format?: 'nam' | 'ir'; page?: number }): Promise<string> {
+    const { api } = this.#tone3000();
+    const token = await this.#tone3000Token();
+    const format = options.format ?? 'nam';
+    const result = await api.searchTones(token, { query: options.query, format, page: options.page ?? 1 });
+    if (result.tones.length === 0) return `TONE3000 has no ${format} results for "${options.query}".`;
+    const lines = result.tones.map((t) => {
+      const makes = t.makes.length ? ` · ${t.makes.join(', ')}` : '';
+      return `- tone ${t.id}: "${t.title}" by ${t.creator} · ${t.gear || 'gear?'}${makes} · ${t.modelsCount} model(s) · ${t.downloads} downloads · ${t.url}${t.description ? `\n    ${t.description.slice(0, 160).replace(/\s+/g, ' ')}` : ''}`;
+    });
+    return `TONE3000 results for "${options.query}" (${format}), page ${result.page} of ${Math.max(result.totalPages, 1)}:\n${lines.join('\n')}`;
+  }
+
+  /**
+   * Downloads a TONE3000 model and puts it on the pedal: a NAM capture is converted and written
+   * to a profile slot, a cabinet IR (WAV) to a user IR slot.
+   */
+  async installTone(options: { toneId: number; modelId?: number; slot: number; confirm: string; replace?: boolean; name?: string }): Promise<string> {
+    const { api } = this.#tone3000();
+    const token = await this.#tone3000Token();
+    const models = await api.listModels(token, options.toneId);
+    const model = options.modelId !== undefined ? models.find((m) => m.id === options.modelId) : models.length === 1 ? models[0] : undefined;
+    if (!model) {
+      const list = models.map((m) => `- model ${m.id}: ${m.name}${m.size ? ` (${m.size})` : ''}`).join('\n');
+      throw new Error(models.length === 0 ? `tone ${options.toneId} has no models` : `tone ${options.toneId} has several models; pass modelId:\n${list}`);
+    }
+    const bytes = await api.downloadModel(token, model.url);
+    const name = options.name ?? model.name;
+    if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
+      return this.#installIr(bytes, { ...options, name: defaultName(name, 10, 'TONE3000') });
+    }
+    const text = new TextDecoder().decode(bytes);
+    if (!text.trimStart().startsWith('{')) throw new Error('the downloaded model is neither a NAM capture nor a WAV IR');
+    return this.#installNam(text, { ...options, name: defaultName(name, PROFILE_NAME, 'TONE3000') });
+  }
+
+  /** Converts a .nam from the nams folder and writes it to a profile slot. */
+  async loadNam(options: { file: string; slot: number; confirm: string; replace?: boolean; name?: string }): Promise<string> {
+    const json = await readFile(inside(this.#folders.nams, options.file), 'utf8');
+    return this.#installNam(json, { ...options, name: options.name ?? defaultName(options.file, PROFILE_NAME, 'NAM capture') });
+  }
+
+  async #installNam(namJson: string, options: { slot: number; confirm: string; name: string; replace?: boolean }): Promise<string> {
+    const { slot } = options;
+    if (!Number.isInteger(slot) || slot < 1 || slot > PROFILE_SLOTS) throw new Error(`profile slot must be 1..${PROFILE_SLOTS}`);
+    requireConfirm(options.confirm, `PROFILE${slot}`);
+    const name = options.name.trim();
+    const convert = this.#extras.convert;
+    if (!convert) throw new Error('NAM conversion is not available in this server');
+    parseNam(namJson); // refuses unsupported captures before anything else
+    const empty = { arrayA: new Float32Array(128), arrayB: new Float32Array(2048), gains: [1, 1, 1, 1] as const };
+    profileUploadBlob(slot - 1, name, empty); // checks slot and name
+    // The conversion takes minutes; check the slot first so it is not wasted on a refusal.
+    const current = await this.#use(async (io) => (await this.#slots(io)).profileNames?.[slot - 1] ?? null);
+    if (current !== null && !options.replace) {
+      throw new Error(`profile slot ${slot} holds "${current}", which cannot be backed up from the pedal; keep its .nam, then pass replace: true to overwrite it`);
+    }
+    const started = Date.now();
+    const arrays = await convert(namJson);
+    const seconds = Math.round((Date.now() - started) / 1000);
+    return this.#use(async (io) => {
+      await io.uploadProfile(slot - 1, name, arrays);
+      return `Converted in ${seconds} s and loaded "${name}" into profile slot ${slot}${current ? ` (replacing "${current}")` : ''}. Use it with edit_preset: AMP model "${name}" (clone mode).\n\n${await this.#describe(io)}`;
+    });
+  }
+
+  #tone3000(): { store: Tone3000Store; api: Tone3000Api } {
+    const t = this.#extras.tone3000;
+    if (!t) throw new Error('TONE3000 is not set up in this server');
+    return { store: t.store, api: t.api ?? defaultTone3000Api };
+  }
+
+  async #tone3000Token(): Promise<string> {
+    const token = await this.#tone3000().store.accessToken();
+    if (!token) throw new Error(this.#login ? 'the TONE3000 sign-in is not approved yet; open the link from tone3000_login first' : 'not signed in to TONE3000; call tone3000_login first');
+    return token;
   }
 
   importPreset(file: string): Promise<string> {
@@ -307,12 +435,15 @@ function typedValue(spec: ParamSpec, value: number | boolean | string): number |
   throw new Error(`${spec.name} needs a number`);
 }
 
-/** File name without folder and extension, as printable ASCII, at most 10 characters. */
-function defaultIrName(file: string): string {
+/** A file or tone name as printable ASCII, without folder and extension, at most `max` characters. */
+function defaultName(file: string, max: number, fallback: string): string {
   const base = file.split(/[\\/]/).pop() ?? file;
-  const stem = base.replace(/\.[^.]+$/, '');
-  return stem.replace(/[^\x20-\x7e]/g, '_').slice(0, 10).trim() || 'User IR';
+  const stem = base.replace(/\.(wav|nam|json)$/i, '');
+  return stem.replace(/[^\x20-\x7e]/g, '_').slice(0, max).trim() || fallback;
 }
+
+const PROFILE_SLOTS = 5;
+const PROFILE_NAME = 15;
 
 const safe = (name: string) => name.replace(/[^A-Za-z0-9_-]+/g, '_') || 'preset';
 

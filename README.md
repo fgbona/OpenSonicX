@@ -89,7 +89,8 @@ the same time.
 
 Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
 `select_preset`, `revert_preset`, `save_preset`, `restore_backup`,
-`export_preset`, `list_preset_files`, `import_preset`, `load_ir`.
+`export_preset`, `list_preset_files`, `import_preset`, `load_ir`, `load_nam`,
+`tone3000_login`, `search_tone3000`, `install_tone`.
 
 - Blocks, parameters and models are named as on the pedal; user IRs and
   captured profiles go by the names of the files you loaded. The server
@@ -103,6 +104,17 @@ Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
 - `load_ir` writes a WAV impulse response from `~/.pocket-master-editor/irs`
   into a user IR slot. The pedal cannot send an IR back, so an occupied slot
   is only overwritten when you say so; keep the WAVs you load.
+- [TONE3000](https://www.tone3000.com) captures go straight to the pedal:
+  `tone3000_login` signs you in with a code you approve on the site,
+  `search_tone3000` finds NAM amp captures or cabinet IRs (for gear the
+  pedal has no model of), and `install_tone` downloads one, converts a NAM
+  capture into the pedal's captured-profile format (about a minute or more)
+  and writes it to a profile slot, or writes an IR to a user IR slot.
+  `load_nam` does the same with a `.nam` in `~/.pocket-master-editor/nams`.
+  Put your TONE3000 publishable key in `~/.pocket-master-editor/tone3000.env`
+  as `TONE3000_CLIENT_ID=...` (from tone3000.com/settings). The conversion
+  downloads a reference DI signal from SonicMaster's repository once (it is
+  not part of this project) and checks it by SHA-256.
 - Tones you like can be kept: say "keep this tone" and the assistant exports
   it with notes (e.g. which record it matches). `list_preset_files` shows
   them, and asking for the same tone again loads it at once instead of
