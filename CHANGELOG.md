@@ -6,6 +6,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-19
+
+The MCP server on npm: `npx -y sonicake-pocket-master-mcp`, published by CI
+with provenance. Container image:
+`ghcr.io/fgbona/pocket-master-editor:v0.11.0` (amd64 and arm64; the image
+serves the web editor).
+
 ### Added
 
 - The MCP server is an npm package, `sonicake-pocket-master-mcp`: one
@@ -20,6 +27,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - The native MIDI library loads on the first call to the pedal, so the
   server starts and lists its tools even where MIDI is unavailable.
 - The MCP server reports the version from its package.json.
+- The package always publishes to the official npm registry (publishConfig), whatever registry the local npm is set to.
 
 ## [0.10.0] - 2026-11-19
 
@@ -356,7 +364,8 @@ Container image: `ghcr.io/fgbona/pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/pocket-master-editor/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/fgbona/pocket-master-editor/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/fgbona/pocket-master-editor/compare/v0.7.0...v0.8.0
