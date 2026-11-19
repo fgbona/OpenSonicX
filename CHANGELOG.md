@@ -6,6 +6,18 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-19
+
+The editor reaches SonicMaster's depth in this editor's design: pedal
+tiles, a knob block editor, a presets sidebar, Global options, a phone
+layout and Bluetooth. Released before every hardware write was checked on
+a unit, at the owner's call: reading, preset volume, global settings
+(backlight), Bluetooth connect, preset names over Bluetooth and a TONE3000
+capture upload over Bluetooth were checked; footswitches, tempo sync,
+slot renames, EXP/FS targets and the other global writes were not yet.
+npm: `npx -y sonicake-pocket-master-mcp` (now with the TONE3000 app key).
+Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.12.0`.
+
 ### Fixed
 
 - Over Bluetooth the preset names never loaded: the 21-packet reply takes
@@ -466,7 +478,8 @@ Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.8.0...v0.9.0
