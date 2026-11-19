@@ -1,3 +1,4 @@
+import { isGlobalWrite } from './globals.ts';
 import { buildFrame, parseFrame } from './frame.ts';
 import { MessageType } from './queries.ts';
 import { CLONE_MODULE, type ParamSpec } from './catalog.ts';
@@ -68,6 +69,16 @@ export function isAllowedEdit(sysex: Uint8Array): boolean {
   }
 }
 
+/** True for a device-wide setting or EXP/FS target write, the other thing the edit queue takes. */
+export function isAllowedGlobalWrite(sysex: Uint8Array): boolean {
+  try {
+    const f = parseFrame(sysex);
+    return f.crcOk && f.total === 1 && isGlobalWrite(f.payload);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Queue key of an edit command, derived from its bytes: command plus module (plus slot for a
  * parameter). Two commands with the same key set the same thing, so the older one can be dropped.
@@ -78,6 +89,7 @@ export function editKey(sysex: Uint8Array): string {
   const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
   const command = payload[1] ?? 0;
   if (command === EditCommand.CHAIN) return 'chain';
+  if (isGlobalWrite(payload)) return `global:${payload[1]}:${payload[2]}:${payload[3]}`;
   // 11 42 <field>: field 1 is the preset volume, 2 the BPM; each has its own key.
   if (command === EditCommand.PRESET_FIELD) return `field:${payload[2]}`;
   if (command === EditCommand.FOOTSWITCH) return `footswitch:${payload[2]}:${payload[3]}`;

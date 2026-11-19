@@ -363,3 +363,30 @@ test('entering the edit session sends 12 30 and goes on after any reply or one s
   await second;
   assert.equal(f.sent.length, 2);
 });
+
+import { factoryReset, setExpFsTarget, setGlobal } from '../src/globals.ts';
+
+test('global settings go through the edit queue, one pending value per setting', () => {
+  const f = fakes();
+  f.link.edit(setGlobal('inputLevel', 1));
+  f.link.edit(setGlobal('inputLevel', 2));
+  f.link.edit(setGlobal('inputLevel', 3));
+  f.link.edit(setGlobal('monitorLevel', -4));
+  f.link.edit(setExpFsTarget('fs1', 2));
+  for (let i = 0; i < 5; i++) mock.timers.tick(20);
+  assert.deepEqual(f.sent, [setGlobal('inputLevel', 1), setGlobal('inputLevel', 3), setGlobal('monitorLevel', -4), setExpFsTarget('fs1', 2)].map(toHex));
+  assert.throws(() => f.link.edit(factoryReset()), /Blocked/);
+});
+
+test('factoryReset sends only the reset command, after queued edits', async () => {
+  const f = fakes();
+  f.link.edit(setGlobal('backlight', 5));
+  const done = f.link.factoryReset();
+  assert.deepEqual(f.sent, [toHex(setGlobal('backlight', 5))]); // not before the edit's acknowledge
+  for (let i = 0; i < 20; i++) {
+    mock.timers.tick(20);
+    await flush();
+  }
+  await done;
+  assert.deepEqual(f.sent, [setGlobal('backlight', 5), factoryReset()].map(toHex));
+});

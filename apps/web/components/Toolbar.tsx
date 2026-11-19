@@ -25,6 +25,7 @@ interface Props {
   busy: boolean;
   /** Save needs a preset read from the pedal first. */
   canSave: boolean;
+  onSettings: () => void;
 }
 
 const STATUS_KEY: Record<Status, MessageKey> = {
@@ -92,6 +93,12 @@ export function Toolbar(p: Props) {
             )}
             <button className="btn" onClick={p.onSave} disabled={p.busy || !p.canSave}>{t('action.save')}</button>
             <button className="btn btn-primary" onClick={p.onRead} disabled={p.status === 'reading' || p.busy}>{t('action.read')}</button>
+            <button type="button" className="btn btn-icon" onClick={p.onSettings} disabled={p.busy} aria-label={t('settings.open')} title={t('settings.open')}>
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+              </svg>
+            </button>
             <button className="btn" onClick={p.onDisconnect} disabled={p.busy}>{t('action.disconnect')}</button>
           </>
         ) : (

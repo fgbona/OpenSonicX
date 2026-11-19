@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BackupsPanel } from '@/components/BackupsPanel';
 import { ChainView } from '@/components/ChainView';
 import { SaveDialog } from '@/components/SaveDialog';
+import { SettingsDialog } from '@/components/SettingsDialog';
 import { PresetFiles } from '@/components/PresetFiles';
-import { PresetList } from '@/components/PresetList';
+import { PresetSidebar } from '@/components/PresetSidebar';
 import { SlotsPanel } from '@/components/SlotsPanel';
 import { Tone3000Panel } from '@/components/Tone3000Panel';
 import { SysexLog } from '@/components/SysexLog';
@@ -19,7 +20,13 @@ export default function EditorPage() {
   const pm = usePocketMaster();
   const { t, te } = useI18n();
   const [saveOpen, setSaveOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const connected = pm.status === 'connected' || pm.status === 'reading';
+  // The sidebar lists every preset: read the names once the pedal is connected.
+  const { names, loadNames } = pm;
+  useEffect(() => {
+    if (connected && names === null) void loadNames();
+  }, [connected, names, loadNames]);
   return (
     <>
       <Toolbar
@@ -45,7 +52,14 @@ export default function EditorPage() {
         }}
         busy={pm.busy !== null}
         canSave={pm.preset !== null}
+        onSettings={() => { pm.clearError(); setSettingsOpen(true); }}
       />
+      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} exclusive={pm.exclusive} writeGlobal={pm.writeGlobal}
+        busy={pm.busy !== null} error={pm.error} onReset={pm.disconnect} />
+      <div className={connected ? 'layout' : 'layout layout-single'}>
+      {connected && (
+        <PresetSidebar names={pm.names} current={pm.presetIndex} modified={pm.modified} disabled={pm.busy !== null} onReadNames={() => void pm.loadNames()} onLoad={pm.loadPreset} />
+      )}
       <main className="main">
         {pm.error && <p className="alert" role="alert">{te(pm.error)}</p>}
         {pm.liveEdit && (
@@ -64,7 +78,8 @@ export default function EditorPage() {
           />
         )}
         {pm.preset ? (
-          <ChainView preset={pm.preset} presetIndex={pm.presetIndex} editable={pm.liveEdit && pm.busy === null} modified={pm.modified} onEdit={pm.edit} irNames={pm.irNames} profileNames={pm.profileNames} />
+          <ChainView preset={pm.preset} presetIndex={pm.presetIndex} presetName={pm.presetIndex !== null ? (pm.names?.[pm.presetIndex] ?? null) : null}
+            editable={pm.liveEdit && pm.busy === null} modified={pm.modified} onEdit={pm.edit} irNames={pm.irNames} profileNames={pm.profileNames} />
         ) : (
           <section className="empty">
             <h1>{t('empty.title')}</h1>
@@ -75,7 +90,6 @@ export default function EditorPage() {
         )}
         {connected && (
           <>
-            <PresetList names={pm.names} current={pm.presetIndex} modified={pm.modified} disabled={pm.busy !== null} onReadNames={() => void pm.loadNames()} onLoad={pm.loadPreset} />
             <Tone3000Panel connected={connected} busy={pm.busy !== null} irNames={pm.irNames} profileNames={pm.profileNames} exclusive={pm.exclusive} error={pm.error} />
             <SlotsPanel connected={connected} busy={pm.busy !== null} irNames={pm.irNames} profileNames={pm.profileNames} exclusive={pm.exclusive} error={pm.error} />
           </>
@@ -106,6 +120,7 @@ export default function EditorPage() {
           onClose={() => setSaveOpen(false)}
         />
       </main>
+      </div>
     </>
   );
 }
