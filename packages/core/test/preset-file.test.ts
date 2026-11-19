@@ -51,3 +51,13 @@ test('loadIntoEditBuffer refuses a preset with a model the editor does not know'
   await assert.rejects(loadIntoEditBuffer(pedal, unknown), /DRV uses model 0x03FFFFFF/);
   assert.deepEqual(pedal.received, []);
 });
+
+test('a preset file can carry notes, and files without notes still parse', async () => {
+  const { presetFile: make, parsePresetFile: parse } = await import('../src/preset-file.ts');
+  const { realP08 } = await import('./fake-pedal.ts');
+  const withNotes = make(realP08(), 'BLACK', () => new Date(0), 'Metallica - Black Album rhythm, approved by ear');
+  assert.equal(parse(JSON.stringify(withNotes)).notes, 'Metallica - Black Album rhythm, approved by ear');
+  const plain = make(realP08(), 'PLAIN', () => new Date(0));
+  assert.equal('notes' in plain, false);
+  assert.equal(parse(JSON.stringify({ ...plain, notes: 7 })).notes, undefined, 'notes that are not text are dropped');
+});

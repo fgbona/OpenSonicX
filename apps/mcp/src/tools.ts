@@ -23,10 +23,27 @@ const change = z.discriminatedUnion('kind', [
 type Reply = { content: { type: 'text'; text: string }[]; isError?: boolean };
 
 /** Runs a session call and turns its result, or its error, into tool text the assistant can act on. */
-async function reply(run: () => Promise<string>): Promise<Reply> {
+export interface Timing {
+  readonly tool: string;
+  /** Time spent in the tool, almost all of it talking to the pedal. */
+  readonly ms: number;
+  readonly ok: boolean;
+}
+
+export interface ServerOptions {
+  onTiming?: (timing: Timing) => void;
+}
+
+/** Runs a session call, times it, and turns its result or error into tool text the assistant can act on. */
+async function reply(tool: string, options: ServerOptions, run: () => Promise<string>): Promise<Reply> {
+  const started = performance.now();
+  const timed = (ok: boolean) => options.onTiming?.({ tool, ms: Math.round(performance.now() - started), ok });
   try {
-    return { content: [{ type: 'text', text: await run() }] };
+    const text = await run();
+    timed(true);
+    return { content: [{ type: 'text', text }] };
   } catch (error) {
+    timed(false);
     console.error('[pocket-master-mcp]', error);
     return { content: [{ type: 'text', text: `Error: ${error instanceof Error ? error.message : String(error)}` }], isError: true };
   }
@@ -36,14 +53,16 @@ const READ = { readOnlyHint: true, destructiveHint: false, idempotentHint: true,
 const LIVE = { readOnlyHint: false, destructiveHint: false, openWorldHint: false } as const;
 const WRITE_SLOT = { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false } as const;
 
-export function createServer(session: Session): McpServer {
+export function createServer(session: Session, options: ServerOptions = {}): McpServer {
   const server = new McpServer({ name: 'pocket-master', version: VERSION }, {
     instructions: [
       'Controls a Sonicake Pocket Master guitar pedal over USB.',
       'The loaded preset lives in an edit buffer: edit_preset changes the sound at once but nothing is stored until save_preset.',
       'select_preset and revert_preset discard unsaved edits; check "unsaved changes" in get_preset and ask the user first.',
       'save_preset and restore_backup overwrite a user slot: only call them when the user asked for that slot, and pass its label as confirm.',
-      'To match a reference tone (an artist, a record, a song), work out the gear used on it, call list_models once to see which pedal models are based on that gear (model names are disguised, e.g. "Calif DualM" is a Mesa/Boogie Dual Rectifier), then build the whole chain with one edit_preset: drive, amp, cabinet, EQ, gate, modulation, delay and reverb, with sensible values. Do not ask for details the user did not give: make reasonable choices, say briefly what you chose and why, and invite them to ask for adjustments by ear.',
+      'Before building a tone from a reference, call list_preset_files: if an approved tone matches the request, load it with import_preset instead of rebuilding it.',
+      'To match a reference tone (an artist, a record, a song), work out the gear used on it, call list_models once to see which pedal models are based on that gear (model names are disguised, e.g. "Calif DualM" is a Mesa/Boogie Dual Rectifier), then build the whole chain with one edit_preset: drive, amp, cabinet, EQ, gate, modulation, delay and reverb, with sensible values. Do not ask for details the user did not give: make reasonable choices, say briefly what you chose and why, and invite them to ask for adjustments by ear. When the user says a tone sounds right, offer to keep it with export_preset and notes naming the reference, so next time it loads at once.',
+      'Keep calls few: edit_preset, select_preset, save_preset and import_preset already return the resulting preset, and list_models only needs to be called once per conversation.',
     ].join(' '),
   });
 
@@ -51,40 +70,40 @@ export function createServer(session: Session): McpServer {
     title: 'Get the loaded preset',
     description: 'The preset loaded on the pedal: name, volume, amp mode, unsaved-changes flag, chain order and every block with its model, on/off state and parameter values.',
     annotations: READ,
-  }, () => reply(() => session.describe()));
+  }, () => reply('get_preset', options, () => session.describe()));
 
   server.registerTool('list_presets', {
     title: 'List presets',
     description: 'Names of all 100 presets (P01..P50 user, F01..F50 factory).',
     annotations: READ,
-  }, () => reply(() => session.listPresets()));
+  }, () => reply('list_presets', options, () => session.listPresets()));
 
   server.registerTool('list_models', {
     title: 'List the models of the pedal',
     description: 'Every model a block can use (or, without block, of every block), with the real gear the manual says it is based on, a short description and its parameters with ranges. Call it without block to learn the whole pedal before building a tone. User IRs are named after the loaded IR files; AMP also lists the captured profiles loaded on the pedal.',
     inputSchema: { block: block.optional() },
     annotations: READ,
-  }, ({ block }) => reply(() => session.listModels(block)));
+  }, ({ block }) => reply('list_models', options, () => session.listModels(block)));
 
   server.registerTool('edit_preset', {
     title: 'Edit the loaded preset',
     description: 'Changes the sound right away, in the edit buffer only (nothing is saved). Changes apply in order and are all checked before any is sent, so a model change can be followed by that model\'s parameters. Names are matched ignoring case; an unknown or ambiguous name fails with the valid choices. Returns the preset as the pedal now holds it.',
     inputSchema: { changes: z.array(change).min(1).max(50) },
     annotations: LIVE,
-  }, ({ changes }) => reply(() => session.edit(changes)));
+  }, ({ changes }) => reply('edit_preset', options, () => session.edit(changes)));
 
   server.registerTool('select_preset', {
     title: 'Load a preset',
     description: 'Loads a preset, like turning the preset knob. Unsaved edits of the current preset are lost.',
     inputSchema: { preset: slot },
     annotations: LIVE,
-  }, ({ preset }) => reply(() => session.select(preset)));
+  }, ({ preset }) => reply('select_preset', options, () => session.select(preset)));
 
   server.registerTool('revert_preset', {
     title: 'Revert unsaved edits',
     description: 'Reloads the loaded preset from its slot, discarding every unsaved edit.',
     annotations: LIVE,
-  }, () => reply(() => session.revert()));
+  }, () => reply('revert_preset', options, () => session.revert()));
 
   server.registerTool('save_preset', {
     title: 'Save to a user slot',
@@ -96,7 +115,7 @@ export function createServer(session: Session): McpServer {
       backup: z.boolean().default(true).describe('Back up the slot before overwriting it (default true)'),
     },
     annotations: WRITE_SLOT,
-  }, (args) => reply(() => session.save(args)));
+  }, (args) => reply('save_preset', options, () => session.save(args)));
 
   server.registerTool('restore_backup', {
     title: 'Restore a backed-up slot',
@@ -107,21 +126,30 @@ export function createServer(session: Session): McpServer {
       confirm: z.string().describe('Must repeat the slot label being restored, e.g. "P03"'),
     },
     annotations: WRITE_SLOT,
-  }, (args) => reply(() => session.restore(args)));
+  }, (args) => reply('restore_backup', options, () => session.restore(args)));
 
   server.registerTool('export_preset', {
     title: 'Export the loaded preset to a file',
     description: 'Writes the edit buffer to a preset file (JSON, the same format as the web editor) inside ~/.pocket-master-editor/presets. Never overwrites a file.',
-    inputSchema: { file: z.string().optional().describe('File path; omitted, a name is made from the preset label and name') },
+    inputSchema: {
+      file: z.string().optional().describe('File path; omitted, a name is made from the preset label and name'),
+      notes: z.string().max(500).optional().describe('What the tone is, e.g. "Metallica - Black Album rhythm, approved by ear"; shown by list_preset_files'),
+    },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
-  }, ({ file }) => reply(() => session.exportPreset(file)));
+  }, ({ file, notes }) => reply('export_preset', options, () => session.exportPreset(file, notes)));
+
+  server.registerTool('list_preset_files', {
+    title: 'List saved tones',
+    description: 'Preset files in ~/.pocket-master-editor/presets with their notes: the user\'s library of approved tones. Check it before building a tone from a reference; import_preset loads one at once.',
+    annotations: READ,
+  }, () => reply('list_preset_files', options, () => session.listPresetFiles()));
 
   server.registerTool('import_preset', {
     title: 'Load a preset file',
     description: 'Loads a preset file from ~/.pocket-master-editor/presets into the edit buffer with live edits (nothing is saved).',
     inputSchema: { file: z.string().describe('Preset file path') },
     annotations: LIVE,
-  }, ({ file }) => reply(() => session.importPreset(file)));
+  }, ({ file }) => reply('export_preset', options, () => session.importPreset(file)));
 
   return server;
 }

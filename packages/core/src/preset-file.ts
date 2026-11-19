@@ -14,11 +14,14 @@ export interface PresetFile {
   readonly createdAt: string;
   /** Raw edit-buffer dump payload (reply to 12 41) in hex. */
   readonly payload: string;
+  /** Free text, e.g. which record the tone matches and that it was approved by ear. Optional. */
+  readonly notes?: string;
 }
 
-export function presetFile(payload: Uint8Array, name: string, now: () => Date = () => new Date()): PresetFile {
+export function presetFile(payload: Uint8Array, name: string, now: () => Date = () => new Date(), notes?: string): PresetFile {
   decodePreset(payload); // never write a file the editor cannot read back
-  return { format: 'pocket-master-preset', version: 1, name, createdAt: now().toISOString(), payload: toHex(payload).replace(/ /g, '') };
+  const file = { format: 'pocket-master-preset', version: 1, name, createdAt: now().toISOString(), payload: toHex(payload).replace(/ /g, '') } as const;
+  return notes?.trim() ? { ...file, notes: notes.trim() } : file;
 }
 
 /** Parses and checks a preset file. Throws a readable error for anything that is not one. */
@@ -41,7 +44,8 @@ export function parsePresetFile(text: string): PresetFile {
   } catch {
     throw new Error('the preset file is damaged and cannot be read');
   }
-  return file as PresetFile;
+  const { format, version, name, createdAt, payload } = file as PresetFile;
+  return { format, version, name, createdAt, payload, ...(typeof file.notes === 'string' && file.notes ? { notes: file.notes } : {}) };
 }
 
 /**
