@@ -24,9 +24,13 @@ export function fileTone3000Store(home: string, fetch: typeof globalThis.fetch =
     const fromEnv = process.env.TONE3000_CLIENT_ID?.trim();
     if (fromEnv) return fromEnv;
     const text = await readFile(join(home, 'tone3000.env'), 'utf8').catch(() => '');
-    const line = text.split(/\r?\n/).find((l) => l.startsWith('TONE3000_CLIENT_ID='));
-    const value = line?.slice('TONE3000_CLIENT_ID='.length).trim().replace(/^['"]|['"]$/g, '') ?? '';
-    if (!value || value === '...') {
+    // Like sourcing the file in a shell: the last assignment wins; the '...' placeholder is skipped.
+    const value = text.split(/\r?\n/)
+      .filter((l) => l.startsWith('TONE3000_CLIENT_ID='))
+      .map((l) => l.slice('TONE3000_CLIENT_ID='.length).trim().replace(/^['"]|['"]$/g, ''))
+      .filter((v) => v && v !== '...')
+      .at(-1) ?? '';
+    if (!value) {
       throw new Error(`no TONE3000 key: put TONE3000_CLIENT_ID=<publishable key> in ${join(home, 'tone3000.env')} (from tone3000.com/settings)`);
     }
     return value;
