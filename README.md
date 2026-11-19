@@ -87,7 +87,10 @@ Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
 `export_preset`, `import_preset`.
 
 - Blocks, parameters and models are named as on the pedal; user IRs and
-  captured profiles go by the names of the files you loaded. A name that is
+  captured profiles go by the names of the files you loaded. The server
+  knows the real gear behind each model (from the Pocket Master manual), so
+  "build me the Black Album rhythm tone on P50 and save it" works without
+  naming models. A name that is
   unknown or ambiguous fails with the valid choices, and nothing is sent.
 - Edits only change the edit buffer. `save_preset` overwrites a user slot
   only with `confirm` repeating that slot (e.g. `"P12"`), and first backs the

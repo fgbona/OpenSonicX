@@ -31,7 +31,7 @@ test('an ambiguous prefix fails and names the candidates instead of guessing', (
 
 test('a model is found by catalog name, case and spacing ignored', () => {
   const brit = modelsFor('amp').find((m) => m.name === 'Brit 800')!;
-  assert.deepEqual(resolveModel('amp', 'brit 800', names), { name: 'Brit 800', code: brit.code, clone: false });
+  assert.deepEqual(resolveModel('amp', 'brit 800', names), { name: 'Brit 800', code: brit.code, clone: false, basedOn: 'Marshall JCM800' });
   assert.equal(resolveModel('drv', 'butterod', names).name, 'Butter OD');
 });
 

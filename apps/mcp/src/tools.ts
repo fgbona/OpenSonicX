@@ -43,6 +43,7 @@ export function createServer(session: Session): McpServer {
       'The loaded preset lives in an edit buffer: edit_preset changes the sound at once but nothing is stored until save_preset.',
       'select_preset and revert_preset discard unsaved edits; check "unsaved changes" in get_preset and ask the user first.',
       'save_preset and restore_backup overwrite a user slot: only call them when the user asked for that slot, and pass its label as confirm.',
+      'To match a reference tone (an artist, a record, a song), work out the gear used on it, call list_models once to see which pedal models are based on that gear (model names are disguised, e.g. "Calif DualM" is a Mesa/Boogie Dual Rectifier), then build the whole chain with one edit_preset: drive, amp, cabinet, EQ, gate, modulation, delay and reverb, with sensible values. Do not ask for details the user did not give: make reasonable choices, say briefly what you chose and why, and invite them to ask for adjustments by ear.',
     ].join(' '),
   });
 
@@ -59,9 +60,9 @@ export function createServer(session: Session): McpServer {
   }, () => reply(() => session.listPresets()));
 
   server.registerTool('list_models', {
-    title: 'List models of a block',
-    description: 'Models a block can use. User IRs are named after the IR file loaded in each slot; AMP also lists the captured profiles loaded on the pedal.',
-    inputSchema: { block },
+    title: 'List the models of the pedal',
+    description: 'Every model a block can use (or, without block, of every block), with the real gear the manual says it is based on, a short description and its parameters with ranges. Call it without block to learn the whole pedal before building a tone. User IRs are named after the loaded IR files; AMP also lists the captured profiles loaded on the pedal.',
+    inputSchema: { block: block.optional() },
     annotations: READ,
   }, ({ block }) => reply(() => session.listModels(block)));
 

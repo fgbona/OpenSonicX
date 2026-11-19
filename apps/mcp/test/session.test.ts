@@ -208,3 +208,12 @@ test('names changed on the pedal show up on the next call', async () => {
   fake.names[8] = 'RENAMED';
   assert.match(await session.describe(), /^P09 "RENAMED"/);
 });
+
+test('listModels without a block teaches the whole pedal: gear, description and parameters', async () => {
+  const { session } = setup();
+  const all = await session.listModels();
+  for (const label of ['NR', 'FX1', 'DRV', 'AMP', 'IR', 'EQ', 'FX2', 'DLY', 'RVB']) assert.match(all, new RegExp(`^${label} models:`, 'm'));
+  assert.match(all, /- Calif DualM: based on Mesa\/Boogie Dual Rectifier, Modern mode\. .*\n {4}params: Gain 0\.\.100/);
+  assert.match(all, /- Scream: based on Ibanez TS-808 Tube Screamer\./);
+  assert.match(all, /- Spring: Vintage amp spring reverb\./);
+});

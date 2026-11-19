@@ -58,3 +58,9 @@ test('save_preset cannot be called without confirm', async () => {
   assert.equal(result.isError, true);
   assert.equal(fake.received.some((r) => r.startsWith('save')), false);
 });
+
+test('list_models works without a block', async () => {
+  const { client } = await connected();
+  const result = await client.callTool({ name: 'list_models', arguments: {} });
+  assert.match(text(result), /AMP models:[\s\S]*Calif DualM: based on Mesa\/Boogie/);
+});
