@@ -8,6 +8,7 @@ import {
 } from '@pocket-master/core';
 import { LinkClosedError, linkPedal, PocketMasterLink, readProfileNames, readUserIrNames, type LogEntry } from '@pocket-master/core';
 import { openMidi, pickPocketMaster, webMidiPort } from './midi';
+import { connectBluetooth } from './ble';
 import { downloadBackup, downloadJson, loadBackups, storeBackup } from './backupStore';
 
 export const LOG_LIMIT = 2000;
@@ -83,6 +84,8 @@ export function usePocketMaster() {
   const access = useRef<MIDIAccess | null>(null);
   const link = useRef<PocketMasterLink | null>(null);
   const connecting = useRef(false);
+  /** Closes what the link runs over: the Bluetooth connection; nothing for USB ports. */
+  const transportClose = useRef<(() => void) | null>(null);
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Edits and Revert work on the latest values, not on a stale render.
   const presetRef = useRef<Preset | null>(null);
@@ -259,6 +262,8 @@ export function usePocketMaster() {
     connecting.current = true;
     link.current?.close();
     link.current = null;
+    transportClose.current?.();
+    transportClose.current = null;
     restoreRef.current = null;
     presetRef.current = null;
     patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false, names: null });
@@ -277,10 +282,46 @@ export function usePocketMaster() {
     }
   }, [state.inputId, state.outputId, patch, appendLog, read, refreshSlotNames]);
 
-  /**
-   * Runs `run` alone on the link (no edits or automatic re-reads meanwhile), then re-reads the slot
-   * names and the preset. Resolves with its result, or null when it failed (the error is shown).
-   */
+  /** Connects over Bluetooth LE MIDI instead of USB; the browser's chooser needs this click. */
+  const connectBle = useCallback(async () => {
+    if (connecting.current) return;
+    connecting.current = true;
+    link.current?.close();
+    link.current = null;
+    transportClose.current?.();
+    transportClose.current = null;
+    restoreRef.current = null;
+    presetRef.current = null;
+    const idle = () => (access.current ? 'ready' : 'idle') as Status;
+    patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false, names: null });
+    try {
+      const ble = await connectBluetooth(
+        (e) => patch({ error: `Bluetooth: ${message(e)}` }),
+        () => {
+          link.current?.close();
+          link.current = null;
+          transportClose.current = null;
+          patch({ status: idle(), liveEdit: false, error: 'The pedal disconnected from Bluetooth.' });
+        },
+      );
+      transportClose.current = ble.close;
+      link.current = new PocketMasterLink(ble.port, appendLog, (f) => notifyRef.current(f));
+      patch({ status: 'connected', error: null, irNames: null, profileNames: null });
+      await read();
+      await refreshSlotNames();
+    } catch (e) {
+      // Closing the chooser without picking is not an error worth showing.
+      const cancelled = e instanceof DOMException && e.name === 'NotFoundError';
+      if (!cancelled) console.error('Bluetooth connect failed', e);
+      link.current = null;
+      transportClose.current?.();
+      transportClose.current = null;
+      patch({ status: idle(), error: cancelled ? null : `Could not connect over Bluetooth: ${message(e)}` });
+    } finally {
+      connecting.current = false;
+    }
+  }, [patch, appendLog, read, refreshSlotNames]);
+
   /** A device-wide setting write (setGlobal / setExpFsTarget bytes); queued like an edit. */
   const writeGlobal = useCallback((bytes: Uint8Array) => {
     const current = link.current;
@@ -294,6 +335,10 @@ export function usePocketMaster() {
     }
   }, [patch]);
 
+  /**
+   * Runs `run` alone on the link (no edits or automatic re-reads meanwhile), then re-reads the slot
+   * names and the preset. Resolves with its result, or null when it failed (the error is shown).
+   */
   const exclusive = useCallback(async <T,>(step: string, run: (current: PocketMasterLink) => Promise<T>): Promise<T | null> => {
     const current = link.current;
     if (!current) {
@@ -336,7 +381,9 @@ export function usePocketMaster() {
     if (settleTimer.current) clearTimeout(settleTimer.current);
     link.current?.close();
     link.current = null;
-    patch({ status: 'ready', liveEdit: false });
+    transportClose.current?.();
+    transportClose.current = null;
+    patch({ status: access.current ? 'ready' : 'idle', liveEdit: false });
   }, [patch]);
 
   // Skip the Enable MIDI click when the visitor already granted access earlier; never prompts by itself.
@@ -357,6 +404,7 @@ export function usePocketMaster() {
     () => () => {
       if (settleTimer.current) clearTimeout(settleTimer.current);
       link.current?.close();
+      transportClose.current?.();
     },
     [],
   );
@@ -536,6 +584,7 @@ export function usePocketMaster() {
     modified,
     enable,
     connect,
+    connectBle: () => void connectBle(),
     disconnect,
     read,
     edit,

@@ -8,6 +8,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Bluetooth: "Connect via Bluetooth" links the editor to the pedal over
+  BLE MIDI (Web Bluetooth: Chrome and Edge, Android included), with no USB
+  cable or MIDI permission. Frames go out whole after the `80 80` header,
+  one write at a time; incoming notifications are reassembled into SysEx
+  (any byte with the top bit set other than F0/F7 is BLE framing, since
+  every data byte here is a nibble). A pedal that drops off is reported.
 - Phone layout: the presets list folds behind a button showing the
   current preset, the main column no longer widens the page past the
   screen (the chain strip scrolls inside it), smaller pedal tiles, and on
