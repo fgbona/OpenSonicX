@@ -47,3 +47,9 @@ test('catalog names still win over gear words', () => {
   assert.equal(resolveModel('ir', 'Dual 4x12', none).name, 'Dual 4x12');
   assert.equal(resolveModel('amp', 'brit 800', none).name, 'Brit 800');
 });
+
+test('AC G is the acoustic simulator of the V1.3.0 manual; later models still make no guess', () => {
+  assert.match(modelInfo('fx1', 'AC G')?.about ?? '', /acoustic guitar simulator/i);
+  assert.match(modelInfo('amp', 'A BassVT')?.about ?? '', /after firmware V1\.3\.0/);
+  assert.equal(modelInfo('drv', 'Bass Drive')?.basedOn, undefined);
+});

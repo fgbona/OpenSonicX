@@ -1,7 +1,7 @@
 /**
- * What each model is, from the Pocket Master user manual (firmware V1.0.1, effect list). `basedOn`
- * is the real gear the manual says a model is based on; models the manual does not name gear for
- * have none, and models added after V1.0.1 say so instead of guessing. Product names are
+ * What each model is, from the Pocket Master user manuals (firmware V1.0.1 and V1.3.0, effect
+ * lists). `basedOn` is the real gear the manual says a model is based on; models the manual names
+ * no gear for have none, and models added after V1.3.0 say so instead of guessing. Product names are
  * trademarks of their owners, used (as in the manual) only to identify the sound character.
  */
 export interface ModelInfo {
@@ -11,7 +11,7 @@ export interface ModelInfo {
 
 type Table = Readonly<Record<string, ModelInfo>>;
 
-const NOT_IN_MANUAL = 'Added in a firmware after V1.0.1; the manual does not describe it.';
+const NOT_IN_MANUAL = 'Added after firmware V1.3.0; the manuals do not describe it.';
 
 /** FX1 and FX2 share most models; `without` drops the ones a block lacks. */
 const FX: Table = {
@@ -32,7 +32,7 @@ const FX: Table = {
   Octave: { about: 'Polyphonic octave: one octave down and one up, mixed with the dry signal.' },
   Pitch: { about: 'Polyphonic pitch shifter / harmonizer, in semitones.' },
   Detune: { about: 'Slightly detuned copy (±50 cents) mixed with the dry signal, for a chorus-like doubling.' },
-  'AC G': { about: NOT_IN_MANUAL },
+  'AC G': { about: 'Acoustic guitar simulator (AC Sim): Body (low resonance), Top (upper harmonics); Standard, Jumbo, Enhanced (attack) or Piezo pickup character.' },
 };
 
 function without(table: Table, ...names: string[]): Table {
@@ -53,7 +53,7 @@ export const MODEL_INFO: Readonly<Record<string, Table>> = {
     'Dark Mouse': { basedOn: 'ProCo The Rat (early LM308 op-amp version)', about: 'Classic hard-clipping distortion with a filter control.' },
     'Grey Fuzz': { basedOn: 'Sola Sound Tone Bender MkII', about: 'Vintage germanium-style fuzz.' },
     'Red Fuzz': { basedOn: 'Dallas-Arbiter Fuzz Face', about: 'Vintage fuzz.' },
-    'Bass Drive': { about: NOT_IN_MANUAL },
+    'Bass Drive': { about: `Bass overdrive with clean blend and bass/treble. ${NOT_IN_MANUAL}` },
   },
   amp: {
     'TWD Deluxe': { basedOn: 'Fender Tweed Deluxe', about: 'Small vintage Fender combo; breaks up early.' },
@@ -76,8 +76,8 @@ export const MODEL_INFO: Readonly<Record<string, Table>> = {
     'Eng Power': { basedOn: 'ENGL Powerball II E645/2, lead channel (channel 4)', about: 'Very high gain, tight modern metal.' },
     'Flyman B1+': { basedOn: 'Friedman "Brown Eye" BE-100, HBE channel', about: 'Boutique hot-rodded British high gain.' },
     'Bog XT': { basedOn: 'Bogner Ecstasy (XTC), red channel', about: 'Fiery boutique high gain.' },
-    'A BassVT': { about: `Bass amp. ${NOT_IN_MANUAL}` },
-    'Voks Bass': { about: `Bass amp. ${NOT_IN_MANUAL}` },
+    'A BassVT': { about: `Bass amp with 3-band EQ and selectable mid frequency. ${NOT_IN_MANUAL}` },
+    'Voks Bass': { about: `Bass amp with bass and treble. ${NOT_IN_MANUAL}` },
   },
   ir: {
     'TWD 1x8': { basedOn: 'Fender Champ 1x8 cabinet', about: 'Tiny vintage combo speaker.' },
