@@ -1,6 +1,6 @@
 {
   "name": "@pocket-master/mcp",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "description": "MCP server for the Sonicake Pocket Master: read, edit and save presets from an AI assistant over USB MIDI.",
   "type": "module",

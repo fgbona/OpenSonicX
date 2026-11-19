@@ -64,8 +64,8 @@ reverse proxy that terminates HTTPS.
 
 ## Use it from an AI assistant (MCP)
 
-> **Preview.** Reading is checked on a pedal; edits and saves are checked
-> against a simulated pedal and still need a test on the real unit.
+> **Preview.** Reading, live edits and revert are checked on a pedal; saves,
+> restores and preset files are checked against a simulated pedal.
 
 `apps/mcp` lets an assistant such as Claude read and tweak your sound in
 conversation ("more gain on the amp", "try the Randall profile", "save this
