@@ -2,7 +2,7 @@ import { constants } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import {
-  applyEdit, blockModelLabel, chainUnits, decodePreset, editToCommands, encodeValue, fromHex, loadIntoEditBuffer,
+  applyEdit, blockModelLabel, findCloneModel, modelInfo, modelsFor, chainUnits, decodePreset, editToCommands, encodeValue, fromHex, loadIntoEditBuffer,
   modelChoices, moveInChain, parseBackupFile, parsePresetFile, parsePresetLabel, presetFile, presetLabel,
   resolveBlock, resolveModel, resolveParam, restoreFromBackup, saveToSlot,
   type BackupFile, type Edit, type ParamSpec, type Pedal, type Preset, type SlotNames,
@@ -89,12 +89,13 @@ export class Session {
     });
   }
 
-  listModels(block: string): Promise<string> {
+  /** Models of one block, or of every block: what each is based on, what it does, its parameters. */
+  listModels(block?: string): Promise<string> {
     return this.#use(async (io) => {
       const preset = decodePreset(await io.readEditBuffer());
-      const target = resolveBlock(preset, block);
-      const choices = modelChoices(target.key, await this.#slots(io));
-      return `${target.label} models:\n${choices.map((c) => `- ${c.name}${c.clone ? ' (captured profile)' : ''}`).join('\n')}`;
+      const slots = await this.#slots(io);
+      const blocks = block === undefined ? preset.chain : [resolveBlock(preset, block)];
+      return blocks.map((b) => formatModels(b.key, b.label, slots)).join('\n\n');
     });
   }
 
@@ -209,6 +210,24 @@ export class Session {
       return `Loaded "${preset.name}" into the edit buffer (not saved).\n\n${await this.#describe(io)}`;
     });
   }
+}
+
+function formatModels(blockKey: string, label: string, slots: SlotNames): string {
+  const lines = modelChoices(blockKey, slots).map((choice) => {
+    const catalogModel = choice.clone ? findCloneModel(choice.code) : modelsFor(blockKey).find((m) => m.code === choice.code);
+    const info = catalogModel ? modelInfo(blockKey, catalogModel.name) : undefined;
+    const text = [choice.basedOn ? `based on ${choice.basedOn}.` : '', choice.clone ? 'Captured profile loaded on the pedal.' : (info?.about ?? '')]
+      .filter(Boolean).join(' ');
+    const params = (catalogModel?.params ?? []).map(formatParamSpec).join(', ');
+    return `- ${choice.name}${text ? `: ${text}` : ''}${params ? `\n    params: ${params}` : ''}`;
+  });
+  return `${label} models:\n${lines.join('\n')}`;
+}
+
+function formatParamSpec(p: ParamSpec): string {
+  if (p.type === 'switch') return `${p.name} on/off`;
+  if (p.type === 'select') return `${p.name} (${(p.options ?? []).join('/')})`;
+  return `${p.name} ${p.min ?? 0}..${p.max ?? 100}${p.unit ? ` ${p.unit}` : ''}`;
 }
 
 function requireConfirm(confirm: string, label: string): void {

@@ -6,6 +6,18 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- The MCP server knows what every model is: `list_models` (now also
+  without a block, for the whole pedal) gives the real gear each model is
+  based on, from the Pocket Master manual, a short description and its
+  parameters with ranges. Models can also be named by that gear ("Dual
+  Rectifier Modern", "JCM800", "Tube Screamer"). Models added after the
+  manual's firmware say so instead of guessing.
+- The server tells the assistant how to build a tone from a reference (an
+  artist or record): work out the gear, map it to the pedal's models and
+  build the whole chain in one edit, without asking for details.
+
 ## [0.8.0] - 2026-11-19
 
 MCP server (preview): an AI assistant can read and edit the pedal's presets

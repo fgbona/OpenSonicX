@@ -1,5 +1,6 @@
 import { modelsFor, type ParamSpec } from './catalog.ts';
 import { modelOf, type Block, type Preset } from './dump.ts';
+import { modelInfo } from './model-info.ts';
 import { USER_PRESETS } from './presets.ts';
 import { userIrSlot } from './slots.ts';
 
@@ -15,18 +16,35 @@ export interface ModelChoice {
   readonly code: number;
   /** A captured profile (AMP in clone mode). */
   readonly clone: boolean;
+  /** The real gear the manual says the model is based on, when it names one. */
+  readonly basedOn?: string;
 }
 
 const normalize = (text: string) => text.toLowerCase().replace(/[\s_-]+/g, '');
 
+const words = (text: string) => text.toLowerCase().split(/[^a-z0-9+]+/).filter(Boolean);
+
 /**
- * The one choice whose name (or alias) equals `input`, else the one it is a unique prefix of.
- * Never guesses: no match or several matches throw an error listing the candidates.
+ * The one choice whose name (or alias) equals `input`, else the one it is a unique prefix of,
+ * else the one whose words (names or `also`, e.g. the gear a model is based on) contain every
+ * word of `input`. Never guesses: no match or several matches throw an error listing them.
  */
-function pick<T>(what: string, input: string, choices: readonly { names: readonly string[]; value: T; label: string }[]): T {
+function pick<T>(
+  what: string,
+  input: string,
+  choices: readonly { names: readonly string[]; value: T; label: string; also?: string }[],
+): T {
   const key = normalize(input);
-  const exact = choices.filter((c) => c.names.some((n) => normalize(n) === key));
-  const found = exact.length > 0 ? exact : choices.filter((c) => c.names.some((n) => normalize(n).startsWith(key)));
+  const wanted = words(input);
+  const tiers = [
+    (c: (typeof choices)[number]) => c.names.some((n) => normalize(n) === key),
+    (c: (typeof choices)[number]) => c.names.some((n) => normalize(n).startsWith(key)),
+    (c: (typeof choices)[number]) => {
+      const have = new Set(words([...c.names, c.also ?? ''].join(' ')));
+      return wanted.length > 0 && wanted.every((w) => have.has(w));
+    },
+  ];
+  const found = tiers.map((match) => choices.filter(match)).find((matches) => matches.length > 0) ?? [];
   if (key && found.length === 1) return found[0]!.value;
   if (found.length > 1) throw new Error(`"${input.trim()}" matches several ${what}s: ${found.map((c) => c.label).join(', ')}`);
   throw new Error(`No ${what} "${input.trim()}". ${capitalize(what)}s: ${choices.map((c) => c.label).join(', ')}`);
@@ -51,7 +69,8 @@ export function modelChoices(blockKey: string, slots: SlotNames): ModelChoice[] 
   const models = modelsFor(blockKey).map((m) => {
     const slot = userIrSlot(m.code);
     const file = slot === null ? null : slots.irNames?.[slot];
-    return { name: file ? `${file} (${m.name})` : m.name, code: m.code, clone: false };
+    const basedOn = modelInfo(blockKey, m.name)?.basedOn;
+    return { name: file ? `${file} (${m.name})` : m.name, code: m.code, clone: false, ...(basedOn ? { basedOn } : {}) };
   });
   if (blockKey !== 'amp') return models;
   const profiles = modelsFor('clone').flatMap((m, i) => {
@@ -64,7 +83,7 @@ export function modelChoices(blockKey: string, slots: SlotNames): ModelChoice[] 
 /** A model for a block by name: catalog name, user IR file name, or captured profile name. */
 export function resolveModel(blockKey: string, input: string, slots: SlotNames): ModelChoice {
   const label = blockKey.toUpperCase();
-  const choices = modelChoices(blockKey, slots).map((c) => ({ names: aliases(c.name), value: c, label: c.name }));
+  const choices = modelChoices(blockKey, slots).map((c) => ({ names: aliases(c.name), value: c, label: c.name, also: c.basedOn }));
   return pick(`${label} model`, input, choices);
 }
 

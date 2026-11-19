@@ -17,3 +17,4 @@ export * from './link.ts';
 export * from './pedal.ts';
 export * from './resolve.ts';
 export * from './model-label.ts';
+export * from './model-info.ts';
