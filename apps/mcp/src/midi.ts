@@ -1,4 +1,4 @@
-import { linkPedal, MessageType, PocketMasterLink, Query, readProfileNames, readUserIrNames, renameUserIr, renameUserProfile, uploadUserIr, uploadUserProfile, type LogEntry, type SlotName } from '@pocket-master/core';
+import { linkPedal, readGlobals, MessageType, PocketMasterLink, Query, readProfileNames, readUserIrNames, renameUserIr, renameUserProfile, uploadUserIr, uploadUserProfile, type LogEntry, type SlotName } from '@pocket-master/core';
 import type { Connection, PedalIO } from './session.ts';
 
 const PORT_NAME = /pocket\s*master/i;
@@ -56,6 +56,11 @@ export async function connectPocketMaster(onLog: (entry: LogEntry) => void = () 
     },
     async renameSlot(kind, slot, name) {
       await (kind === 'ir' ? renameUserIr : renameUserProfile)(link, slot, name);
+    },
+    readGlobals: () => readGlobals(link),
+    async writeGlobals(bytes) {
+      bytes.forEach((b) => link.edit(b));
+      await link.drained();
     },
     async readModified() {
       const { payload } = await link.request(Query.MODIFIED);

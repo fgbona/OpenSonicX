@@ -1,13 +1,14 @@
 import { constants } from 'node:fs';
 import type { Converter } from './convert.ts';
 import type { Tone3000Store } from './tone3000-store.ts';
+import { describeGlobals, globalWrites, type GlobalChanges } from './globals.ts';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import {
   applyEdit, blockModelLabel, downloadModel, IR_SLOTS, irSamplesFromWav, irUploadBlob, listModels, parseNam, pollDeviceToken, profileUploadBlob, searchTones, startDeviceLogin, findCloneModel, modelInfo, modelsFor, chainUnits, decodePreset, editToCommands, encodeValue, fromHex, loadIntoEditBuffer,
   modelChoices, moveInChain, parseBackupFile, parsePresetFile, parsePresetLabel, presetFile, presetLabel,
   resolveBlock, resolveModel, resolveParam, restoreFromBackup, saveToSlot,
-  type BackupFile, type CloArrays, type DeviceLogin, type Edit, type Footswitch, type ParamSpec, type Tokens, type Pedal, type Preset, type SlotNames,
+  type BackupFile, type CloArrays, type GlobalSettings, type DeviceLogin, type Edit, type Footswitch, type ParamSpec, type Tokens, type Pedal, type Preset, type SlotNames,
 } from '@pocket-master/core';
 
 /** What the session needs from the pedal: the core Pedal contract plus two read-only queries. */
@@ -21,6 +22,10 @@ export interface PedalIO extends Pedal {
   uploadProfile(slot: number, name: string, arrays: CloArrays): Promise<void>;
   /** Renames a user IR or profile slot (0..4); what the slot holds is untouched. */
   renameSlot(kind: 'ir' | 'profile', slot: number, name: string): Promise<void>;
+  /** Device-wide settings (12 10). */
+  readGlobals(): Promise<GlobalSettings>;
+  /** Sends setting writes (setGlobal / setExpFsTarget bytes) and waits until they are written. */
+  writeGlobals(bytes: Uint8Array[]): Promise<void>;
 }
 
 /** The TONE3000 API calls the session uses; injectable for tests. */
@@ -391,6 +396,19 @@ export class Session {
       if (before === null) throw new Error(`${kind === 'ir' ? 'User IR' : 'Profile'} slot ${slot} is empty; nothing to rename`);
       await io.renameSlot(kind, slot - 1, name);
       return `Renamed ${kind === 'ir' ? 'user IR' : 'profile'} slot ${slot} from "${before}" to "${name}".`;
+    });
+  }
+
+  getGlobals(): Promise<string> {
+    return this.#use(async (io) => describeGlobals(await io.readGlobals()));
+  }
+
+  /** Changes device-wide settings; every value is checked before anything is sent. Never a factory reset. */
+  setGlobals(changes: GlobalChanges): Promise<string> {
+    return this.#use(async (io) => {
+      const { bytes, summary } = globalWrites(changes, await io.readGlobals());
+      await io.writeGlobals(bytes);
+      return `Set ${summary.join(', ')}. These are device-wide settings, stored by the pedal at once (no preset save needed).`;
     });
   }
 

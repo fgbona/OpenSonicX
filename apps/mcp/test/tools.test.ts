@@ -11,7 +11,7 @@ import { createServer } from '../src/tools.ts';
 
 async function connected() {
   const fake = new FakePedal({}, 8);
-  const io: PedalIO = Object.assign(fake, { readSlotNames: async () => ({ irNames: null, profileNames: null }), readModified: async () => null, uploadIr: async () => undefined, uploadProfile: async () => undefined, renameSlot: async () => undefined });
+  const io: PedalIO = Object.assign(fake, { readSlotNames: async () => ({ irNames: null, profileNames: null }), readModified: async () => null, uploadIr: async () => undefined, uploadProfile: async () => undefined, renameSlot: async () => undefined, readGlobals: async () => GLOBALS, writeGlobals: async () => undefined });
   const dir = mkdtempSync(join(tmpdir(), 'pm-tools-'));
   const session = new Session(() => ({ io, close: () => undefined }), { backups: join(dir, 'b'), presets: join(dir, 'p'), irs: join(dir, 'i'), nams: join(dir, 'n') });
   const [a, b] = InMemoryTransport.createLinkedPair();
@@ -22,13 +22,15 @@ async function connected() {
 
 const text = (r: unknown) => (r as { content: { text: string }[] }).content.map((c) => c.text).join('\n');
 
+const GLOBALS = { masterVolume: 80, inputLevel: -3, fxRecLevel: 2, monitorLevel: 0, btRecLevel: 0, backlight: 6, mode: 1, reamp: 0, eco: 0, expFsType: 1 } as const;
+
 test('the server lists every tool, marking reads read-only and slot writes destructive', async () => {
   const { client } = await connected();
   const { tools } = await client.listTools();
   const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
   assert.deepEqual(Object.keys(byName).sort(), [
-    'edit_preset', 'export_preset', 'get_preset', 'import_preset', 'install_tone', 'list_models', 'list_preset_files', 'list_presets',
-    'load_ir', 'load_nam', 'rename_slot', 'restore_backup', 'revert_preset', 'save_preset', 'search_tone3000', 'select_preset', 'tone3000_login',
+    'edit_preset', 'export_preset', 'get_global_settings', 'get_preset', 'import_preset', 'install_tone', 'list_models', 'list_preset_files', 'list_presets',
+    'load_ir', 'load_nam', 'rename_slot', 'restore_backup', 'revert_preset', 'save_preset', 'search_tone3000', 'select_preset', 'set_global_settings', 'tone3000_login',
   ]);
   for (const name of ['get_preset', 'list_presets', 'list_models']) assert.equal(byName[name]!.annotations?.readOnlyHint, true, name);
   for (const name of ['save_preset', 'restore_backup', 'load_ir', 'load_nam', 'install_tone']) assert.equal(byName[name]!.annotations?.destructiveHint, true, name);
@@ -67,7 +69,7 @@ test('list_models works without a block', async () => {
 
 test('every tool call reports how long it took on the pedal', async () => {
   const fake = new FakePedal({}, 8);
-  const io: PedalIO = Object.assign(fake, { readSlotNames: async () => ({ irNames: null, profileNames: null }), readModified: async () => null, uploadIr: async () => undefined, uploadProfile: async () => undefined, renameSlot: async () => undefined });
+  const io: PedalIO = Object.assign(fake, { readSlotNames: async () => ({ irNames: null, profileNames: null }), readModified: async () => null, uploadIr: async () => undefined, uploadProfile: async () => undefined, renameSlot: async () => undefined, readGlobals: async () => GLOBALS, writeGlobals: async () => undefined });
   const dir = mkdtempSync(join(tmpdir(), 'pm-timing-'));
   const session = new Session(() => ({ io, close: () => undefined }), { backups: join(dir, 'b'), presets: join(dir, 'p'), irs: join(dir, 'i'), nams: join(dir, 'n') });
   const timings: { tool: string; ms: number; ok: boolean }[] = [];

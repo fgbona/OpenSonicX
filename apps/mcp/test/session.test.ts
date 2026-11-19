@@ -1,3 +1,4 @@
+import { setExpFsTarget, setGlobal } from '@pocket-master/core';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -9,17 +10,22 @@ import { Session, type PedalIO } from '../src/session.ts';
 
 const SLOT_NAMES = { irNames: ['Mesa OS', null, null, null, null], profileNames: ['Randall SA', null, null, null, null] };
 
+const GLOBALS = { masterVolume: 80, inputLevel: -3, fxRecLevel: 2, monitorLevel: 0, btRecLevel: 0, backlight: 6, mode: 1, reamp: 0, eco: 0, expFsType: 1 } as const;
+
 function setup(start = 8, options: ConstructorParameters<typeof FakePedal>[0] = {}) {
   const fake = new FakePedal(options, start);
   const irNames = [...SLOT_NAMES.irNames];
   const profileNames = [...SLOT_NAMES.profileNames];
   const uploads: { slot: number; name: string; bytes: number }[] = [];
+  const globalWrites: Uint8Array[] = [];
   const io: PedalIO = Object.assign(fake, {
     readSlotNames: async () => ({ irNames: [...irNames], profileNames: [...profileNames] }),
     readModified: async () => false,
     uploadIr: async (slot: number, name: string, wav: Uint8Array) => { uploads.push({ slot, name, bytes: wav.length }); irNames[slot] = name; },
     uploadProfile: async (slot: number, name: string) => { uploads.push({ slot, name, bytes: -1 }); profileNames[slot] = name; },
     renameSlot: async (kind: 'ir' | 'profile', slot: number, name: string) => { (kind === 'ir' ? irNames : profileNames)[slot] = name; uploads.push({ slot, name, bytes: -2 }); },
+    readGlobals: async () => GLOBALS,
+    writeGlobals: async (bytes: Uint8Array[]) => void globalWrites.push(...bytes),
   });
   let opened = 0;
   let closed = 0;
@@ -33,7 +39,7 @@ function setup(start = 8, options: ConstructorParameters<typeof FakePedal>[0] = 
   };
   const session = new Session(connect, { backups: join(dir, 'backups'), presets: join(dir, 'presets'), irs: join(dir, 'irs'), nams: join(dir, 'nams') });
   const block = (key: string) => decodePreset(fake.editBuffer).chain.find((b) => b.key === key)!;
-  return { fake, session, dir, block, uploads, counts: () => ({ opened, closed, maxOpenAtOnce }) };
+  return { fake, session, dir, block, uploads, globalWrites, counts: () => ({ opened, closed, maxOpenAtOnce }) };
 }
 
 test('describe names the preset and lists every block with its model and values', async () => {
@@ -398,4 +404,26 @@ test('with Sync on, edit_preset sets a delay Time by note division', async () =>
   assert.match(text, /Time 1\/8D/);
   await assert.rejects(session.edit([{ kind: 'parameter', block: 'dly', parameter: 'time', value: 400 }]), /Time options: 1\/1/);
   assert.ok(fake.received.length > 0);
+});
+
+test('get_global_settings reports the device-wide settings in words', async () => {
+  const { session } = setup();
+  const text = await session.getGlobals();
+  assert.match(text, /Master volume 80/);
+  assert.match(text, /Input -3 dB/);
+  assert.match(text, /USB recording: wet/);
+  assert.match(text, /EXP\/FS jack: single footswitch/);
+  assert.match(text, /Backlight 6/);
+});
+
+test('set_global_settings writes each change once and validates first', async () => {
+  const { session, globalWrites } = setup();
+  const text = await session.setGlobals({ inputLevel: 4, backlight: 8, fsTarget: 'Tap Tempo' });
+  assert.match(text, /Input level 4 dB/);
+  assert.deepEqual(globalWrites, [setGlobal('inputLevel', 4), setGlobal('backlight', 8), setExpFsTarget('fs', 2)]);
+  await assert.rejects(session.setGlobals({ inputLevel: 30 }), /-20\.\.20/);
+  await assert.rejects(session.setGlobals({ fsTarget: 'Nope' }), /Tap Tempo/);
+  await assert.rejects(session.setGlobals({ expTarget: 'DLY' }), /EXP\/FS jack is set to single footswitch/);
+  await assert.rejects(session.setGlobals({}), /Nothing to change/);
+  assert.equal(globalWrites.length, 3); // the refused calls sent nothing
 });

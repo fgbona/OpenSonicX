@@ -8,6 +8,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- MCP `get_global_settings` and `set_global_settings`: the device-wide
+  options in words, and changes by value or target name (validated before
+  anything is sent; the jack type is written before its targets). Factory
+  reset is deliberately not exposed to the assistant.
 - Global options (gear in the toolbar): master volume and the input,
   FX-rec, monitor and BT-rec levels as knobs, USB recording dry/wet and
   re-amp, the EXP/FS jack type and its targets, backlight, ECO, power-off
