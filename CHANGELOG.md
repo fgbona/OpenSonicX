@@ -8,6 +8,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- BPM is no longer shown or offered as a control. The pedal (V1.3.3)
+  ignores SonicMaster's `11 42 02 20 …` tempo write and five variants of
+  it (lengths 1/2/4, u8, u32, float32) while a volume write on the same
+  path works, and the unit shows no value for the 0x2002 record it was
+  read from. Removed: the BPM knob, tap tempo, the delay's "Time from
+  BPM" buttons, the MCP `bpm` change and the BPM in `get_preset`.
 - Backlight in Global options runs 0..100, as the unit reports it; it was
   capped at 10 (taken from SonicMaster), so moving the slider set a full
   backlight down to 10.

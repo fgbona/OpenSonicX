@@ -25,18 +25,12 @@ export function setPresetVolume(value: number): Uint8Array {
 
 export const BPM_RANGE = { min: 40, max: 260 } as const;
 
-/**
- * Tempo of the loaded preset, BPM 40..260: the volume's preset-field command with field 2 and a
- * 16-bit value (`11 42 02 20 01 00 lo hi`). Delays and modulations with Sync on follow it.
- * Field layout from SonicMaster (github.com/skyggedans/SonicMaster, MIT); the dump's 0x2002
- * record (120 on the owner's unit) confirms where it is stored.
+/*
+ * No BPM write: SonicMaster's `11 42 02 20 01 00 lo hi` (and length 2/4, u8, u32 and float32
+ * variants) is ignored by the owner's unit (V1.3.3, 2026-11-19): the dump keeps 120 and the
+ * modified flag stays clear, while a volume write on the same path sets both. The BPM is read
+ * from the dump's 0x2002 record only.
  */
-export function setPresetBpm(bpm: number): Uint8Array {
-  if (!Number.isInteger(bpm) || bpm < BPM_RANGE.min || bpm > BPM_RANGE.max) {
-    throw new Error(`BPM must be ${BPM_RANGE.min}..${BPM_RANGE.max} (whole numbers)`);
-  }
-  return buildFrame([MessageType.SET, PresetCommand.VOLUME, 0x02, 0x20, 0x01, 0x00, bpm & 0xff, bpm >> 8]);
-}
 
 /** 1..10 printable ASCII characters, zero padded to 10 bytes. */
 export function encodeName(name: string): number[] {

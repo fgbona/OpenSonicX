@@ -5,7 +5,7 @@ import { decodePreset, type Preset } from '../src/dump.ts';
 import { applyEdit } from '../src/edit.ts';
 import { decodeNotification } from '../src/notify.ts';
 import { resolveBlock, resolveParam } from '../src/resolve.ts';
-import { delayMs, paramSpecFor, SYNC_DIVISIONS, TAP_DIVISIONS } from '../src/tempo.ts';
+import { paramSpecFor, SYNC_DIVISIONS } from '../src/tempo.ts';
 import { buildFrame, parseFrame } from '../src/frame.ts';
 import { realP08 } from './fake-pedal.ts';
 
@@ -45,13 +45,6 @@ test('parameter specs follow Sync, so a division is set by name and a millisecon
   assert.equal(spec.type, 'select');
   assert.deepEqual(spec.options, SYNC_DIVISIONS);
   assert.equal(paramSpecFor(decodePreset(realP08()), block(decodePreset(realP08()), 'dly'), 1)?.type, undefined, 'plain number with Sync off');
-});
-
-test('tap divisions turn a BPM into delay milliseconds', () => {
-  assert.deepEqual(TAP_DIVISIONS.map((d) => d.label), ['1/8', '1/8·', '1/4', '1/2']);
-  assert.equal(delayMs(120, 1), 500);
-  assert.equal(delayMs(120, 0.75), 375);
-  assert.equal(delayMs(90, 0.5), 333);
 });
 
 test('a footswitch change made on the unit (12 4D) makes the editor re-read', () => {

@@ -19,7 +19,6 @@ const change = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('model'), block, model: z.string().describe('Model name from list_models; for AMP, a captured profile name selects clone mode') }),
   z.object({ kind: z.literal('move'), block, position: z.number().int().describe('1-based position in the chain; DRV, AMP, IR and EQ move together') }),
   z.object({ kind: z.literal('volume'), value: z.number().int().min(0).max(100).describe('Preset volume 0..100') }),
-  z.object({ kind: z.literal('bpm'), value: z.number().int().min(40).max(260).describe('Preset tempo 40..260 BPM; delays and modulations with Sync on follow it') }),
   z.object({
     kind: z.literal('footswitch'),
     block,

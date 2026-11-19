@@ -2,7 +2,7 @@ import { findCloneModel, findModel, CLONE_MODULE, type ModelSpec } from './catal
 import { setAmpMode, selectModel, setBlockOn, setChain, setFootswitch, setParam, validateChain, type Footswitch } from './commands.ts';
 import { modelOf, toParam, type Block, type Preset } from './dump.ts';
 import { effectiveSpec } from './sync.ts';
-import { setPresetBpm, setPresetVolume } from './slots.ts';
+import { setPresetVolume } from './slots.ts';
 
 /** The most blocks one footswitch can toggle. */
 export const FOOTSWITCH_CAPACITY = 3;
@@ -19,7 +19,6 @@ export type Edit =
   | { readonly kind: 'model'; readonly module: number; readonly code: number; readonly clone?: boolean }
   | { readonly kind: 'chain'; readonly order: readonly number[] }
   | { readonly kind: 'volume'; readonly value: number }
-  | { readonly kind: 'bpm'; readonly value: number }
   /** Puts a block on FS1 or FS2, or (null) on none. */
   | { readonly kind: 'footswitch'; readonly module: number; readonly footswitch: Footswitch | null };
 
@@ -29,9 +28,6 @@ export function applyEdit(preset: Preset, edit: Edit): Preset {
     case 'volume':
       setPresetVolume(edit.value); // validates 0..100
       return { ...preset, volume: edit.value };
-    case 'bpm':
-      setPresetBpm(edit.value); // validates the range
-      return { ...preset, bpm: edit.value };
     case 'footswitch':
       return mapBlock(preset, edit.module, (b) => ({ ...b, footswitch: edit.footswitch }));
     case 'chain': {
@@ -83,8 +79,6 @@ export function editToCommands(preset: Preset, edit: Edit): Uint8Array[] {
   switch (edit.kind) {
     case 'volume':
       return [setPresetVolume(edit.value)];
-    case 'bpm':
-      return [setPresetBpm(edit.value)];
     case 'footswitch':
       return footswitchCommands(preset, edit.module, edit.footswitch);
     case 'chain':
@@ -138,7 +132,6 @@ export function diffPresets(from: Preset, to: Preset): Edit[] {
     }
   }
   if (to.volume !== null && to.volume !== from.volume) edits.push({ kind: 'volume', value: to.volume });
-  if (to.bpm !== null && to.bpm !== from.bpm) edits.push({ kind: 'bpm', value: to.bpm });
   // Footswitches: first take blocks off the switches they leave, then add, so a switch never
   // holds more than FOOTSWITCH_CAPACITY blocks on the way.
   const moving = afterModels.chain.filter((b) => (target.get(b.module) as Block).footswitch !== b.footswitch);

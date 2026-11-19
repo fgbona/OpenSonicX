@@ -35,8 +35,7 @@ The catalog in turn was derived by pocket-master-mcp from PocketEdit
 (https://github.com/suckyble/PocketEdit), which declares no license.
 
 SonicMaster (https://github.com/skyggedans/SonicMaster), at commit 931a68f, is the
-source of protocol knowledge ported to TypeScript here: the preset BPM field and
-footswitch commands and their place in the dump (packages/core/src/slots.ts,
+source of protocol knowledge ported to TypeScript here: the footswitch commands and their place in the dump (packages/core/src/slots.ts,
 commands.ts, dump.ts), the Sync and Trail parameters added to
 packages/core/src/catalog.json, and the user IR upload: WAV conversion, blob,
 chunked transport, edit session and flash-write notice

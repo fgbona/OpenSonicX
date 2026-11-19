@@ -5,7 +5,7 @@ import { decodePreset, type Preset } from '../src/dump.ts';
 import { applyEdit, diffPresets, editToCommands, type Edit } from '../src/edit.ts';
 import { buildFrame } from '../src/frame.ts';
 import { toHex } from '../src/hex.ts';
-import { setPresetBpm, setPresetVolume } from '../src/slots.ts';
+import { setPresetVolume } from '../src/slots.ts';
 import { FakePedal, realP08 } from './fake-pedal.ts';
 
 const hex = (frames: Uint8Array[]) => frames.map(toHex);
@@ -38,20 +38,14 @@ test('footswitch masks map module bits to FS1 / FS2; FS1 wins if both are set', 
   assert.equal(block(p, 'drv').footswitch, null);
 });
 
-test('BPM and footswitch commands have the exact bytes and pass the live-edit guard', () => {
-  assert.equal(toHex(setPresetBpm(120)), toHex(buildFrame([0x11, 0x42, 0x02, 0x20, 0x01, 0x00, 0x78, 0x00])));
-  assert.equal(toHex(setPresetBpm(260)), toHex(buildFrame([0x11, 0x42, 0x02, 0x20, 0x01, 0x00, 0x04, 0x01])));
+test('footswitch commands have the exact bytes and pass the live-edit guard', () => {
   assert.equal(toHex(setFootswitch('fs2', MODULE.DLY, true)), toHex(buildFrame([0x11, 0x4d, 0x01, 0x07, 0x01])));
   assert.equal(toHex(setFootswitch('fs1', MODULE.NR, false)), toHex(buildFrame([0x11, 0x4d, 0x00, 0x00, 0x00])));
-  assert.ok(isAllowedEdit(setPresetBpm(90)));
   assert.ok(isAllowedEdit(setFootswitch('fs1', 2, true)));
-  assert.throws(() => setPresetBpm(39), /BPM must be 40\.\.260/);
-  assert.throws(() => setPresetBpm(120.5), /BPM must be 40\.\.260/);
   assert.throws(() => setFootswitch('fs1', 9, true), /module must be 0\.\.8/);
 });
 
-test('a BPM change never replaces a queued volume change, and switches are queued per switch and module', () => {
-  assert.notEqual(editKey(setPresetBpm(100)), editKey(setPresetVolume(50)));
+test('switches are queued per switch and module', () => {
   assert.notEqual(editKey(setFootswitch('fs1', 7, true)), editKey(setFootswitch('fs2', 7, false)));
   assert.equal(editKey(setFootswitch('fs1', 7, true)), editKey(setFootswitch('fs1', 7, false)));
 });
@@ -70,30 +64,29 @@ test('a switch takes at most three blocks', () => {
   assert.throws(() => editToCommands(full, { kind: 'footswitch', module: MODULE.RVB, footswitch: 'fs1' }), /FS1 already switches 3 blocks/);
 });
 
-test('diff brings BPM and footswitches back, freeing a switch before filling it', () => {
+test('diff brings footswitches back, freeing a switch before filling it, and never writes the BPM', () => {
   const target = decodePreset(withMasks((1 << MODULE.NR) | (1 << MODULE.FX1) | (1 << MODULE.RVB), 1 << MODULE.DLY));
   const from = decodePreset(withMasks((1 << MODULE.NR) | (1 << MODULE.FX1) | (1 << MODULE.DLY), 0));
-  const fromBpm = applyEdit(from, { kind: 'bpm', value: 90 });
+  const fromBpm: Preset = { ...from, bpm: 90 };
   const edits = diffPresets(fromBpm, target);
   const after = edits.reduce(applyEdit, fromBpm);
-  assert.deepEqual(diffPresets(after, target), []);
+  assert.deepEqual(diffPresets(after, target), []); // a BPM difference alone produces no edit
   // DLY leaves FS1 before RVB joins it, so FS1 never holds four blocks
   const commands = edits.reduce<{ p: Preset; n: number }>((acc, e) => ({ p: applyEdit(acc.p, e), n: acc.n + editToCommands(acc.p, e).length }), { p: fromBpm, n: 0 });
   assert.ok(commands.n > 0);
-  assert.ok(edits.some((e) => e.kind === 'bpm' && e.value === 120));
+  assert.ok(edits.every((e) => (e.kind as string) !== 'bpm'));
 });
 
-test('on the simulated pedal, BPM and footswitch edits land in the dump', async () => {
+test('on the simulated pedal, footswitch edits land in the dump', async () => {
   const pedal = new FakePedal();
   const before = decodePreset(await pedal.readEditBuffer());
-  const edits: Edit[] = [{ kind: 'bpm', value: 96 }, { kind: 'footswitch', module: MODULE.DLY, footswitch: 'fs1' }, { kind: 'footswitch', module: MODULE.RVB, footswitch: 'fs2' }];
+  const edits: Edit[] = [{ kind: 'footswitch', module: MODULE.DLY, footswitch: 'fs1' }, { kind: 'footswitch', module: MODULE.RVB, footswitch: 'fs2' }];
   let p = before;
   for (const e of edits) {
     await pedal.sendEdits(editToCommands(p, e));
     p = applyEdit(p, e);
   }
   const after = decodePreset(await pedal.readEditBuffer());
-  assert.equal(after.bpm, 96);
   assert.equal(block(after, 'dly').footswitch, 'fs1');
   assert.equal(block(after, 'rvb').footswitch, 'fs2');
   assert.deepEqual(diffPresets(after, p), []);
