@@ -6,6 +6,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.13.3] - 2026-11-20
+
+Plain-language model names, and the first update the macOS app installs by
+itself (from 0.13.2).
+
 ### Changed
 
 - Model menus speak plainly: every model keeps the pedal's own name (what
@@ -19,7 +24,6 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - The SysEx log is hidden unless you turn it on from the link under the
   panels; the choice is remembered. It is a troubleshooting tool, not
   something an editing session needs.
-
 - CI and release workflows use actions/checkout v7.0.1 and actions/setup-node
   v7.1.0 (pinned by SHA), which run on Node 24: GitHub warned that the v4
   actions target the deprecated Node 20 runtime.
@@ -651,7 +655,8 @@ Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.2...HEAD
+[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.3...HEAD
+[0.13.3]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.2...v0.13.3
 [0.13.2]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.1...v0.13.2
 [0.13.1]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.12.3...v0.13.0
