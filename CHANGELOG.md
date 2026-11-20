@@ -28,6 +28,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
   updater reads releases/latest, which skips pre-releases, so a 0.13.0 app
   could not find any update. v0.13.0 was switched over by hand, which lets
   the apps already installed find the next version.
+- The macOS app is named Pocket Master Editor again; 0.13.0 and 0.13.1
+  installed it as pocket-master-editor.app (a Linux file-name setting leaked
+  into the macOS build). Updates keep the installed bundle's name.
 
 ## [0.13.1] - 2026-11-20
 
