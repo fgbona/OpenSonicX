@@ -6,6 +6,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Clearer drive labels: Butter OD reads "Boss OD-1 style" and JP Dist
+  "Boss DS-1 style" (the manual only describes them as the classic yellow
+  2-knob overdrive and orange 3-knob distortion), and Shark "Crunch Box
+  (amp in a box)".
+
 ## [0.13.4] - 2026-11-20
 
 The redesign: a dark stage theme, an amp faceplate that dresses like each
