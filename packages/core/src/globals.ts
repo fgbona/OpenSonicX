@@ -15,7 +15,7 @@ export interface GlobalSettings {
   readonly masterVolume: number;
   /**
    * The settings below are null when the reply has no record for them: firmware V1.3.3 reports
-   * levels, mode, backlight and power-off confirm, but not re-amp, ECO or the EXP/FS jack type.
+   * levels, mode, backlight and boot anti-touch protection, but not re-amp, ECO or the EXP/FS jack type.
    */
   /** Levels in dB, -20..20. */
   readonly inputLevel: number | null;
@@ -25,7 +25,7 @@ export interface GlobalSettings {
   readonly backlight: number | null;
   /** USB recording: 0 dry, 1 wet. V1.3.3 reports it but ignores writes. */
   readonly mode: number | null;
-  readonly powerConfirm: number | null;
+  readonly bootProtection: number | null;
   readonly reamp: number | null;
   readonly eco: number | null;
   /** 0 expression pedal, 1 single footswitch, 2 dual footswitch. */
@@ -54,7 +54,7 @@ export const GLOBAL_SETTINGS = {
   // 0..100: the unit reports 100 at full brightness (SonicMaster's dialog stops at 10).
   backlight: { address: [0x03, 0x02], min: 0, max: 100 },
   eco: { address: [0x04, 0x02], ...FLAG },
-  powerConfirm: { address: [0x05, 0x02], ...FLAG },
+  bootProtection: { address: [0x05, 0x02], ...FLAG },
   battOnly: { address: [0x06, 0x02], ...FLAG },
 } as const satisfies Record<string, SettingSpec>;
 export type GlobalSetting = keyof typeof GLOBAL_SETTINGS;
@@ -117,7 +117,7 @@ export function factoryReset(): Uint8Array {
 /**
  * Decodes the 12 10 reply: after the two command bytes, records of `<a0 a1> <length u16 LE>
  * <value>`, matched to settings by address (levels are signed bytes). SonicMaster reads fixed
- * byte offsets, which on V1.3.3 put the power-off confirm record where re-amp was expected.
+ * byte offsets, which on V1.3.3 put the boot anti-touch protection record where re-amp was expected.
  * Null when the reply is not one or has no master volume record.
  */
 export function decodeGlobals(payload: Uint8Array): GlobalSettings | null {
@@ -138,7 +138,7 @@ export function decodeGlobals(payload: Uint8Array): GlobalSettings | null {
   return {
     masterVolume,
     inputLevel: level('inputLevel'), fxRecLevel: level('fxRecLevel'), monitorLevel: level('monitorLevel'), btRecLevel: level('btRecLevel'),
-    backlight: byte('backlight'), mode: byte('mode'), powerConfirm: byte('powerConfirm'),
+    backlight: byte('backlight'), mode: byte('mode'), bootProtection: byte('bootProtection'),
     reamp: byte('reamp'), eco: byte('eco'), expFsType: byte('expFsType'),
   };
 }

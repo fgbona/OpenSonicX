@@ -10,7 +10,7 @@ import { Session, type PedalIO } from '../src/session.ts';
 
 const SLOT_NAMES = { irNames: ['Mesa OS', null, null, null, null], profileNames: ['Randall SA', null, null, null, null] };
 
-const GLOBALS = { masterVolume: 80, inputLevel: -3, fxRecLevel: 2, monitorLevel: 0, btRecLevel: 0, backlight: 6, mode: 1, powerConfirm: 1, reamp: 0, eco: 0, expFsType: 1 } as const;
+const GLOBALS = { masterVolume: 80, inputLevel: -3, fxRecLevel: 2, monitorLevel: 0, btRecLevel: 0, backlight: 6, mode: 1, bootProtection: 1, reamp: 0, eco: 0, expFsType: 1 } as const;
 
 function setup(start = 8, options: ConstructorParameters<typeof FakePedal>[0] = {}) {
   const fake = new FakePedal(options, start);
@@ -375,16 +375,16 @@ test('get_global_settings reports the device-wide settings in words', async () =
   assert.match(text, /Master volume 80/);
   assert.match(text, /Input -3 dB/);
   assert.match(text, /Backlight 6/);
-  assert.match(text, /Power-off confirm on/);
+  assert.match(text, /Boot anti-touch protection on/);
   // Smart Box settings the Pocket Master lacks are not shown even when a reply carries them.
   assert.doesNotMatch(text, /USB recording|re-amp|EXP\/FS|ECO|battery/i);
 });
 
 test('set_global_settings writes each change once and validates first', async () => {
   const { session, globalWrites } = setup();
-  const text = await session.setGlobals({ inputLevel: 4, backlight: 8, powerConfirm: 0 });
-  assert.match(text, /Input level 4 dB, Backlight 8, Power-off confirm off/);
-  assert.deepEqual(globalWrites, [setGlobal('inputLevel', 4), setGlobal('backlight', 8), setGlobal('powerConfirm', 0)]);
+  const text = await session.setGlobals({ inputLevel: 4, backlight: 8, bootProtection: 0 });
+  assert.match(text, /Input level 4 dB, Backlight 8, Boot anti-touch protection off/);
+  assert.deepEqual(globalWrites, [setGlobal('inputLevel', 4), setGlobal('backlight', 8), setGlobal('bootProtection', 0)]);
   await assert.rejects(session.setGlobals({ inputLevel: 30 }), /-20\.\.20/);
   await assert.rejects(session.setGlobals({}), /Nothing to change/);
   assert.equal(globalWrites.length, 3); // the refused calls sent nothing
