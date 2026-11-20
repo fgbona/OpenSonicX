@@ -32,9 +32,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 The catalog in turn was derived by pocket-master-mcp from PocketEdit
-(https://github.com/suckyble/PocketEdit), which declares no license. The
-PocketEdit author gave this project's maintainer permission to use the
-catalog data here on 2026-11-19.
+(https://github.com/suckyble/PocketEdit), which declares no license.
 
 SonicMaster (https://github.com/skyggedans/SonicMaster), at commit 931a68f, is the
 source of protocol knowledge ported to TypeScript here: the footswitch commands and their place in the dump (packages/core/src/slots.ts,

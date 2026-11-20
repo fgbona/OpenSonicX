@@ -167,5 +167,5 @@ most useful thing you can send is a SysEx capture from your own unit.
 ## Credits and license
 
 MIT, see [LICENSE](LICENSE). The model catalog comes from pocket-master-mcp,
-which derived it from [PocketEdit](https://github.com/suckyble/PocketEdit), used
-with its author's permission; see [NOTICE](NOTICE). Not affiliated with Sonicake.
+which derived it from [PocketEdit](https://github.com/suckyble/PocketEdit);
+see [NOTICE](NOTICE). Not affiliated with Sonicake.
