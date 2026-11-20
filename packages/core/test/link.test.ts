@@ -404,3 +404,48 @@ test('a slow multi-packet reply keeps the request alive while its packets arrive
   assert.equal(frame.payload.length, 210);
   assert.equal(f.sent.length, 1); // never re-sent mid-reply
 });
+
+test('queries go out one at a time: a second request waits until the first reply is in', async () => {
+  const f = fakes();
+  const names = f.link.request(0x40);
+  const current = f.link.request(CURRENT_PRESET);
+  await flush();
+  assert.equal(f.sent.length, 1); // the edit buffer read must not overlap the 21-packet names reply
+  f.receive(buildFrame([0x12, 0x40, 1]));
+  await names;
+  await flush();
+  assert.equal(f.sent.length, 2);
+  f.receive(reply);
+  assert.equal(toHex((await current).payload), '12 43 07 00');
+});
+
+test('a failed request does not block the next one', async () => {
+  const f = fakes();
+  const failed = assert.rejects(f.link.request(CURRENT_PRESET), /after 3 tries/);
+  const next = f.link.request(CURRENT_PRESET);
+  for (let i = 0; i < 3; i++) {
+    mock.timers.tick(1500);
+    await flush();
+  }
+  await failed;
+  await flush();
+  f.receive(reply);
+  assert.equal(toHex((await next).payload), '12 43 07 00');
+});
+
+test('three queries never overlap, even when the third arrives as the first finishes', async () => {
+  const f = fakes();
+  const a = f.link.request(CURRENT_PRESET);
+  const b = f.link.request(0x40);
+  f.receive(reply);
+  await a;
+  const c = f.link.request(0x45); // between a's end and b's start
+  await flush();
+  assert.deepEqual(f.sent.length, 2); // a and b only; c waits for b
+  f.receive(buildFrame([0x12, 0x40, 1]));
+  await b;
+  await flush();
+  assert.equal(f.sent.length, 3);
+  f.receive(buildFrame([0x12, 0x45, 0]));
+  await c;
+});

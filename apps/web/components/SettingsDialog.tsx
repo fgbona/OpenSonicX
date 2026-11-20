@@ -18,6 +18,8 @@ interface Props {
   busy: boolean;
   /** The hook's last error, shown inside the dialog so a failed read or write is not hidden behind it. */
   error: string | null;
+  /** Sends the factory reset; resolves true once sent (the pedal then reboots). */
+  factoryReset: () => Promise<boolean>;
   /** Called after a factory reset was sent: the pedal reboots and the link is gone. */
   onReset: () => void;
 }
@@ -56,7 +58,7 @@ function Segmented({ label, value, options, disabled, onChange }: { label: strin
 }
 
 /** Global Options: device-wide levels, USB mode, EXP/FS, display and power, factory reset. */
-export function SettingsDialog({ open, onClose, exclusive, writeGlobal, busy, error, onReset }: Props) {
+export function SettingsDialog({ open, onClose, exclusive, writeGlobal, busy, error, factoryReset, onReset }: Props) {
   const { t } = useI18n();
   const [values, setValues] = useState<Values | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -85,7 +87,7 @@ export function SettingsDialog({ open, onClose, exclusive, writeGlobal, busy, er
     writeGlobal(setExpFsTarget(slot, value));
   };
   const reset = async () => {
-    const sent = await exclusive('Factory reset', async (link: PocketMasterLink) => { await link.factoryReset(); return true; });
+    const sent = await factoryReset();
     if (sent) {
       onClose();
       onReset();

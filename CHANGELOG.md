@@ -6,6 +6,19 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Queries to the pedal go out one at a time. On connect the presets
+  sidebar read the 21-packet name list while the preset was being read;
+  replies are matched by kind and joined by packet count, so two in flight
+  could mix or time out (most visible over Bluetooth).
+- Factory reset no longer re-reads a pedal that is rebooting: it is sent,
+  then the editor disconnects, instead of ~10 s locked on retries ending
+  in a "did not answer" error.
+- EXP/FS target writes queue like settings: only the latest value per
+  slot goes out.
+- The development preview no longer re-reads the settings in a loop.
+
 ## [0.12.0] - 2026-11-19
 
 The editor reaches SonicMaster's depth in this editor's design: pedal

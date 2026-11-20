@@ -56,7 +56,7 @@ export default function EditorPage() {
         onBluetooth={pm.connectBle}
       />
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} exclusive={pm.exclusive} writeGlobal={pm.writeGlobal}
-        busy={pm.busy !== null} error={pm.error} onReset={pm.disconnect} />
+        busy={pm.busy !== null} error={pm.error} factoryReset={pm.factoryReset} onReset={pm.disconnect} />
       <div className={connected ? 'layout' : 'layout layout-single'}>
       {connected && (
         <PresetSidebar names={pm.names} current={pm.presetIndex} modified={pm.modified} disabled={pm.busy !== null} onReadNames={() => void pm.loadNames()} onLoad={pm.loadPreset} />
