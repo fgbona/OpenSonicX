@@ -13,15 +13,19 @@ import { MessageType, Query } from './queries.ts';
 export interface GlobalSettings {
   /** Master volume, 0..100. */
   readonly masterVolume: number;
+  /**
+   * The settings below are null when the reply has no record for them: firmware V1.3.3 reports
+   * levels, mode, backlight and power-off confirm, but not re-amp, ECO or the EXP/FS jack type.
+   */
   /** Levels in dB, -20..20. */
-  readonly inputLevel: number;
-  readonly fxRecLevel: number;
-  readonly monitorLevel: number;
-  readonly btRecLevel: number;
-  /** The settings below are null when the dump is too short to hold them. */
+  readonly inputLevel: number | null;
+  readonly fxRecLevel: number | null;
+  readonly monitorLevel: number | null;
+  readonly btRecLevel: number | null;
   readonly backlight: number | null;
-  /** USB recording: 0 dry, 1 wet. */
+  /** USB recording: 0 dry, 1 wet. V1.3.3 reports it but ignores writes. */
   readonly mode: number | null;
+  readonly powerConfirm: number | null;
   readonly reamp: number | null;
   readonly eco: number | null;
   /** 0 expression pedal, 1 single footswitch, 2 dual footswitch. */
@@ -110,28 +114,31 @@ export function factoryReset(): Uint8Array {
   return buildFrame([MessageType.SET, FACTORY_RESET]);
 }
 
-/** Payload byte offsets of each value (one byte each; levels are signed). */
-const OFFSET = {
-  masterVolume: 22, backlight: 35, inputLevel: 40, fxRecLevel: 45, monitorLevel: 50,
-  mode: 60, btRecLevel: 65, reamp: 70, eco: 75, expFsType: 80,
-} as const;
-const MIN_LENGTH = OFFSET.btRecLevel + 1;
-
-/** Decodes the 12 10 reply payload; null when it is not one or is too short for the levels. */
+/**
+ * Decodes the 12 10 reply: after the two command bytes, records of `<a0 a1> <length u16 LE>
+ * <value>`, matched to settings by address (levels are signed bytes). SonicMaster reads fixed
+ * byte offsets, which on V1.3.3 put the power-off confirm record where re-amp was expected.
+ * Null when the reply is not one or has no master volume record.
+ */
 export function decodeGlobals(payload: Uint8Array): GlobalSettings | null {
-  if (payload[0] !== MessageType.GET || payload[1] !== Query.GLOBALS || payload.length < MIN_LENGTH) return null;
-  const signed = (o: number) => ((payload[o] as number) << 24) >> 24;
-  const optional = (o: number) => (o < payload.length ? (payload[o] as number) : null);
+  if (payload[0] !== MessageType.GET || payload[1] !== Query.GLOBALS) return null;
+  const values = new Map<string, Uint8Array>();
+  for (let o = 2; o + 4 <= payload.length; ) {
+    const length = (payload[o + 2] as number) | ((payload[o + 3] as number) << 8);
+    if (o + 4 + length > payload.length) break;
+    values.set(`${payload[o]}:${payload[o + 1]}`, payload.subarray(o + 4, o + 4 + length));
+    o += 4 + length;
+  }
+  const raw = (setting: GlobalSetting) => values.get(GLOBAL_SETTINGS[setting].address.join(':'));
+  // Values are little-endian; every setting fits its first byte (master volume's record is 4 bytes).
+  const byte = (setting: GlobalSetting) => raw(setting)?.[0] ?? null;
+  const level = (setting: GlobalSetting) => { const b = byte(setting); return b === null ? null : (b << 24) >> 24; };
+  const masterVolume = byte('masterVolume');
+  if (masterVolume === null) return null;
   return {
-    masterVolume: payload[OFFSET.masterVolume] as number,
-    backlight: payload[OFFSET.backlight] as number,
-    inputLevel: signed(OFFSET.inputLevel),
-    fxRecLevel: signed(OFFSET.fxRecLevel),
-    monitorLevel: signed(OFFSET.monitorLevel),
-    mode: payload[OFFSET.mode] as number,
-    btRecLevel: signed(OFFSET.btRecLevel),
-    reamp: optional(OFFSET.reamp),
-    eco: optional(OFFSET.eco),
-    expFsType: optional(OFFSET.expFsType),
+    masterVolume,
+    inputLevel: level('inputLevel'), fxRecLevel: level('fxRecLevel'), monitorLevel: level('monitorLevel'), btRecLevel: level('btRecLevel'),
+    backlight: byte('backlight'), mode: byte('mode'), powerConfirm: byte('powerConfirm'),
+    reamp: byte('reamp'), eco: byte('eco'), expFsType: byte('expFsType'),
   };
 }

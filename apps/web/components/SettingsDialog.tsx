@@ -41,7 +41,7 @@ const SWITCHES: readonly { key: GlobalSetting; label: MessageKey }[] = [
 const RESET_WORD = 'RESET';
 
 function fromDump(g: GlobalSettings): Values {
-  return { ...g, powerConfirm: null, battOnly: null, target1: null, target2: null };
+  return { ...g, battOnly: null, target1: null, target2: null };
 }
 
 function Segmented({ label, value, options, disabled, onChange }: { label: string; value: number | null; options: readonly string[]; disabled: boolean; onChange: (v: number) => void }) {

@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildFrame } from '../src/frame.ts';
 import { toHex } from '../src/hex.ts';
+import { fromHex } from '../src/hex.ts';
 import { decodeGlobals, factoryReset, setExpFsTarget, setGlobal } from '../src/globals.ts';
 
 // Frames the official app sent, as captured by SonicMaster (MIT); 8080 USB prefix dropped.
@@ -29,21 +30,21 @@ test('global writes refuse values out of range', () => {
   assert.throws(() => setExpFsTarget('exp', 8), /0\.\.7/);
 });
 
-test('the globals dump decodes at the offsets SonicMaster bound', () => {
-  const p = new Array(81).fill(0);
-  p[0] = 0x12; p[1] = 0x10;
-  p[22] = 80; p[35] = 6; p[40] = 0xfb; p[45] = 3; p[50] = 0; p[60] = 1; p[65] = 0xec; p[70] = 1; p[75] = 0; p[80] = 2;
-  assert.deepEqual(decodeGlobals(Uint8Array.from(p)), {
-    masterVolume: 80, backlight: 6, inputLevel: -5, fxRecLevel: 3, monitorLevel: 0, mode: 1, btRecLevel: -20,
-    reamp: 1, eco: 0, expFsType: 2,
+// Reply to 12 10 from the owner's unit (firmware V1.3.3, 2026-11-20): records of
+// <address a0 a1> <length u16 LE> <value>. Settings this firmware does not have are absent.
+const OWNER_GLOBALS = fromHex(
+  '12 10 01 01 04 00 03 03 01 01 02 01 04 00 02 00 00 00 02 02 04 00 3C 00 00 00 01 02 01 00 00 03 ' +
+  '02 01 00 64 01 03 01 00 FB 01 04 01 00 00 02 04 01 00 00 03 04 01 00 01 04 04 01 00 01 05 04 01 ' +
+  '00 EC 05 02 01 00 01',
+);
+
+test('the globals reply decodes by record address, not by byte position', () => {
+  assert.deepEqual(decodeGlobals(OWNER_GLOBALS), {
+    masterVolume: 60, backlight: 100, inputLevel: -5, fxRecLevel: 0, monitorLevel: 0, btRecLevel: -20,
+    mode: 1, powerConfirm: 1, reamp: null, eco: null, expFsType: null,
   });
-  // A short dump keeps the levels, and the later settings are unknown (null).
-  const short = decodeGlobals(Uint8Array.from(p.slice(0, 66)));
-  assert.equal(short?.btRecLevel, -20);
-  assert.equal(short?.expFsType, null);
-  assert.equal(decodeGlobals(Uint8Array.from(p.slice(0, 40))), null);
-  assert.equal(decodeGlobals(Uint8Array.from([0x12, 0x41, ...p.slice(2)])), null);
-  assert.equal(buildFrame([0x12, 0x10]).length > 0, true);
+  assert.equal(decodeGlobals(Uint8Array.from([0x12, 0x41, ...OWNER_GLOBALS.slice(2)])), null);
+  assert.equal(decodeGlobals(OWNER_GLOBALS.slice(0, 10)), null, 'no master volume record');
 });
 
 test('queued target writes keep only the latest value per slot; settings keep one per address', async () => {

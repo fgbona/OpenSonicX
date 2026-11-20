@@ -10,7 +10,7 @@ import { Session, type PedalIO } from '../src/session.ts';
 
 const SLOT_NAMES = { irNames: ['Mesa OS', null, null, null, null], profileNames: ['Randall SA', null, null, null, null] };
 
-const GLOBALS = { masterVolume: 80, inputLevel: -3, fxRecLevel: 2, monitorLevel: 0, btRecLevel: 0, backlight: 6, mode: 1, reamp: 0, eco: 0, expFsType: 1 } as const;
+const GLOBALS = { masterVolume: 80, inputLevel: -3, fxRecLevel: 2, monitorLevel: 0, btRecLevel: 0, backlight: 6, mode: 1, powerConfirm: 1, reamp: 0, eco: 0, expFsType: 1 } as const;
 
 function setup(start = 8, options: ConstructorParameters<typeof FakePedal>[0] = {}) {
   const fake = new FakePedal(options, start);
