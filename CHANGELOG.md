@@ -23,6 +23,10 @@ itself (from 0.13.2).
   it is off, warming up over about a second and a half when it is turned
   on or a new amp model loads, glowing hotter with more gain, and
   breathing gently while lit (no motion if the system asks for less).
+  Model menus are drawn by the editor instead of the system: two aligned
+  columns, the pedal's name and what it is, under the style groups, in the
+  theme's colours, with the same keyboard use as a menu (arrows, Enter,
+  Escape, first letter).
   Everything but the tube image is CSS and
   SVG; the tube and the script font ship with the app, so it works offline.
 - Model menus speak plainly: every model keeps the pedal's own name (what
