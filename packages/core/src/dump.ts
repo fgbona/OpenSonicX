@@ -1,6 +1,5 @@
 import { blockByModule, findCloneModel, findModel, CLONE_MODULE, type ModelSpec, type ParamSpec } from './catalog.ts';
 import type { Footswitch } from './commands.ts';
-import { effectiveSpec } from './sync.ts';
 import { MessageType, Query } from './queries.ts';
 import { toHex } from './hex.ts';
 
@@ -109,10 +108,7 @@ function decodeParams(model: ModelSpec | undefined, view: DataView, module: numb
   if (!model) return [];
   return model.params
     .filter((p) => view.byteLength >= PARAM_STRIDE * module + 4 * p.alg + 4)
-    .map((p) => {
-      const raw = (alg: number) => (view.byteLength >= PARAM_STRIDE * module + 4 * alg + 4 ? view.getFloat32(PARAM_STRIDE * module + 4 * alg, true) : undefined);
-      return toParam(effectiveSpec(p, raw), raw(p.alg)!);
-    });
+    .map((p) => toParam(p, view.getFloat32(PARAM_STRIDE * module + 4 * p.alg, true)));
 }
 
 /** A decoded parameter for a catalog spec and a raw value. */
@@ -120,6 +116,11 @@ export function toParam(p: ParamSpec, value: number): Param {
   const kind = p.type ?? 'number';
   const range = kind === 'number' ? { min: p.min ?? 0, max: p.max ?? 100 } : {};
   return { name: p.name, alg: p.alg, kind, value: round(value, decimals(p)), display: formatValue(p, value), ...range };
+}
+
+/** The catalog spec of slot `alg` of a block's current model. */
+export function paramSpecFor(preset: Preset, block: Block, alg: number): ParamSpec | undefined {
+  return modelOf(preset, block)?.params.find((p) => p.alg === alg);
 }
 
 /** Catalog model of a block in a preset; AMP in clone mode resolves to a captured profile. */
