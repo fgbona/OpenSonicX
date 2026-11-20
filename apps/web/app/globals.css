@@ -378,7 +378,7 @@ button, select { font: inherit; color: inherit; }
 .sidebar-item.is-current .sidebar-badge { background: var(--blue); color: #fff; }
 .sidebar-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* Segmented control (banks, footswitch) */
+/* Segmented control (banks) */
 .segmented { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--fill); gap: 2px; }
 .segmented button {
   border: 0; border-radius: 7px; padding: 4px 10px; background: transparent; color: var(--label-2);
@@ -416,7 +416,6 @@ button, select { font: inherit; color: inherit; }
 .tile-model { font-size: 0.75rem; color: var(--label-2); max-width: 92px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tile-off .module-icon, .tile-off .tile-label { color: var(--label-3); }
 .tile-off .tile-model { color: var(--label-3); }
-.tile-fs { position: absolute; top: 6px; right: 6px; font-size: 0.625rem; font-weight: 800; padding: 1px 5px; border-radius: 5px; background: var(--tint); color: #fff; }
 .tile-led {
   width: 44px; height: 8px; border: 0; padding: 0; border-radius: 4px; background: var(--fill-strong); cursor: pointer;
   transition: background 120ms, box-shadow 120ms;

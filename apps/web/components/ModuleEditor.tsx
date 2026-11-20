@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  type Block, blockModelLabel, type Edit, encodeValue, FOOTSWITCH_CAPACITY, modelInfo, modelLabel, modelOf, modelsFor,
+  type Block, blockModelLabel, type Edit, encodeValue, modelInfo, modelLabel, modelOf, modelsFor,
   paramSpecFor, type Preset,
 } from '@pocket-master/core';
 import { Knob } from './Knob';
@@ -19,9 +19,8 @@ interface Props {
 }
 
 const SINGLE_MODEL = new Set(['nr']);
-const FOOTSWITCHES = [null, 'fs1', 'fs2'] as const;
 
-/** The selected block: model, on/off, footswitch, every parameter as a knob, switch or list. */
+/** The selected block: model, on/off, every parameter as a knob, switch or list. */
 export function ModuleEditor({ preset, block, editable, onEdit, irNames, profileNames }: Props) {
   const { t } = useI18n();
   const model = modelOf(preset, block);
@@ -63,17 +62,6 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
           <span className="editor-model editor-model-static">{shown}</span>
         )}
         <span className="editor-end">
-          <span className="segmented" role="radiogroup" aria-label={t('block.footswitchAria', { block: block.label })}>
-            {FOOTSWITCHES.map((fs) => {
-              const full = fs !== null && block.footswitch !== fs && preset.chain.filter((b) => b.footswitch === fs).length >= FOOTSWITCH_CAPACITY;
-              return (
-                <button key={fs ?? 'none'} type="button" role="radio" aria-checked={block.footswitch === fs} className={block.footswitch === fs ? 'is-on' : ''}
-                  disabled={!editable || full} onClick={() => onEdit({ kind: 'footswitch', module: block.module, footswitch: fs })}>
-                  {fs ? fs.toUpperCase() : t('editor.fsNone')}
-                </button>
-              );
-            })}
-          </span>
           <button type="button" role="switch" aria-checked={block.on} aria-label={t(block.on ? 'block.onAria' : 'block.offAria', { block: block.label })}
             className={`switch${block.on ? ' switch-on' : ''}`} disabled={!editable} onClick={() => onEdit({ kind: 'on', module: block.module, on: !block.on })}>
             <span className="switch-knob" />

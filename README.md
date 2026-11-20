@@ -24,7 +24,6 @@ trademarks of their owners, used only to describe the modeled gear.
   restored from the Backups panel.
 - Lists all 100 presets with a filter and loads one, asking first when the
   current one has unsaved changes.
-- Preset BPM with tap tempo, and the footswitch (FS1/FS2) of each block.
 - Loads a NAM capture (`.nam`) into a captured-profile slot, converting it
   in the browser, and a WAV into a user IR slot.
 - Searches [TONE3000](https://www.tone3000.com) and installs a capture or IR

@@ -17,7 +17,7 @@ interface Props {
 }
 
 /**
- * The signal chain as pedals: drawing, label, model, an on/off LED and the footswitch badge. A
+ * The signal chain as pedals: drawing, label, model, an on/off LED. A
  * click selects the block for the editor; in live edit units drag (or move with the arrows), and
  * DRV-AMP-IR-EQ move together.
  */
@@ -67,7 +67,6 @@ export function ChainTiles({ chain, editable, selected, onSelect, onEdit, irName
               return (
                 <div key={m} className={`tile block-${b.key}${b.on ? '' : ' tile-off'}${selected === m ? ' tile-selected' : ''}`}>
                   <button type="button" className="tile-body" aria-pressed={selected === m} aria-label={t('tile.select', { block: b.label, model })} onClick={() => onSelect(m)}>
-                    {b.footswitch && <span className="tile-fs">{b.footswitch.toUpperCase()}</span>}
                     <ModuleIcon blockKey={b.key} />
                     <span className="tile-label">{b.label}</span>
                     <span className="tile-model">{model}</span>

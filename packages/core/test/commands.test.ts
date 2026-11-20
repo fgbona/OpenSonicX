@@ -107,3 +107,7 @@ test('encodeValue validates and rounds by the catalog spec', () => {
   assert.throws(() => encodeValue(sel, 'Banjo'), /Mode options: Guitar, Bass/);
   assert.throws(() => encodeValue(sel, 2), /Mode options/);
 });
+
+test('the live-edit guard refuses 11 4D: per-block footswitch assignment does nothing on V1.3.3', () => {
+  assert.equal(isAllowedEdit(buildFrame([0x11, 0x4d, 0x00, 0x07, 0x01])), false);
+});
