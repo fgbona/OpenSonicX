@@ -44,6 +44,7 @@ export function useTone3000() {
   const cancelled = useRef(false);
 
   const signingIn = useRef(false);
+  const polling = useRef<AbortController | null>(null);
 
   useEffect(() => {
     cancelled.current = false; // strict mode runs effects twice: undo the first cleanup
@@ -52,6 +53,7 @@ export function useTone3000() {
     setTokens(t);
     return () => {
       cancelled.current = true;
+      polling.current?.abort(); // the panel closed: stop asking TONE3000 for the code's approval
     };
   }, []);
 
@@ -88,13 +90,16 @@ export function useTone3000() {
     setError(null);
     try {
       const start = await startDeviceLogin(TONE3000_CLIENT_ID);
+      if (cancelled.current) return;
       setLogin(start);
-      const t = await pollDeviceToken({ clientId: TONE3000_CLIENT_ID, start });
+      polling.current = new AbortController();
+      const t = await pollDeviceToken({ clientId: TONE3000_CLIENT_ID, start, signal: polling.current.signal });
       if (!cancelled.current) save(t);
     } catch (e) {
       if (!cancelled.current) setError(message(e));
     } finally {
       signingIn.current = false;
+      polling.current = null;
       if (!cancelled.current) setLogin(null);
     }
   }, [save]);
