@@ -6,6 +6,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Security
+
+- GitHub Actions are pinned to full commit SHAs (version kept in a
+  comment for Dependabot), so a moved tag cannot change what CI and the
+  release run.
+
 ### Fixed
 
 - Installing a NAM capture no longer freezes the page for about a second
