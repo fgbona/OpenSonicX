@@ -6,6 +6,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-11-20
+
+Fixes from the first hardware pass on a unit with firmware V1.3.3: two
+controls ported from SonicMaster do not exist on this firmware. Sync and
+Trail silently ruined Mix or Depth and are removed; the per-block
+footswitch did nothing and is removed.
+
 ### Removed
 
 - The per-block footswitch (None / FS1 / FS2 in the block editor, the FS
@@ -533,7 +540,8 @@ Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.12.1...HEAD
+[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.12.2...HEAD
+[0.12.2]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.10.0...v0.11.0
