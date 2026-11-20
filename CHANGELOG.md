@@ -6,6 +6,15 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Comments on captured-profile and user IR slots: write one from the Pedal
+  slots panel and it shows next to the name in the AMP and IR menus, in the
+  same second column as the built-in models' descriptions (without one, the
+  column says which slot it is). Installing from TONE3000 fills it with the
+  tone's title and creator. The pedal stores only a slot's name, so comments
+  live in this browser or desktop app, tied to the slot and the name it held.
+
 ## [0.13.3] - 2026-11-20
 
 Plain-language model names, and the first update the macOS app installs by

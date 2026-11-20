@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Dialog } from './Dialog';
 import { useI18n } from './I18n';
 import { install, NAME_MAX, slotName, type Exclusive, type InstallSource } from '@/lib/install';
+import { setSlotNote } from '@/lib/slotNotes';
 
 interface Props {
   /** One entry per model; a select picks among several. Null closes the dialog. */
@@ -72,7 +73,10 @@ export function InstallDialog({ sources, irNames, profileNames, exclusive, error
         setStage(s.stage);
         if (s.stage === 'probe') setProbe({ done: s.done, total: s.total });
       });
-      if (ok) setWritten(target);
+      if (ok) {
+        setWritten(target);
+        if (source.note) setSlotNote(source.kind, target.slot - 1, target.name, source.note);
+      }
       setStage(ok ? 'done' : 'idle');
     } catch (e) {
       setFailure(e instanceof Error ? e.message : String(e));

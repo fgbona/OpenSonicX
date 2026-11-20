@@ -7,6 +7,7 @@ import {
 import { Knob } from './Knob';
 import { AmpTube } from './AmpTube';
 import { ModelPicker, type PickerGroup, type PickerOption } from './ModelPicker';
+import { noteFor, useSlotNotes } from '@/lib/slotNotes';
 import { ModuleIcon } from './ModuleIcon';
 import { useI18n } from './I18n';
 import { modelValue, parseModelValue, profileChoices } from '@/lib/ampChoices';
@@ -25,10 +26,17 @@ const SINGLE_MODEL = new Set(['nr']);
 /** The selected block: model, on/off, every parameter as a knob, switch or list. */
 export function ModuleEditor({ preset, block, editable, onEdit, irNames, profileNames }: Props) {
   const { t, lang } = useI18n();
+  const notes = useSlotNotes();
   // The pedal's own name (what its screen shows), and what it is in plain words beside it.
   const option = (m: ModelSpec, value: string): PickerOption => {
     const g = modelGuide(block.key, m.name);
-    return { value, name: modelLabel(block.key, m.code, m.name, irNames), detail: g && g.group !== 'userIr' ? g.label[lang] : undefined };
+    if (g?.group === 'userIr') {
+      // A user IR: the file name on the pedal, and the owner's comment (or which slot it is).
+      const slot = Number(m.name.replace(/\D/g, '')) - 1;
+      const name = irNames?.[slot] ?? m.name;
+      return { value, name, detail: noteFor(notes, 'ir', slot, irNames?.[slot]) ?? t('block.irSlot', { n: slot + 1 }) };
+    }
+    return { value, name: modelLabel(block.key, m.code, m.name, irNames), detail: g?.label[lang] };
   };
   const modelGroups = (value: (m: ModelSpec) => string): PickerGroup[] => {
     const groups = groupModels(block.key, choices, lang);
@@ -60,7 +68,7 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
             groups={[
               ...(clone && shown === block.model ? [{ name: null, options: [{ value: modelValue(block.code, true), name: t('block.captured', { model: block.model }), disabled: true }] }] : []),
               ...modelGroups((m) => modelValue(m.code, false)),
-              ...(profiles.length > 0 ? [{ name: t('block.profiles'), options: profiles.map((p) => ({ value: modelValue(p.code, true), name: t('block.profileOption', { name: p.name, n: p.slot }) })) }] : []),
+              ...(profiles.length > 0 ? [{ name: t('block.profiles'), options: profiles.map((p) => ({ value: modelValue(p.code, true), name: p.name, detail: noteFor(notes, 'profile', p.slot - 1, p.name) ?? t('block.profileSlot', { n: p.slot }) })) }] : []),
             ]} />
         ) : editable && choices.length > 0 ? (
           <ModelPicker ariaLabel={t('block.modelAria', { block: block.label })} value={String(block.code)}

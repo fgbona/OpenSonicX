@@ -758,3 +758,8 @@ button, select { font: inherit; color: inherit; }
    menu: the panel holding the open menu rises above its siblings. */
 .editor { position: relative; }
 .editor:has(.picker-list) { z-index: 40; }
+
+/* Slot comments */
+.slot-text { display: grid; gap: 1px; min-width: 0; }
+.slot-note { color: var(--label-2); font-size: 0.8125rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 1.6em; }
+.slot-buttons { display: inline-flex; gap: 6px; flex: none; }

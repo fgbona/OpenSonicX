@@ -40,6 +40,7 @@ export function Tone3000Panel({ connected, busy, irNames, profileNames, exclusiv
         kind,
         label: m.size ? `${m.name} (${m.size})` : m.name,
         name: m.name,
+        note: tone.creator ? `${tone.title} · ${tone.creator}` : tone.title,
         load: () => t3k.download(m.url),
       })));
     } catch (e) {
