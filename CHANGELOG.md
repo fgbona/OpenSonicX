@@ -6,6 +6,14 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- The editor is published to GitHub Pages with every release (and on
+  demand), at https://fgbona.github.io/sonicake-pocket-master-editor/, or at
+  the root of a custom domain set in the PAGES_DOMAIN variable. `NEXT_BASE_PATH`
+  builds it under a path prefix; the NAM conversion worker follows that
+  prefix, which until now was assumed to be the site root.
+
 ## [0.13.1] - 2026-11-20
 
 First update for the desktop app: installed 0.13.0 apps pick it up (Windows

@@ -38,7 +38,7 @@ function stopAll(): void {
 function runJob<T>(message: unknown, transfer: Transferable[] = []): Promise<T> {
   return new Promise((resolve, reject) => {
     // Built from lib/convert.worker.ts by `npm run build:worker` (Turbopack does not bundle workers).
-    const worker = new Worker('/convert-worker.js', { type: 'module' });
+    const worker = new Worker(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/convert-worker.js`, { type: 'module' });
     running.add(worker);
     worker.onmessage = (e: MessageEvent<{ ok: boolean; error?: string } & T>) => {
       worker.terminate();
