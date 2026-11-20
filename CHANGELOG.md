@@ -6,6 +6,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- NOTICE and README record that the PocketEdit author permitted the use
+  of the model catalog derived from PocketEdit.
+
 ## [0.12.1] - 2026-11-19
 
 Ships the 0.12.0 container image, which never finished building (see
