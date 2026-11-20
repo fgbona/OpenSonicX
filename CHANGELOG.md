@@ -6,6 +6,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.12.3] - 2026-11-20
+
+Global options now match the Pocket Master: settings that belong to the
+Smart Box (SonicMaster serves both pedals) are gone, and the settings
+reply is read by record address, so power-off confirm shows its real
+value.
+
 ### Removed
 
 - The EXP/FS section (jack type and targets), ECO and battery-only, from
@@ -562,7 +569,8 @@ Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.12.2...HEAD
+[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.12.3...HEAD
+[0.12.3]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.11.0...v0.12.0
