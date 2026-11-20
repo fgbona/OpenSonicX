@@ -17,7 +17,8 @@ itself (from 0.13.2).
   click away): graphite glass panels, an amber accent that glows, a lit
   signal cable running through the chain of pedals, chrome knobs, and the
   AMP block drawn as an amplifier faceplate with screws, a top vent, a lit
-  power tube, the speaker grille and a script "Based on …" signature. The
+  power tube (an illustrated EL84 with glass reflections, getter, plates and
+  a glowing heater), the speaker grille and a script "Based on …" signature. The
   other blocks get a dark face in their own colour. All drawn in CSS and
   SVG, with the script font served by the app, so it works offline.
 - Model menus speak plainly: every model keeps the pedal's own name (what
