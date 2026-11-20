@@ -5,6 +5,7 @@ import {
   modelsFor, type ModelSpec, paramSpecFor, type Preset,
 } from '@pocket-master/core';
 import { Knob } from './Knob';
+import { AmpTube } from './AmpTube';
 import { ModuleIcon } from './ModuleIcon';
 import { useI18n } from './I18n';
 import { modelValue, parseModelValue, profileChoices } from '@/lib/ampChoices';
@@ -133,12 +134,7 @@ function AmpDecor() {
       <span className="amp-screw amp-screw-bl" aria-hidden="true" />
       <span className="amp-screw amp-screw-br" aria-hidden="true" />
       <span className="amp-vent" aria-hidden="true" />
-      <svg className="amp-tube" viewBox="0 0 40 72" aria-hidden="true">
-        <rect x="6" y="2" width="28" height="56" rx="13" className="amp-tube-glass" />
-        <rect x="14" y="14" width="12" height="30" rx="3" className="amp-tube-plate" />
-        <path d="M20 46 V22 M16 22 h8" className="amp-tube-filament" />
-        <rect x="9" y="56" width="22" height="12" rx="2" className="amp-tube-base" />
-      </svg>
+      <AmpTube />
       <span className="amp-grille" aria-hidden="true" />
     </>
   );
