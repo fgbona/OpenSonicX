@@ -12,6 +12,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
   "Boss DS-1 style" (the manual only describes them as the classic yellow
   2-knob overdrive and orange 3-knob distortion), and Shark "Crunch Box
   (amp in a box)".
+- CI runs in about a third of the time: the converter parity tests against
+  SonicMaster's output (several minutes) run in their own workflow, only when
+  the converter or its fixtures change.
 
 ## [0.13.4] - 2026-11-20
 

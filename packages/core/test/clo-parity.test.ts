@@ -21,7 +21,7 @@ const maxAbsDiff = (a: ArrayLike<number>, b: ArrayLike<number>) => {
 const sum = (a: ArrayLike<number>) => Array.from(a).reduce((s, v) => s + v, 0);
 
 for (const name of ['ref_input', 'synthetic_v070']) {
-  test(`the TypeScript converter matches SonicMaster's DSP on ${name}.nam`, { timeout: 300_000 }, () => {
+  test(`the TypeScript converter matches SonicMaster's DSP on ${name}.nam`, { timeout: 300_000, skip: process.env.SKIP_CLO_PARITY ? 'converter unchanged (runs in the Converter parity workflow)' : false }, () => {
     const want = golden(name);
     const got = generateClo(readFileSync(fixture(`${name}.nam`), 'utf8'), syntheticDi());
     assert.equal(got.arrayA.length, 128);
