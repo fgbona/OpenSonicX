@@ -6,6 +6,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- CI and release workflows use actions/checkout v7.0.1 and actions/setup-node
+  v7.1.0 (pinned by SHA), which run on Node 24: GitHub warned that the v4
+  actions target the deprecated Node 20 runtime.
+
 ## [0.13.2] - 2026-11-20
 
 The macOS desktop app updates itself from this version on (install this one
