@@ -6,6 +6,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-11-20
+
+First update for the desktop app: installed 0.13.0 apps pick it up (Windows
+and Linux install it on restart; macOS shows where to download it).
+
 ### Changed
 
 - In the desktop app the start screen no longer asks to enable MIDI or
@@ -597,7 +602,8 @@ Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.1...HEAD
+[0.13.1]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.12.3...v0.13.0
 [0.12.3]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.12.1...v0.12.2
