@@ -8,8 +8,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- The editor is published to GitHub Pages with every release, at
-  https://fgbona.github.io/sonicake-pocket-master-editor/. `NEXT_BASE_PATH`
+- The editor is published to GitHub Pages with every release (and on
+  demand), at https://fgbona.github.io/sonicake-pocket-master-editor/, or at
+  the root of a custom domain set in the PAGES_DOMAIN variable. `NEXT_BASE_PATH`
   builds it under a path prefix; the NAM conversion worker follows that
   prefix, which until now was assumed to be the site root.
 

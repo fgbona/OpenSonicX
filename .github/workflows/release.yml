@@ -4,8 +4,7 @@ name: Release
 # image back and smoke-tests it, and only then moves `latest` and creates the GitHub
 # release with that version's CHANGELOG.md section as notes. The desktop app is then
 # built on Linux, Windows and macOS and its installers attached to that release; the
-# installed apps update from there (latest*.yml). The same release publishes the editor
-# to GitHub Pages (https://<owner>.github.io/<repository>/).
+# installed apps update from there (latest*.yml).
 on:
   push:
     tags: ['v*.*.*']
@@ -149,37 +148,6 @@ jobs:
           cd apps/desktop/release
           shopt -s nullglob
           gh release upload "$GITHUB_REF_NAME" ./*.dmg ./*.zip ./*.exe ./*.AppImage ./*.blockmap ./latest*.yml --clobber
-
-  pages:
-    name: Publish the editor to GitHub Pages
-    needs: release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      # Pages serves the site under /<repository>; the static export carries that prefix.
-      - run: npm run build -w @pocket-master/web
-        env:
-          NEXT_OUTPUT: export
-          NEXT_BASE_PATH: /${{ github.event.repository.name }}
-          NEXT_PUBLIC_TONE3000_CLIENT_ID: ${{ vars.TONE3000_CLIENT_ID }}
-      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
-        with:
-          path: apps/web/out
-      - id: deploy
-        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
 
   npm:
     # Trusted publishing (OIDC): no npm token is stored. Off until the repository variable
