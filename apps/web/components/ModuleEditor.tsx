@@ -8,6 +8,7 @@ import { Knob } from './Knob';
 import { AmpTube } from './AmpTube';
 import { ModelPicker, type PickerGroup, type PickerOption } from './ModelPicker';
 import { noteFor, useSlotNotes } from '@/lib/slotNotes';
+import { ampSkin, hasTube } from '@/lib/ampSkins';
 import { ModuleIcon } from './ModuleIcon';
 import { useI18n } from './I18n';
 import { modelValue, parseModelValue, profileChoices } from '@/lib/ampChoices';
@@ -45,6 +46,7 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
   const model = modelOf(preset, block);
   const guide = model ? modelGuide(block.key, model.name) : undefined;
   const clone = block.key === 'amp' && preset.ampMode === 'clone';
+  const skin = block.key === 'amp' && !clone ? ampSkin(model?.name) : null;
   const choices = SINGLE_MODEL.has(block.key) ? [] : modelsFor(block.key);
   const profiles = block.key === 'amp' ? profileChoices(profileNames) : [];
   const shown = blockModelLabel(block, preset.ampMode, irNames, profileNames);
@@ -84,8 +86,8 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
           </button>
         </span>
       </header>
-      <div className={`editor-face face-${block.key}`}>
-      {block.key === 'amp' && <AmpDecor on={block.on} drive={gainOf(block)} tubeKey={block.code} />}
+      <div className={`editor-face face-${block.key}`} data-skin={skin ?? undefined}>
+      {block.key === 'amp' && <AmpDecor on={block.on} drive={gainOf(block)} tubeKey={block.code} tube={hasTube(skin)} />}
       {block.params.length === 0 ? (
         <p className="muted small">{t('block.noParams')}</p>
       ) : (
@@ -120,7 +122,7 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
           })}
         </div>
       )}
-      {block.key === 'amp' && guide && <p className="amp-script">{t('editor.basedOn', { gear: guide.label[lang] })}</p>}
+      {block.key === 'amp' && guide && info?.basedOn && <p className="amp-script">{t('editor.basedOn', { gear: guide.label[lang] })}</p>}
       {(info?.basedOn || info?.about) && (() => {
         // The AMP's faceplate already signs "Based on …"; the line below then only describes it.
         const basedOn = block.key === 'amp' && guide ? undefined : info.basedOn;
@@ -132,7 +134,7 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
 }
 
 /** Faceplate details of the AMP panel: screws, top vent, a lit power tube and the speaker grille. */
-function AmpDecor({ on, drive, tubeKey }: { on: boolean; drive: number; tubeKey: number }) {
+function AmpDecor({ on, drive, tubeKey, tube }: { on: boolean; drive: number; tubeKey: number; tube: boolean }) {
   return (
     <>
       <span className="amp-screw amp-screw-tl" aria-hidden="true" />
@@ -140,7 +142,7 @@ function AmpDecor({ on, drive, tubeKey }: { on: boolean; drive: number; tubeKey:
       <span className="amp-screw amp-screw-bl" aria-hidden="true" />
       <span className="amp-screw amp-screw-br" aria-hidden="true" />
       <span className="amp-vent" aria-hidden="true" />
-      <AmpTube key={tubeKey} on={on} drive={drive} />
+      {tube ? <AmpTube key={tubeKey} on={on} drive={drive} /> : <span className="amp-tube" aria-hidden="true" />}
       <span className="amp-grille" aria-hidden="true" />
     </>
   );

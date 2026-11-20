@@ -32,6 +32,11 @@ itself (from 0.13.2).
   it is off, warming up over about a second and a half when it is turned
   on or a new amp model loads, glowing hotter with more gain, and
   breathing gently while lit (no motion if the system asks for less).
+  The AMP faceplate dresses like the gear each model is based on, without
+  logos: tweed, blackface, British fawn and copper, a brushed-gold Marshall
+  panel, Rectifier diamond plate, hot-rod chrome, 90s black and red, modern
+  German graphite with a blue light, boutique walnut, solid-state silver
+  (no tube on the Jazz 120) and bass black and silver.
   Model menus are drawn by the editor instead of the system: two aligned
   columns, the pedal's name and what it is, under the style groups, in the
   theme's colours, with the same keyboard use as a menu (arrows, Enter,
