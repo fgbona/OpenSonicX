@@ -79,7 +79,7 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
         </span>
       </header>
       <div className={`editor-face face-${block.key}`}>
-      {block.key === 'amp' && <AmpDecor />}
+      {block.key === 'amp' && <AmpDecor on={block.on} drive={gainOf(block)} tubeKey={block.code} />}
       {block.params.length === 0 ? (
         <p className="muted small">{t('block.noParams')}</p>
       ) : (
@@ -126,7 +126,7 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
 }
 
 /** Faceplate details of the AMP panel: screws, top vent, a lit power tube and the speaker grille. */
-function AmpDecor() {
+function AmpDecor({ on, drive, tubeKey }: { on: boolean; drive: number; tubeKey: number }) {
   return (
     <>
       <span className="amp-screw amp-screw-tl" aria-hidden="true" />
@@ -134,8 +134,15 @@ function AmpDecor() {
       <span className="amp-screw amp-screw-bl" aria-hidden="true" />
       <span className="amp-screw amp-screw-br" aria-hidden="true" />
       <span className="amp-vent" aria-hidden="true" />
-      <AmpTube />
+      <AmpTube key={tubeKey} on={on} drive={drive} />
       <span className="amp-grille" aria-hidden="true" />
     </>
   );
+}
+
+/** The amp's gain as 0..1, for how hot the tube glows; middle when the model has no gain knob. */
+function gainOf(block: Block): number {
+  const gain = block.params.find((p) => /gain/i.test(p.name) && p.kind === 'number');
+  if (!gain || gain.max === undefined || gain.min === undefined || gain.max === gain.min) return 0.5;
+  return (gain.value - gain.min) / (gain.max - gain.min);
 }

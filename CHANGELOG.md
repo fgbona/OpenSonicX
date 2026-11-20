@@ -19,7 +19,11 @@ itself (from 0.13.2).
   AMP block drawn as an amplifier faceplate with screws, a top vent, a lit
   power tube (an illustration the owner generated for this project), the
   speaker grille and a script "Based on …" signature. The other blocks get a
-  dark face in their own colour. Everything but the tube image is CSS and
+  dark face in their own colour. The tube follows the AMP block: dark when
+  it is off, warming up over about a second and a half when it is turned
+  on or a new amp model loads, glowing hotter with more gain, and
+  breathing gently while lit (no motion if the system asks for less).
+  Everything but the tube image is CSS and
   SVG; the tube and the script font ship with the app, so it works offline.
 - Model menus speak plainly: every model keeps the pedal's own name (what
   its screen shows) followed by what it is, such as "Brit 800 — Marshall
