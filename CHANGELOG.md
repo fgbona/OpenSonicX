@@ -6,6 +6,16 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Removed
+
+- The per-block footswitch (None / FS1 / FS2 in the block editor, the FS
+  badge on the tiles and the MCP's `footswitch` change). Checked on a
+  unit with firmware V1.3.3, also with the jack set to Dual FS: the pedal
+  ignores the assignment command (11 4D) and its dump never shows one. On
+  this firmware a footswitch toggles a block through the device-wide
+  EXP/FS function (Global options, `set_global_settings` fs1Target and
+  fs2Target), which stays. The live-edit guard now refuses 11 4D.
+
 ### Fixed
 
 - Sync (modulation and delay) and Trail (delay) are gone from the model

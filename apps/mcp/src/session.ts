@@ -8,7 +8,7 @@ import {
   applyEdit, blockModelLabel, downloadModel, IR_SLOTS, irSamplesFromWav, irUploadBlob, listModels, parseNam, pollDeviceToken, profileUploadBlob, searchTones, startDeviceLogin, findCloneModel, modelInfo, modelsFor, chainUnits, decodePreset, editToCommands, encodeValue, fromHex, loadIntoEditBuffer,
   modelChoices, moveInChain, parseBackupFile, parsePresetFile, parsePresetLabel, presetFile, presetLabel,
   resolveBlock, resolveModel, resolveParam, restoreFromBackup, saveToSlot,
-  type BackupFile, type CloArrays, type GlobalSettings, type DeviceLogin, type Edit, type Footswitch, type ParamSpec, type Tokens, type Pedal, type Preset, type SlotNames,
+  type BackupFile, type CloArrays, type GlobalSettings, type DeviceLogin, type Edit, type ParamSpec, type Tokens, type Pedal, type Preset, type SlotNames,
 } from '@pocket-master/core';
 
 /** What the session needs from the pedal: the core Pedal contract plus two read-only queries. */
@@ -57,7 +57,6 @@ export type Change =
   | { readonly kind: 'move'; readonly block: string; readonly position: number }
   | { readonly kind: 'volume'; readonly value: number }
   /** FS1, FS2 or none, in any case. */
-  | { readonly kind: 'footswitch'; readonly block: string; readonly switch: string };
 
 export interface Folders {
   readonly backups: string;
@@ -491,8 +490,6 @@ function toEdit(preset: Preset, change: Change, slots: SlotNames): Edit {
     }
     case 'block':
       return { kind: 'on', module: block.module, on: change.on };
-    case 'footswitch':
-      return { kind: 'footswitch', module: block.module, footswitch: parseFootswitch(change.switch) };
     case 'model': {
       const model = resolveModel(block.key, change.model, slots);
       return { kind: 'model', module: block.module, code: model.code, clone: model.clone };
@@ -508,13 +505,6 @@ function toEdit(preset: Preset, change: Change, slots: SlotNames): Edit {
   }
 }
 
-function parseFootswitch(input: string): Footswitch | null {
-  const key = input.trim().toLowerCase();
-  if (key === 'fs1' || key === 'fs2') return key;
-  if (key === 'none' || key === '') return null;
-  throw new Error(`switch must be FS1, FS2 or none, got "${input}"`);
-}
-
 function formatPreset(index: number, name: string, preset: Preset, slots: SlotNames, modified: boolean | null): string {
   const head = [
     `${presetLabel(index)} "${name}"`,
@@ -527,8 +517,7 @@ function formatPreset(index: number, name: string, preset: Preset, slots: SlotNa
   const blocks = preset.chain.map((b) => {
     const model = blockModelLabel(b, preset.ampMode, slots.irNames, slots.profileNames);
     const params = b.params.map((p) => `${p.name} ${p.display}`).join(', ');
-    const footswitch = b.footswitch ? `[${b.footswitch.toUpperCase()}] ` : '';
-    return `${b.label.padEnd(width)}  ${b.on ? 'on ' : 'off'}  ${footswitch}${model}${params ? `: ${params}` : ''}`;
+    return `${b.label.padEnd(width)}  ${b.on ? 'on ' : 'off'}  ${model}${params ? `: ${params}` : ''}`;
   });
   return [head, chain, ...blocks].join('\n');
 }

@@ -241,31 +241,6 @@ test('exported tones keep notes and are listed, so an approved tone is reused in
   assert.match(list, /black-album\.json: ".*" — Metallica - Black Album rhythm, approved by ear/);
 });
 
-test('edit puts blocks on footswitches; get_preset shows them', async () => {
-  const { session, fake } = setup();
-  const text = await session.edit([
-    { kind: 'footswitch', block: 'DLY', switch: 'FS1' },
-    { kind: 'footswitch', block: 'rvb', switch: 'fs2' },
-  ]);
-  const preset = decodePreset(fake.editBuffer);
-  assert.equal(preset.chain.find((b) => b.key === 'dly')!.footswitch, 'fs1');
-  assert.doesNotMatch(text, /bpm/i); // the 0x2002 record is not shown on the unit and cannot be written
-  assert.match(text, /\nDLY +(on|off) +\[FS1\] Analog/);
-  await session.edit([{ kind: 'footswitch', block: 'dly', switch: 'none' }]);
-  assert.equal(decodePreset(fake.editBuffer).chain.find((b) => b.key === 'dly')!.footswitch, null);
-});
-
-test('a full switch fails before anything is sent', async () => {
-  const { session, fake } = setup();
-  const before = fake.received.length;
-  await session.edit([{ kind: 'footswitch', block: 'nr', switch: 'FS1' }, { kind: 'footswitch', block: 'fx1', switch: 'FS1' }, { kind: 'footswitch', block: 'dly', switch: 'FS1' }]);
-  const sent = fake.received.length;
-  await assert.rejects(session.edit([{ kind: 'footswitch', block: 'rvb', switch: 'FS1' }]), /FS1 already switches 3 blocks/);
-  assert.equal(fake.received.length, sent);
-  assert.ok(sent > before);
-});
-
-
 /** A tiny valid 16-bit mono WAV. */
 function tinyWav(): Uint8Array {
   const buf = new Uint8Array(48);
