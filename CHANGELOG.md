@@ -6,6 +6,39 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Comments on captured-profile and user IR slots: write one from the Pedal
+  slots panel and it shows next to the name in the AMP and IR menus, in the
+  same second column as the built-in models' descriptions (without one, the
+  column says which slot it is). Installing from TONE3000 fills it with the
+  tone's title and creator. The pedal stores only a slot's name, so comments
+  live in this browser or desktop app, tied to the slot and the name it held.
+
+### Changed
+
+- New look, a dark "stage" theme, now the default (the light theme stays a
+  click away): graphite glass panels, an amber accent that glows, a lit
+  signal cable running through the chain of pedals, chrome knobs, and the
+  AMP block drawn as an amplifier faceplate with screws, a top vent, a lit
+  power tube (an illustration the owner generated for this project), the
+  speaker grille and a script "Based on …" signature. The other blocks get a
+  dark face in their own colour. The tube follows the AMP block: dark when
+  it is off, warming up over about a second and a half when it is turned
+  on or a new amp model loads, glowing hotter with more gain, and
+  breathing gently while lit (no motion if the system asks for less).
+- The AMP faceplate dresses like the gear each model is based on, without
+  logos: tweed, blackface, British fawn and copper, a brushed-gold Marshall
+  panel, Rectifier diamond plate, hot-rod chrome, 90s black and red, modern
+  German graphite with a blue light, boutique walnut, solid-state silver
+  (no tube on the Jazz 120) and bass black and silver.
+- Model menus are drawn by the editor instead of the system: two aligned
+  columns, the pedal's name and what it is, under the style groups, in the
+  theme's colours, with the same keyboard use as a menu (arrows, Enter,
+  Escape, first letter).
+- Everything but the tube image is CSS and SVG; the tube and the script
+  font ship with the app, so it works offline.
+
 ## [0.13.3] - 2026-11-20
 
 Plain-language model names, and the first update the macOS app installs by

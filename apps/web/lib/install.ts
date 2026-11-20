@@ -11,6 +11,8 @@ export interface InstallSource {
   readonly kind: SlotKind;
   readonly label: string;
   readonly name: string;
+  /** Comment kept for the slot after a successful install (the TONE3000 tone and its creator). */
+  readonly note?: string;
   readonly load: () => Promise<Uint8Array>;
 }
 

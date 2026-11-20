@@ -6,6 +6,7 @@ import { Dialog } from './Dialog';
 import { InstallDialog } from './InstallDialog';
 import { useI18n } from './I18n';
 import { NAME_MAX, type Exclusive, type InstallSource, type SlotKind } from '@/lib/install';
+import { NOTE_MAX, noteFor, setSlotNote, useSlotNotes } from '@/lib/slotNotes';
 
 interface Props {
   connected: boolean;
@@ -22,6 +23,8 @@ export function SlotsPanel({ connected, busy, irNames, profileNames, exclusive, 
   const [sources, setSources] = useState<InstallSource[] | null>(null);
   const [renaming, setRenaming] = useState<{ kind: SlotKind; slot: number; name: string } | null>(null);
   const [renameTried, setRenameTried] = useState(false);
+  const notes = useSlotNotes();
+  const [noting, setNoting] = useState<{ kind: SlotKind; slot: number; name: string; text: string } | null>(null);
 
   const rename = async () => {
     if (!renaming) return;
@@ -44,11 +47,19 @@ export function SlotsPanel({ connected, busy, irNames, profileNames, exclusive, 
     <ol className="slots">
       {Array.from({ length: 5 }, (_, i) => (
         <li key={i} className={names?.[i] ? 'slot' : 'slot muted'}>
-          <span><span className="slot-n">{i + 1}</span> {names?.[i] ?? t('slots.empty')}</span>
+          <span className="slot-text">
+            <span><span className="slot-n">{i + 1}</span> {names?.[i] ?? t('slots.empty')}</span>
+            {noteFor(notes, kind, i, names?.[i]) && <span className="slot-note">{noteFor(notes, kind, i, names?.[i])}</span>}
+          </span>
           {names?.[i] && (
-            <button type="button" className="btn btn-small slot-rename" disabled={disabled} onClick={() => { setRenameTried(false); setRenaming({ kind, slot: i, name: names[i]! }); }}>
-              {t('slots.rename')}
-            </button>
+            <span className="slot-buttons">
+              <button type="button" className="btn btn-small slot-rename" onClick={() => setNoting({ kind, slot: i, name: names[i]!, text: noteFor(notes, kind, i, names[i]) ?? '' })}>
+                {t('slots.note')}
+              </button>
+              <button type="button" className="btn btn-small slot-rename" disabled={disabled} onClick={() => { setRenameTried(false); setRenaming({ kind, slot: i, name: names[i]! }); }}>
+                {t('slots.rename')}
+              </button>
+            </span>
           )}
         </li>
       ))}
@@ -93,6 +104,21 @@ export function SlotsPanel({ connected, busy, irNames, profileNames, exclusive, 
               <button className="btn btn-primary" onClick={() => void rename()} disabled={busy || renaming.name.trim() === ''}>{t('slots.renameSubmit')}</button>
             </div>
           </>
+        )}
+      </Dialog>
+      <Dialog open={noting !== null} title={noting ? t('slots.noteTitle', { name: noting.name }) : ''} onClose={() => setNoting(null)}>
+        {noting && (
+          <form className="sheet-form" onSubmit={(e) => { e.preventDefault(); setSlotNote(noting.kind, noting.slot, noting.name, noting.text); setNoting(null); }}>
+            <label className="field">
+              {t('slots.note')}
+              <input value={noting.text} maxLength={NOTE_MAX} placeholder={t('slots.notePlaceholder')} autoFocus onChange={(e) => setNoting({ ...noting, text: e.target.value })} />
+            </label>
+            <p className="muted small">{t('slots.noteHint')}</p>
+            <div className="sheet-actions">
+              <button type="button" className="btn" onClick={() => setNoting(null)}>{t('action.cancel')}</button>
+              <button type="submit" className="btn btn-primary">{t('slots.noteSave')}</button>
+            </div>
+          </form>
         )}
       </Dialog>
       <InstallDialog sources={sources} irNames={irNames} profileNames={profileNames} exclusive={exclusive} error={error} onClose={() => setSources(null)} />

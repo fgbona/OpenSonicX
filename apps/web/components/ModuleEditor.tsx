@@ -1,10 +1,14 @@
 'use client';
 
 import {
-  type Block, blockModelLabel, type Edit, encodeValue, groupModels, type ModelGroup, modelGuide, modelInfo, modelLabel, modelOf,
+  type Block, blockModelLabel, type Edit, encodeValue, groupModels, modelGuide, modelInfo, modelLabel, modelOf,
   modelsFor, type ModelSpec, paramSpecFor, type Preset,
 } from '@pocket-master/core';
 import { Knob } from './Knob';
+import { AmpTube } from './AmpTube';
+import { ModelPicker, type PickerGroup, type PickerOption } from './ModelPicker';
+import { noteFor, useSlotNotes } from '@/lib/slotNotes';
+import { ampSkin, hasTube } from '@/lib/ampSkins';
 import { ModuleIcon } from './ModuleIcon';
 import { useI18n } from './I18n';
 import { modelValue, parseModelValue, profileChoices } from '@/lib/ampChoices';
@@ -23,17 +27,26 @@ const SINGLE_MODEL = new Set(['nr']);
 /** The selected block: model, on/off, every parameter as a knob, switch or list. */
 export function ModuleEditor({ preset, block, editable, onEdit, irNames, profileNames }: Props) {
   const { t, lang } = useI18n();
-  // The pedal's own name first (it is what its screen shows), then what it is in plain words.
-  const optionText = (m: ModelSpec) => {
-    const name = modelLabel(block.key, m.code, m.name, irNames);
+  const notes = useSlotNotes();
+  // The pedal's own name (what its screen shows), and what it is in plain words beside it.
+  const option = (m: ModelSpec, value: string): PickerOption => {
     const g = modelGuide(block.key, m.name);
-    return g && g.group !== 'userIr' ? `${name} — ${g.label[lang]}` : name;
+    if (g?.group === 'userIr') {
+      // A user IR: the file name on the pedal, and the owner's comment (or which slot it is).
+      const slot = Number(m.name.replace(/\D/g, '')) - 1;
+      const name = irNames?.[slot] ?? m.name;
+      return { value, name, detail: noteFor(notes, 'ir', slot, irNames?.[slot]) ?? t('block.irSlot', { n: slot + 1 }) };
+    }
+    return { value, name: modelLabel(block.key, m.code, m.name, irNames), detail: g?.label[lang] };
   };
-  const grouped = (render: (m: ModelSpec) => React.ReactNode, groups: ModelGroup<ModelSpec>[]) =>
-    groups.length === 1 ? groups[0]!.models.map(render) : groups.map((g) => <optgroup key={g.name ?? 'other'} label={g.name ?? t('block.otherModels')}>{g.models.map(render)}</optgroup>);
+  const modelGroups = (value: (m: ModelSpec) => string): PickerGroup[] => {
+    const groups = groupModels(block.key, choices, lang);
+    return groups.map((g) => ({ name: groups.length === 1 ? null : g.name ?? t('block.otherModels'), options: g.models.map((m) => option(m, value(m))) }));
+  };
   const model = modelOf(preset, block);
   const guide = model ? modelGuide(block.key, model.name) : undefined;
   const clone = block.key === 'amp' && preset.ampMode === 'clone';
+  const skin = block.key === 'amp' && !clone ? ampSkin(model?.name) : null;
   const choices = SINGLE_MODEL.has(block.key) ? [] : modelsFor(block.key);
   const profiles = block.key === 'amp' ? profileChoices(profileNames) : [];
   const shown = blockModelLabel(block, preset.ampMode, irNames, profileNames);
@@ -49,24 +62,20 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
         <ModuleIcon blockKey={block.key} size={36} />
         <span className="editor-label">{block.label}</span>
         {editable && block.key === 'amp' ? (
-          <select className="editor-model" aria-label={t('block.modelAria', { block: block.label })} value={modelValue(block.code, clone)}
-            onChange={(e) => {
-              const choice = parseModelValue(e.target.value);
+          <ModelPicker ariaLabel={t('block.modelAria', { block: block.label })} value={modelValue(block.code, clone)}
+            onChange={(v) => {
+              const choice = parseModelValue(v);
               if (choice) onEdit({ kind: 'model', module: block.module, code: choice.code, clone: choice.clone });
-            }}>
-            {clone && shown === block.model && <option value={modelValue(block.code, true)} disabled>{t('block.captured', { model: block.model })}</option>}
-            {grouped((m) => <option key={m.code} value={modelValue(m.code, false)}>{optionText(m)}</option>, groupModels(block.key, choices, lang))}
-            {profiles.length > 0 && (
-              <optgroup label={t('block.profiles')}>
-                {profiles.map((p) => <option key={p.code} value={modelValue(p.code, true)}>{t('block.profileOption', { name: p.name, n: p.slot })}</option>)}
-              </optgroup>
-            )}
-          </select>
+            }}
+            groups={[
+              ...(clone && shown === block.model ? [{ name: null, options: [{ value: modelValue(block.code, true), name: t('block.captured', { model: block.model }), disabled: true }] }] : []),
+              ...modelGroups((m) => modelValue(m.code, false)),
+              ...(profiles.length > 0 ? [{ name: t('block.profiles'), options: profiles.map((p) => ({ value: modelValue(p.code, true), name: p.name, detail: noteFor(notes, 'profile', p.slot - 1, p.name) ?? t('block.profileSlot', { n: p.slot }) })) }] : []),
+            ]} />
         ) : editable && choices.length > 0 ? (
-          <select className="editor-model" aria-label={t('block.modelAria', { block: block.label })} value={block.code}
-            onChange={(e) => onEdit({ kind: 'model', module: block.module, code: Number(e.target.value) })}>
-            {grouped((m) => <option key={m.code} value={m.code}>{optionText(m)}</option>, groupModels(block.key, choices, lang))}
-          </select>
+          <ModelPicker ariaLabel={t('block.modelAria', { block: block.label })} value={String(block.code)}
+            onChange={(v) => onEdit({ kind: 'model', module: block.module, code: Number(v) })}
+            groups={modelGroups((m) => String(m.code))} />
         ) : (
           <span className="editor-model editor-model-static">{shown}</span>
         )}
@@ -77,6 +86,8 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
           </button>
         </span>
       </header>
+      <div className={`editor-face face-${block.key}`} data-skin={skin ?? undefined}>
+      {block.key === 'amp' && <AmpDecor on={block.on} drive={gainOf(block)} tubeKey={block.code} tube={hasTube(skin)} />}
       {block.params.length === 0 ? (
         <p className="muted small">{t('block.noParams')}</p>
       ) : (
@@ -111,9 +122,35 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
           })}
         </div>
       )}
-      {(info?.basedOn || info?.about) && (
-        <p className="editor-info">{info.basedOn ? t('editor.basedOn', { gear: info.basedOn }) : ''}{info.basedOn && info.about ? ' · ' : ''}{lang === 'pt' && guide ? guide.aboutPt : info.about}</p>
-      )}
+      {block.key === 'amp' && guide && info?.basedOn && <p className="amp-script">{t('editor.basedOn', { gear: guide.label[lang] })}</p>}
+      {(info?.basedOn || info?.about) && (() => {
+        // The AMP's faceplate already signs "Based on …"; the line below then only describes it.
+        const basedOn = block.key === 'amp' && guide ? undefined : info.basedOn;
+        return <p className="editor-info">{basedOn ? t('editor.basedOn', { gear: basedOn }) : ''}{basedOn && info.about ? ' · ' : ''}{lang === 'pt' && guide ? guide.aboutPt : info.about}</p>;
+      })()}
+      </div>
     </section>
   );
+}
+
+/** Faceplate details of the AMP panel: screws, top vent, a lit power tube and the speaker grille. */
+function AmpDecor({ on, drive, tubeKey, tube }: { on: boolean; drive: number; tubeKey: number; tube: boolean }) {
+  return (
+    <>
+      <span className="amp-screw amp-screw-tl" aria-hidden="true" />
+      <span className="amp-screw amp-screw-tr" aria-hidden="true" />
+      <span className="amp-screw amp-screw-bl" aria-hidden="true" />
+      <span className="amp-screw amp-screw-br" aria-hidden="true" />
+      <span className="amp-vent" aria-hidden="true" />
+      {tube ? <AmpTube key={tubeKey} on={on} drive={drive} /> : <span className="amp-tube" aria-hidden="true" />}
+      <span className="amp-grille" aria-hidden="true" />
+    </>
+  );
+}
+
+/** The amp's gain as 0..1, for how hot the tube glows; middle when the model has no gain knob. */
+function gainOf(block: Block): number {
+  const gain = block.params.find((p) => /gain/i.test(p.name) && p.kind === 'number');
+  if (!gain || gain.max === undefined || gain.min === undefined || gain.max === gain.min) return 0.5;
+  return (gain.value - gain.min) / (gain.max - gain.min);
 }

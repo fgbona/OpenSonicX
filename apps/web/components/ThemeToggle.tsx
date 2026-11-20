@@ -8,9 +8,9 @@ export const THEME_KEY = 'pocket-master-editor.theme';
 
 /**
  * Runs in <head> before the page paints, so a saved theme never flashes the other one.
- * Without a saved choice it sets nothing and the CSS follows the system.
+ * Without a saved choice the editor opens in its dark stage theme.
  */
-export const THEME_BOOT_SCRIPT = `try{var t=localStorage.getItem('${THEME_KEY}');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}`;
+export const THEME_BOOT_SCRIPT = `var t='dark';try{var s=localStorage.getItem('${THEME_KEY}');if(s==='light'||s==='dark')t=s}catch(e){}document.documentElement.dataset.theme=t`;
 
 const current = (): Theme => {
   const chosen = document.documentElement.dataset.theme;
