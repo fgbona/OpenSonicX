@@ -754,3 +754,7 @@ button, select { font: inherit; color: inherit; }
   .picker-option .picker-detail { white-space: normal; }
   .picker-button .picker-detail { display: none; }
 }
+/* Glass panels (backdrop-filter) are stacking contexts, so a later panel would paint over an open
+   menu: the panel holding the open menu rises above its siblings. */
+.editor { position: relative; }
+.editor:has(.picker-list) { z-index: 40; }
