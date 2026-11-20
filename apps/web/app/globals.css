@@ -526,3 +526,8 @@ button, select { font: inherit; color: inherit; }
 @media (prefers-reduced-transparency: reduce) {
   .toolbar { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
+
+/* Discreet page tools under the panels (the SysEx log toggle). */
+.page-tools { text-align: center; margin: 8px 0 24px; }
+.btn-link { background: none; border: 0; padding: 4px 8px; color: var(--label-2); font: inherit; font-size: 0.8125rem; text-decoration: underline; cursor: pointer; }
+.btn-link:hover { color: var(--label); }
