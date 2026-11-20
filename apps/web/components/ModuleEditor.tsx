@@ -1,8 +1,8 @@
 'use client';
 
 import {
-  type Block, blockModelLabel, type Edit, encodeValue, modelInfo, modelLabel, modelOf, modelsFor,
-  paramSpecFor, type Preset,
+  type Block, blockModelLabel, type Edit, encodeValue, groupModels, type ModelGroup, modelGuide, modelInfo, modelLabel, modelOf,
+  modelsFor, type ModelSpec, paramSpecFor, type Preset,
 } from '@pocket-master/core';
 import { Knob } from './Knob';
 import { ModuleIcon } from './ModuleIcon';
@@ -22,8 +22,17 @@ const SINGLE_MODEL = new Set(['nr']);
 
 /** The selected block: model, on/off, every parameter as a knob, switch or list. */
 export function ModuleEditor({ preset, block, editable, onEdit, irNames, profileNames }: Props) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  // The pedal's own name first (it is what its screen shows), then what it is in plain words.
+  const optionText = (m: ModelSpec) => {
+    const name = modelLabel(block.key, m.code, m.name, irNames);
+    const g = modelGuide(block.key, m.name);
+    return g && g.group !== 'userIr' ? `${name} — ${g.label[lang]}` : name;
+  };
+  const grouped = (render: (m: ModelSpec) => React.ReactNode, groups: ModelGroup<ModelSpec>[]) =>
+    groups.length === 1 ? groups[0]!.models.map(render) : groups.map((g) => <optgroup key={g.name ?? 'other'} label={g.name ?? t('block.otherModels')}>{g.models.map(render)}</optgroup>);
   const model = modelOf(preset, block);
+  const guide = model ? modelGuide(block.key, model.name) : undefined;
   const clone = block.key === 'amp' && preset.ampMode === 'clone';
   const choices = SINGLE_MODEL.has(block.key) ? [] : modelsFor(block.key);
   const profiles = block.key === 'amp' ? profileChoices(profileNames) : [];
@@ -46,7 +55,7 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
               if (choice) onEdit({ kind: 'model', module: block.module, code: choice.code, clone: choice.clone });
             }}>
             {clone && shown === block.model && <option value={modelValue(block.code, true)} disabled>{t('block.captured', { model: block.model })}</option>}
-            <optgroup label={t('block.ampModels')}>{choices.map((m) => <option key={m.code} value={modelValue(m.code, false)}>{m.name}</option>)}</optgroup>
+            {grouped((m) => <option key={m.code} value={modelValue(m.code, false)}>{optionText(m)}</option>, groupModels(block.key, choices, lang))}
             {profiles.length > 0 && (
               <optgroup label={t('block.profiles')}>
                 {profiles.map((p) => <option key={p.code} value={modelValue(p.code, true)}>{t('block.profileOption', { name: p.name, n: p.slot })}</option>)}
@@ -56,7 +65,7 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
         ) : editable && choices.length > 0 ? (
           <select className="editor-model" aria-label={t('block.modelAria', { block: block.label })} value={block.code}
             onChange={(e) => onEdit({ kind: 'model', module: block.module, code: Number(e.target.value) })}>
-            {choices.map((m) => <option key={m.code} value={m.code}>{modelLabel(block.key, m.code, m.name, irNames)}</option>)}
+            {grouped((m) => <option key={m.code} value={m.code}>{optionText(m)}</option>, groupModels(block.key, choices, lang))}
           </select>
         ) : (
           <span className="editor-model editor-model-static">{shown}</span>
@@ -103,7 +112,7 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
         </div>
       )}
       {(info?.basedOn || info?.about) && (
-        <p className="editor-info">{info.basedOn ? t('editor.basedOn', { gear: info.basedOn }) : ''}{info.basedOn && info.about ? ' · ' : ''}{info.about}</p>
+        <p className="editor-info">{info.basedOn ? t('editor.basedOn', { gear: info.basedOn }) : ''}{info.basedOn && info.about ? ' · ' : ''}{lang === 'pt' && guide ? guide.aboutPt : info.about}</p>
       )}
     </section>
   );

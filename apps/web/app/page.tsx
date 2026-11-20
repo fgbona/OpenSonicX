@@ -16,6 +16,7 @@ import { useI18n } from '@/components/I18n';
 import { useIsDesktop } from '@/lib/desktop';
 
 const STEPS = ['empty.step1', 'empty.step2', 'empty.step3'] as const;
+const LOG_KEY = 'pocket-master-editor.showLog';
 // The desktop app grants MIDI itself and has no browser to pick.
 const DESKTOP_STEPS = ['empty.step1', 'empty.desktopStep2'] as const;
 
@@ -24,6 +25,24 @@ export default function EditorPage() {
   const { t, te } = useI18n();
   const desktop = useIsDesktop();
   const [saveOpen, setSaveOpen] = useState(false);
+  // The SysEx log is a diagnostic tool: hidden unless asked for, and the choice is remembered.
+  const [showLog, setShowLog] = useState(false);
+  useEffect(() => {
+    try {
+      setShowLog(localStorage.getItem(LOG_KEY) === '1');
+    } catch {
+      // storage blocked: the log stays hidden
+    }
+  }, []);
+  const toggleLog = () => {
+    const next = !showLog;
+    setShowLog(next);
+    try {
+      localStorage.setItem(LOG_KEY, next ? '1' : '0');
+    } catch {
+      // storage blocked: the choice lasts for this page only
+    }
+  };
   const [settingsOpen, setSettingsOpen] = useState(false);
   const connected = pm.status === 'connected' || pm.status === 'reading';
   // The sidebar lists every preset: read the names once the pedal is connected.
@@ -111,7 +130,8 @@ export default function EditorPage() {
           onRestore={pm.restore}
           onError={pm.showError}
         />
-        <SysexLog log={pm.log} onClear={pm.clearLog} />
+        {showLog && <SysexLog log={pm.log} onClear={pm.clearLog} />}
+        <p className="page-tools"><button type="button" className="btn-link" onClick={toggleLog}>{t(showLog ? 'log.hide' : 'log.show')}</button></p>
         <SaveDialog
           open={saveOpen}
           presetIndex={pm.presetIndex}
