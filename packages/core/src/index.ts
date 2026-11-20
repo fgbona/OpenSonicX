@@ -25,5 +25,4 @@ export * from './clo/codec.ts';
 export * from './clo/reference-di.ts';
 export * from './clo/synthetic-di.ts';
 export * from './tone3000.ts';
-export * from './tempo.ts';
 export * from './globals.ts';

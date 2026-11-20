@@ -394,15 +394,6 @@ test('rename_slot renames a loaded slot and refuses an empty one', async () => {
   await assert.rejects(session.renameSlot({ kind: 'ir', slot: 1, name: 'eleven chars' }), /1\.\.10 characters/);
 });
 
-test('with Sync on, edit_preset sets a delay Time by note division', async () => {
-  const { session, fake } = setup();
-  await session.edit([{ kind: 'parameter', block: 'dly', parameter: 'sync', value: true }]);
-  const text = await session.edit([{ kind: 'parameter', block: 'dly', parameter: 'time', value: '1/8D' }]);
-  assert.match(text, /Time 1\/8D/);
-  await assert.rejects(session.edit([{ kind: 'parameter', block: 'dly', parameter: 'time', value: 400 }]), /Time options: 1\/1/);
-  assert.ok(fake.received.length > 0);
-});
-
 test('get_global_settings reports the device-wide settings in words', async () => {
   const { session } = setup();
   const text = await session.getGlobals();

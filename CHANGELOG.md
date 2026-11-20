@@ -6,6 +6,16 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Sync (modulation and delay) and Trail (delay) are gone from the model
+  catalog, and with them tempo sync's note divisions. Firmware V1.3.3 has
+  neither: checked on a unit, writing either slot changed the model's
+  first parameter instead (delay Mix 12 -> 1, chorus Depth 38 -> 1), so
+  turning Sync or Trail on in the editor or through the MCP silently
+  ruined Mix or Depth. They came from SonicMaster's catalog, which may
+  target newer firmware.
+
 ## [0.12.1] - 2026-11-19
 
 Ships the 0.12.0 container image, which never finished building (see

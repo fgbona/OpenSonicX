@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   applyEdit, decodeCurrentPreset, fromHex, decodeNotification, decodePreset, diffPresets, editToCommands, MessageType, Query,
-  loadIntoEditBuffer, paramSpecFor, presetFile, presetLabel, restoreFromBackup, saveToSlot,
+  loadIntoEditBuffer, presetFile, presetLabel, restoreFromBackup, saveToSlot,
   type BackupFile, type Edit, type Frame, type Pedal, type Preset, type PresetFile, type Progress, type SaveResult, type SlotBackup,
 } from '@pocket-master/core';
 import { LinkClosedError, linkPedal, PocketMasterLink, readProfileNames, readUserIrNames, type LogEntry } from '@pocket-master/core';
@@ -192,10 +192,8 @@ export function usePocketMaster() {
         editGeneration.current += 1;
         presetRef.current = next;
         patch({ preset: next, error: null });
-        // A model or chain change, a footswitch move or a Sync switch (the pedal rewrites the
-        // synced Time or Rate) is followed by a re-read, so the screen shows the pedal's values.
-        const syncToggle = (e: Edit) => e.kind === 'param' && preset.chain.some((b) => b.module === e.module && paramSpecFor(preset, b, e.alg)?.name === 'Sync');
-        if (edits.some((e) => e.kind === 'model' || e.kind === 'chain' || syncToggle(e))) scheduleReread();
+        // A model or chain change is followed by a re-read, so the screen shows the pedal's values.
+        if (edits.some((e) => e.kind === 'model' || e.kind === 'chain')) scheduleReread();
       } catch (e) {
         if (e instanceof LinkClosedError) return;
         console.error('edit failed', e);

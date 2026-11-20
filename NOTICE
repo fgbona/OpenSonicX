@@ -36,13 +36,11 @@ The catalog in turn was derived by pocket-master-mcp from PocketEdit
 
 SonicMaster (https://github.com/skyggedans/SonicMaster), at commit 931a68f, is the
 source of protocol knowledge ported to TypeScript here: the footswitch commands and their place in the dump (packages/core/src/slots.ts,
-commands.ts, dump.ts), the Sync and Trail parameters added to
-packages/core/src/catalog.json, and the user IR upload: WAV conversion, blob,
+commands.ts, dump.ts), the user IR upload: WAV conversion, blob,
 chunked transport, edit session and flash-write notice
 (packages/core/src/ir-upload.ts, link.ts, pedal.ts), and the NAM capture to
 clone-model converter, the .clo format and the profile upload
-(packages/core/src/clo/, pedal.ts), the tempo-sync note divisions
-(packages/core/src/sync.ts), and the device-wide settings: dump offsets,
+(packages/core/src/clo/, pedal.ts), and the device-wide settings: dump offsets,
 setting addresses, EXP/FS target registers and factory reset
 (packages/core/src/globals.ts), and the Bluetooth LE MIDI service, characteristic
 and framing (apps/web/lib/ble.ts). The editor's block drawings are original and
