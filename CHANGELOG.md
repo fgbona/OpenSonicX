@@ -18,9 +18,9 @@ itself (from 0.13.2).
   signal cable running through the chain of pedals, chrome knobs, and the
   AMP block drawn as an amplifier faceplate with screws, a top vent, a lit
   power tube (an illustration the owner generated for this project), the
-  speaker grille and a script "Based on …" signature. The
-  other blocks get a dark face in their own colour. All drawn in CSS and
-  SVG, with the script font served by the app, so it works offline.
+  speaker grille and a script "Based on …" signature. The other blocks get a
+  dark face in their own colour. Everything but the tube image is CSS and
+  SVG; the tube and the script font ship with the app, so it works offline.
 - Model menus speak plainly: every model keeps the pedal's own name (what
   its screen shows) followed by what it is, such as "Brit 800 — Marshall
   JCM800" or "Plate 1 — Large plate", and long menus are grouped by style
