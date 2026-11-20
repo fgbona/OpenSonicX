@@ -17,6 +17,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - Installing a NAM capture no longer freezes the page for about a second
   before the conversion: the reference DI's 44.1 -> 48 kHz resample runs
   in a worker like the probe passes and the fit.
+- The container image build no longer runs the test suite: it already
+  runs natively in CI and in the release's verify job, and under QEMU the
+  arm64 build spent hours on the NAM converter's golden test (175 s on
+  amd64), so the 0.12.0 image never finished publishing.
 - Queries to the pedal go out one at a time. On connect the presets
   sidebar read the 21-packet name list while the preset was being read;
   replies are matched by kind and joined by packet count, so two in flight
