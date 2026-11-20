@@ -51,7 +51,7 @@ function Segmented({ label, value, options, disabled, onChange }: { label: strin
   );
 }
 
-/** Global Options: the Pocket Master's device-wide levels, display and power-off confirm, factory reset. */
+/** Global Options: the Pocket Master's device-wide levels, display and boot anti-touch protection, factory reset. */
 export function SettingsDialog({ open, onClose, exclusive, writeGlobal, busy, error, factoryReset, onReset }: Props) {
   const { t } = useI18n();
   const [values, setValues] = useState<Values | null>(null);
@@ -105,7 +105,7 @@ export function SettingsDialog({ open, onClose, exclusive, writeGlobal, busy, er
                 onChange={(e) => set('backlight', Number(e.target.value))} style={{ '--fill': `${values.backlight ?? 0}%` } as React.CSSProperties} />
               <span className="param-value">{values.backlight ?? '—'}</span>
             </label>
-            <Segmented label={t('settings.powerConfirm')} value={values.powerConfirm} options={[t('block.off'), t('block.on')]} disabled={off} onChange={(v) => set('powerConfirm', v)} />
+            <Segmented label={t('settings.bootProtection')} value={values.bootProtection} options={[t('block.off'), t('block.on')]} disabled={off} onChange={(v) => set('bootProtection', v)} />
           </section>
           <section className="settings-group settings-danger">
             <h3>{t('settings.reset')}</h3>

@@ -171,7 +171,7 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
 
   server.registerTool('get_global_settings', {
     title: 'Get global settings',
-    description: 'Device-wide settings that are not part of any preset: master volume, input/FX-rec/monitor/BT-rec levels, backlight, power-off confirm.',
+    description: 'Device-wide settings that are not part of any preset: master volume, input/FX-rec/monitor/BT-rec levels, backlight, boot anti-touch protection.',
     annotations: READ,
   }, () => reply('get_global_settings', options, () => session.getGlobals()));
 
@@ -179,11 +179,11 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
   const flag = z.number().int().min(0).max(1);
   server.registerTool('set_global_settings', {
     title: 'Change global settings',
-    description: 'Changes device-wide settings (they affect every preset and are kept by the pedal at once). Levels are dB -20..20; backlight 0..100; powerConfirm 0 off / 1 on. Ask the user before changing these. Factory reset is not available here.',
+    description: 'Changes device-wide settings (they affect every preset and are kept by the pedal at once). Levels are dB -20..20; backlight 0..100; bootProtection 0 off / 1 on. Ask the user before changing these. Factory reset is not available here.',
     inputSchema: {
       masterVolume: z.number().int().min(0).max(100).optional(),
       inputLevel: level.optional(), fxRecLevel: level.optional(), monitorLevel: level.optional(), btRecLevel: level.optional(),
-      powerConfirm: flag.optional(),
+      bootProtection: flag.optional(),
       backlight: z.number().int().min(0).max(100).optional(),
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },

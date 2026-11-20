@@ -41,7 +41,7 @@ const OWNER_GLOBALS = fromHex(
 test('the globals reply decodes by record address, not by byte position', () => {
   assert.deepEqual(decodeGlobals(OWNER_GLOBALS), {
     masterVolume: 60, backlight: 100, inputLevel: -5, fxRecLevel: 0, monitorLevel: 0, btRecLevel: -20,
-    mode: 1, powerConfirm: 1, reamp: null, eco: null, expFsType: null,
+    mode: 1, bootProtection: 1, reamp: null, eco: null, expFsType: null,
   });
   assert.equal(decodeGlobals(Uint8Array.from([0x12, 0x41, ...OWNER_GLOBALS.slice(2)])), null);
   assert.equal(decodeGlobals(OWNER_GLOBALS.slice(0, 10)), null, 'no master volume record');
