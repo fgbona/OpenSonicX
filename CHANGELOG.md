@@ -6,6 +6,15 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Global settings are read by record address. The reply is a list of
+  `<address> <length> <value>` records, but the decoder (ported from
+  SonicMaster) read fixed byte positions; on firmware V1.3.3, which sends
+  fewer records, it showed the power-off confirm as "re-amp on". Re-amp,
+  ECO and the EXP/FS jack type are absent from that firmware's reply and
+  now show as not reported; power-off confirm is read for the first time.
+
 ## [0.12.2] - 2026-11-20
 
 Fixes from the first hardware pass on a unit with firmware V1.3.3: two

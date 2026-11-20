@@ -22,7 +22,7 @@ async function connected() {
 
 const text = (r: unknown) => (r as { content: { text: string }[] }).content.map((c) => c.text).join('\n');
 
-const GLOBALS = { masterVolume: 80, inputLevel: -3, fxRecLevel: 2, monitorLevel: 0, btRecLevel: 0, backlight: 6, mode: 1, reamp: 0, eco: 0, expFsType: 1 } as const;
+const GLOBALS = { masterVolume: 80, inputLevel: -3, fxRecLevel: 2, monitorLevel: 0, btRecLevel: 0, backlight: 6, mode: 1, powerConfirm: 1, reamp: 0, eco: 0, expFsType: 1 } as const;
 
 test('the server lists every tool, marking reads read-only and slot writes destructive', async () => {
   const { client } = await connected();

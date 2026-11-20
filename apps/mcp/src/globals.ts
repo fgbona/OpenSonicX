@@ -18,17 +18,26 @@ const LABEL: Record<GlobalSetting, string> = {
 };
 
 const db = (v: number) => `${v} dB`;
-const onOff = (v: number | null) => (v === null ? 'unknown' : v ? 'on' : 'off');
+const onOff = (v: number) => (v ? 'on' : 'off');
 
 export function describeGlobals(g: GlobalSettings): string {
-  return [
+  const shown = (label: string, value: number | null, text: (v: number) => string) => (value === null ? null : `${label} ${text(value)}`);
+  const levels = [shown('Input', g.inputLevel, db), shown('FX rec', g.fxRecLevel, db), shown('Monitor', g.monitorLevel, db), shown('BT rec', g.btRecLevel, db)]
+    .filter((l) => l !== null);
+  const lines = [
     `Master volume ${g.masterVolume}`,
-    `Levels: Input ${db(g.inputLevel)}, FX rec ${db(g.fxRecLevel)}, Monitor ${db(g.monitorLevel)}, BT rec ${db(g.btRecLevel)}`,
-    `USB recording: ${g.mode === null ? 'unknown' : g.mode ? 'wet' : 'dry'}; re-amp ${onOff(g.reamp)}`,
-    `EXP/FS jack: ${g.expFsType === null ? 'unknown' : JACK[g.expFsType] ?? `type ${g.expFsType}`}`,
-    `Backlight ${g.backlight ?? 'unknown'}; ECO ${onOff(g.eco)}`,
-    'Not reported by the pedal: EXP/FS targets, power-off confirm, battery only.',
-  ].join('\n');
+    levels.length > 0 ? `Levels: ${levels.join(', ')}` : null,
+    shown('USB recording:', g.mode, (v) => (v ? 'wet' : 'dry')),
+    shown('Re-amp', g.reamp, onOff),
+    shown('EXP/FS jack:', g.expFsType, (v) => JACK[v] ?? `type ${v}`),
+    shown('Backlight', g.backlight, String),
+    shown('ECO', g.eco, onOff),
+    shown('Power-off confirm', g.powerConfirm, onOff),
+  ].filter((l) => l !== null);
+  const missing = ([
+    ['re-amp', g.reamp], ['ECO', g.eco], ['EXP/FS jack type', g.expFsType], ['power-off confirm', g.powerConfirm],
+  ] as const).filter(([, v]) => v === null).map(([name]) => name);
+  return [...lines, `Not reported by the pedal: EXP/FS targets, battery only${missing.length ? `, ${missing.join(', ')}` : ''}.`].join('\n');
 }
 
 /**
