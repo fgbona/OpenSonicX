@@ -111,13 +111,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+        # A full release, not a pre-release: the desktop apps update from releases/latest,
+        # which skips pre-releases.
         run: |
-          prerelease=""
-          case "$GITHUB_REF_NAME" in v0.*) prerelease="--prerelease";; esac
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release edit "$GITHUB_REF_NAME" --notes-file notes.md $prerelease
+            gh release edit "$GITHUB_REF_NAME" --notes-file notes.md --prerelease=false --latest
           else
-            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md $prerelease
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md --latest
           fi
 
   desktop:

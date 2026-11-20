@@ -13,6 +13,24 @@ and the project uses [Semantic Versioning](https://semver.org/).
   the root of a custom domain set in the PAGES_DOMAIN variable. `NEXT_BASE_PATH`
   builds it under a path prefix; the NAM conversion worker follows that
   prefix, which until now was assumed to be the site root.
+- The macOS desktop app updates itself: it downloads the new release's zip,
+  checks it against the SHA-512 in latest-mac.yml, and swaps its .app bundle
+  when it quits (or right away, if you choose to restart), keeping the old
+  one if the copy fails. Squirrel.Mac cannot do this for an app without an
+  Apple Developer signature. It still only announces the release when it
+  runs from the disk image, from a translocated copy or from a folder you
+  cannot write to. Updated apps carry no quarantine flag, so Open Anyway is
+  needed only after the first download.
+
+### Fixed
+
+- Releases are full releases, no longer pre-releases: the desktop apps'
+  updater reads releases/latest, which skips pre-releases, so a 0.13.0 app
+  could not find any update. v0.13.0 was switched over by hand, which lets
+  the apps already installed find the next version.
+- The macOS app is named Pocket Master Editor again; 0.13.0 and 0.13.1
+  installed it as pocket-master-editor.app (a Linux file-name setting leaked
+  into the macOS build). Updates keep the installed bundle's name.
 
 ## [0.13.1] - 2026-11-20
 

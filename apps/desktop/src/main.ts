@@ -2,12 +2,14 @@
  * Desktop shell of the editor: serves the web app's static export over a privileged app://
  * scheme (a secure context, so Web MIDI, Web Bluetooth, workers and Cache Storage work), grants
  * MIDI to that origin only, picks the pedal for Web Bluetooth, and keeps itself up to date from
- * GitHub Releases. Unsigned macOS builds cannot install updates, so there it only announces them.
+ * GitHub Releases: electron-updater on Windows and Linux, our own swap on macOS (mac-update.ts),
+ * where it only announces the update when the app cannot replace itself.
  */
 import { app, BrowserWindow, dialog, net, protocol, session, shell } from 'electron';
 import electronUpdater from 'electron-updater';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { appBundle, canReplace, pickZip, prepare, startSwap } from './mac-update.ts';
 import { resolveAppFile } from './serve.ts';
 
 const ORIGIN = 'app://editor';
@@ -57,18 +59,42 @@ function createWindow(): void {
   void win.loadURL(`${ORIGIN}/`);
 }
 
+/** Offers to restart now; otherwise `install` runs when the app quits. */
+async function offerRestart(version: string, install: (relaunch: boolean) => void): Promise<void> {
+  const { response } = await dialog.showMessageBox({ type: 'info', message: text.ready(version), buttons: [text.restart(), text.later()] });
+  if (response === 0) install(true);
+  else app.once('will-quit', () => install(false));
+}
+
+/** macOS: download, verify and swap the bundle ourselves; announce the release when that is not possible. */
+async function updateMac(version: string, files: readonly { url: string; sha512: string }[]): Promise<void> {
+  const bundle = appBundle(process.execPath);
+  const zip = pickZip(files, process.arch);
+  if (zip && canReplace(bundle)) {
+    try {
+      const next = await prepare(zip, `${RELEASES}/download/v${version}/${zip.url}`, net.fetch);
+      return offerRestart(version, (relaunch) => {
+        startSwap(bundle, next, process.pid, relaunch);
+        if (relaunch) app.quit();
+      });
+    } catch (error) {
+      console.warn('self-update failed, announcing the release instead:', (error as Error).message);
+    }
+  }
+  const { response } = await dialog.showMessageBox({ type: 'info', message: text.available(version), buttons: [text.download(), text.later()] });
+  if (response === 0) void shell.openExternal(`${RELEASES}/tag/v${version}`);
+}
+
 function checkForUpdates(): void {
   const { autoUpdater } = electronUpdater;
-  const installs = process.platform !== 'darwin';
-  autoUpdater.autoDownload = installs;
-  autoUpdater.on('update-available', async (info) => {
-    if (installs) return; // downloads in the background; asked to restart once ready
-    const { response } = await dialog.showMessageBox({ type: 'info', message: text.available(info.version), buttons: [text.download(), text.later()] });
-    if (response === 0) void shell.openExternal(`${RELEASES}/tag/v${info.version}`);
+  const mac = process.platform === 'darwin';
+  autoUpdater.autoDownload = !mac;
+  autoUpdater.on('update-available', (info) => {
+    if (mac) void updateMac(info.version, info.files);
   });
-  autoUpdater.on('update-downloaded', async (info) => {
-    const { response } = await dialog.showMessageBox({ type: 'info', message: text.ready(info.version), buttons: [text.restart(), text.later()] });
-    if (response === 0) autoUpdater.quitAndInstall();
+  autoUpdater.on('update-downloaded', (info) => {
+    // Later: electron-updater installs it when the app quits (autoInstallOnAppQuit).
+    void offerRestart(info.version, (relaunch) => { if (relaunch) autoUpdater.quitAndInstall(); });
   });
   autoUpdater.on('error', (error) => console.warn('update check failed:', error.message)); // offline is normal
   void autoUpdater.checkForUpdates().catch((error: Error) => console.warn('update check failed:', error.message));

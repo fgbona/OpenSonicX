@@ -72,8 +72,8 @@
     },
     "linux": {
       "target": "AppImage",
-      "category": "Audio"
-    },
-    "executableName": "pocket-master-editor"
+      "category": "Audio",
+      "executableName": "pocket-master-editor"
+    }
   }
 }
