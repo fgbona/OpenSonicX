@@ -1,0 +1,33 @@
+name: Converter parity
+# The NAM -> .clo parity tests against SonicMaster's golden output take minutes, so
+# ci.yml and release.yml skip them; they run here, only when the converter changes.
+on:
+  push:
+    branches: [main]
+    paths: &paths
+      - packages/core/src/clo/**
+      - packages/core/test/clo-parity.test.ts
+      - packages/core/test/fixtures/clo/**
+      - apps/mcp/src/convert*.ts
+      - apps/mcp/test/convert.test.ts
+      - .github/workflows/converter.yml
+  pull_request:
+    paths: *paths
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: converter-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  parity:
+    name: Converter matches SonicMaster
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: node --test packages/core/test/clo-parity.test.ts apps/mcp/test/convert.test.ts

@@ -26,6 +26,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+        env:
+          # The slow converter parity tests run in converter.yml, only when the converter changes.
+          SKIP_CLO_PARITY: '1'
       - run: npm run typecheck
       - run: npm run build
       - name: Tag matches every package.json version
