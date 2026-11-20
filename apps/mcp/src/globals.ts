@@ -27,15 +27,13 @@ export function describeGlobals(g: GlobalSettings): string {
   const lines = [
     `Master volume ${g.masterVolume}`,
     levels.length > 0 ? `Levels: ${levels.join(', ')}` : null,
-    shown('USB recording:', g.mode, (v) => (v ? 'wet' : 'dry')),
-    shown('Re-amp', g.reamp, onOff),
     shown('EXP/FS jack:', g.expFsType, (v) => JACK[v] ?? `type ${v}`),
     shown('Backlight', g.backlight, String),
     shown('ECO', g.eco, onOff),
     shown('Power-off confirm', g.powerConfirm, onOff),
   ].filter((l) => l !== null);
   const missing = ([
-    ['re-amp', g.reamp], ['ECO', g.eco], ['EXP/FS jack type', g.expFsType], ['power-off confirm', g.powerConfirm],
+    ['ECO', g.eco], ['EXP/FS jack type', g.expFsType], ['power-off confirm', g.powerConfirm],
   ] as const).filter(([, v]) => v === null).map(([name]) => name);
   return [...lines, `Not reported by the pedal: EXP/FS targets, battery only${missing.length ? `, ${missing.join(', ')}` : ''}.`].join('\n');
 }

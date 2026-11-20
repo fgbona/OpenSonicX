@@ -374,7 +374,7 @@ test('get_global_settings reports the device-wide settings in words', async () =
   const text = await session.getGlobals();
   assert.match(text, /Master volume 80/);
   assert.match(text, /Input -3 dB/);
-  assert.match(text, /USB recording: wet/);
+  assert.doesNotMatch(text, /USB recording|re-amp/i); // V1.3.3 ignores mode and has no re-amp
   assert.match(text, /EXP\/FS jack: single footswitch/);
   assert.match(text, /Backlight 6/);
 });

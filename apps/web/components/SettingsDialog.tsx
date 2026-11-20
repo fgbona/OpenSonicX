@@ -57,7 +57,7 @@ function Segmented({ label, value, options, disabled, onChange }: { label: strin
   );
 }
 
-/** Global Options: device-wide levels, USB mode, EXP/FS, display and power, factory reset. */
+/** Global Options: device-wide levels, EXP/FS, display and power, factory reset. */
 export function SettingsDialog({ open, onClose, exclusive, writeGlobal, busy, error, factoryReset, onReset }: Props) {
   const { t } = useI18n();
   const [values, setValues] = useState<Values | null>(null);
@@ -120,11 +120,6 @@ export function SettingsDialog({ open, onClose, exclusive, writeGlobal, busy, er
                   display={`${(values[key] ?? 0) > 0 ? '+' : ''}${values[key] ?? 0} dB`} disabled={off} onChange={(v) => set(key, v)} />
               ))}
             </div>
-          </section>
-          <section className="settings-group">
-            <h3>{t('settings.usb')}</h3>
-            <Segmented label={t('settings.mode')} value={values.mode} options={[t('settings.dry'), t('settings.wet')]} disabled={off} onChange={(v) => set('mode', v)} />
-            <Segmented label={t('settings.reamp')} value={values.reamp} options={[t('block.off'), t('block.on')]} disabled={off} onChange={(v) => set('reamp', v)} />
           </section>
           <section className="settings-group">
             <h3>{t('settings.expFs')}</h3>
