@@ -18,6 +18,7 @@ export * from './pedal.ts';
 export * from './resolve.ts';
 export * from './model-label.ts';
 export * from './model-info.ts';
+export * from './model-guide.ts';
 export * from './ir-upload.ts';
 export * from './clo/nam.ts';
 export * from './clo/generate.ts';

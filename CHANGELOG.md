@@ -6,6 +6,20 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Model menus speak plainly: every model keeps the pedal's own name (what
+  its screen shows) followed by what it is, such as "Brit 800 — Marshall
+  JCM800" or "Plate 1 — Large plate", and long menus are grouped by style
+  (amps: clean, crunch, high gain, bass; cabinets by speaker count;
+  modulation, tremolo, pitch; digital or analog and tape delays; rooms,
+  plates and springs, ambient reverbs). Descriptions follow the chosen
+  language; all 110 models have one in Portuguese.
+- The preset volume knob is labelled Patch Volume (Volume do patch).
+- The SysEx log is hidden unless you turn it on from the link under the
+  panels; the choice is remembered. It is a troubleshooting tool, not
+  something an editing session needs.
+
 ### Added
 
 - The editor is published to GitHub Pages with every release (and on
