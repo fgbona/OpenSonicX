@@ -74,9 +74,9 @@ export const MODEL_GUIDE: Readonly<Record<string, Readonly<Record<string, ModelG
   fx2: FX,
   drv: {
     Scream: g('overdrive', 'Ibanez Tube Screamer', 'Ibanez Tube Screamer', 'Overdrive com médios na frente, muito usado para apertar amps de high gain.'),
-    'Butter OD': g('overdrive', 'Yellow 2-knob overdrive', 'Overdrive amarelo de 2 knobs', 'Overdrive inspirado no clássico pedal amarelo de dois knobs.'),
-    'JP Dist': g('distortion', 'Orange 3-knob distortion', 'Distorção laranja de 3 knobs', 'Distorção inspirada num clássico pedal laranja de três knobs.'),
-    Shark: g('distortion', 'Crunch Box (amp-like)', 'Crunch Box (tipo amp)', 'Distorção de alto ganho com cara de amplificador.'),
+    'Butter OD': g('overdrive', 'Boss OD-1 style', 'Estilo Boss OD-1', 'Overdrive inspirado no clássico pedal amarelo de dois knobs (o manual não o nomeia; a descrição é a do Boss OD-1).'),
+    'JP Dist': g('distortion', 'Boss DS-1 style', 'Estilo Boss DS-1', 'Distorção inspirada num clássico pedal laranja de três knobs (o manual não o nomeia; a descrição é a do Boss DS-1).'),
+    Shark: g('distortion', 'Crunch Box (amp in a box)', 'Crunch Box (Marshall em pedal)', 'Distorção de alto ganho com cara de amplificador Marshall, num pedal.'),
     'Dark Mouse': g('distortion', 'ProCo RAT', 'ProCo RAT', 'Distorção clássica de clipping forte, com controle de filtro.'),
     'Grey Fuzz': g('fuzz', 'Tone Bender fuzz', 'Fuzz Tone Bender', 'Fuzz vintage estilo germânio.'),
     'Red Fuzz': g('fuzz', 'Fuzz Face', 'Fuzz Face', 'Fuzz vintage.'),
