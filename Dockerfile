@@ -37,9 +37,9 @@ COPY apps ./apps
 COPY tsconfig.base.json ./
 # Tests run natively before any image is built (CI, and the release's verify job); under QEMU
 # the arm64 build would spend hours on the NAM converter's golden test.
-RUN npm run build -w @pocket-master/web
 # Image optimisation is off (next.config.ts), so sharp and its ~19 MB of native binaries are dead weight.
-RUN rm -rf apps/web/.next/standalone/node_modules/sharp apps/web/.next/standalone/node_modules/@img
+RUN npm run build -w @pocket-master/web \
+ && rm -rf apps/web/.next/standalone/node_modules/sharp apps/web/.next/standalone/node_modules/@img
 
 FROM ${RUNTIME_IMAGE} AS runtime
 # Pinned to the Node major the app is built and tested with; the build fails if 3.23 moves off it.
