@@ -8,6 +8,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Installing a NAM capture no longer freezes the page for about a second
+  before the conversion: the reference DI's 44.1 -> 48 kHz resample runs
+  in a worker like the probe passes and the fit.
 - Queries to the pedal go out one at a time. On connect the presets
   sidebar read the 21-packet name list while the preset was being read;
   replies are matched by kind and joined by packet count, so two in flight
