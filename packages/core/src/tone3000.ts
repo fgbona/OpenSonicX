@@ -152,9 +152,9 @@ export async function startDeviceLogin(clientId: string, fetch: Fetch = globalTh
   };
 }
 
-/** Polls until the user approves the device sign-in (RFC 8628), honouring slow_down. */
+/** Polls until the user approves the device sign-in (RFC 8628), honouring slow_down; `signal` stops it. */
 export async function pollDeviceToken(
-  o: { clientId: string; start: DeviceLogin },
+  o: { clientId: string; start: DeviceLogin; signal?: AbortSignal },
   fetch: Fetch = globalThis.fetch,
   clock: { sleep: (ms: number) => Promise<void>; now: () => number } = { sleep: (ms) => new Promise((r) => setTimeout(r, ms)), now: Date.now },
 ): Promise<Tokens> {
@@ -162,6 +162,7 @@ export async function pollDeviceToken(
   const deadline = clock.now() + o.start.expiresIn * 1000;
   while (clock.now() < deadline) {
     await clock.sleep(interval);
+    o.signal?.throwIfAborted();
     const { status, body } = await postToken({ grant_type: 'urn:ietf:params:oauth:grant-type:device_code', device_code: o.start.deviceCode, client_id: o.clientId }, fetch);
     if (status === 200) return toTokens(body, clock.now());
     if (body.error === 'authorization_pending') continue;

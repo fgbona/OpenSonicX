@@ -67,6 +67,15 @@ test('a declined or expired device login stops with a readable error', async () 
   await assert.rejects(pollDeviceToken({ clientId: 'pk', start }, expired.fetch, { sleep: async () => undefined, now: () => 0 }), /expired/);
 });
 
+test('an aborted device login stops polling without another request', async () => {
+  const start = { deviceCode: 'D', userCode: 'X', verificationUri: 'u', verificationUriComplete: 'u', expiresIn: 600, interval: 5 };
+  const f = fakeFetch([[400, { error: 'authorization_pending' }]]);
+  const ctrl = new AbortController();
+  const sleep = async () => { ctrl.abort(); };
+  await assert.rejects(pollDeviceToken({ clientId: 'pk', start, signal: ctrl.signal }, f.fetch, { sleep, now: () => 0 }), { name: 'AbortError' });
+  assert.equal(f.calls.length, 0);
+});
+
 test('search sends the bearer token and documented filters and maps the tones', async () => {
   const f = fakeFetch([[200, {
     page: 1, page_size: 10, total: 1, total_pages: 1,

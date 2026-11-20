@@ -18,6 +18,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - EXP/FS target writes queue like settings: only the latest value per
   slot goes out.
 - The development preview no longer re-reads the settings in a loop.
+- A TONE3000 sign-in stops asking for the code's approval when its panel
+  closes (for example, the pedal disconnects), instead of polling the
+  token endpoint until the code expires up to ten minutes later.
 
 ## [0.12.0] - 2026-11-19
 
