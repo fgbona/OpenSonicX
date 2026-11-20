@@ -15,11 +15,6 @@ and the project uses [Semantic Versioning](https://semver.org/).
   tone's title and creator. The pedal stores only a slot's name, so comments
   live in this browser or desktop app, tied to the slot and the name it held.
 
-## [0.13.3] - 2026-11-20
-
-Plain-language model names, and the first update the macOS app installs by
-itself (from 0.13.2).
-
 ### Changed
 
 - New look, a dark "stage" theme, now the default (the light theme stays a
@@ -32,17 +27,25 @@ itself (from 0.13.2).
   it is off, warming up over about a second and a half when it is turned
   on or a new amp model loads, glowing hotter with more gain, and
   breathing gently while lit (no motion if the system asks for less).
-  The AMP faceplate dresses like the gear each model is based on, without
+- The AMP faceplate dresses like the gear each model is based on, without
   logos: tweed, blackface, British fawn and copper, a brushed-gold Marshall
   panel, Rectifier diamond plate, hot-rod chrome, 90s black and red, modern
   German graphite with a blue light, boutique walnut, solid-state silver
   (no tube on the Jazz 120) and bass black and silver.
-  Model menus are drawn by the editor instead of the system: two aligned
+- Model menus are drawn by the editor instead of the system: two aligned
   columns, the pedal's name and what it is, under the style groups, in the
   theme's colours, with the same keyboard use as a menu (arrows, Enter,
   Escape, first letter).
-  Everything but the tube image is CSS and
-  SVG; the tube and the script font ship with the app, so it works offline.
+- Everything but the tube image is CSS and SVG; the tube and the script
+  font ship with the app, so it works offline.
+
+## [0.13.3] - 2026-11-20
+
+Plain-language model names, and the first update the macOS app installs by
+itself (from 0.13.2).
+
+### Changed
+
 - Model menus speak plainly: every model keeps the pedal's own name (what
   its screen shows) followed by what it is, such as "Brit 800 — Marshall
   JCM800" or "Plate 1 — Large plate", and long menus are grouped by style
