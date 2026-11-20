@@ -6,6 +6,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Removed
+
+- USB recording mode (dry/wet) and re-amp, from Global options and the
+  MCP's global settings tools. On firmware V1.3.3 the pedal ignores mode
+  writes (it keeps reporting wet) and has no re-amp record; a tone played
+  into it over USB came back as digital silence in every combination.
+
 ### Fixed
 
 - Global settings are read by record address. The reply is a list of
