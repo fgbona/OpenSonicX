@@ -6,6 +6,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- In the desktop app the start screen no longer asks to enable MIDI or
+  lists browsers: it says to check the ports and connect, and that
+  Bluetooth finds the pedal by itself.
+
 ## [0.13.0] - 2026-11-20
 
 The editor as a desktop app: installers for Linux, Windows and macOS are

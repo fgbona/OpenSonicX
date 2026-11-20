@@ -13,12 +13,16 @@ import { SysexLog } from '@/components/SysexLog';
 import { Toolbar } from '@/components/Toolbar';
 import { usePocketMaster } from '@/lib/usePocketMaster';
 import { useI18n } from '@/components/I18n';
+import { useIsDesktop } from '@/lib/desktop';
 
 const STEPS = ['empty.step1', 'empty.step2', 'empty.step3'] as const;
+// The desktop app grants MIDI itself and has no browser to pick.
+const DESKTOP_STEPS = ['empty.step1', 'empty.desktopStep2'] as const;
 
 export default function EditorPage() {
   const pm = usePocketMaster();
   const { t, te } = useI18n();
+  const desktop = useIsDesktop();
   const [saveOpen, setSaveOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const connected = pm.status === 'connected' || pm.status === 'reading';
@@ -85,8 +89,8 @@ export default function EditorPage() {
           <section className="empty">
             <h1>{t('empty.title')}</h1>
             <p className="muted">{t('empty.subtitle')}</p>
-            <ol className="steps">{STEPS.map((s) => <li key={s}>{t(s)}</li>)}</ol>
-            <p className="muted small">{t('empty.browsers')}</p>
+            <ol className="steps">{(desktop ? DESKTOP_STEPS : STEPS).map((s) => <li key={s}>{t(s)}</li>)}</ol>
+            <p className="muted small">{t(desktop ? 'empty.desktopNote' : 'empty.browsers')}</p>
           </section>
         )}
         {connected && (
