@@ -16,6 +16,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
   notarized, so it announces new versions and opens their page instead.
 - `NEXT_OUTPUT=export` builds the web editor as static files.
 
+### Fixed
+
+- Record 05 02 is the boot anti-touch protection (the pedal's menu name),
+  not a power-off confirm: the owner changed it on the unit while the
+  editor watched the settings reply. The setting is now `bootProtection`
+  in the core and the MCP, labelled as on the pedal (#62).
+
 ## [0.12.3] - 2026-11-20
 
 Global options now match the Pocket Master: settings that belong to the
