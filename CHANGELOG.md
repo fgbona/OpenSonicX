@@ -6,6 +6,16 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Desktop app for Linux (AppImage), Windows (installer) and macOS (dmg, Apple
+  Silicon and Intel), attached to each release. It serves the editor's static
+  export from inside the app, so it works offline; USB MIDI and Bluetooth work
+  as in Chrome (the app picks the pedal in the Bluetooth chooser). Windows and
+  Linux update themselves from the GitHub release; the macOS build is not
+  notarized, so it announces new versions and opens their page instead.
+- `NEXT_OUTPUT=export` builds the web editor as static files.
+
 ## [0.12.3] - 2026-11-20
 
 Global options now match the Pocket Master: settings that belong to the
