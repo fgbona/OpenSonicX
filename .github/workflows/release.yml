@@ -2,7 +2,9 @@ name: Release
 # Push a tag like v0.2.0. The pipeline tests the code, publishes a multi-arch image
 # (linux/amd64 and linux/arm64) to GHCR under the version tag, pulls that published
 # image back and smoke-tests it, and only then moves `latest` and creates the GitHub
-# release with that version's CHANGELOG.md section as notes.
+# release with that version's CHANGELOG.md section as notes. The desktop app is then
+# built on Linux, Windows and macOS and its installers attached to that release; the
+# installed apps update from there (latest*.yml).
 on:
   push:
     tags: ['v*.*.*']
@@ -29,7 +31,7 @@ jobs:
       - name: Tag matches every package.json version
         run: |
           v="${GITHUB_REF_NAME#v}"
-          for f in package.json packages/core/package.json apps/web/package.json apps/mcp/package.json; do
+          for f in package.json packages/core/package.json apps/web/package.json apps/mcp/package.json apps/desktop/package.json; do
             test "$(node -p "require('./$f').version")" = "$v" || { echo "::error::$f version is not $v"; exit 1; }
           done
       - name: CHANGELOG.md has a section for this version
@@ -117,6 +119,35 @@ jobs:
           else
             gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md $prerelease
           fi
+
+  desktop:
+    name: Desktop app (${{ matrix.os }})
+    needs: release
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+      # The MCP package is macOS/Linux only; the desktop app does not use it, so Windows skips that check.
+      - run: npm ci ${{ runner.os == 'Windows' && '--force' || '' }}
+      - run: npm run dist -w @pocket-master/desktop
+        env:
+          NEXT_PUBLIC_TONE3000_CLIENT_ID: ${{ vars.TONE3000_CLIENT_ID }}
+      - name: Attach the installers and the updater metadata to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cd apps/desktop/release
+          shopt -s nullglob
+          gh release upload "$GITHUB_REF_NAME" ./*.dmg ./*.zip ./*.exe ./*.AppImage ./*.blockmap ./latest*.yml --clobber
 
   npm:
     # Trusted publishing (OIDC): no npm token is stored. Off until the repository variable

@@ -1,0 +1,79 @@
+{
+  "name": "@pocket-master/desktop",
+  "version": "0.12.3",
+  "private": true,
+  "description": "Pocket Master Editor as a desktop app: works offline and updates itself.",
+  "author": "Fernando Bona",
+  "homepage": "https://github.com/fgbona/sonicake-pocket-master-editor#readme",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node build.mjs && electron .",
+    "dist": "node build.mjs && electron-builder --publish never",
+    "test": "node --test 'test/**/*.test.ts'",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "electron": "45.2.3",
+    "electron-builder": "26.18.0",
+    "electron-updater": "6.8.11",
+    "esbuild": "0.28.2"
+  },
+  "build": {
+    "appId": "io.github.fgbona.pocketmastereditor",
+    "productName": "Pocket Master Editor",
+    "artifactName": "Pocket-Master-Editor-${version}-${os}-${arch}.${ext}",
+    "electronVersion": "45.2.3",
+    "npmRebuild": false,
+    "directories": {
+      "output": "release",
+      "buildResources": "resources"
+    },
+    "files": [
+      "dist/**",
+      "web/**",
+      "package.json"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "fgbona",
+        "repo": "sonicake-pocket-master-editor"
+      }
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "category": "public.app-category.music",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "extendInfo": {
+        "NSBluetoothAlwaysUsageDescription": "Pocket Master Editor connects to the pedal over Bluetooth MIDI."
+      }
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Audio"
+    },
+    "executableName": "pocket-master-editor"
+  }
+}

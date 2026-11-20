@@ -43,7 +43,28 @@ Tested on firmware **V1.3.3** over USB.
 | `packages/core` | The SysEx protocol in TypeScript: framing, decoding, model catalog, the guarded link to the pedal and the save/backup flows. No browser or MIDI dependency, so the web app and the MCP server share it. |
 | `apps/web` | The Next.js editor. Web MIDI runs in the visitor's browser. |
 | `apps/mcp` | An MCP server: the same core over native USB MIDI, for AI assistants. |
+| `apps/desktop` | The editor as a desktop app (Electron) for Linux, Windows and macOS: works offline, updates itself. |
 | `docs/` | Design notes and plans. |
+
+## Desktop app
+
+Each release attaches installers: `.dmg` (macOS, Apple Silicon and Intel),
+`.exe` (Windows) and `.AppImage` (Linux). The app runs the same editor without a
+browser or an internet connection; only TONE3000 and the first NAM conversion
+(which downloads a reference file once) need the network.
+
+- **Windows and Linux** update themselves: a new version downloads in the
+  background and installs when you restart the app.
+- **macOS** builds are not notarized (no Apple Developer account). The first
+  time, right-click the app and choose *Open* (or allow it in *System Settings >
+  Privacy & Security*). The app tells you when a new version is out and opens
+  its download page; it cannot replace itself.
+- Windows may show a SmartScreen warning for the unsigned installer: *More info >
+  Run anyway*.
+
+From the repository: `npm run start -w @pocket-master/desktop` builds and opens
+it; `npm run dist -w @pocket-master/desktop` makes the installer for your
+system in `apps/desktop/release`.
 
 ## Run it
 

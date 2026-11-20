@@ -1,0 +1,40 @@
+name: Desktop
+# Builds the desktop installers (no publishing) when the desktop app changes, or on demand,
+# so packaging problems show before a release. The installers are kept as artifacts for a week.
+on:
+  pull_request:
+    paths: ['apps/desktop/**', '.github/workflows/desktop.yml']
+  push:
+    branches: [main]
+    paths: ['apps/desktop/**', '.github/workflows/desktop.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    name: Package (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+      # The MCP package is macOS/Linux only; the desktop app does not use it, so Windows skips that check.
+      - run: npm ci ${{ runner.os == 'Windows' && '--force' || '' }}
+      - run: npm run dist -w @pocket-master/desktop
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: desktop-${{ matrix.os }}
+          retention-days: 7
+          path: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.AppImage
