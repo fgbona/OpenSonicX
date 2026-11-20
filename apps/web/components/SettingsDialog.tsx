@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import {
-  EXP_TARGETS, FS_TARGETS, type GlobalSetting, type GlobalSettings, readGlobals, setExpFsTarget, setGlobal, type PocketMasterLink,
+  type GlobalSetting, type GlobalSettings, readGlobals, setGlobal, type PocketMasterLink,
 } from '@pocket-master/core';
 import { Dialog } from './Dialog';
 import { Knob } from './Knob';
@@ -24,8 +24,7 @@ interface Props {
   onReset: () => void;
 }
 
-/** Values the dump does not report start unknown (null) and show as unset until written. */
-type Values = { [K in GlobalSetting]: number | null } & { target1: number | null; target2: number | null };
+type Values = { [K in GlobalSetting]: number | null };
 
 const LEVELS: readonly { key: GlobalSetting; label: MessageKey }[] = [
   { key: 'inputLevel', label: 'settings.input' },
@@ -33,15 +32,10 @@ const LEVELS: readonly { key: GlobalSetting; label: MessageKey }[] = [
   { key: 'monitorLevel', label: 'settings.monitor' },
   { key: 'btRecLevel', label: 'settings.btRec' },
 ];
-const SWITCHES: readonly { key: GlobalSetting; label: MessageKey }[] = [
-  { key: 'eco', label: 'settings.eco' },
-  { key: 'powerConfirm', label: 'settings.powerConfirm' },
-  { key: 'battOnly', label: 'settings.battOnly' },
-];
 const RESET_WORD = 'RESET';
 
 function fromDump(g: GlobalSettings): Values {
-  return { ...g, battOnly: null, target1: null, target2: null };
+  return { ...g, battOnly: null };
 }
 
 function Segmented({ label, value, options, disabled, onChange }: { label: string; value: number | null; options: readonly string[]; disabled: boolean; onChange: (v: number) => void }) {
@@ -57,7 +51,7 @@ function Segmented({ label, value, options, disabled, onChange }: { label: strin
   );
 }
 
-/** Global Options: device-wide levels, EXP/FS, display and power, factory reset. */
+/** Global Options: the Pocket Master's device-wide levels, display and power-off confirm, factory reset. */
 export function SettingsDialog({ open, onClose, exclusive, writeGlobal, busy, error, factoryReset, onReset }: Props) {
   const { t } = useI18n();
   const [values, setValues] = useState<Values | null>(null);
@@ -79,13 +73,6 @@ export function SettingsDialog({ open, onClose, exclusive, writeGlobal, busy, er
     setValues({ ...values, [key]: value });
     writeGlobal(setGlobal(key, value));
   };
-  const setTarget = (which: 'target1' | 'target2', value: number) => {
-    if (!values) return;
-    const type = values.expFsType ?? 0;
-    const slot = type === 0 ? 'exp' : type === 1 ? 'fs' : which === 'target1' ? 'fs1' : 'fs2';
-    setValues({ ...values, [which]: value });
-    writeGlobal(setExpFsTarget(slot, value));
-  };
   const reset = async () => {
     const sent = await factoryReset();
     if (sent) {
@@ -94,17 +81,6 @@ export function SettingsDialog({ open, onClose, exclusive, writeGlobal, busy, er
     }
   };
   const off = busy || values === null;
-  const targets = (values?.expFsType ?? 0) === 0 ? EXP_TARGETS : FS_TARGETS;
-  const targetSelect = (which: 'target1' | 'target2', label: string) => (
-    <label className="settings-row">
-      <span className="settings-label">{label}</span>
-      <select className="param-select" value={values?.[which] ?? ''} disabled={off} onChange={(e) => setTarget(which, Number(e.target.value))}>
-        <option value="" disabled>{t('settings.unset')}</option>
-        {targets.map((name, i) => <option key={name} value={i}>{name}</option>)}
-      </select>
-    </label>
-  );
-
   return (
     <Dialog open={open} title={t('settings.title')} onClose={onClose} locked={busy}>
       {values === null ? (
@@ -122,17 +98,6 @@ export function SettingsDialog({ open, onClose, exclusive, writeGlobal, busy, er
             </div>
           </section>
           <section className="settings-group">
-            <h3>{t('settings.expFs')}</h3>
-            <Segmented label={t('settings.type')} value={values.expFsType} options={['EXP', 'Single FS', 'Dual FS']} disabled={off}
-              onChange={(v) => { setValues({ ...values, expFsType: v, target1: null, target2: null }); writeGlobal(setGlobal('expFsType', v)); }} />
-            {values.expFsType === 2 ? (
-              <>
-                {targetSelect('target1', t('settings.func1'))}
-                {targetSelect('target2', t('settings.func2'))}
-              </>
-            ) : targetSelect('target1', t('settings.target'))}
-          </section>
-          <section className="settings-group">
             <h3>{t('settings.device')}</h3>
             <label className="settings-row">
               <span className="settings-label">{t('settings.backlight')}</span>
@@ -140,10 +105,7 @@ export function SettingsDialog({ open, onClose, exclusive, writeGlobal, busy, er
                 onChange={(e) => set('backlight', Number(e.target.value))} style={{ '--fill': `${values.backlight ?? 0}%` } as React.CSSProperties} />
               <span className="param-value">{values.backlight ?? '—'}</span>
             </label>
-            {SWITCHES.map(({ key, label }) => (
-              <Segmented key={key} label={t(label)} value={values[key]} options={[t('block.off'), t('block.on')]} disabled={off} onChange={(v) => set(key, v)} />
-            ))}
-            <p className="muted small">{t('settings.writeOnly')}</p>
+            <Segmented label={t('settings.powerConfirm')} value={values.powerConfirm} options={[t('block.off'), t('block.on')]} disabled={off} onChange={(v) => set('powerConfirm', v)} />
           </section>
           <section className="settings-group settings-danger">
             <h3>{t('settings.reset')}</h3>

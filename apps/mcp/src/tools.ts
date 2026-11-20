@@ -171,7 +171,7 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
 
   server.registerTool('get_global_settings', {
     title: 'Get global settings',
-    description: 'Device-wide settings that are not part of any preset: master volume, input/FX-rec/monitor/BT-rec levels, EXP/FS jack type, backlight, ECO, power-off confirm.',
+    description: 'Device-wide settings that are not part of any preset: master volume, input/FX-rec/monitor/BT-rec levels, backlight, power-off confirm.',
     annotations: READ,
   }, () => reply('get_global_settings', options, () => session.getGlobals()));
 
@@ -179,14 +179,12 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
   const flag = z.number().int().min(0).max(1);
   server.registerTool('set_global_settings', {
     title: 'Change global settings',
-    description: 'Changes device-wide settings (they affect every preset and are kept by the pedal at once). Levels are dB -20..20; expFsType 0 expression pedal, 1 single footswitch, 2 dual footswitch; targets by name (expression: VOL, FX1, DRV, AMP, IR, FX2, DLY, RVB; footswitch: Preset-, Preset+, Tap Tempo, NR, FX1, DRV, AMP, IR, EQ, FX2, DLY, RVB, CTRL 1, CTRL 2, Drum, REC/Play, Loop Stop, Tuner). Ask the user before changing these. Factory reset is not available here.',
+    description: 'Changes device-wide settings (they affect every preset and are kept by the pedal at once). Levels are dB -20..20; backlight 0..100; powerConfirm 0 off / 1 on. Ask the user before changing these. Factory reset is not available here.',
     inputSchema: {
       masterVolume: z.number().int().min(0).max(100).optional(),
       inputLevel: level.optional(), fxRecLevel: level.optional(), monitorLevel: level.optional(), btRecLevel: level.optional(),
-      eco: flag.optional(), powerConfirm: flag.optional(), battOnly: flag.optional(),
-      expFsType: z.number().int().min(0).max(2).optional(),
+      powerConfirm: flag.optional(),
       backlight: z.number().int().min(0).max(100).optional(),
-      expTarget: z.string().optional(), fsTarget: z.string().optional(), fs1Target: z.string().optional(), fs2Target: z.string().optional(),
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   }, (args) => reply('set_global_settings', options, () => session.setGlobals(args)));

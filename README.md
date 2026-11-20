@@ -129,8 +129,7 @@ Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
   not part of this project) and checks it by SHA-256.
 - `get_global_settings` and `set_global_settings` read and change the
   device-wide options (master volume, input/FX-rec/monitor/BT-rec levels,
-  USB recording, re-amp, EXP/FS jack and its targets, backlight, ECO,
-  power-off confirm, battery only). They affect every preset. Factory reset
+  backlight, power-off confirm). They affect every preset. Factory reset
   is only in the web editor, behind a typed confirmation.
 - Tones you like can be kept: say "keep this tone" and the assistant exports
   it with notes (e.g. which record it matches). `list_preset_files` shows

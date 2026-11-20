@@ -1,4 +1,4 @@
-import { setExpFsTarget, setGlobal } from '@pocket-master/core';
+import { setGlobal } from '@pocket-master/core';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -374,19 +374,18 @@ test('get_global_settings reports the device-wide settings in words', async () =
   const text = await session.getGlobals();
   assert.match(text, /Master volume 80/);
   assert.match(text, /Input -3 dB/);
-  assert.doesNotMatch(text, /USB recording|re-amp/i); // V1.3.3 ignores mode and has no re-amp
-  assert.match(text, /EXP\/FS jack: single footswitch/);
   assert.match(text, /Backlight 6/);
+  assert.match(text, /Power-off confirm on/);
+  // Smart Box settings the Pocket Master lacks are not shown even when a reply carries them.
+  assert.doesNotMatch(text, /USB recording|re-amp|EXP\/FS|ECO|battery/i);
 });
 
 test('set_global_settings writes each change once and validates first', async () => {
   const { session, globalWrites } = setup();
-  const text = await session.setGlobals({ inputLevel: 4, backlight: 8, fsTarget: 'Tap Tempo' });
-  assert.match(text, /Input level 4 dB/);
-  assert.deepEqual(globalWrites, [setGlobal('inputLevel', 4), setGlobal('backlight', 8), setExpFsTarget('fs', 2)]);
+  const text = await session.setGlobals({ inputLevel: 4, backlight: 8, powerConfirm: 0 });
+  assert.match(text, /Input level 4 dB, Backlight 8, Power-off confirm off/);
+  assert.deepEqual(globalWrites, [setGlobal('inputLevel', 4), setGlobal('backlight', 8), setGlobal('powerConfirm', 0)]);
   await assert.rejects(session.setGlobals({ inputLevel: 30 }), /-20\.\.20/);
-  await assert.rejects(session.setGlobals({ fsTarget: 'Nope' }), /Tap Tempo/);
-  await assert.rejects(session.setGlobals({ expTarget: 'DLY' }), /EXP\/FS jack is set to single footswitch/);
   await assert.rejects(session.setGlobals({}), /Nothing to change/);
   assert.equal(globalWrites.length, 3); // the refused calls sent nothing
 });
