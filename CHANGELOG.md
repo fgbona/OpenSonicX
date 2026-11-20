@@ -6,6 +6,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.13.5] - 2026-11-20
+
+Clearer drive labels and a faster CI.
+
 ### Changed
 
 - Clearer drive labels: Butter OD reads "Boss OD-1 style" and JP Dist
@@ -704,7 +708,8 @@ Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.4...HEAD
+[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.5...HEAD
+[0.13.5]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.4...v0.13.5
 [0.13.4]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.3...v0.13.4
 [0.13.3]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.2...v0.13.3
 [0.13.2]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.1...v0.13.2
