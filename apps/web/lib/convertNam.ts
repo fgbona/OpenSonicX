@@ -3,7 +3,7 @@
  * workers, then the fit in one more. The reference DI is downloaded from SonicMaster once, kept in
  * Cache Storage, and checked by SHA-256 every time it is used.
  */
-import { parseNam, parseReferenceDi, PROBE_LEVELS, REFERENCE_DI, referenceDiAt48, type CloArrays } from '@pocket-master/core';
+import { parseNam, parseReferenceDi, PROBE_LEVELS, REFERENCE_DI, type CloArrays } from '@pocket-master/core';
 
 const CACHE = 'pocket-master-reference-di-v1';
 
@@ -59,7 +59,9 @@ function runJob<T>(message: unknown, transfer: Transferable[] = []): Promise<T> 
 export async function convertNam(namJson: string, onStage?: (s: ConvertStage) => void): Promise<CloArrays> {
   parseNam(namJson); // refuse unsupported captures before downloading 12 MB
   onStage?.({ stage: 'download' });
-  const di48 = referenceDiAt48(await referenceDi());
+  const di = await referenceDi();
+  // The 44.1 -> 48 kHz resample takes about a second: a worker keeps the page responsive.
+  const { di48 } = await runJob<{ di48: Float64Array }>({ kind: 'resample', di }, [di.buffer]);
   let done = 0;
   const probes = Promise.all(
     PROBE_LEVELS.map(async (level) => {
