@@ -8,6 +8,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- New look, a dark "stage" theme, now the default (the light theme stays a
+  click away): graphite glass panels, an amber accent that glows, a lit
+  signal cable running through the chain of pedals, chrome knobs, and the
+  AMP block drawn as an amplifier faceplate with screws, a top vent, a lit
+  power tube, the speaker grille and a script "Based on …" signature. The
+  other blocks get a dark face in their own colour. All drawn in CSS and
+  SVG, with the script font served by the app, so it works offline.
 - Model menus speak plainly: every model keeps the pedal's own name (what
   its screen shows) followed by what it is, such as "Brit 800 — Marshall
   JCM800" or "Plate 1 — Large plate", and long menus are grouped by style

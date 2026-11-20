@@ -77,6 +77,8 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
           </button>
         </span>
       </header>
+      <div className={`editor-face face-${block.key}`}>
+      {block.key === 'amp' && <AmpDecor />}
       {block.params.length === 0 ? (
         <p className="muted small">{t('block.noParams')}</p>
       ) : (
@@ -111,9 +113,33 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
           })}
         </div>
       )}
-      {(info?.basedOn || info?.about) && (
-        <p className="editor-info">{info.basedOn ? t('editor.basedOn', { gear: info.basedOn }) : ''}{info.basedOn && info.about ? ' · ' : ''}{lang === 'pt' && guide ? guide.aboutPt : info.about}</p>
-      )}
+      {block.key === 'amp' && guide && <p className="amp-script">{t('editor.basedOn', { gear: guide.label[lang] })}</p>}
+      {(info?.basedOn || info?.about) && (() => {
+        // The AMP's faceplate already signs "Based on …"; the line below then only describes it.
+        const basedOn = block.key === 'amp' && guide ? undefined : info.basedOn;
+        return <p className="editor-info">{basedOn ? t('editor.basedOn', { gear: basedOn }) : ''}{basedOn && info.about ? ' · ' : ''}{lang === 'pt' && guide ? guide.aboutPt : info.about}</p>;
+      })()}
+      </div>
     </section>
+  );
+}
+
+/** Faceplate details of the AMP panel: screws, top vent, a lit power tube and the speaker grille. */
+function AmpDecor() {
+  return (
+    <>
+      <span className="amp-screw amp-screw-tl" aria-hidden="true" />
+      <span className="amp-screw amp-screw-tr" aria-hidden="true" />
+      <span className="amp-screw amp-screw-bl" aria-hidden="true" />
+      <span className="amp-screw amp-screw-br" aria-hidden="true" />
+      <span className="amp-vent" aria-hidden="true" />
+      <svg className="amp-tube" viewBox="0 0 40 72" aria-hidden="true">
+        <rect x="6" y="2" width="28" height="56" rx="13" className="amp-tube-glass" />
+        <rect x="14" y="14" width="12" height="30" rx="3" className="amp-tube-plate" />
+        <path d="M20 46 V22 M16 22 h8" className="amp-tube-filament" />
+        <rect x="9" y="56" width="22" height="12" rx="2" className="amp-tube-base" />
+      </svg>
+      <span className="amp-grille" aria-hidden="true" />
+    </>
   );
 }
