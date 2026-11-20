@@ -6,6 +6,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.13.2] - 2026-11-20
+
+The macOS desktop app updates itself from this version on (install this one
+by hand once), and the editor is on GitHub Pages.
+
 ### Added
 
 - The editor is published to GitHub Pages with every release (and on
@@ -628,7 +633,8 @@ Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.1...HEAD
+[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.2...HEAD
+[0.13.2]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.1...v0.13.2
 [0.13.1]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.12.3...v0.13.0
 [0.12.3]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.12.2...v0.12.3
