@@ -134,7 +134,8 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - run: npm ci
+      # The MCP package is macOS/Linux only; the desktop app does not use it, so Windows skips that check.
+      - run: npm ci ${{ runner.os == 'Windows' && '--force' || '' }}
       - run: npm run dist -w @pocket-master/desktop
         env:
           NEXT_PUBLIC_TONE3000_CLIENT_ID: ${{ vars.TONE3000_CLIENT_ID }}

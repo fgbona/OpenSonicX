@@ -27,7 +27,8 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - run: npm ci
+      # The MCP package is macOS/Linux only; the desktop app does not use it, so Windows skips that check.
+      - run: npm ci ${{ runner.os == 'Windows' && '--force' || '' }}
       - run: npm run dist -w @pocket-master/desktop
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

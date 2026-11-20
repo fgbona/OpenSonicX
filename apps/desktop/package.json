@@ -73,6 +73,7 @@
     "linux": {
       "target": "AppImage",
       "category": "Audio"
-    }
+    },
+    "executableName": "pocket-master-editor"
   }
 }
