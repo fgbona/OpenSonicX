@@ -8,6 +8,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Removed
 
+- The EXP/FS section (jack type and targets), ECO and battery-only, from
+  Global options and the MCP's global settings tools. These are Smart Box
+  settings (SonicMaster serves both pedals): the Pocket Master has no
+  EXP/FS jack and no ECO menu (checked on the owner's unit), and firmware
+  V1.3.3 reports none of them. Global options now holds master volume,
+  the four levels, backlight and power-off confirm.
 - USB recording mode (dry/wet) and re-amp, from Global options and the
   MCP's global settings tools. On firmware V1.3.3 the pedal ignores mode
   writes (it keeps reporting wet) and has no re-amp record; a tone played

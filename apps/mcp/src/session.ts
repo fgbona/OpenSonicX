@@ -402,9 +402,9 @@ export class Session {
   }
 
   /** Changes device-wide settings; every value is checked before anything is sent. Never a factory reset. */
-  setGlobals(changes: GlobalChanges): Promise<string> {
+  async setGlobals(changes: GlobalChanges): Promise<string> {
+    const { bytes, summary } = globalWrites(changes);
     return this.#use(async (io) => {
-      const { bytes, summary } = globalWrites(changes, await io.readGlobals());
       await io.writeGlobals(bytes);
       return `Set ${summary.join(', ')}. These are device-wide settings, stored by the pedal at once (no preset save needed).`;
     });
