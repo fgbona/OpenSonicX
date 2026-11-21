@@ -71,7 +71,7 @@ jobs:
           if (-not $info) { throw 'the update was not downloaded' }
           Get-Content $info
           # Quit like a user would: close the windows (no /F), so the quit handlers run the installer.
-          taskkill /PID $app.Id /T
+          taskkill /PID $app.Id
           foreach ($i in 1..90) { if ((& $version) -eq $env:TO) { break }; Start-Sleep 2 }
           "installed $(& $version)"
           Stop-Process -Name 'Pocket Master Editor' -Force -ErrorAction SilentlyContinue
