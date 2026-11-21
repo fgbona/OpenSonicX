@@ -6,6 +6,9 @@ import { ChainView } from '@/components/ChainView';
 import { SaveDialog } from '@/components/SaveDialog';
 import { SettingsDialog } from '@/components/SettingsDialog';
 import { PresetFiles } from '@/components/PresetFiles';
+import { PresetLibrary } from '@/components/PresetLibrary';
+import { addToLibrary } from '@/lib/presetLibrary';
+import type { PresetFile } from '@pocket-master/core';
 import { PresetSidebar } from '@/components/PresetSidebar';
 import { SlotsPanel } from '@/components/SlotsPanel';
 import { Tone3000Panel } from '@/components/Tone3000Panel';
@@ -44,6 +47,13 @@ export default function EditorPage() {
     }
   };
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // A preset file waiting for the import confirmation, picked from disk or from the library.
+  const [importing, setImporting] = useState<PresetFile | null>(null);
+  const importPreset = async (file: PresetFile) => {
+    const ok = await pm.importPreset(file);
+    if (ok) addToLibrary(file);
+    return ok;
+  };
   // ⌘Z / Ctrl+Z undoes a live edit, ⇧⌘Z / Ctrl+Y redoes; text fields keep their own undo.
   const { undo, redo } = pm;
   useEffect(() => {
@@ -117,8 +127,10 @@ export default function EditorPage() {
             current={pm.preset}
             busy={pm.busy}
             error={pm.error}
+            pending={importing}
+            onPick={setImporting}
             onExport={pm.exportPreset}
-            onImport={pm.importPreset}
+            onImport={importPreset}
             onError={pm.showError}
           />
         )}
@@ -140,6 +152,7 @@ export default function EditorPage() {
             <SlotsPanel connected={connected} busy={pm.busy !== null} irNames={pm.irNames} profileNames={pm.profileNames} exclusive={pm.exclusive} error={pm.error} />
           </>
         )}
+        {connected && <PresetLibrary disabled={pm.busy !== null || !pm.preset} onLoad={(file) => { pm.clearError(); setImporting(file); }} />}
         <BackupsPanel
           backups={pm.backups}
           connected={connected}

@@ -20,7 +20,8 @@ interface Props {
   onError: (message: string) => void;
 }
 
-const when = (iso: string, lang: string) => new Date(iso).toLocaleString(lang === 'pt' ? 'pt-BR' : 'en');
+/** A date and time in the UI language. */
+export const when = (iso: string, lang: string) => new Date(iso).toLocaleString(lang === 'pt' ? 'pt-BR' : 'en');
 
 export function BackupsPanel({ backups, connected, busy, error, flowBackups, storageWarning, onDownload, onImport, onRestore, onError }: Props) {
   const [pending, setPending] = useState<SlotBackup | null>(null);
