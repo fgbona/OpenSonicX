@@ -107,7 +107,8 @@ button, select { font: inherit; color: inherit; }
   background-size: 5px 5px; background-repeat: no-repeat;
 }
 .port select:disabled { opacity: 0.5; }
-.actions { display: flex; align-items: center; gap: 10px; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.actions .btn, .status { white-space: nowrap; }
 .theme-toggle {
   display: inline-grid; place-items: center; width: 30px; height: 30px; padding: 0; border: none;
   border-radius: 8px; background: var(--fill); color: var(--label); cursor: pointer;

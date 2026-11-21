@@ -24,6 +24,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
   primary button and the indigo EQ are a little brighter on the dark theme;
   the Rectifier and British-vintage signatures are darker on their light
   plates.
+- On a phone the page no longer jumps as it loads (Lighthouse layout shift
+  0.117 -> under 0.05, now tested): the Bluetooth button is there from the
+  start instead of appearing after the page starts, and toolbar buttons keep
+  their label on one line.
 
 - The README shows the editor: screenshots of the chain, eight amp
   finishes and the model menu, the tube warming up, and a download table
