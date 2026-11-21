@@ -13,7 +13,7 @@ import { appBundle, canReplace, pickZip, prepare, startSwap } from './mac-update
 import { resolveAppFile } from './serve.ts';
 
 const ORIGIN = 'app://editor';
-const RELEASES = 'https://github.com/fgbona/sonicake-pocket-master-editor/releases';
+const RELEASES = 'https://github.com/fgbona/OpenSonicX/releases';
 const BLUETOOTH_TIMEOUT_MS = 15_000;
 
 protocol.registerSchemesAsPrivileged([

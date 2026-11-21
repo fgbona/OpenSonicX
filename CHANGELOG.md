@@ -15,7 +15,7 @@ straight from the editor and the desktop app, with no server of ours; saving sti
 through the Save dialog you confirm. Also new: a preset library, and
 the pedal's firmware version in Global options.
 
-![The tone assistant building a Black Album rhythm tone](https://raw.githubusercontent.com/fgbona/sonicake-pocket-master-editor/main/docs/media/assistant.jpg)
+![The tone assistant building a Black Album rhythm tone](https://raw.githubusercontent.com/fgbona/OpenSonicX/main/docs/media/assistant.jpg)
 
 ### Added
 
@@ -72,6 +72,11 @@ the pedal's firmware version in Global options.
 
 ### Changed
 
+- The project is now **OpenSonicX** (github.com/fgbona/OpenSonicX): open-source tools for
+  Sonicake pedals, starting with the Pocket Master and next the Smart Box. The site moves to
+  https://fgbona.github.io/OpenSonicX/ (the old address stops working; GitHub forwards the old
+  repository links). The desktop app, its updates, the npm package and the container image
+  keep their names.
 - The tone tools (turning "AMP gain 70" into an edit, and the preset and model text an
   assistant reads) moved from the MCP server into the shared core, so the MCP server and the
   editor's assistant run the same code. The MCP server behaves exactly as before.

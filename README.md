@@ -1,11 +1,11 @@
-# Pocket Master Editor
+# OpenSonicX
 
-A free, open-source editor for the **Sonicake Pocket Master** guitar
-multi-effects pedal, over USB MIDI or Bluetooth. No driver: open the page in
-Chrome, Edge or Opera, plug the pedal in, and read your preset.
+Free, open-source tools for Sonicake guitar pedals. Today: the **Pocket Master Editor**, for
+the **Sonicake Pocket Master** multi-effects pedal, over USB MIDI or Bluetooth. No driver: open
+the page in Chrome, Edge or Opera, plug the pedal in, and read your preset.
 
-**Open it:** https://fgbona.github.io/sonicake-pocket-master-editor/ (updated
-with every release) · **Download the app:** [latest release](https://github.com/fgbona/sonicake-pocket-master-editor/releases/latest)
+**Open it:** https://fgbona.github.io/OpenSonicX/ (updated
+with every release) · **Download the app:** [latest release](https://github.com/fgbona/OpenSonicX/releases/latest)
 for macOS, Windows and Linux ([details](#desktop-app)).
 
 ![The editor: the preset's signal chain, and the AMP block drawn as the amplifier it models](docs/media/editor.jpg)
@@ -105,7 +105,7 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
 
 ## Desktop app
 
-Each [release](https://github.com/fgbona/sonicake-pocket-master-editor/releases/latest)
+Each [release](https://github.com/fgbona/OpenSonicX/releases/latest)
 attaches installers:
 
 | System | File |
@@ -209,7 +209,7 @@ the reference the tests check against.
 
 ## Releases
 
-Each version is a git tag, a [GitHub release](https://github.com/fgbona/sonicake-pocket-master-editor/releases)
+Each version is a git tag, a [GitHub release](https://github.com/fgbona/OpenSonicX/releases)
 and a container image in the GitHub Container Registry. Changes are listed in
 [CHANGELOG.md](CHANGELOG.md). Versions below 1.0 are previews.
 
