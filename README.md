@@ -1,17 +1,40 @@
 # Pocket Master Editor
 
-A free, open-source browser editor for the **Sonicake Pocket Master** guitar
-multi-effects pedal, over USB MIDI. No install and no driver: open the page in
+A free, open-source editor for the **Sonicake Pocket Master** guitar
+multi-effects pedal, over USB MIDI or Bluetooth. No driver: open the page in
 Chrome, Edge or Opera, plug the pedal in, and read your preset.
 
 **Open it:** https://fgbona.github.io/sonicake-pocket-master-editor/ (updated
-with every release). Prefer an app that works offline? See [Desktop app](#desktop-app).
+with every release) · **Download the app:** [latest release](https://github.com/fgbona/sonicake-pocket-master-editor/releases/latest)
+for macOS, Windows and Linux ([details](#desktop-app)).
+
+![The editor: the preset's signal chain, and the AMP block drawn as the amplifier it models](docs/media/editor.jpg)
 
 Unofficial: not affiliated with or endorsed by Sonicake. Product names are
 trademarks of their owners, used only to describe the modeled gear.
 
 > **Status: preview.** Reading, live editing and saving to preset slots work.
 > Every save backs up the slot it overwrites, unless you opt out for that save.
+
+## The amp you picked, on screen
+
+The AMP block dresses like the gear its model is based on (materials and
+colours only, no logos), and its power tube is lit while the block is on:
+it warms up when you switch it on or change model, and glows hotter with more
+gain.
+
+![The tube warming up when the AMP block is switched on](docs/media/tube.gif)
+
+| | |
+|---|---|
+| ![Tweed](docs/media/amp-twd-deluxe.jpg) | ![British vintage](docs/media/amp-voks-30tb.jpg) |
+| ![Brushed-gold panel](docs/media/amp-brit-800.jpg) | ![Diamond plate](docs/media/amp-calif-dualm.jpg) |
+| ![Chrome](docs/media/amp-sol-100-ld.jpg) | ![Graphite with a blue light](docs/media/amp-eng-power.jpg) |
+| ![Walnut](docs/media/amp-bog-xt.jpg) | ![Black and red](docs/media/amp-halen-51.jpg) |
+
+Every menu shows the pedal's own name next to what it is, grouped by style:
+
+![The amp model menu: the pedal's names and the gear they model, in two aligned columns](docs/media/menu.jpg)
 
 ## What it does today
 
@@ -35,9 +58,14 @@ trademarks of their owners, used only to describe the modeled gear.
   `NEXT_PUBLIC_TONE3000_CLIENT_ID` (in `apps/web/.env.local` for
   `npm run dev`; the `TONE3000_CLIENT_ID` repository variable for the
   release image).
-- Logs every SysEx message sent and received, in hex, with a label.
+- Comments on captured-profile and IR slots (kept in this browser or app),
+  shown next to their names in the menus.
+- *Global options* (gear button): input and USB/Bluetooth levels, boot
+  protection, backlight.
+- A SysEx log (hidden by default; *Show the SysEx log* at the bottom of the page)
+  with every message sent and received, in hex, with a label.
 
-Tested on firmware **V1.3.3** over USB.
+Tested on firmware **V1.3.3** over USB and Bluetooth (desktop Chrome).
 
 ## Repository layout
 
@@ -51,17 +79,25 @@ Tested on firmware **V1.3.3** over USB.
 
 ## Desktop app
 
-Each release attaches installers: `.dmg` (macOS, Apple Silicon and Intel),
-`.exe` (Windows) and `.AppImage` (Linux). The app runs the same editor without a
+Each [release](https://github.com/fgbona/sonicake-pocket-master-editor/releases/latest)
+attaches installers:
+
+| System | File |
+|---|---|
+| macOS, Apple Silicon (M1 and later) | `Pocket-Master-Editor-<version>-mac-arm64.dmg` |
+| macOS, Intel | `Pocket-Master-Editor-<version>-mac-x64.dmg` |
+| Windows | `Pocket-Master-Editor-<version>-win-x64.exe` |
+| Linux | `Pocket-Master-Editor-<version>-linux-x86_64.AppImage` |
+ The app runs the same editor without a
 browser or an internet connection; only TONE3000 and the first NAM conversion
 (which downloads a reference file once) need the network.
 
-- **Windows and Linux** update themselves: a new version downloads in the
-  background and installs when you restart the app.
+- **The app updates itself** on every system: a new version downloads in the
+  background and installs when you choose *Restart now* (or the next time you
+  open the app).
 - **macOS** builds are not notarized (no Apple Developer account). The first
   time, right-click the app and choose *Open* (or allow it in *System Settings >
-  Privacy & Security*). The app tells you when a new version is out and opens
-  its download page; it cannot replace itself.
+  Privacy & Security*). Updates after that need nothing.
 - Windows may show a SmartScreen warning for the unsigned installer: *More info >
   Run anyway*.
 

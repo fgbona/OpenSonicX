@@ -51,6 +51,16 @@ Run the container check locally with:
 docker build -t pocket-master-editor . && scripts/smoke-test.sh pocket-master-editor
 ```
 
+## README images
+
+The screenshots and the tube animation in `docs/media` come from the dev-only
+`/preview` page (a stored preset, no pedal). After a visual change, with
+`npm run dev` running, Google Chrome installed and ffmpeg on your PATH:
+
+```sh
+node scripts/readme-media.mjs http://localhost:3000/preview
+```
+
 ## Commits and pull requests
 
 - Conventional commit messages: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`.
