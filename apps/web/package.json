@@ -11,7 +11,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node --test --test-timeout=5000 'test/**/*.test.ts'"
+    "test": "node --test --test-timeout=5000 'test/**/*.test.ts'",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@pocket-master/core": "*",

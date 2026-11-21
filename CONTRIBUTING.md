@@ -23,7 +23,13 @@ npm install
 npm test           # protocol tests (node:test, no extra framework)
 npm run typecheck
 npm run dev        # http://localhost:3000
+npm run e2e        # the editor in Chrome against a simulated pedal (Playwright)
 ```
+
+The end-to-end tests (`apps/web/e2e`) run the real connect, read, live edit,
+revert, save and comment flows. The page's Web MIDI is replaced by a fake
+"Pocket Master" port wired to the core tests' `FakePedal`, so no hardware is
+needed. Run `npx playwright install chromium` once first.
 
 - Write the failing test first, then the code.
 - `packages/core` must stay free of browser and Node-only APIs so the web app
