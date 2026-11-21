@@ -220,6 +220,6 @@ test('a refused Groq key is reported once while Gemini answers; a quota cut mid-
   await ask(page, 'louder');
   await expect(panel(page).getByText(/The free requests of Gemini Flash ran out in the middle of this answer/)).toBeVisible();
   await expect(panel(page).getByText('Groq refused the saved key.', { exact: false })).toHaveCount(1);
-  expect(gemini.map((r) => r.model)).toEqual(['gemini-3.8-flash', 'gemini-3.8-flash', 'gemini-3.8-flash'], 'Flash-Lite was not asked to redo the edit');
+  expect(gemini.map((r) => r.model), 'Flash-Lite was not asked to redo the edit').toEqual(['gemini-3.8-flash', 'gemini-3.8-flash', 'gemini-3.8-flash']);
   expect(pedal.pedal.received.filter((r) => r === 'edit 42')).toHaveLength(1);
 });
