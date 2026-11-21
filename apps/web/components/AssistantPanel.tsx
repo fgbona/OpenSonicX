@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { comparePresets, type Difference, type Preset, type ToneHost } from '@pocket-master/core';
+import { comparePresets, type Difference, type ToneHost, type ToneSnapshot } from '@pocket-master/core';
 import { loadKey, maskKey, removeKey, saveKey } from '@/lib/aiKey';
 import { nextReset, recordRequest, usedToday, useAiUsage, type AiModel } from '@/lib/aiUsage';
 import { converse, GEMINI_MODELS, KeyError, QuotaError, testKey, type Step } from '@/lib/gemini';
@@ -19,6 +19,9 @@ interface Message {
   readonly text: string;
   readonly changes?: readonly Difference[];
 }
+
+/** What the reply changed on the loaded preset; nothing when another preset is loaded now. */
+const changed = (before: ToneSnapshot, after: ToneSnapshot) => (before.index === after.index ? comparePresets(before.preset, after.preset) : []);
 
 const STUDIO_KEYS = 'https://aistudio.google.com/apikey';
 const STUDIO_LIMITS = 'https://aistudio.google.com/rate-limit';
@@ -64,15 +67,15 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
     setDraft('');
     setMessages((m) => [...m, { role: 'user', text: message }]);
     setWorking(true);
-    let before: Preset | null = null;
+    let before: ToneSnapshot | null = null;
     try {
-      before = host.snapshot().preset;
+      before = host.snapshot();
       const result = await converse({
         key, model, history, message, host,
         onRequest: () => recordRequest(model),
         onStep: (_tool, ok, text) => { if (!ok && text.includes('Live edit is off')) setNeedLive(true); },
       });
-      const changes = comparePresets(before, host.snapshot().preset);
+      const changes = changed(before, host.snapshot());
       setHistory(result.history);
       setMessages((m) => [...m, { role: 'assistant', text: result.reply || '…', changes }]);
     } catch (error) {
@@ -80,7 +83,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
       const text = error instanceof QuotaError ? t('assistant.quota', { time: time(error.retryAt) })
         : error instanceof KeyError ? t('assistant.keyRejected')
           : t('assistant.error', { reason: error instanceof Error ? error.message : String(error) });
-      const changes = before ? comparePresets(before, host.snapshot().preset) : [];
+      const changes = before ? changed(before, host.snapshot()) : [];
       setMessages((m) => [...m, { role: 'error', text, changes }]);
     } finally {
       setWorking(false);

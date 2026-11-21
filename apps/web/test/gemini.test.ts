@@ -68,7 +68,9 @@ test('the next message carries the history, without the context again', async ()
   await converse({ key: KEY, model: 'lite', history: first.history, message: 'more gain', host: h, fetchFn, onRequest: () => {} });
   const input = requests[0]!.body.input as { type: string; content: unknown }[];
   assert.deepEqual(input.map((s) => s.type), ['user_input', 'model_output', 'user_input']);
-  assert.equal(input[2]!.content, 'more gain');
+  // Later messages carry the preset as it is now (the person may have loaded or edited meanwhile), not the model list.
+  assert.match(String(input[2]!.content), /^Loaded preset now:\nP08 "IRON-RHY"[\s\S]*\n\nRequest: more gain$/);
+  assert.doesNotMatch(String(input[2]!.content), /models:/);
   assert.equal(requests[0]!.body.model, GEMINI_MODELS.lite.id);
 });
 
@@ -104,4 +106,22 @@ test('schemas go to Gemini in the subset it documents: anyOf, enum, one type eac
   assert.deepEqual(toGeminiSchema({ oneOf: [{ type: 'string', const: 'a' }] }), { anyOf: [{ type: 'string', enum: ['a'] }] });
   assert.deepEqual(toGeminiSchema({ type: ['number', 'boolean'], description: 'v' }), { anyOf: [{ type: 'number' }, { type: 'boolean' }], description: 'v' });
   assert.deepEqual(toGeminiSchema({ type: 'object', properties: { a: { type: 'integer', minimum: 0 } }, required: ['a'] }), { type: 'object', properties: { a: { type: 'integer', minimum: 0 } }, required: ['a'] });
+});
+
+test('a preset the person loads during a reply stops the assistant from editing it blind', async () => {
+  const { h, edits } = host();
+  let index = 7;
+  const snap = h.snapshot;
+  h.snapshot = () => ({ ...snap(), index });
+  const { fetchFn, requests } = scripted(call('edit_preset', { changes: [{ kind: 'volume', value: 50 }] }), say('The preset changed; tell me again.'));
+  const original = fetchFn;
+  const loadingMeanwhile = (async (url: string, init: RequestInit) => { index = 9; return original(url, init); }) as unknown as typeof fetch;
+  await converse({ key: KEY, model: 'flash', history: [], message: 'louder', host: h, fetchFn: loadingMeanwhile, onRequest: () => {} });
+  assert.equal(edits.length, 0);
+  assert.match(JSON.stringify(requests[1]!.body.input), /the preset changed to P10/);
+});
+
+test('an answer with nothing recognisable in it is an error, not a silent empty reply', async () => {
+  const { h } = host();
+  await assert.rejects(converse({ key: KEY, model: 'flash', history: [], message: 'x', host: h, fetchFn: scripted({ body: { outputs: [] } }).fetchFn, onRequest: () => {} }), /no answer this editor understands/);
 });

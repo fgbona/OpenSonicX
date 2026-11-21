@@ -438,8 +438,6 @@ export class Session {
   }
 }
 
-
-
 function requireConfirm(confirm: string, label: string): void {
   if (confirm.trim().toUpperCase() !== label) throw new Error(`confirm must be "${label}" to write that slot`);
 }
@@ -452,7 +450,6 @@ function inside(folder: string, file: string): string {
   return path;
 }
 
-
 /** A file or tone name as printable ASCII, without folder and extension, at most `max` characters. */
 function defaultName(file: string, max: number, fallback: string): string {
   const base = file.split(/[\\/]/).pop() ?? file;
@@ -464,5 +461,4 @@ const PROFILE_SLOTS = 5;
 const PROFILE_NAME = 15;
 
 const safe = (name: string) => name.replace(/[^A-Za-z0-9_-]+/g, '_') || 'preset';
-
 

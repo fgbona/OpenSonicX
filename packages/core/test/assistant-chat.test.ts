@@ -103,3 +103,25 @@ test('the first message carries the preset and every block\'s models, so a tone 
   for (const label of ['NR', 'DRV', 'AMP', 'IR', 'RVB']) assert.match(text, new RegExp(`\\n${label} models:\\n`));
   assert.match(CHAT_INSTRUCTIONS, /Save dialog/);
 });
+
+test('a preset loaded during a reply makes the change tools refuse, until the model looks again', async () => {
+  const { host, calls } = fakeHost();
+  const guard = { index: 7 };
+  const snap = host.snapshot;
+  host.snapshot = () => ({ ...snap(), index: 9, name: 'THR-CLEAN' }); // the person loaded P10 meanwhile
+  for (const [tool, args] of [['edit_preset', { changes: [{ kind: 'volume', value: 50 }] }], ['undo_edit', {}], ['revert_preset', {}]] as const) {
+    const r = await runChatTool(host, tool, args, guard);
+    assert.equal(r.ok, false, tool);
+    assert.match(r.text, /preset changed to P10/);
+  }
+  assert.deepEqual(calls, []);
+  assert.match((await runChatTool(host, 'get_preset', {}, guard)).text, /^P10 "THR-CLEAN"/);
+  assert.equal((await runChatTool(host, 'edit_preset', { changes: [{ kind: 'volume', value: 50 }] }, guard)).ok, true, 'looking again moves the guard');
+});
+
+test('loading a preset through the tool moves the guard to it', async () => {
+  const { host } = fakeHost();
+  const guard = { index: 7 };
+  await runChatTool(host, 'select_preset', { preset: 'P10' }, guard);
+  assert.equal(guard.index, 7, 'the fake host stays on P08, so the guard follows what is loaded');
+});

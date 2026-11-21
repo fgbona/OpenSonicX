@@ -4,7 +4,7 @@
  * conversation lives in the editor, Google keeps none of it between requests. Tool calls run in the
  * editor through runChatTool, so they act on the pedal the way the person's own edits do.
  */
-import { CHAT_INSTRUCTIONS, CHAT_TOOLS, chatContext, runChatTool, type JsonSchema, type ToneHost } from '@pocket-master/core';
+import { CHAT_INSTRUCTIONS, CHAT_TOOLS, chatContext, currentPresetText, runChatTool, type ChatGuard, type JsonSchema, type ToneHost } from '@pocket-master/core';
 import { nextReset, type AiModel } from './aiUsage.ts';
 
 /** Models and their free daily requests (AI Studio, 2026-11). Check aistudio.google.com/rate-limit when they change. */
@@ -96,8 +96,11 @@ export interface ConverseOptions {
 /** Sends one message, runs the tools the model asks for, and returns its answer and the history. */
 export async function converse(options: ConverseOptions): Promise<{ history: Step[]; reply: string }> {
   const { key, model, host, onRequest, onStep, fetchFn = fetch, now = () => new Date() } = options;
-  // The first message carries the preset and the models, so the model needs no lookup calls.
-  const content = options.history.length === 0 ? `${chatContext(host)}\n\nRequest: ${options.message}` : options.message;
+  // The first message carries the preset and the models, so the model needs no lookup calls; later
+  // ones carry the preset as it is now, since the person may have loaded or edited one meanwhile.
+  const context = options.history.length === 0 ? chatContext(host) : `Loaded preset now:\n${currentPresetText(host)}`;
+  const content = `${context}\n\nRequest: ${options.message}`;
+  const guard: ChatGuard = { index: host.snapshot().index };
   const input: Step[] = [...options.history, { type: 'user_input', content }];
   for (let request = 0; request < MAX_REQUESTS; request++) {
     onRequest();
@@ -108,7 +111,8 @@ export async function converse(options: ConverseOptions): Promise<{ history: Ste
     });
     const body = (await r.json().catch(() => ({}))) as ApiError & { steps?: Step[] };
     if (!r.ok) throw failure(r.status, body, now());
-    const steps = body.steps ?? [];
+    const steps = body.steps;
+    if (!Array.isArray(steps) || steps.length === 0) throw new Error('Gemini sent no answer this editor understands. Try again in a moment.');
     input.push(...steps); // model steps go back exactly as received (thoughts included)
     const calls = steps.filter((s) => s.type === 'function_call');
     if (calls.length === 0) {
@@ -118,7 +122,7 @@ export async function converse(options: ConverseOptions): Promise<{ history: Ste
       return { history: input, reply };
     }
     for (const c of calls) {
-      const result = await runChatTool(host, String(c.name), c.arguments);
+      const result = await runChatTool(host, String(c.name), c.arguments, guard);
       onStep?.(String(c.name), result.ok, result.text);
       input.push({ type: 'function_result', name: c.name, call_id: c.id, is_error: !result.ok, result: [{ type: 'text', text: result.text }] });
     }

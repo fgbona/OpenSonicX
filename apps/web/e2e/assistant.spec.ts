@@ -113,3 +113,29 @@ test('a used-up free quota says when it comes back, and offers Flash-Lite', asyn
   await expect(panel(page).getByText('Hello from Flash-Lite')).toBeVisible();
   expect(requests[1]!.model).toBe('gemini-3.5-flash-lite');
 });
+
+test('what a tool reports matches the pedal: loading, reverting, and undo with Live edit off', async ({ page, pedal }) => {
+  const requests = await fakeGemini(page, [
+    call('undo_edit', {}), say('Live edit is off.'),
+    call('select_preset', { preset: 'P10' }), say('Loaded P10.'),
+    call('edit_preset', { changes: [{ kind: 'volume', value: 50 }] }, 'c3'), call('revert_preset', {}, 'c4'), say('Back as it was.'),
+  ]);
+  await connect(page, pedal);
+  await addKey(page);
+  await ask(page, 'undo that');
+  await expect(panel(page).getByText('Live edit is off.')).toBeVisible();
+  expect(JSON.stringify(requests[1])).toMatch(/Live edit is off, so the sound cannot change/);
+
+  await page.getByRole('switch', { name: 'Live edit' }).click();
+  await ask(page, 'load P10');
+  await expect(page.getByRole('heading', { name: /P10\s*THR-CLEAN/ })).toBeVisible();
+  const loaded = JSON.stringify((requests[3]!.input as unknown[]).at(-1));
+  expect(loaded).toContain('P10 \\"THR-CLEAN\\"');
+  expect(loaded).toContain('unsaved changes: no');
+
+  await ask(page, 'louder, then put it back');
+  await expect(panel(page).getByText('Back as it was.')).toBeVisible();
+  const reverted = JSON.stringify((requests[6]!.input as unknown[]).at(-1));
+  expect(reverted).toContain('Reverted to the saved preset.');
+  expect(reverted).toContain('unsaved changes: no');
+});

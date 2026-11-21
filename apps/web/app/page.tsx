@@ -61,7 +61,7 @@ export default function EditorPage() {
         const discard = await new Promise<boolean>((resolve) => setAssistantLoad({ index, resolve }));
         if (!discard) return false;
       }
-      await loadPresetNow(index);
+      if (!(await loadPresetNow(index))) throw new Error(`The pedal did not load ${presetLabel(index)}.`);
       return true;
     },
     proposeSave: (target, name) => new Promise((resolve) => {

@@ -103,6 +103,11 @@ export function chatContext(host: ToneHost): string {
 
 const preset = (s: ToneSnapshot) => formatPreset(s.index, s.name, s.preset, s.slots, s.modified);
 
+/** The loaded preset as the model reads it, for messages after the first. */
+export function currentPresetText(host: ToneHost): string {
+  return preset(host.snapshot());
+}
+
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const str = (args: Record<string, unknown>, key: string, optional = false): string | undefined => {
   const v = args[key];
@@ -136,11 +141,30 @@ function asChange(v: unknown): Change {
   }
 }
 
-async function run(host: ToneHost, name: string, args: Record<string, unknown>): Promise<{ ok: boolean; text: string }> {
+/**
+ * The preset a reply is working on. When the person loads another one meanwhile, the tools that
+ * change the sound refuse until the model has looked at the preset again (get_preset).
+ */
+export interface ChatGuard {
+  index: number;
+}
+
+const CHANGES_SOUND = new Set(['edit_preset', 'undo_edit', 'revert_preset']);
+
+async function run(host: ToneHost, name: string, args: Record<string, unknown>, guard?: ChatGuard): Promise<{ ok: boolean; text: string }> {
   const done = (text: string) => ({ ok: true, text });
+  if (guard && CHANGES_SOUND.has(name)) {
+    const s = host.snapshot();
+    if (s.index !== guard.index) {
+      return { ok: false, text: `Error: the preset changed to ${presetLabel(s.index)} "${s.name}" while you were working (the person loaded it). Call get_preset and check the request still applies before changing anything.` };
+    }
+  }
   switch (name) {
-    case 'get_preset':
-      return done(preset(host.snapshot()));
+    case 'get_preset': {
+      const s = host.snapshot();
+      if (guard) guard.index = s.index;
+      return done(preset(s));
+    }
     case 'list_presets':
       return done(host.snapshot().names.map((n, i) => `${presetLabel(i)} ${n}`).join('\n'));
     case 'list_models': {
@@ -169,7 +193,9 @@ async function run(host: ToneHost, name: string, args: Record<string, unknown>):
     case 'select_preset': {
       const index = parsePresetLabel(str(args, 'preset') as string);
       if (!(await host.selectPreset(index))) return { ok: false, text: `The person kept the current preset (it has unsaved changes), so ${presetLabel(index)} was not loaded.` };
-      return done(preset(host.snapshot()));
+      const s = host.snapshot();
+      if (guard) guard.index = s.index;
+      return done(preset(s));
     }
     case 'save_preset': {
       const index = parsePresetLabel(str(args, 'slot') as string);
@@ -187,10 +213,10 @@ async function run(host: ToneHost, name: string, args: Record<string, unknown>):
 }
 
 /** Runs a tool call from the model. Never throws: errors come back as text the model can act on. */
-export async function runChatTool(host: ToneHost, name: string, args: unknown): Promise<{ ok: boolean; text: string }> {
+export async function runChatTool(host: ToneHost, name: string, args: unknown, guard?: ChatGuard): Promise<{ ok: boolean; text: string }> {
   try {
     if (!CHAT_TOOLS.some((t) => t.name === name)) return { ok: false, text: `Error: unknown tool ${name}` };
-    return await run(host, name, isRecord(args) ? args : {});
+    return await run(host, name, isRecord(args) ? args : {}, guard);
   } catch (error) {
     return { ok: false, text: `Error: ${error instanceof Error ? error.message : String(error)}` };
   }
