@@ -114,6 +114,7 @@ export default function EditorPage() {
         {pm.preset && (
           <PresetFiles
             connected={connected}
+            current={pm.preset}
             busy={pm.busy}
             error={pm.error}
             onExport={pm.exportPreset}

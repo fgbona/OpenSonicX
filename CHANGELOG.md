@@ -8,6 +8,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Importing a preset file first shows what it changes from the loaded preset (chain order,
+  models, on/off, each parameter and the volume), so a file can be compared with the
+  current sound and the import cancelled.
 - Undo and Redo for live edits: toolbar buttons next to Revert, and ⌘Z / ⇧⌘Z (Ctrl+Z /
   Ctrl+Shift+Z or Ctrl+Y elsewhere). Turning a knob counts as one step however many values
   it sent; up to 100 steps, cleared when another preset is loaded.
