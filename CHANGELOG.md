@@ -17,6 +17,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
     always deliberate.
   - Browser data: backups and slot comments as 0.13 stored them must still load, and
     survive the next write.
+- README: a "What works where" section (tested firmware, browsers, what this firmware does
+  not do), and the start screen says which firmware the editor was tested with.
+- An end-to-end test of the save safety net: a save backs up the slot first, the backup
+  shows in the Backups panel, and restoring it puts the slot back byte for byte.
 
 ## [0.13.7] - 2026-11-21
 
