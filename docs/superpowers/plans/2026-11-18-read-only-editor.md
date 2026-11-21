@@ -1,7 +1,5 @@
 # Read-only Pocket Master editor Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
 **Goal:** A static web page that connects to a Pocket Master over Web MIDI, reads the edit buffer, shows the chain with parameters, and logs all SysEx in hex, without ever writing to the pedal.
 
 **Architecture:** npm workspaces. `packages/core` is pure TypeScript (bytes in, bytes out, no browser or MIDI API). `apps/web` is a Next.js app whose editor page (a client component) owns the Web MIDI transport and passes raw bytes to core.

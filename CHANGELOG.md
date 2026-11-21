@@ -6,6 +6,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Removed
+
+- `apps/web/AGENTS.md` (written by `next dev` for AI coding assistants;
+  `agentRules: false` now turns it off) and the assistant-only header of the
+  plans in `docs/superpowers/plans`.
+
 ### Added
 
 - End-to-end tests: Playwright drives the editor in Chrome against a
