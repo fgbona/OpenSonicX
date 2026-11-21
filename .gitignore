@@ -9,3 +9,7 @@ next-env.d.ts
 .DS_Store
 .env*.local
 apps/web/public/convert-worker.js
+
+# Playwright
+test-results/
+playwright-report/

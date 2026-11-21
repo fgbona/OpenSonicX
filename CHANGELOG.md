@@ -6,6 +6,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- End-to-end tests: Playwright drives the editor in Chrome against a
+  simulated pedal speaking SysEx (connect, read, read-only until live edit,
+  knob and model edits, revert, the unsaved-changes guard, save with backup,
+  slot comments in the AMP menu). They run in CI on every pull request.
+
 ### Changed
 
 - The README shows the editor: screenshots of the chain, eight amp
