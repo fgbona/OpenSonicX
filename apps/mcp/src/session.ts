@@ -5,11 +5,14 @@ import { describeGlobals, globalWrites, type GlobalChanges } from './globals.ts'
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import {
-  applyEdit, applyPreset, blockModelLabel, downloadModel, IR_SLOTS, irSamplesFromWav, irUploadBlob, listModels, parseNam, pollDeviceToken, profileUploadBlob, searchTones, startDeviceLogin, findCloneModel, modelInfo, modelsFor, chainUnits, decodePreset, editToCommands, encodeValue, fromHex, loadIntoEditBuffer,
-  modelChoices, moveInChain, parseBackupFile, parsePresetFile, parsePresetLabel, presetFile, presetLabel,
-  resolveBlock, resolveModel, resolveParam, restoreFromBackup, saveToSlot,
-  type BackupFile, type CloArrays, type GlobalSettings, type DeviceLogin, type Edit, type ParamSpec, type Tokens, type Pedal, type Preset, type SlotNames,
+  formatModels, formatPreset, toEdit, type Change,
+  applyEdit, applyPreset, downloadModel, IR_SLOTS, irSamplesFromWav, irUploadBlob, listModels, parseNam, pollDeviceToken, profileUploadBlob, searchTones, startDeviceLogin, decodePreset, editToCommands, fromHex, loadIntoEditBuffer,
+  parseBackupFile, parsePresetFile, parsePresetLabel, presetFile, presetLabel,
+  resolveBlock, restoreFromBackup, saveToSlot,
+  type BackupFile, type CloArrays, type GlobalSettings, type DeviceLogin, type Edit, type Tokens, type Pedal, type Preset, type SlotNames,
 } from '@pocket-master/core';
+
+export type { Change } from '@pocket-master/core';
 
 /** What the session needs from the pedal: the core Pedal contract plus two read-only queries. */
 export interface PedalIO extends Pedal {
@@ -48,15 +51,6 @@ export interface Connection {
   readonly io: PedalIO;
   close(): void;
 }
-
-/** A change named the way a musician says it. */
-export type Change =
-  | { readonly kind: 'parameter'; readonly block: string; readonly parameter: string; readonly value: number | boolean | string }
-  | { readonly kind: 'block'; readonly block: string; readonly on: boolean }
-  | { readonly kind: 'model'; readonly block: string; readonly model: string }
-  | { readonly kind: 'move'; readonly block: string; readonly position: number }
-  | { readonly kind: 'volume'; readonly value: number }
-  /** FS1, FS2 or none, in any case. */
 
 export interface Folders {
   readonly backups: string;
@@ -444,23 +438,7 @@ export class Session {
   }
 }
 
-function formatModels(blockKey: string, label: string, slots: SlotNames): string {
-  const lines = modelChoices(blockKey, slots).map((choice) => {
-    const catalogModel = choice.clone ? findCloneModel(choice.code) : modelsFor(blockKey).find((m) => m.code === choice.code);
-    const info = catalogModel ? modelInfo(blockKey, catalogModel.name) : undefined;
-    const text = [choice.basedOn ? `based on ${choice.basedOn}.` : '', choice.clone ? 'Captured profile loaded on the pedal.' : (info?.about ?? '')]
-      .filter(Boolean).join(' ');
-    const params = (catalogModel?.params ?? []).map(formatParamSpec).join(', ');
-    return `- ${choice.name}${text ? `: ${text}` : ''}${params ? `\n    params: ${params}` : ''}`;
-  });
-  return `${label} models:\n${lines.join('\n')}`;
-}
 
-function formatParamSpec(p: ParamSpec): string {
-  if (p.type === 'switch') return `${p.name} on/off`;
-  if (p.type === 'select') return `${p.name} (${(p.options ?? []).join('/')})`;
-  return `${p.name} ${p.min ?? 0}..${p.max ?? 100}${p.unit ? ` ${p.unit}` : ''}`;
-}
 
 function requireConfirm(confirm: string, label: string): void {
   if (confirm.trim().toUpperCase() !== label) throw new Error(`confirm must be "${label}" to write that slot`);
@@ -474,24 +452,6 @@ function inside(folder: string, file: string): string {
   return path;
 }
 
-/** The value as the parameter's type expects it; refuses anything that would have to be guessed. */
-function typedValue(spec: ParamSpec, value: number | boolean | string): number | boolean | string {
-  const text = typeof value === 'string' ? value.trim() : null;
-  if (spec.type === 'switch') {
-    if (typeof value === 'boolean') return value;
-    if (text?.toLowerCase() === 'on' || text?.toLowerCase() === 'off') return text.toLowerCase() === 'on';
-    throw new Error(`${spec.name} is a switch: use true/false or "on"/"off"`);
-  }
-  if (spec.type === 'select') {
-    const options = spec.options ?? [];
-    const index = text === null ? (typeof value === 'number' ? value : -1) : options.findIndex((o) => o.toLowerCase() === text.toLowerCase());
-    if (index < 0) throw new Error(`${spec.name} options: ${options.join(', ')}`);
-    return index;
-  }
-  if (typeof value === 'number') return value;
-  if (text && Number.isFinite(Number(text))) return Number(text);
-  throw new Error(`${spec.name} needs a number`);
-}
 
 /** A file or tone name as printable ASCII, without folder and extension, at most `max` characters. */
 function defaultName(file: string, max: number, fallback: string): string {
@@ -505,44 +465,4 @@ const PROFILE_NAME = 15;
 
 const safe = (name: string) => name.replace(/[^A-Za-z0-9_-]+/g, '_') || 'preset';
 
-function toEdit(preset: Preset, change: Change, slots: SlotNames): Edit {
-  if (change.kind === 'volume') return { kind: 'volume', value: change.value };
-  const block = resolveBlock(preset, change.block);
-  switch (change.kind) {
-    case 'parameter': {
-      const spec = resolveParam(preset, block, change.parameter);
-      return { kind: 'param', module: block.module, alg: spec.alg, value: encodeValue(spec, typedValue(spec, change.value)) };
-    }
-    case 'block':
-      return { kind: 'on', module: block.module, on: change.on };
-    case 'model': {
-      const model = resolveModel(block.key, change.model, slots);
-      return { kind: 'model', module: block.module, code: model.code, clone: model.clone };
-    }
-    case 'move': {
-      const order = preset.chain.map((b) => b.module);
-      const units = chainUnits(order).length;
-      if (!Number.isInteger(change.position) || change.position < 1 || change.position > units) {
-        throw new Error(`position must be 1..${units} (DRV, AMP, IR and EQ move together)`);
-      }
-      return { kind: 'chain', order: moveInChain(order, block.module, change.position - 1) };
-    }
-  }
-}
 
-function formatPreset(index: number, name: string, preset: Preset, slots: SlotNames, modified: boolean | null): string {
-  const head = [
-    `${presetLabel(index)} "${name}"`,
-    `volume ${preset.volume ?? '?'}`,
-    `amp mode: ${preset.ampMode === 'clone' ? 'captured profile' : 'amp model'}`,
-    `unsaved changes: ${modified === null ? 'unknown' : modified ? 'yes' : 'no'}`,
-  ].join(' · ');
-  const chain = `Chain: ${preset.chain.map((b) => b.label).join(' → ')}`;
-  const width = Math.max(...preset.chain.map((b) => b.label.length));
-  const blocks = preset.chain.map((b) => {
-    const model = blockModelLabel(b, preset.ampMode, slots.irNames, slots.profileNames);
-    const params = b.params.map((p) => `${p.name} ${p.display}`).join(', ');
-    return `${b.label.padEnd(width)}  ${b.on ? 'on ' : 'off'}  ${model}${params ? `: ${params}` : ''}`;
-  });
-  return [head, chain, ...blocks].join('\n');
-}

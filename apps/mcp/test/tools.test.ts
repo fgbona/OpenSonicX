@@ -8,6 +8,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { FakePedal } from '../../../packages/core/test/fake-pedal.ts';
 import { Session, type PedalIO } from '../src/session.ts';
 import { createServer } from '../src/tools.ts';
+import { shape, type Schema } from '../../../packages/core/test/schema-shape.ts';
 
 async function connected() {
   const fake = new FakePedal({}, 8);
@@ -87,21 +88,6 @@ test('list_preset_files is a read-only tool', async () => {
   const { tools } = await client.listTools();
   assert.equal(tools.find((t) => t.name === 'list_preset_files')?.annotations?.readOnlyHint, true);
 });
-
-type Schema = { type?: string | string[]; enum?: unknown[]; items?: Schema; properties?: Record<string, Schema>; required?: string[]; anyOf?: Schema[]; oneOf?: Schema[]; const?: unknown };
-
-/** A parameter's shape without its description: what an assistant's call has to match. */
-function shape(s: Schema): string {
-  const union = s.anyOf ?? s.oneOf;
-  if (union) return `(${union.map(shape).join(' | ')})`;
-  if (s.const !== undefined) return JSON.stringify(s.const);
-  if (s.enum) return s.enum.map((v) => JSON.stringify(v)).join(' | ');
-  if (s.type === 'array') return `${shape(s.items ?? {})}[]`;
-  if (s.properties) {
-    return `{ ${Object.entries(s.properties).map(([k, v]) => `${k}${s.required?.includes(k) ? '' : '?'}: ${shape(v)}`).join(', ')} }`;
-  }
-  return [s.type ?? 'any'].flat().join(' | ');
-}
 
 // The tool contract assistants are configured against is frozen for 1.x. A change that fails here
 // is deliberate: rerun with UPDATE_MCP_CONTRACT=1, and record it in the changelog (a removed or
