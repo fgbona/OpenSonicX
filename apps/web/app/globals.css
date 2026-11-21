@@ -758,7 +758,7 @@ button, select { font: inherit; color: inherit; }
 .picker-option .picker-detail { color: var(--label-2); white-space: nowrap; }
 .picker-check { color: var(--accent); font-weight: 700; }
 @media (max-width: 720px) {
-  .picker-list { position: fixed; left: 12px; right: 12px; top: auto; bottom: 12px; width: auto; max-height: 60vh; grid-template-columns: 1.2em minmax(0, max-content) minmax(0, 1fr); }
+  .picker-list { position: fixed; left: 12px; right: 12px; top: auto; bottom: 12px; width: auto; min-width: 0; max-height: 60vh; grid-template-columns: 1.2em minmax(0, max-content) minmax(0, 1fr); }
   .picker-option .picker-detail { white-space: normal; }
   .picker-button .picker-detail { display: none; }
 }
@@ -766,6 +766,11 @@ button, select { font: inherit; color: inherit; }
    menu: the panel holding the open menu rises above its siblings. */
 .editor { position: relative; }
 .editor:has(.picker-list) { z-index: 40; }
+/* In the dark theme they are also the containing block of fixed descendants, so on a phone the menu (fixed to
+   the screen's bottom) would hang off the panel instead: the panel drops its blur while it is open. */
+@media (max-width: 720px) {
+  :root .editor:has(.picker-list) { -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
 
 /* Slot comments */
 .slot-text { display: grid; gap: 1px; min-width: 0; }
