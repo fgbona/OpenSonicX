@@ -8,6 +8,7 @@ import {
 } from '@pocket-master/core';
 import { LinkClosedError, linkPedal, PocketMasterLink, readProfileNames, readUserIrNames, type LogEntry } from '@pocket-master/core';
 import { openMidi, pickPocketMaster, webMidiPort } from './midi';
+import { addToLibrary } from './presetLibrary';
 import { EMPTY_HISTORY, record, redo as redoStep, undo as undoStep, type History } from './history';
 import { connectBluetooth } from './ble';
 import { downloadBackup, downloadJson, loadBackups, storeBackup } from './backupStore';
@@ -579,6 +580,7 @@ export function usePocketMaster() {
       const file = presetFile(payload, name);
       const safe = (name || presetLabel(index)).replace(/[^A-Za-z0-9_-]+/g, '_');
       downloadJson(file, `pocket-master-${presetLabel(index)}-${safe}.json`);
+      addToLibrary(file);
     } catch (e) {
       if (!(e instanceof LinkClosedError)) patch({ error: message(e) });
     }

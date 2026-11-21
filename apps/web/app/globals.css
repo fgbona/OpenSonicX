@@ -316,6 +316,11 @@ button, select { font: inherit; color: inherit; }
 .preset-files { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: -12px; }
 .file-button.is-disabled { opacity: 0.4; pointer-events: none; }
 .backup-actions { padding: 0 16px 8px; }
+.library { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow: auto; }
+.library li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 10px; padding: 8px 16px; }
+.library li + li { border-top: 0.5px solid var(--separator); }
+.library-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 720px) { .library li { grid-template-columns: minmax(0, 1fr) auto auto; } .library li > .muted { display: none; } }
 
 /* Preset meta: BPM with tap tempo */
 .bpm { display: inline-flex; align-items: center; gap: 6px; }

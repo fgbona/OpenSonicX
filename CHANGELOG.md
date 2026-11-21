@@ -6,6 +6,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- A preset library: every preset you export, or import into the pedal, is kept in this
+  browser (or the desktop app), newest first, up to 50. *Load…* opens the import
+  confirmation with what it changes from the loaded preset; *Remove* takes it out.
+
 ### Changed
 
 - The Windows self-update check now closes the "downloaded" box (Later) and then the app,

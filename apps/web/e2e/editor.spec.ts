@@ -195,3 +195,26 @@ test('after a save the preset is no longer modified: loading another one does no
   await expect(page.getByRole('heading', { name: /P10\s*THR-CLEAN/ })).toBeVisible();
   await expect(page.getByRole('dialog', { name: 'Discard the changes?' })).toBeHidden();
 });
+
+test('an exported preset goes into the library, and loads from there with its comparison', async ({ page, pedal }) => {
+  await connect(page, pedal);
+  const library = page.getByRole('region', { name: 'Preset library' });
+  await expect(library.getByText(/Presets you export or import/)).toBeVisible();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export preset' }).click();
+  await download;
+  await expect(library.getByText('IRON-LEAD')).toBeVisible();
+
+  await liveEdit(page);
+  await pickAmp(page, 'Calif DualM');
+  await library.getByRole('button', { name: 'Load IRON-LEAD' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Import a preset' });
+  await expect(dialog.getByRole('listitem').filter({ hasText: 'AMP Model' })).toContainText('Calif DualM → Brit 800');
+  await dialog.getByRole('button', { name: 'Load into the pedal' }).click();
+  await expect(dialog.getByText(/is loaded into the edit buffer/)).toBeVisible();
+  await dialog.getByRole('button', { name: 'Done' }).click();
+  await expect(amp(page).getByText('Brit 800')).toBeVisible();
+
+  await library.getByRole('button', { name: 'Remove IRON-LEAD from the library' }).click();
+  await expect(library.getByText('IRON-LEAD')).toBeHidden();
+});

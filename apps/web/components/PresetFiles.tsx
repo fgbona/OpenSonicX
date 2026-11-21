@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { comparePresets, decodePreset, fromHex, parsePresetFile, type Difference, type Preset, type PresetFile, type Progress } from '@pocket-master/core';
 import { Dialog } from './Dialog';
 import { ProgressBar } from './ProgressBar';
@@ -12,17 +12,20 @@ interface Props {
   current: Preset | null;
   busy: Progress | null;
   error: string | null;
+  /** The file waiting for confirmation, picked here or in the preset library. */
+  pending: PresetFile | null;
+  onPick: (file: PresetFile | null) => void;
   onExport: () => void;
   onImport: (file: PresetFile) => Promise<boolean>;
   onError: (message: string) => void;
 }
 
 /** Export the edit buffer as a file, or load a file into it after a confirmation. */
-export function PresetFiles({ connected, current, busy, error, onExport, onImport, onError }: Props) {
+export function PresetFiles({ connected, current, busy, error, pending, onPick, onExport, onImport, onError }: Props) {
   const { t, te } = useI18n();
   const label = (d: Difference) => (d.what === 'param' ? d.name : t(DIFF_KEY[d.what]));
-  const [pending, setPending] = useState<PresetFile | null>(null);
   const [done, setDone] = useState(false);
+  useEffect(() => { if (pending) setDone(false); }, [pending]);
   const disabled = !connected || busy !== null;
 
   const pick = async (input: HTMLInputElement) => {
@@ -30,8 +33,7 @@ export function PresetFiles({ connected, current, busy, error, onExport, onImpor
     input.value = '';
     if (!file) return;
     try {
-      setDone(false);
-      setPending(parsePresetFile(await file.text()));
+      onPick(parsePresetFile(await file.text()));
     } catch (e) {
       onError(e instanceof Error ? e.message : String(e));
     }
@@ -45,13 +47,13 @@ export function PresetFiles({ connected, current, busy, error, onExport, onImpor
         {t('presetFile.import')}
         <input type="file" accept="application/json,.json" disabled={disabled} onChange={(e) => void pick(e.currentTarget)} />
       </label>
-      <Dialog open={pending !== null} title={t('presetFile.title')} onClose={() => setPending(null)} locked={busy !== null}>
+      <Dialog open={pending !== null} title={t('presetFile.title')} onClose={() => onPick(null)} locked={busy !== null}>
         {busy ? (
           <ProgressBar progress={busy} />
         ) : done ? (
           <>
             <p>{t('presetFile.done', { name })}</p>
-            <div className="sheet-actions"><button className="btn btn-primary" onClick={() => setPending(null)}>{t('action.done')}</button></div>
+            <div className="sheet-actions"><button className="btn btn-primary" onClick={() => onPick(null)}>{t('action.done')}</button></div>
           </>
         ) : (
           <>
@@ -62,7 +64,7 @@ export function PresetFiles({ connected, current, busy, error, onExport, onImpor
             {current && pending && <Changes differences={comparePresets(current, decodePreset(fromHex(pending.payload)))} label={label} />}
             {error && <p className="alert" role="alert">{te(error)}</p>}
             <div className="sheet-actions">
-              <button className="btn" onClick={() => setPending(null)}>{t('action.cancel')}</button>
+              <button className="btn" onClick={() => onPick(null)}>{t('action.cancel')}</button>
               <button className="btn btn-primary" onClick={async () => { if (pending && (await onImport(pending))) setDone(true); }}>
                 {t('presetFile.submit')}
               </button>
