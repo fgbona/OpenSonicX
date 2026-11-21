@@ -65,7 +65,18 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
 - A SysEx log (hidden by default; *Show the SysEx log* at the bottom of the page)
   with every message sent and received, in hex, with a label.
 
-Tested on firmware **V1.3.3** over USB and Bluetooth (desktop Chrome).
+## What works where
+
+- **Pedal firmware:** tested on **V1.3.3**. Other versions may behave differently; the editor
+  cannot read the firmware version from the pedal yet.
+- **Browsers:** Chrome, Edge and Opera on a computer, over USB. Bluetooth in Chrome and Edge;
+  tested in desktop Chrome, Android still to be confirmed on a real phone.
+- **Not supported:** Safari and every browser on iPhone and iPad (no Web MIDI there); Firefox is untested.
+  The desktop app covers macOS, Windows and Linux without a browser.
+- **Not on this firmware:** a tempo (BPM) per preset, Sync and Trail on delays and modulation,
+  and per-preset footswitch assignments. The unit ignores those writes, so the editor does not
+  offer them (on this firmware a footswitch toggles a block through the pedal's own
+  Function 1/2 setting).
 
 ## Repository layout
 

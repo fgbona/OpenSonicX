@@ -110,6 +110,7 @@ export default function EditorPage() {
             <p className="muted">{t('empty.subtitle')}</p>
             <ol className="steps">{(desktop ? DESKTOP_STEPS : STEPS).map((s) => <li key={s}>{t(s)}</li>)}</ol>
             <p className="muted small">{t(desktop ? 'empty.desktopNote' : 'empty.browsers')}</p>
+            <p className="muted small">{t('empty.firmware')}</p>
           </section>
         )}
         {connected && (
