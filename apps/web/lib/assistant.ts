@@ -24,11 +24,20 @@ export const MAX_REQUESTS = 6;
 /** The model's free quota is used up; it takes requests again at `retryAt`. */
 export class QuotaError extends Error {
   readonly retryAt: Date;
-  constructor(retryAt: Date) {
+  /** The model that ran out, when one ran out after it had already changed the pedal. */
+  readonly model?: AiModel;
+  /** True when the sound had already changed: the request was only partly done. */
+  readonly partial: boolean;
+  constructor(retryAt: Date, stopped?: { model: AiModel }) {
     super('The free quota is used up for now.');
     this.retryAt = retryAt;
+    this.model = stopped?.model;
+    this.partial = stopped !== undefined;
   }
 }
+
+/** Tools whose success changes the pedal (or opens the Save dialog): a request that ran one is not repeated elsewhere. */
+const ACTS = new Set(['edit_preset', 'undo_edit', 'revert_preset', 'select_preset', 'save_preset']);
 
 /** The provider refused the key itself (wrong, deleted, or not allowed). */
 export class KeyError extends Error {
@@ -45,7 +54,10 @@ export function requestText(host: ToneHost, turns: readonly Turn[], message: str
   return `${context}\n\nRequest: ${message}`;
 }
 
-/** Tool parameters in the JSON Schema subset both APIs document: unions as anyOf, constants as one-value enums. */
+/**
+ * Tool parameters in the JSON Schema subset both APIs document: unions as anyOf, constants as
+ * one-value enums. Not valid for an OpenAI-style "strict" mode (top-level anyOf, type unions).
+ */
 export function toToolSchema(s: JsonSchema): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   if (s.oneOf) out.anyOf = s.oneOf.map(toToolSchema);
@@ -92,6 +104,8 @@ export async function ask(options: Omit<ConverseOptions, 'key' | 'model' | 'onRe
   readonly converse: Readonly<Record<AiModel, Converse>>;
   readonly onRequest: (model: AiModel) => void;
   readonly onLimits?: (model: AiModel, remaining: number, limit: number) => void;
+  /** Called with the pauses as soon as one changes, so they survive any error. */
+  readonly onCooldown?: (cooldown: Cooldown) => void;
 }): Promise<{ reply: string; model: AiModel; cooldown: Cooldown; badKeys: Provider[] }> {
   const now = (options.now ?? (() => new Date()))();
   let cooldown: Cooldown = options.cooldown;
@@ -102,17 +116,28 @@ export async function ask(options: Omit<ConverseOptions, 'key' | 'model' | 'onRe
   for (const model of candidates) {
     const key = options.keys[providerOf(model)]!;
     if (badKeys.includes(providerOf(model)) || (cooldown[model] && cooldown[model]! > now)) continue;
+    let acted = false;
     try {
       const reply = await options.converse[model]({
         ...options, key, model,
         onRequest: () => options.onRequest(model),
         onLimits: (remaining, limit) => options.onLimits?.(model, remaining, limit),
+        onStep: (tool, ok, text) => {
+          if (ok && ACTS.has(tool)) acted = true;
+          options.onStep?.(tool, ok, text);
+        },
       });
       return { reply, model, cooldown, badKeys };
     } catch (error) {
-      if (error instanceof QuotaError) cooldown = { ...cooldown, [model]: error.retryAt };
-      else if (error instanceof KeyError) { badKeys.push(error.provider); keyError = error; }
-      else throw error;
+      if (error instanceof QuotaError) {
+        cooldown = { ...cooldown, [model]: error.retryAt };
+        options.onCooldown?.(cooldown);
+        // Part of the request is already on the pedal: another model would do it again ("more gain" twice).
+        if (acted) throw new QuotaError(error.retryAt, { model });
+      } else if (error instanceof KeyError) {
+        badKeys.push(error.provider);
+        keyError = error;
+      } else throw error;
     }
   }
   if (keyError && candidates.every((m) => badKeys.includes(providerOf(m)))) throw keyError;

@@ -195,3 +195,31 @@ test('with a Groq key, Groq builds the tone; when its quota runs out, Gemini tak
   expect(input).toContain('Rectifier on.');
   expect(input).toContain('Loaded preset now:');
 });
+
+test('a refused Groq key is reported once while Gemini answers; a quota cut mid-answer is not redone elsewhere', async ({ page, pedal }) => {
+  await page.route('https://api.groq.com/**', (route) => route.request().url().endsWith('/models')
+    ? route.fulfill({ json: { data: [] } })
+    : route.fulfill({ status: 401, json: { error: { message: 'Invalid API Key' } } }));
+  const gemini = await fakeGemini(page, [
+    say('Hi from Gemini.'),
+    call('edit_preset', { changes: [{ kind: 'volume', value: 50 }] }),
+    { status: 429, body: { error: { status: 'RESOURCE_EXHAUSTED', details: [{ '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '60s' }] } } },
+  ]);
+  await connect(page, pedal);
+  await page.getByRole('switch', { name: 'Live edit' }).click();
+  await addGroqKey(page);
+  await panel(page).getByRole('button', { name: 'Keys' }).click();
+  await geminiSetup(page).getByLabel('Gemini API key').fill(KEY);
+  await geminiSetup(page).getByRole('button', { name: 'Save key' }).click();
+  await panel(page).getByRole('button', { name: 'Back to the chat' }).click();
+
+  await ask(page, 'hi');
+  await expect(panel(page).getByText('Hi from Gemini.')).toBeVisible();
+  await expect(panel(page).getByText('Groq refused the saved key.', { exact: false })).toHaveCount(1);
+
+  await ask(page, 'louder');
+  await expect(panel(page).getByText(/The free requests of Gemini Flash ran out in the middle of this answer/)).toBeVisible();
+  await expect(panel(page).getByText('Groq refused the saved key.', { exact: false })).toHaveCount(1);
+  expect(gemini.map((r) => r.model)).toEqual(['gemini-3.8-flash', 'gemini-3.8-flash', 'gemini-3.8-flash'], 'Flash-Lite was not asked to redo the edit');
+  expect(pedal.pedal.received.filter((r) => r === 'edit 42')).toHaveLength(1);
+});

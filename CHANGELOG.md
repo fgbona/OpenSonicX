@@ -20,6 +20,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Tone assistant routing (review of the Groq change): a model whose free requests run out
+  after it already changed the sound no longer hands the message to the next model, which
+  would do it again ("more gain" twice); the panel says the answer was cut and to send it
+  again. A provider that refuses its key while another answers is reported once instead of
+  failing quietly on every message. Each model's pause is kept as the router learns it.
 - Tone assistant: `save_preset` also stops when the person loaded another preset during a
   reply, like the other tools that change the pedal.
 

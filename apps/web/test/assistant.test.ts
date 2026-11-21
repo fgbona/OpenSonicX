@@ -61,3 +61,32 @@ test('a refused key skips that provider; other errors stop at once', async () =>
   assert.deepEqual(broken.asked, ['groq']);
   await assert.rejects(ask({ ...base, keys: {}, cooldown: {}, converse: broken.converse }), /No AI key/);
 });
+
+test('a quota that runs out after the sound changed stops instead of repeating the request elsewhere', async () => {
+  const asked: string[] = [];
+  const converse = {
+    groq: async (o: { onStep?: (t: string, ok: boolean, text: string) => void }) => {
+      asked.push('groq');
+      o.onStep?.('edit_preset', true, 'ok');
+      throw new QuotaError(later(30));
+    },
+    flash: async () => { asked.push('flash'); return 'from flash'; },
+    lite: async () => { asked.push('lite'); return 'from lite'; },
+  } as unknown as Record<AiModel, Converse>;
+  const seen: unknown[] = [];
+  const e = await ask({ ...base, keys: { groq: 'g', gemini: 'k' }, cooldown: {}, converse, onCooldown: (c) => seen.push(c) }).catch((x) => x);
+  assert.ok(e instanceof QuotaError);
+  assert.equal(e.partial, true);
+  assert.equal(e.model, 'groq');
+  assert.deepEqual(asked, ['groq'], 'Gemini is not asked to do it again');
+  assert.deepEqual(seen, [{ groq: later(30) }], 'the pause is reported as soon as it is known');
+});
+
+test('a read-only step before the quota ran out still hands the message on', async () => {
+  const converse = {
+    groq: async (o: { onStep?: (t: string, ok: boolean, text: string) => void }) => { o.onStep?.('get_preset', true, 'P08'); o.onStep?.('edit_preset', false, 'Error'); throw new QuotaError(later(30)); },
+    flash: async () => 'from flash',
+    lite: async () => 'from lite',
+  } as unknown as Record<AiModel, Converse>;
+  assert.equal((await ask({ ...base, keys: { groq: 'g', gemini: 'k' }, cooldown: {}, converse })).model, 'flash');
+});

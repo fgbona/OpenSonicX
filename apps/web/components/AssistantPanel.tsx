@@ -121,6 +121,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
   const [limits, setLimits] = useState<Partial<Record<AiModel, { remaining: number; limit: number }>>>({});
   const [needLive, setNeedLive] = useState(false);
   const usage = useAiUsage();
+  const warnedKeys = useRef(new Set<Provider>());
   const end = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -150,16 +151,24 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
       const result = await ask({
         keys, cooldown, converse: CONVERSE, turns, message, host,
         onRequest: (model) => recordRequest(model),
+        onCooldown: setCooldown,
         onLimits: (model, remaining, limit) => setLimits((l) => ({ ...l, [model]: { remaining, limit } })),
         onStep: (_tool, ok, text) => { if (!ok && text.includes('Live edit is off')) setNeedLive(true); },
       });
       setCooldown(result.cooldown);
       const reply = result.reply || '…';
+      // A key the provider refused, while another provider answered: say it once, or it fails silently on every message.
+      const refused = result.badKeys.filter((p) => !warnedKeys.current.has(p));
+      refused.forEach((p) => warnedKeys.current.add(p));
       setTurns((h) => [...h, { role: 'user', text: message }, { role: 'assistant', text: reply }]);
-      setMessages((m) => [...m, { role: 'assistant', text: reply, model: result.model, changes: changed(before!, host.snapshot()) }]);
+      setMessages((m) => [
+        ...m,
+        ...refused.map((p): Message => ({ role: 'error', text: t('assistant.keyRejected', { provider: PROVIDER_NAME[p] }) })),
+        { role: 'assistant', text: reply, model: result.model, changes: changed(before!, host.snapshot()) },
+      ]);
     } catch (error) {
-      if (error instanceof QuotaError) setCooldown(Object.fromEntries(ROUTE.filter((m) => keys[providerOf(m)]).map((m) => [m, error.retryAt])));
-      const text = error instanceof QuotaError ? t('assistant.quotaAll', { time: time(error.retryAt) })
+      const text = error instanceof QuotaError && error.partial && error.model ? t('assistant.quotaPartial', { model: MODELS[error.model].name })
+        : error instanceof QuotaError ? t('assistant.quotaAll', { time: time(error.retryAt) })
         : error instanceof KeyError ? t('assistant.keyRejected', { provider: PROVIDER_NAME[error.provider] })
           : t('assistant.error', { reason: error instanceof Error ? error.message : String(error) });
       setMessages((m) => [...m, { role: 'error', text, changes: before ? changed(before, host.snapshot()) : [] }]);
@@ -188,7 +197,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
         {hasKey && (
           <div className="assistant-head-actions">
             {!managing && messages.length > 0 && <button type="button" className="btn btn-small" onClick={() => { setMessages([]); setTurns([]); }}>{t('assistant.new')}</button>}
-            <button type="button" className="btn btn-small" onClick={() => setManaging(!managing)}>{t(managing ? 'assistant.backToChat' : 'assistant.keys')}</button>
+            <button type="button" className="btn btn-small" disabled={working} onClick={() => setManaging(!managing)}>{t(managing ? 'assistant.backToChat' : 'assistant.keys')}</button>
           </div>
         )}
       </header>
@@ -200,7 +209,13 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
             {SETUP.map((s) => (
               <KeySetup key={s.provider} setup={s} saved={keys[s.provider] ?? null}
                 onSaved={(k) => setKeys((all) => ({ ...all, [s.provider]: k }))}
-                onRemove={() => { removeKey(s.provider); setKeys(({ [s.provider]: _gone, ...rest }) => rest); }} />
+                onRemove={() => {
+                  removeKey(s.provider);
+                  warnedKeys.current.delete(s.provider);
+                  const { [s.provider]: _gone, ...rest } = keys;
+                  setKeys(rest);
+                  if (Object.keys(rest).length === 0) setManaging(false); // the next key added goes straight to the chat
+                }} />
             ))}
             <p className="muted small">{t('assistant.privacy')}</p>
           </>
