@@ -169,7 +169,7 @@ Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
   reasoning; the pedal side takes a fraction of a second per call (each call
   is logged in `~/.pocket-master-editor/timings.log`). For quicker answers,
   start the session with `claude --effort low`.
-- Preset files use the same format as the web editor's Export/Import and
+- Preset files use the same [format](docs/preset-file-format.md) as the web editor's Export/Import and
   live in `~/.pocket-master-editor/presets` (set `POCKET_MASTER_HOME` to
   move both folders). The server reads and writes files only inside these
   folders.

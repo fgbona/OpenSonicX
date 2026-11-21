@@ -1,0 +1,21 @@
+{
+  "edit_preset": "{ changes: ({ kind: \"parameter\", block: string, parameter: string, value: number | boolean | string } | { kind: \"block\", block: string, on: boolean } | { kind: \"model\", block: string, model: string } | { kind: \"move\", block: string, position: integer } | { kind: \"volume\", value: integer })[] }",
+  "export_preset": "{ file?: string, notes?: string }",
+  "get_global_settings": "{  }",
+  "get_preset": "{  }",
+  "import_preset": "{ file: string }",
+  "install_tone": "{ toneId: integer, modelId?: integer, slot: integer, confirm: string, name?: string, replace?: boolean }",
+  "list_models": "{ block?: string }",
+  "list_preset_files": "{  }",
+  "list_presets": "{  }",
+  "load_ir": "{ file: string, slot: integer, confirm: string, name?: string, replace?: boolean }",
+  "load_nam": "{ file: string, slot: integer, confirm: string, name?: string, replace?: boolean }",
+  "rename_slot": "{ kind: \"ir\" | \"profile\", slot: integer, name: string }",
+  "restore_backup": "{ file: string, slot?: string, confirm: string }",
+  "revert_preset": "{  }",
+  "save_preset": "{ slot: string, name: string, confirm: string, backup?: boolean }",
+  "search_tone3000": "{ query: string, format?: \"nam\" | \"ir\", page?: integer }",
+  "select_preset": "{ preset: string }",
+  "set_global_settings": "{ masterVolume?: integer, inputLevel?: integer, fxRecLevel?: integer, monitorLevel?: integer, btRecLevel?: integer, bootProtection?: integer, backlight?: integer }",
+  "tone3000_login": "{  }"
+}

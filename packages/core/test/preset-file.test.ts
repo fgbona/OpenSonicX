@@ -6,6 +6,7 @@ import { applyEdit, diffPresets } from '../src/edit.ts';
 import { modelsFor } from '../src/catalog.ts';
 import { fromHex } from '../src/hex.ts';
 import { FakePedal, realP08 } from './fake-pedal.ts';
+import { readFileSync } from 'node:fs';
 
 const NOW = () => new Date('2026-11-18T22:30:00Z');
 
@@ -60,4 +61,28 @@ test('a preset file can carry notes, and files without notes still parse', async
   const plain = make(realP08(), 'PLAIN', () => new Date(0));
   assert.equal('notes' in plain, false);
   assert.equal(parse(JSON.stringify({ ...plain, notes: 7 })).notes, undefined, 'notes that are not text are dropped');
+});
+
+// Format version 1 is frozen for 1.x: these files were written by 0.13 and every later 1.x must read
+// them the same way. A change here is a breaking change (a new format version), not a fix.
+const V1 = readFileSync(new URL('./fixtures/preset-files/v1-iron-lead.json', import.meta.url), 'utf8');
+
+test('a version 1 file written by 0.13 still reads, with the same preset in it', () => {
+  const file = parsePresetFile(V1);
+  assert.deepEqual(file, JSON.parse(V1));
+  const preset = decodePreset(fromHex(file.payload));
+  assert.equal(preset.volume, 65);
+  assert.deepEqual(preset.chain.map((b) => `${b.label} ${b.model}${b.on ? '' : ' (off)'}`), [
+    'NR Gate', 'FX1 Boost (off)', 'DRV Scream', 'AMP Brit 800', 'IR BritGN 4x12', 'EQ GT EQ 1', 'FX2 A-Chorus (off)', 'DLY Analog (off)', 'RVB Plate 2 (off)',
+  ]);
+});
+
+test('the writer still produces version 1 byte for byte', () => {
+  const file = presetFile(realP08(), 'IRON-LEAD', NOW, "P08 read from the owner's unit, firmware V1.3.3.");
+  assert.equal(`${JSON.stringify(file, null, 2)}\n`, V1);
+});
+
+test('fields a later 1.x adds are ignored, so older 1.x readers keep working', () => {
+  const later = JSON.stringify({ ...JSON.parse(V1), author: 'someone', tags: ['lead'] });
+  assert.deepEqual(parsePresetFile(later), JSON.parse(V1));
 });
