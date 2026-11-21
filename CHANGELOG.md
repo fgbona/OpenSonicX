@@ -8,6 +8,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Tone assistant and the preset library: when a tone sounds right, the assistant keeps it in
+  the library under a short name with the reference it matches ("BLACK RHY — Metallica Black
+  Album, rhythm"); the library goes with the first message, so asking for it again loads the
+  kept tone exactly, without building it anew or spending extra free requests.
+- An end-to-end test of the tone assistant on a phone.
 - Tone assistant: **Groq** as a second free provider (about 1,000 free requests a day on
   `openai/gpt-oss-120b`, no card), recommended first in the setup. With more than one key,
   the editor routes on its own: Groq, then Gemini Flash, then Gemini Flash-Lite; a model

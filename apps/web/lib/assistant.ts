@@ -37,7 +37,7 @@ export class QuotaError extends Error {
 }
 
 /** Tools whose success changes the pedal (or opens the Save dialog): a request that ran one is not repeated elsewhere. */
-const ACTS = new Set(['edit_preset', 'undo_edit', 'revert_preset', 'select_preset', 'save_preset']);
+const ACTS = new Set(['edit_preset', 'undo_edit', 'revert_preset', 'select_preset', 'save_preset', 'load_saved_tone', 'keep_tone']);
 
 /** The provider refused the key itself (wrong, deleted, or not allowed). */
 export class KeyError extends Error {

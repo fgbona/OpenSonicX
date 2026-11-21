@@ -64,6 +64,8 @@ function update(next: PresetFile[]): void {
 }
 
 export const addToLibrary = (file: PresetFile) => update(withPreset(current(), file));
+/** The library as it is now, for code outside React (the tone assistant's tools). */
+export const libraryNow = (): readonly PresetFile[] => current();
 export const removeFromLibrary = (file: PresetFile) => update(withoutPreset(current(), file));
 
 /** The library, newest first; components re-render when it changes. */
