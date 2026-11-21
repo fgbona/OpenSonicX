@@ -6,6 +6,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.13.6] - 2026-11-21
+
+Easier to read in both themes, no jump on phones while the page loads, and
+the README shows the editor. Tested end to end against a simulated pedal.
+
 ### Removed
 
 - `apps/web/AGENTS.md` (written by `next dev` for AI coding assistants;
@@ -744,7 +749,8 @@ Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.5...HEAD
+[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.6...HEAD
+[0.13.6]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.5...v0.13.6
 [0.13.5]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.4...v0.13.5
 [0.13.4]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.3...v0.13.4
 [0.13.3]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.2...v0.13.3
