@@ -3,6 +3,7 @@
  * known read query, and reports the firmware version (from the settings reply) and anything else
  * that looks like one. With --scan it also tries the query kinds nobody has mapped (GET frames
  * only, one at a time). Everything sent and received goes to ~/.pocket-master-editor/probe-<time>.txt.
+ * It also finds a Smart Box, so the first session with one can start from the same read-only report.
  *
  *   node apps/mcp/scripts/probe-pedal.ts [--scan]
  */
@@ -12,7 +13,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { decodeCurrentPreset, decodeFirmware, decodePreset, diffPresets, isReadOnly, presetLabel, readStoredPreset, parseFrame, PocketMasterLink, Query, queryFrame, toHex, type QueryKind } from '@pocket-master/core';
 
-const PORT_NAME = /pocket\s*master/i;
+const PORT_NAME = /pocket\s*master|smart\s*box/i;
 const QUIET_MS = 3000;
 const SCAN_WAIT_MS = 600;
 /** The tested firmware's bytes in either order (the globals reply stores 03 03 01). */
@@ -37,7 +38,7 @@ async function main(scan: boolean) {
   const output = new Output();
   const port = (p: { getPortCount(): number; getPortName(i: number): string }) => {
     const i = Array.from({ length: p.getPortCount() }, (_, k) => p.getPortName(k)).findIndex((n) => PORT_NAME.test(n));
-    if (i < 0) throw new Error('No Pocket Master MIDI port: plug the pedal in by USB and close other editors.');
+    if (i < 0) throw new Error('No Pocket Master or Smart Box MIDI port: plug the pedal in by USB and close other editors.');
     return i;
   };
   const lines: string[] = [];
@@ -46,6 +47,7 @@ async function main(scan: boolean) {
   input.ignoreTypes(false, true, true);
   input.on('messageBuffer', (_t: number, m: Buffer) => receiver?.(new Uint8Array(m)));
   input.openPort(port(input));
+  say(`Port: ${input.getPortName(port(input))}`);
   output.openPort(port(output));
   const send = (bytes: Uint8Array) => {
     if (!isReadOnly(bytes)) throw new Error('blocked: the probe only sends read queries');
