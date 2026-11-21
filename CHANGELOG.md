@@ -6,6 +6,15 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The README shows the editor: screenshots of the chain, eight amp
+  finishes and the model menu, the tube warming up, and a download table
+  for the desktop app. `scripts/readme-media.mjs` regenerates them from the
+  preview page.
+- The README's "Run it" section is gone: development setup was already in
+  CONTRIBUTING.md, which now also covers hosting the container.
+
 ## [0.13.5] - 2026-11-20
 
 Clearer drive labels and a faster CI.
