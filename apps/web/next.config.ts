@@ -16,6 +16,8 @@ const config: NextConfig = {
   // The editor has no images to optimise, so Next never loads sharp (removed from the image in the Dockerfile).
   images: { unoptimized: true },
   outputFileTracingRoot: fileURLToPath(new URL('../../', import.meta.url)),
+  // No AGENTS.md written by `next dev`: assistant instructions are not part of the published source.
+  agentRules: false,
 };
 
 export default config;
