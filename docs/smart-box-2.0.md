@@ -37,14 +37,11 @@ Models SonicMaster offers on the Smart Box but not on the Pocket Master (by id):
 - Cab: 421 (Bass 4x10)
 - Delays: 710-716 (Flash, Damage, Flutter, Glost, Dark, Shiny, Echo)
 
-## Open question for the owner: where the model data comes from
+## Model data
 
-Our catalog is PocketEdit's (permission from its author, 2026-11-19) and covers the Pocket
-Master only. The Smart Box models' parameters, ranges and defaults exist in SonicMaster's
-libraries, but those carry the same values as PocketEdit's without credit, so SonicMaster's MIT
-licence does not settle their provenance. Options: ask the PocketEdit author whether the data for
-these models is theirs too; read them from the Smart Box itself and its manual; or ask
-SonicMaster's author.
+Settled by the owner (2026-11-21): the Smart Box models' parameters, ranges and defaults come
+from the same source as the Pocket Master catalog, credited as it is today in NOTICE. Each
+model is still checked against the unit before it ships.
 
 ## First session with the Smart Box (read only, ~10 min)
 
