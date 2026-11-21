@@ -8,6 +8,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Undo and Redo for live edits: toolbar buttons next to Revert, and ⌘Z / ⇧⌘Z (Ctrl+Z /
+  Ctrl+Shift+Z or Ctrl+Y elsewhere). Turning a knob counts as one step however many values
+  it sent; up to 100 steps, cleared when another preset is loaded.
 - `apps/mcp/scripts/probe-pedal.ts`: a read-only diagnostic for sessions with the real
   pedal. It checks the USB port is quiet, sends every known read query (optionally every
   unmapped one with `--scan`), flags anything that looks like a firmware version and saves

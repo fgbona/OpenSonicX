@@ -119,3 +119,34 @@ test('a save backs up the slot first, and that backup puts the slot back as it w
   expect(pedal.pedal.names[8]).toBe(original.name);
   expect(Array.from(pedal.pedal.slots[8]!)).toEqual(original.bytes);
 });
+
+test('undo and redo step through live edits, a knob turn counting as one step', async ({ page, pedal }) => {
+  await connect(page, pedal);
+  await liveEdit(page);
+  const gain = amp(page).getByRole('slider', { name: /gain/i });
+  const before = Number(await gain.getAttribute('aria-valuenow'));
+  await gain.focus();
+  for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowUp');
+  await expect(gain).toHaveAttribute('aria-valuenow', String(before + 3));
+  await pickAmp(page, 'Calif DualM');
+  await expect(amp(page).locator('.face-amp')).toHaveAttribute('data-skin', 'mesa');
+
+  const undo = page.getByRole('button', { name: 'Undo' });
+  const redo = page.getByRole('button', { name: 'Redo' });
+  await undo.click();
+  await expect(amp(page).locator('.face-amp')).toHaveAttribute('data-skin', 'marshall');
+  await expect(gain).toHaveAttribute('aria-valuenow', String(before + 3));
+  await undo.click();
+  await expect(gain).toHaveAttribute('aria-valuenow', String(before));
+  await expect(undo).toBeDisabled();
+  // The pedal holds what the screen shows.
+  await expect.poll(() => pedal.pedal.editBuffer.join()).toBe(pedal.pedal.slots[8]!.join());
+
+  await redo.click();
+  await expect(gain).toHaveAttribute('aria-valuenow', String(before + 3));
+  await page.locator('body').click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press('ControlOrMeta+Shift+z');
+  await expect(amp(page).locator('.face-amp')).toHaveAttribute('data-skin', 'mesa');
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(amp(page).locator('.face-amp')).toHaveAttribute('data-skin', 'marshall');
+});

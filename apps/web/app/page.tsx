@@ -44,6 +44,22 @@ export default function EditorPage() {
     }
   };
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // ⌘Z / Ctrl+Z undoes a live edit, ⇧⌘Z / Ctrl+Y redoes; text fields keep their own undo.
+  const { undo, redo } = pm;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+      const key = e.key.toLowerCase();
+      if (key !== 'z' && key !== 'y') return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('input, textarea, select, [contenteditable="true"], dialog[open]')) return;
+      e.preventDefault();
+      if (key === 'y' || e.shiftKey) redo();
+      else undo();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [undo, redo]);
   const connected = pm.status === 'connected' || pm.status === 'reading';
   // The sidebar lists every preset: read the names once the pedal is connected.
   const { names, loadNames } = pm;
@@ -68,6 +84,10 @@ export default function EditorPage() {
         modified={pm.modified}
         onLiveEdit={pm.setLiveEdit}
         onRevert={pm.revert}
+        onUndo={pm.undo}
+        onRedo={pm.redo}
+        canUndo={pm.canUndo}
+        canRedo={pm.canRedo}
         onSave={() => {
           pm.clearError();
           setSaveOpen(true);

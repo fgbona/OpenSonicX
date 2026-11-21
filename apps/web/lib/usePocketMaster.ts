@@ -8,6 +8,7 @@ import {
 } from '@pocket-master/core';
 import { LinkClosedError, linkPedal, PocketMasterLink, readProfileNames, readUserIrNames, type LogEntry } from '@pocket-master/core';
 import { openMidi, pickPocketMaster, webMidiPort } from './midi';
+import { EMPTY_HISTORY, record, redo as redoStep, undo as undoStep, type History } from './history';
 import { connectBluetooth } from './ble';
 import { downloadBackup, downloadJson, loadBackups, storeBackup } from './backupStore';
 
@@ -51,12 +52,14 @@ export interface PocketMasterState {
   readonly profileNames: readonly (string | null)[] | null;
   /** The pedal's own "edit buffer differs from the slot" flag (12 45), null until read. */
   readonly pedalModified: boolean | null;
+  /** Live edits that Undo and Redo step through; cleared when another preset is read. */
+  readonly history: History;
 }
 
 const INITIAL: PocketMasterState = {
   status: 'idle', error: null, inputs: [], outputs: [], inputId: '', outputId: '',
   preset: null, presetIndex: null, restorePoint: null, liveEdit: false, log: [],
-  busy: null, names: null, backups: [], flowBackups: [], storageWarning: null, irNames: null, profileNames: null, pedalModified: null,
+  busy: null, names: null, backups: [], flowBackups: [], storageWarning: null, irNames: null, profileNames: null, pedalModified: null, history: EMPTY_HISTORY,
 };
 
 const toOptions = (ports: Iterable<MIDIPort>): PortOption[] =>
@@ -68,6 +71,14 @@ const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const isPresetChange = (f: Frame) => f.payload[0] === MessageType.GET && f.payload[1] === Query.CURRENT_PRESET;
 /** The pedal reports 12 45 01 after the first edit and 12 45 00 after a save or a preset load. */
 const modifiedFlag = (f: Frame) => (f.payload[0] === MessageType.GET && f.payload[1] === Query.MODIFIED && f.payload.length >= 3 ? f.payload[2] !== 0 : null);
+
+/** Edits of one control merge into one Undo step while it is being turned. */
+const stepKey = (edits: readonly Edit[]): string | null => {
+  const [e] = edits;
+  if (edits.length !== 1 || !e) return null;
+  if (e.kind === 'param') return `param:${e.module}:${e.alg}`;
+  return e.kind === 'volume' ? 'volume' : null;
+};
 
 const safeModified = (preset: Preset | null, restorePoint: Preset | null) => {
   if (!preset || !restorePoint) return false;
@@ -90,6 +101,7 @@ export function usePocketMaster() {
   // Edits and Revert work on the latest values, not on a stale render.
   const presetRef = useRef<Preset | null>(null);
   const restoreRef = useRef<Preset | null>(null);
+  const historyRef = useRef<History>(EMPTY_HISTORY);
   /** Bumped by every edit; a dump requested before the latest edit is stale. */
   const editGeneration = useRef(0);
   const notifyRef = useRef<(f: Frame) => void>(() => undefined);
@@ -161,7 +173,8 @@ export function usePocketMaster() {
         const keep = !options.freshRestorePoint && s.restorePoint && s.presetIndex === index;
         const restorePoint = keep ? s.restorePoint : preset;
         restoreRef.current = restorePoint;
-        return { ...s, status: 'connected', preset, presetIndex: index, restorePoint, pedalModified };
+        historyRef.current = keep ? historyRef.current : EMPTY_HISTORY;
+        return { ...s, status: 'connected', preset, presetIndex: index, restorePoint, pedalModified, history: historyRef.current };
       });
       presetRef.current = preset;
       return preset;
@@ -176,9 +189,12 @@ export function usePocketMaster() {
   const readRef = useRef(read);
   readRef.current = read;
 
-  /** Applies edits to the screen at once and queues them for the pedal. */
+  /**
+   * Applies edits to the screen at once and queues them for the pedal. A new edit is recorded for
+   * Undo; Undo and Redo pass the history they lead to instead.
+   */
   const send = useCallback(
-    (edits: readonly Edit[]) => {
+    (edits: readonly Edit[], history?: History) => {
       const current = link.current;
       const preset = presetRef.current;
       if (!current || !preset || edits.length === 0 || busyRef.current) return;
@@ -191,7 +207,8 @@ export function usePocketMaster() {
         commands.forEach((bytes) => current.edit(bytes));
         editGeneration.current += 1;
         presetRef.current = next;
-        patch({ preset: next, error: null });
+        historyRef.current = history ?? record(historyRef.current, preset, stepKey(edits), Date.now());
+        patch({ preset: next, error: null, history: historyRef.current });
         // A model or chain change is followed by a re-read, so the screen shows the pedal's values.
         if (edits.some((e) => e.kind === 'model' || e.kind === 'chain')) scheduleReread();
       } catch (e) {
@@ -209,6 +226,23 @@ export function usePocketMaster() {
     },
     [state.liveEdit, send],
   );
+
+  /** Sends the pedal back (or forward) to the preset of the previous (next) step. */
+  const step = useCallback(
+    (back: boolean) => {
+      const preset = presetRef.current;
+      if (!state.liveEdit || !preset || busyRef.current) return;
+      const moved = (back ? undoStep : redoStep)(historyRef.current, preset);
+      if (!moved) return;
+      const edits = diffPresets(preset, moved.target);
+      if (edits.length > 0) return send(edits, moved.history);
+      historyRef.current = moved.history; // nothing to send: the pedal already matches
+      patch({ history: moved.history });
+    },
+    [state.liveEdit, send, patch],
+  );
+  const undo = useCallback(() => step(true), [step]);
+  const redo = useCallback(() => step(false), [step]);
 
   /**
    * Reloads the preset from its slot, as switching presets on the unit does: the edit buffer goes
@@ -264,7 +298,8 @@ export function usePocketMaster() {
     transportClose.current = null;
     restoreRef.current = null;
     presetRef.current = null;
-    patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false, names: null });
+    historyRef.current = EMPTY_HISTORY;
+    patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false, names: null, history: EMPTY_HISTORY });
     try {
       await Promise.all([input.open(), output.open()]);
       link.current = new PocketMasterLink(webMidiPort(input, output), appendLog, (f) => notifyRef.current(f));
@@ -291,7 +326,8 @@ export function usePocketMaster() {
     restoreRef.current = null;
     presetRef.current = null;
     const idle = () => (access.current ? 'ready' : 'idle') as Status;
-    patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false, names: null });
+    historyRef.current = EMPTY_HISTORY;
+    patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false, names: null, history: EMPTY_HISTORY });
     try {
       const ble = await connectBluetooth(
         (e) => patch({ error: `Bluetooth: ${message(e)}` }),
@@ -610,6 +646,10 @@ export function usePocketMaster() {
     read,
     edit,
     revert: () => void revert(),
+    undo,
+    redo,
+    canUndo: state.liveEdit && state.history.past.length > 0,
+    canRedo: state.liveEdit && state.history.future.length > 0,
     save,
     restore,
     loadNames,
