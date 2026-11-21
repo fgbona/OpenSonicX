@@ -4,14 +4,14 @@ What only the real pedal can check (milestone 1.0.0). About 45 minutes; a guitar
 for step 4. Before anything: close SonicMaster and every other editor tab (another client on the
 port steals replies), and keep a backup: the editor backs up each slot before writing it.
 
-## 1. Firmware version (#101), 2 min
+## 1. Read-only probe, 2 min
 
 Pedal on USB, nothing else connected to it:
 
     node apps/mcp/scripts/probe-pedal.ts
 
-It only reads. If no line says `VERSION?`, run it again with `--scan` (tries the read queries no
-one has mapped, about 1 minute). Send the log file it prints at the end.
+It only reads, and prints the firmware version among other things (the editor now shows it in
+*Global options*). Send the log file it prints at the end.
 
 ## 2. Global options (#90), 10 min
 

@@ -77,3 +77,8 @@ packages/core/test/fixtures/clo/ref_input.nam is SonicMaster's test capture
 (app/rust/tests/fixtures). The *.golden.f32 files next to it are outputs of
 SonicMaster's own clo_dsp.dart, run on that capture and on a synthetic DI, which
 the tests compare against.
+
+Protocol facts used from the Pocket Master Interoperability Guide by klotznick
+(https://github.com/klotznick/pocket-master-interoperability-guide), dedicated to
+the public domain under CC0 1.0: the firmware version in record 01 01 of the
+settings reply (12 10). No text or code from it is included.

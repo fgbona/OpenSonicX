@@ -44,7 +44,7 @@ export default function Preview() {
       <main className="main">
         <label className="muted small"><input type="checkbox" checked={editable} onChange={(e) => setEditable(e.target.checked)} /> live edit (preview only)</label>
         <button type="button" className="btn" onClick={() => setSettingsOpen(true)}>Global options</button>
-        <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} exclusive={fakeExclusive}
+        <SettingsDialog firmware="V1.3.3" open={settingsOpen} onClose={() => setSettingsOpen(false)} exclusive={fakeExclusive}
           writeGlobal={(b) => console.info('preview global write', b)} busy={false} error={null} factoryReset={fakeReset} onReset={() => undefined} />
         <ChainView preset={preset} presetIndex={current} presetName={NAMES[current] ?? null} editable={editable} modified={false} onEdit={onEdit}
           irNames={['Mesa OS', null, null, null, null]} profileNames={['Randall SA', null, null, null, null]} />

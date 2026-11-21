@@ -12,6 +12,8 @@ import type { MessageKey } from '@/lib/i18n';
 
 interface Props {
   open: boolean;
+  /** Firmware version the pedal reported on connecting, shown for reference. */
+  firmware: string | null;
   onClose: () => void;
   exclusive: Exclusive;
   writeGlobal: (bytes: Uint8Array) => void;
@@ -52,7 +54,7 @@ function Segmented({ label, value, options, disabled, onChange }: { label: strin
 }
 
 /** Global Options: the Pocket Master's device-wide levels, display and boot anti-touch protection, factory reset. */
-export function SettingsDialog({ open, onClose, exclusive, writeGlobal, busy, error, factoryReset, onReset }: Props) {
+export function SettingsDialog({ open, firmware, onClose, exclusive, writeGlobal, busy, error, factoryReset, onReset }: Props) {
   const { t } = useI18n();
   const [values, setValues] = useState<Values | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -105,6 +107,12 @@ export function SettingsDialog({ open, onClose, exclusive, writeGlobal, busy, er
                 onChange={(e) => set('backlight', Number(e.target.value))} style={{ '--fill': `${values.backlight ?? 0}%` } as React.CSSProperties} />
               <span className="param-value">{values.backlight ?? '—'}</span>
             </label>
+            {firmware && (
+              <div className="settings-row">
+                <span className="settings-label">{t('settings.firmware')}</span>
+                <span className="param-value">{firmware}</span>
+              </div>
+            )}
             <Segmented label={t('settings.bootProtection')} value={values.bootProtection} options={[t('block.off'), t('block.on')]} disabled={off} onChange={(v) => set('bootProtection', v)} />
           </section>
           <section className="settings-group settings-danger">

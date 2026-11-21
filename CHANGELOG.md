@@ -8,6 +8,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The editor reads the pedal's firmware version on connecting: *Global options* shows it,
+  and a notice appears when it is not V1.3.3, the version the editor was tested on. The MCP
+  server's `get_global_settings` names it too. The version comes from the settings reply
+  (record 01 01), as documented in klotznick's CC0 Pocket Master Interoperability Guide.
 - A preset library: every preset you export, or import into the pedal, is kept in this
   browser (or the desktop app), newest first, up to 50. *Load…* opens the import
   confirmation with what it changes from the loaded preset; *Remove* takes it out.

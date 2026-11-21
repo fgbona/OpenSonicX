@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { buildFrame } from '../src/frame.ts';
 import { toHex } from '../src/hex.ts';
 import { fromHex } from '../src/hex.ts';
-import { decodeGlobals, factoryReset, setExpFsTarget, setGlobal } from '../src/globals.ts';
+import { decodeFirmware, decodeGlobals, factoryReset, setExpFsTarget, setGlobal, TESTED_FIRMWARE } from '../src/globals.ts';
 
 // Frames the official app sent, as captured by SonicMaster (MIT); 8080 USB prefix dropped.
 const hex = (b: Uint8Array) => toHex(b).replace(/\s/g, '').toLowerCase();
@@ -41,7 +41,7 @@ const OWNER_GLOBALS = fromHex(
 test('the globals reply decodes by record address, not by byte position', () => {
   assert.deepEqual(decodeGlobals(OWNER_GLOBALS), {
     masterVolume: 60, backlight: 100, inputLevel: -5, fxRecLevel: 0, monitorLevel: 0, btRecLevel: -20,
-    mode: 1, bootProtection: 1, reamp: null, eco: null, expFsType: null,
+    mode: 1, bootProtection: 1, reamp: null, eco: null, expFsType: null, firmware: 'V1.3.3',
   });
   assert.equal(decodeGlobals(Uint8Array.from([0x12, 0x41, ...OWNER_GLOBALS.slice(2)])), null);
   assert.equal(decodeGlobals(OWNER_GLOBALS.slice(0, 10)), null, 'no master volume record');
@@ -54,4 +54,14 @@ test('queued target writes keep only the latest value per slot; settings keep on
   assert.notEqual(editKey(setExpFsTarget('exp', 1)), editKey(setExpFsTarget('fs', 1)));
   assert.equal(editKey(setGlobal('inputLevel', 1)), editKey(setGlobal('inputLevel', -3)));
   assert.notEqual(editKey(setGlobal('inputLevel', 1)), editKey(setGlobal('fxRecLevel', 1)));
+});
+
+// Record 01 01 holds the firmware version, last part first (klotznick's interoperability guide,
+// CC0): 03 03 01 01 is V1.3.3 on the owner's unit.
+test('the globals reply carries the firmware version', () => {
+  assert.equal(decodeFirmware(OWNER_GLOBALS), 'V1.3.3');
+  assert.equal(decodeFirmware(fromHex('12 10 01 01 04 00 07 04 01 01')), 'V1.4.7');
+  assert.equal(decodeFirmware(fromHex('12 10 02 01 04 00 02 00 00 00')), null, 'no version record');
+  assert.equal(decodeFirmware(fromHex('12 41 01 01 04 00 03 03 01 01')), null, 'not a globals reply');
+  assert.equal(TESTED_FIRMWARE, 'V1.3.3');
 });

@@ -218,3 +218,16 @@ test('an exported preset goes into the library, and loads from there with its co
   await library.getByRole('button', { name: 'Remove IRON-LEAD from the library' }).click();
   await expect(library.getByText('IRON-LEAD')).toBeHidden();
 });
+
+test('the firmware version shows in Global options, and a different one gets a notice', async ({ page, pedal }) => {
+  await connect(page, pedal);
+  await expect(page.getByText(/the editor was tested on/)).toBeHidden();
+  await page.getByRole('button', { name: 'Global options' }).click();
+  await expect(page.getByRole('dialog', { name: 'Global options' }).getByText('V1.3.3')).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  pedal.globals = Uint8Array.from(pedal.globals.map((b, i) => (i === 6 ? 0 : i === 7 ? 4 : b))); // 00 04 01 01: V1.4.0
+  await page.getByRole('button', { name: 'Disconnect' }).click();
+  await page.getByRole('button', { name: 'Connect', exact: true }).click();
+  await expect(page.getByText('This pedal reports firmware V1.4.0; the editor was tested on V1.3.3.', { exact: false })).toBeVisible();
+});

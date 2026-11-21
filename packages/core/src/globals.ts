@@ -30,6 +30,8 @@ export interface GlobalSettings {
   readonly eco: number | null;
   /** 0 expression pedal, 1 single footswitch, 2 dual footswitch. */
   readonly expFsType: number | null;
+  /** Firmware version, e.g. "V1.3.3"; null when the reply has no version record. */
+  readonly firmware?: string | null;
 }
 
 interface SettingSpec {
@@ -120,7 +122,8 @@ export function factoryReset(): Uint8Array {
  * byte offsets, which on V1.3.3 put the boot anti-touch protection record where re-amp was expected.
  * Null when the reply is not one or has no master volume record.
  */
-export function decodeGlobals(payload: Uint8Array): GlobalSettings | null {
+/** The records of a 12 10 reply by address ("a0:a1"), or null for another reply. */
+function globalRecords(payload: Uint8Array): Map<string, Uint8Array> | null {
   if (payload[0] !== MessageType.GET || payload[1] !== Query.GLOBALS) return null;
   const values = new Map<string, Uint8Array>();
   for (let o = 2; o + 4 <= payload.length; ) {
@@ -129,6 +132,24 @@ export function decodeGlobals(payload: Uint8Array): GlobalSettings | null {
     values.set(`${payload[o]}:${payload[o + 1]}`, payload.subarray(o + 4, o + 4 + length));
     o += 4 + length;
   }
+  return values;
+}
+
+/** The firmware the editor was tested with; other versions may behave differently. */
+export const TESTED_FIRMWARE = 'V1.3.3';
+
+/**
+ * Firmware version from record 01 01 of the globals reply, e.g. "V1.3.3" for 03 03 01 01: the
+ * parts come last first. Which part the fourth byte is remains unknown with one firmware seen.
+ */
+export function decodeFirmware(payload: Uint8Array): string | null {
+  const v = globalRecords(payload)?.get('1:1');
+  return v && v.length >= 3 ? `V${v[2]}.${v[1]}.${v[0]}` : null;
+}
+
+export function decodeGlobals(payload: Uint8Array): GlobalSettings | null {
+  const values = globalRecords(payload);
+  if (!values) return null;
   const raw = (setting: GlobalSetting) => values.get(GLOBAL_SETTINGS[setting].address.join(':'));
   // Values are little-endian; every setting fits its first byte (master volume's record is 4 bytes).
   const byte = (setting: GlobalSetting) => raw(setting)?.[0] ?? null;
@@ -140,5 +161,6 @@ export function decodeGlobals(payload: Uint8Array): GlobalSettings | null {
     inputLevel: level('inputLevel'), fxRecLevel: level('fxRecLevel'), monitorLevel: level('monitorLevel'), btRecLevel: level('btRecLevel'),
     backlight: byte('backlight'), mode: byte('mode'), bootProtection: byte('bootProtection'),
     reamp: byte('reamp'), eco: byte('eco'), expFsType: byte('expFsType'),
+    firmware: decodeFirmware(payload),
   };
 }
