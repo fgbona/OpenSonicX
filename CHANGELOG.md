@@ -6,6 +6,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The Windows self-update check now closes the "downloaded" box (Later) and then the app,
+  the install-on-quit path; it used to rely on the box's old "close means Restart now"
+  behaviour fixed in 0.13.7. 0.13.7 -> 0.13.8 verified this way.
+
 ## [0.13.8] - 2026-11-21
 
 Undo and redo for live edits, a preview of what a preset file changes before loading it,
