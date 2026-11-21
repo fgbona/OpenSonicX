@@ -8,6 +8,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Link previews: sharing the site's address (WhatsApp, Discord, social networks) shows the
+  editor's picture and a description that names Bluetooth, TONE3000 and the tone assistant.
 - SECURITY.md: how to report a security problem privately, and everything the editor keeps in
   the browser, under which storage key. Issue forms for bugs (where, version, USB or Bluetooth,
   system, pedal firmware, MIDI log) and ideas.
