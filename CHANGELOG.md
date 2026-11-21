@@ -12,6 +12,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
   finishes and the model menu, the tube warming up, and a download table
   for the desktop app. `scripts/readme-media.mjs` regenerates them from the
   preview page.
+- The README's "Run it" section is gone: development setup was already in
+  CONTRIBUTING.md, which now also covers hosting the container.
 
 ## [0.13.5] - 2026-11-20
 

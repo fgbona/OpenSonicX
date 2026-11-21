@@ -51,6 +51,28 @@ Run the container check locally with:
 docker build -t pocket-master-editor . && scripts/smoke-test.sh pocket-master-editor
 ```
 
+## Host it yourself
+
+In a container, from the published image:
+
+```sh
+docker run --rm -p 3000:3000 ghcr.io/fgbona/sonicake-pocket-master-editor:latest
+```
+
+Or build it yourself:
+
+```sh
+docker compose up --build   # editor at http://localhost:3000
+```
+
+The container only serves the page. The browser talks to the pedal, so the
+container needs no USB access. Web MIDI only works on `https` or `localhost`.
+
+The image is Alpine with only the Node binary (no npm, no package manager),
+runs as an unprivileged user and works with a read-only root filesystem. `compose.yaml` applies those restrictions
+and binds the port to localhost only. To serve it publicly, put it behind a
+reverse proxy that terminates HTTPS.
+
 ## README images
 
 The screenshots and the tube animation in `docs/media` come from the dev-only
