@@ -16,7 +16,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "electron": "45.2.3",
+    "electron": "45.4.1",
     "electron-builder": "26.18.0",
     "electron-updater": "6.8.11",
     "esbuild": "0.28.2"
@@ -25,7 +25,7 @@
     "appId": "io.github.fgbona.pocketmastereditor",
     "productName": "Pocket Master Editor",
     "artifactName": "Pocket-Master-Editor-${version}-${os}-${arch}.${ext}",
-    "electronVersion": "45.2.3",
+    "electronVersion": "45.4.1",
     "npmRebuild": false,
     "directories": {
       "output": "release",

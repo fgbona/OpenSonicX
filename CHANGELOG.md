@@ -6,6 +6,20 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Security
+
+- The desktop app runs on Electron 45.4.1 (was 45.2.3), which carries the latest Chromium
+  security fixes.
+- The installer build no longer pulls a minimatch version open to a denial of service
+  (GHSA-g3hv-75wg-m249): versions 7 to 11.0.0 are overridden to 11.0.9. This only ran on
+  the build machine; nothing shipped to users used it. `npm audit` is clean again.
+
+### Changed
+
+- The MCP server's native MIDI library is updated to @julusian/midi 3.9.0.
+- The desktop packaging check also runs when the lockfile changes, so a dependency bump
+  that breaks an installer shows on its pull request.
+
 ## [0.13.6] - 2026-11-21
 
 Easier to read in both themes, no jump on phones while the page loads, and
