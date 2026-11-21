@@ -8,6 +8,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- On a phone the model menu now sits at the bottom of the screen. In the dark theme it was
+  anchored to the panel it opened from (a blurred glass panel captures fixed elements), so
+  it could end below the screen's edge; in both themes it ran 12px past the right edge.
 - Desktop app: closing the "update downloaded" box (Esc or its close button) restarted the
   app at once, as if "Restart now" had been picked; it now means "Later". Closing the
   "new version available" box no longer opens the download page either.
@@ -17,6 +20,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - A CI check that installs the previous release on Windows and Linux, lets it find and
   download the latest one, quits it, and confirms the new version got installed. It runs
   after every release and on demand.
+- End-to-end tests on a phone screen (Pixel 7, touch): the page fits without sideways
+  scrolling, the preset list stays folded until opened, the chain reorders with the arrows
+  and the model menu opens inside the screen in both themes.
 
 ### Security
 
