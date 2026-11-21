@@ -9,8 +9,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
 ### Added
 
 - `docs/smart-box-2.0.md`: what is known about the Sonicake Smart Box before 2.0.0 (the
-  features and models SonicMaster offers only on it, the open question about where their data
-  comes from, a read-only first session). The probe script now finds a Smart Box too and
+  features and models SonicMaster offers only on it, where their data comes from, a read-only
+  first session). The probe script now finds a Smart Box too and
   prints the port it opened.
 - Link previews: sharing the site's address (WhatsApp, Discord, social networks) shows the
   editor's picture and a description that names Bluetooth, TONE3000 and the tone assistant.
