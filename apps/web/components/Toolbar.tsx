@@ -58,8 +58,9 @@ function PortSelect(props: { label: string; ports: readonly PortOption[]; value:
 export function Toolbar(p: Props) {
   const { t } = useI18n();
   const linked = p.status === 'connected' || p.status === 'reading';
-  // Known only in the browser; checked after mount so the server and first render agree.
-  const [bluetooth, setBluetooth] = useState(false);
+  // Known only in the browser; checked after mount so the server and first render agree. Rendered
+  // until then: the browsers the editor works in have it, and a late button shifts the page.
+  const [bluetooth, setBluetooth] = useState(true);
   useEffect(() => setBluetooth(bluetoothAvailable()), []);
   const bluetoothButton = bluetooth && (
     <button type="button" className="btn" onClick={p.onBluetooth} disabled={p.status === 'connecting'}>{t('action.bluetooth')}</button>
