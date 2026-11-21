@@ -62,7 +62,7 @@ jobs:
           $version = { (Get-Item $exe -ErrorAction SilentlyContinue).VersionInfo.ProductVersion -replace '\.0$' }
           "installed $(& $version) at $exe"
           if ((& $version) -ne $env:FROM) { throw "expected $env:FROM installed" }
-          $app = Start-Process $exe -PassThru
+          $app = Start-Process $exe -PassThru -RedirectStandardOutput app-out.log -RedirectStandardError app-err.log
           $info = $null
           foreach ($i in 1..120) {
             $info = Get-ChildItem "$env:LOCALAPPDATA\*-updater\pending\update-info.json" -ErrorAction SilentlyContinue
@@ -75,5 +75,10 @@ jobs:
           taskkill /PID $app.Id
           foreach ($i in 1..90) { if ((& $version) -eq $env:TO) { break }; Start-Sleep 2 }
           "installed $(& $version)"
+          "app still running: $([bool](Get-Process -Id $app.Id -ErrorAction SilentlyContinue))"
+          Get-Process | Where-Object { $_.Name -match 'Pocket|Pocket-Master|Un_A|Au_' } | Format-Table Id, Name, Path -AutoSize | Out-String
+          '--- app stdout'; Get-Content app-out.log -ErrorAction SilentlyContinue
+          '--- app stderr'; Get-Content app-err.log -ErrorAction SilentlyContinue | Select-Object -Last 40
+          '--- pending'; Get-ChildItem "$env:LOCALAPPDATA\*-updater\pending" -ErrorAction SilentlyContinue | Format-Table Name, Length | Out-String
           Stop-Process -Name 'Pocket Master Editor' -Force -ErrorAction SilentlyContinue
           if ((& $version) -ne $env:TO) { throw "expected $env:TO installed" }
