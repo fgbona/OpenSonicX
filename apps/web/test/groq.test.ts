@@ -85,3 +85,23 @@ test('testGroqKey asks for the model list', async () => {
   assert.equal(await testGroqKey(KEY, scripted({ status: 401, body: {} }).fetchFn), 'invalid');
   assert.equal(await testGroqKey(KEY, scripted({ status: 503, body: {} }).fetchFn), 'unavailable');
 });
+
+test('a 429 without retry-after waits for the reset Groq states, or longer for a daily limit', async () => {
+  const { h } = host();
+  const now = new Date('2026-11-21T20:00:00Z');
+  const run = (r: { status: number; body: unknown; headers?: Record<string, string> }) =>
+    converseGroq({ key: KEY, model: 'groq', turns: [], message: 'x', host: h, fetchFn: scripted(r).fetchFn, onRequest: () => {}, now: () => now }).then(() => { throw new Error('expected a quota error'); }, (x) => x as QuotaError);
+  assert.equal((await run({ status: 429, body: {}, headers: { 'x-ratelimit-reset-requests': '2h3m4.5s' } })).retryAt.toISOString(), '2026-11-21T22:03:04.500Z');
+  assert.equal((await run({ status: 429, body: { error: { message: 'Rate limit reached ... on requests per day (RPD): Limit 1000' } } })).retryAt.toISOString(), '2026-11-21T21:00:00.000Z', 'an hour for a daily limit');
+  assert.equal((await run({ status: 429, body: {} })).retryAt.toISOString(), '2026-11-21T20:01:00.000Z');
+});
+
+test('a malformed tool call from the model (400 tool_use_failed) is retried once', async () => {
+  const { h } = host();
+  const failed = { status: 400, body: { error: { message: 'Failed to call a function', code: 'tool_use_failed' } } };
+  const ok = scripted(failed, say('Done.'));
+  assert.equal(await converseGroq({ key: KEY, model: 'groq', turns: [], message: 'x', host: h, fetchFn: ok.fetchFn, onRequest: () => {} }), 'Done.');
+  assert.equal(ok.requests.length, 2);
+  const twice = scripted(failed, failed);
+  await assert.rejects(converseGroq({ key: KEY, model: 'groq', turns: [], message: 'x', host: h, fetchFn: twice.fetchFn, onRequest: () => {} }), /Groq answered 400/);
+});

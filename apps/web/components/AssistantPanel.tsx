@@ -60,7 +60,7 @@ const SETUP: readonly {
 const changed = (before: ToneSnapshot, after: ToneSnapshot) => (before.index === after.index ? comparePresets(before.preset, after.preset) : []);
 
 /** One provider's key: how to get it, or the saved one with a way to remove it. */
-function KeySetup({ setup, saved, onSaved, onRemove }: { setup: (typeof SETUP)[number]; saved: string | null; onSaved: (key: string) => void; onRemove: () => void }) {
+function KeySetup({ setup, saved, kept, onSaved, onRemove }: { setup: (typeof SETUP)[number]; saved: string | null; kept: boolean; onSaved: (key: string, kept: boolean) => void; onRemove: () => void }) {
   const { t } = useI18n();
   const [input, setInput] = useState('');
   const [status, setStatus] = useState<'idle' | 'testing' | 'invalid' | 'unavailable'>('idle');
@@ -71,17 +71,17 @@ function KeySetup({ setup, saved, onSaved, onRemove }: { setup: (typeof SETUP)[n
     setStatus('testing');
     const result = await setup.test(candidate);
     if (result !== 'ok') return setStatus(result);
-    saveKey(setup.provider, candidate);
+    const kept = saveKey(setup.provider, candidate);
     setInput('');
     setStatus('idle');
-    onSaved(candidate);
+    onSaved(candidate, kept);
   };
   return (
     <section className="assistant-provider" aria-label={t('assistant.providerAria', { provider: name })}>
       <h3>{name} <span className="muted small">{t(setup.note)}</span></h3>
       {saved ? (
         <p className="assistant-saved">
-          <span>{t('assistant.keySaved', { key: maskKey(saved) })}</span>
+          <span>{t(kept ? 'assistant.keySaved' : 'assistant.keyNotKept', { key: maskKey(saved) })}</span>
           <button type="button" className="btn btn-small" onClick={onRemove}>{t('assistant.removeKey')}</button>
         </p>
       ) : (
@@ -112,6 +112,8 @@ function KeySetup({ setup, saved, onSaved, onRemove }: { setup: (typeof SETUP)[n
 export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
   const { t, lang } = useI18n();
   const [keys, setKeys] = useState<Partial<Record<Provider, string>>>({});
+  /** Keys the browser refused to store: they last for this page only. */
+  const [notKept, setNotKept] = useState<readonly Provider[]>([]);
   const [managing, setManaging] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -171,6 +173,8 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
         : error instanceof QuotaError ? t('assistant.quotaAll', { time: time(error.retryAt) })
         : error instanceof KeyError ? t('assistant.keyRejected', { provider: PROVIDER_NAME[error.provider] })
           : t('assistant.error', { reason: error instanceof Error ? error.message : String(error) });
+      // The next answer is told this one was cut, so a model does not lose the request (the preset it gets is current).
+      setTurns((h) => [...h, { role: 'user', text: message }, { role: 'assistant', text: `(This answer was interrupted: ${error instanceof Error ? error.message : String(error)})` }]);
       setMessages((m) => [...m, { role: 'error', text, changes: before ? changed(before, host.snapshot()) : [] }]);
     } finally {
       setWorking(false);
@@ -207,8 +211,11 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
             {!hasKey && <p>{t('assistant.intro')}</p>}
             <p className="muted small">{t('assistant.setupHint')}</p>
             {SETUP.map((s) => (
-              <KeySetup key={s.provider} setup={s} saved={keys[s.provider] ?? null}
-                onSaved={(k) => setKeys((all) => ({ ...all, [s.provider]: k }))}
+              <KeySetup key={s.provider} setup={s} saved={keys[s.provider] ?? null} kept={!notKept.includes(s.provider)}
+                onSaved={(k, kept) => {
+                  setKeys((all) => ({ ...all, [s.provider]: k }));
+                  setNotKept((list) => (kept ? list.filter((p) => p !== s.provider) : [...list, s.provider]));
+                }}
                 onRemove={() => {
                   removeKey(s.provider);
                   warnedKeys.current.delete(s.provider);

@@ -20,7 +20,7 @@ type Step = { readonly type: string; readonly [field: string]: unknown };
 
 const TOOLS = CHAT_TOOLS.map((t) => ({ type: 'function', name: t.name, description: t.description, parameters: toToolSchema(t.parameters) }));
 
-type ApiError = { error?: { status?: string; message?: string; details?: { '@type'?: string; reason?: string; retryDelay?: string }[] } };
+type ApiError = { error?: { status?: string; message?: string; details?: { '@type'?: string; reason?: string; retryDelay?: string; violations?: { quotaId?: string }[] }[] } };
 
 /** The error Google answered with, as one of ours. The key is never part of the message. */
 function failure(status: number, body: ApiError, now: Date): Error {
@@ -28,7 +28,10 @@ function failure(status: number, body: ApiError, now: Date): Error {
   if (status === 429) {
     const delay = details.find((d) => d['@type']?.endsWith('RetryInfo'))?.retryDelay;
     const seconds = delay ? Number.parseFloat(delay) : Number.NaN;
-    return new QuotaError(Number.isFinite(seconds) ? new Date(now.getTime() + seconds * 1000) : nextReset(now));
+    if (Number.isFinite(seconds)) return new QuotaError(new Date(now.getTime() + seconds * 1000));
+    // Without a delay, the violated quota tells a per-minute limit (a minute) from the daily one (Pacific midnight).
+    const perMinute = details.some((d) => d.violations?.some((v) => /PerMinute/i.test(v.quotaId ?? '')));
+    return new QuotaError(perMinute ? new Date(now.getTime() + 60_000) : nextReset(now));
   }
   if (status === 401 || status === 403 || details.some((d) => d.reason === 'API_KEY_INVALID')) {
     return new KeyError('gemini', body.error?.message ?? 'Google did not accept this key.');

@@ -125,3 +125,12 @@ test('an answer with nothing recognisable in it is an error, not a silent empty 
   const { h } = host();
   await assert.rejects(converse({ key: KEY, model: 'flash', turns: [], message: 'x', host: h, fetchFn: scripted({ body: { outputs: [] } }).fetchFn, onRequest: () => {} }), /no answer this editor understands/);
 });
+
+test('a per-minute 429 without a retry delay pauses a minute; a daily one until Pacific midnight', async () => {
+  const { h } = host();
+  const now = new Date('2026-11-21T20:00:00Z');
+  const run = (quotaId: string) => converse({ key: KEY, model: 'flash', turns: [], message: 'x', host: h, onRequest: () => {}, now: () => now,
+    fetchFn: scripted({ status: 429, body: { error: { status: 'RESOURCE_EXHAUSTED', details: [{ '@type': 'type.googleapis.com/google.rpc.QuotaFailure', violations: [{ quotaId }] }] } } }).fetchFn }).then(() => { throw new Error('expected a quota error'); }, (x) => x as QuotaError);
+  assert.equal((await run('GenerateRequestsPerMinutePerProjectPerModel-FreeTier')).retryAt.toISOString(), '2026-11-21T20:01:00.000Z');
+  assert.equal((await run('GenerateRequestsPerDayPerProjectPerModel-FreeTier')).retryAt.toISOString(), '2026-11-22T08:00:00.000Z');
+});
