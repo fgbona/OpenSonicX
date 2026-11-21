@@ -8,6 +8,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- SECURITY.md: how to report a security problem privately, and everything the editor keeps in
+  the browser, under which storage key. Issue forms for bugs (where, version, USB or Bluetooth,
+  system, pedal firmware, MIDI log) and ideas.
 - Tone assistant: three example requests under the empty chat ("Black Album rhythm tone", a
   clean chorus, an AC/DC crunch); a click puts one in the message box, so a first-time user
   only has to press Send. The README animation now starts from one.
