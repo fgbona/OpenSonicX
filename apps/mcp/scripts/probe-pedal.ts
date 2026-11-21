@@ -10,7 +10,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { decodeFirmware, isReadOnly, parseFrame, PocketMasterLink, Query, queryFrame, toHex, type QueryKind } from '@pocket-master/core';
+import { decodeCurrentPreset, decodeFirmware, decodePreset, diffPresets, isReadOnly, presetLabel, readStoredPreset, parseFrame, PocketMasterLink, Query, queryFrame, toHex, type QueryKind } from '@pocket-master/core';
 
 const PORT_NAME = /pocket\s*master/i;
 const QUIET_MS = 3000;
@@ -61,6 +61,7 @@ async function main(scan: boolean) {
 
     const link = new PocketMasterLink({ send, listen: (r) => void (receiver = r) }, (e) => lines.push(`${e.dir} ${e.hex}${e.note ? `  (${e.note})` : ''}`));
     for (const [name, kind] of Object.entries(Query)) {
+      if (kind === Query.STORED_PRESET) continue; // needs an index: checked below
       try {
         const { payload } = await link.request(kind);
         const hits = versionCandidates(payload);
@@ -69,6 +70,18 @@ async function main(scan: boolean) {
       } catch (error) {
         say(`${name}: no reply (${(error as Error).message})`);
       }
+    }
+    // Reading a slot without loading it (12 4F) must give what the edit buffer holds while the
+    // preset is unmodified; then backups can stop loading each slot.
+    try {
+      const index = decodeCurrentPreset((await link.request(Query.CURRENT_PRESET)).payload);
+      const buffer = decodePreset((await link.request(Query.EDIT_BUFFER)).payload);
+      const modified = (await link.request(Query.MODIFIED)).payload[2] === 1;
+      const stored = await readStoredPreset(link, index);
+      const same = diffPresets(stored.preset, buffer).length === 0;
+      say(`STORED_PRESET ${presetLabel(index)} "${stored.name}": ${stored.payload.length} bytes, ${same ? 'same as the edit buffer' : 'DIFFERS from the edit buffer'}${modified ? ' (the preset has unsaved edits, so a difference is expected)' : ''}`);
+    } catch (error) {
+      say(`STORED_PRESET: failed (${(error as Error).message})`);
     }
     link.close();
 

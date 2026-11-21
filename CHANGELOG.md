@@ -12,6 +12,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
   and a notice appears when it is not V1.3.3, the version the editor was tested on. The MCP
   server's `get_global_settings` names it too. The version comes from the settings reply
   (record 01 01), as documented in klotznick's CC0 Pocket Master Interoperability Guide.
+- Groundwork for reading a stored preset without loading it (12 4F, also from the guide):
+  the core can request and decode it, and the probe script compares it with the edit buffer.
+  The editor keeps loading a slot to back it up until that check passes on the pedal.
 - A preset library: every preset you export, or import into the pedal, is kept in this
   browser (or the desktop app), newest first, up to 50. *Load…* opens the import
   confirmation with what it changes from the loaded preset; *Remove* takes it out.

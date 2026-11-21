@@ -10,8 +10,11 @@ Pedal on USB, nothing else connected to it:
 
     node apps/mcp/scripts/probe-pedal.ts
 
-It only reads, and prints the firmware version among other things (the editor now shows it in
-*Global options*). Send the log file it prints at the end.
+It only reads. Besides the firmware version, it reads the loaded slot without loading it (a
+command from klotznick's guide) and says whether that matches the edit buffer; if it does,
+backups can stop loading each slot. Then run it once more with `--scan` (about a minute; it
+also tries the battery and charge reads, which may only answer over Bluetooth). Send both log
+files it prints at the end.
 
 ## 2. Global options (#90), 10 min
 
@@ -37,5 +40,11 @@ holds Randall SA). Pick it on AMP and play.
 
 On the Android phone: the preset list folds behind its button, the arrows under the tiles move a
 block in the chain, the model menu opens at the bottom of the screen.
+
+## 6. With Claude, if there is time, 10 min
+
+Copying a preset to another slot and turning the tuner on and off are writes the guide
+documents but this project has not tried. They are done together in the session, on a spare
+slot, with a backup first.
 
 Write down for each step: OK, or what happened. Each result closes its issue or turns into a fix.

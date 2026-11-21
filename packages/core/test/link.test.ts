@@ -449,3 +449,11 @@ test('three queries never overlap, even when the third arrives as the first fini
   f.receive(buildFrame([0x12, 0x45, 0]));
   await c;
 });
+
+test('a query with arguments sends them, and its reply is matched by kind', async () => {
+  const f = fakes();
+  const pending = f.link.request(0x4f, [8, 0, 0, 0]);
+  assert.equal(f.sent[0], toHex(buildFrame([0x12, 0x4f, 8, 0, 0, 0])));
+  f.receive(buildFrame([0x12, 0x4f, 0xff, 0xff, 0xff, 0xff]));
+  assert.equal(toHex((await pending).payload), '12 4F FF FF FF FF');
+});
