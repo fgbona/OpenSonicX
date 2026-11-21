@@ -6,6 +6,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.13.8] - 2026-11-21
+
+Undo and redo for live edits, a preview of what a preset file changes before loading it,
+and two fixes found over Bluetooth: Save suggests the right name, and a saved preset no
+longer counts as modified. Toward 1.0: preset files, the MCP tools and browser data are
+pinned by tests, and a read-only probe prepares the remaining checks on the pedal.
+
 ### Fixed
 
 - Save suggested the wrong name: on first opening it took P01's name ("MTL-CLEAN") instead
@@ -829,7 +836,8 @@ Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.7...HEAD
+[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.8...HEAD
+[0.13.8]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.7...v0.13.8
 [0.13.7]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.6...v0.13.7
 [0.13.6]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.5...v0.13.6
 [0.13.5]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.4...v0.13.5
