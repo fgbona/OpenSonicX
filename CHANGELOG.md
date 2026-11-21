@@ -12,84 +12,67 @@ and the project uses [Semantic Versioning](https://semver.org/).
 tone" or "warmer, less gain" into models and knob settings, live, and lists what changed. It
 runs on your own free AI key, Groq (about 1,000 requests a day) or Google Gemini, called
 straight from the editor and the desktop app, with no server of ours; saving still goes
-through the Save dialog you confirm. Also new: undo and redo for live edits, a preset library,
-a comparison before importing a preset file, and the pedal's firmware version in Global
-options.
+through the Save dialog you confirm. Also new: a preset library, and
+the pedal's firmware version in Global options.
 
 ![The tone assistant building a Black Album rhythm tone](https://raw.githubusercontent.com/fgbona/sonicake-pocket-master-editor/main/docs/media/assistant.jpg)
 
 ### Added
 
-- Link previews: sharing the site's address (WhatsApp, Discord, social networks) shows the
-  editor's picture and a description that names Bluetooth, TONE3000 and the tone assistant.
-- SECURITY.md: how to report a security problem privately, and everything the editor keeps in
-  the browser, under which storage key. Issue forms for bugs (where, version, USB or Bluetooth,
-  system, pedal firmware, MIDI log) and ideas.
-- Tone assistant: three example requests under the empty chat ("Black Album rhythm tone", a
-  clean chorus, an AC/DC crunch); a click puts one in the message box, so a first-time user
-  only has to press Send. The README animation now starts from one.
-- Tone assistant: when Google does not offer the Gemini API in the person's region, the chat
-  says so, with a link to Google's list of regions, instead of "Gemini answered 400".
-- Tone assistant and the preset library: when a tone sounds right, the assistant keeps it in
-  the library under a short name with the reference it matches ("BLACK RHY — Metallica Black
-  Album, rhythm"); the library goes with the first message, so asking for it again loads the
-  kept tone exactly, without building it anew or spending extra free requests.
-- An end-to-end test of the tone assistant on a phone.
-- Tone assistant: **Groq** as a second free provider (about 1,000 free requests a day on
-  `openai/gpt-oss-120b`, no card), recommended first in the setup. With more than one key,
-  the editor routes on its own: Groq, then Gemini Flash, then Gemini Flash-Lite; a model
-  whose free requests run out hands the message to the next and stays paused until it comes
-  back. Each answer says which model gave it; the meter shows every model (Groq's real
-  remaining count when the browser can read it). Conversations keep only the texts, and
-  every message carries the preset as it is now, so any provider can take the next one.
-- README: a "Describe a tone" section with an animation of the tone assistant at work
-  (`MEDIA=1 npx playwright test e2e/media-assistant.spec.ts` regenerates it and a still,
-  with a simulated pedal and Gemini).
-- The Portuguese and accessibility end-to-end tests cover the tone assistant's chat too
-  (messages, what changed, usage), in both themes.
-- `npm run e2e:live` (with `GROQ_API_KEY` and/or `GEMINI_API_KEY`) checks each real
-  provider; it replaces `npm run e2e:gemini`.
-
-- **Tone assistant** in the editor: describe a sound and it is built on the pedal, live.
-  It uses Google Gemini with the person's own free API key, called straight from the editor
-  (no server; Google keeps no conversation, as it runs in stateless mode).
-  - Guided key setup: a link to Google AI Studio and three steps, including creating the
-    key in a project without billing so it can never charge; the key is tested before it is
-    kept, stays on the device, and is never shown in full.
-  - Each answer lists what changed on the pedal; the editor's Undo and Revert work on the
+- **Tone assistant** in the editor and the desktop app: describe a sound ("Black Album rhythm
+  tone", "warmer, less gain", in English or Portuguese) and it is built on the pedal, live.
+  - It runs on the person's own free key, called straight from the editor, with no server of
+    ours: **Groq** (about 1,000 free requests a day on `openai/gpt-oss-120b`, no card;
+    recommended first) and/or **Google Gemini** (Flash and Flash-Lite, stateless, so Google
+    keeps no conversation).
+  - Guided key setup per provider, with a link to its console; each key is tested before it
+    is kept, stays on the device, and is never shown in full.
+  - With more than one key the editor routes on its own: Groq, then Gemini Flash, then Gemini
+    Flash-Lite. A model whose free requests run out passes the message to the next and stays
+    paused until it comes back; one that runs out after it already changed the sound stops
+    instead, so nothing is done twice. Each answer says which model gave it.
+  - A meter of each model's free requests (Groq's real remaining count when the browser can
+    read it) and when they reset.
+  - Each answer lists what changed on the pedal. The editor's Undo and Revert work on the
     assistant's changes; saving opens the Save dialog filled in, and only the person's click
-    saves; loading another preset asks first if there are unsaved changes.
-  - A meter of the free requests used today and when they reset (Pacific midnight); when
-    the quota runs out, the panel says when it comes back and offers Gemini Flash-Lite.
-  - With Live edit off, the assistant asks to turn it on instead of changing anything.
-  - A notice that what is written and the loaded preset go to Google.
-  - `npm run e2e:gemini` (with `GEMINI_API_KEY` set) checks it against the real Gemini;
-    every other test simulates Gemini.
-
-- The editor reads the pedal's firmware version on connecting: *Global options* shows it,
-  and a notice appears when it is not V1.3.3, the version the editor was tested on. The MCP
-  server's `get_global_settings` names it too. The version comes from the settings reply
-  (record 01 01), as documented in klotznick's CC0 Pocket Master Interoperability Guide.
-- Groundwork for reading a stored preset without loading it (12 4F, also from the guide):
-  the core can request and decode it, and the probe script compares it with the edit buffer.
-  The editor keeps loading a slot to back it up until that check passes on the pedal.
+    saves; loading another preset asks first if there are unsaved changes. With Live edit
+    off, it asks to turn it on instead of changing anything.
+  - When a tone sounds right, the assistant keeps it in the preset library with the reference
+    it matches ("BLACK RHY — Metallica Black Album, rhythm"); asking for it again loads the
+    kept tone exactly, without spending extra requests.
+  - Three example requests under the empty chat; a click puts one in the message box.
+  - Clear messages when a key is refused, when every free quota is used up (and until when),
+    and when Google does not offer Gemini in the person's region (with Google's list).
+  - A notice that what is written and the loaded preset go to the provider.
 - A preset library: every preset you export, or import into the pedal, is kept in this
   browser (or the desktop app), newest first, up to 50. *Load…* opens the import
-  confirmation with what it changes from the loaded preset; *Remove* takes it out.
-- MCP server: `undo_edit` puts the edit buffer back as it was before the last
-  `edit_preset`, up to 20 steps, so "I don't like that, go back" no longer means reverting
-  the whole preset. It refuses once the pedal is on another preset, and loading, reverting,
+  confirmation with what it changes from the loaded preset.
+- The editor reads the pedal's firmware version on connecting: *Global options* shows it,
+  and a notice appears when it is not V1.3.3, the version the editor was tested on. The MCP
+  server's `get_global_settings` names it too (record 01 01 of the settings reply, as
+  documented in klotznick's CC0 Pocket Master Interoperability Guide).
+- MCP server: `undo_edit` puts the edit buffer back as it was before the last `edit_preset`,
+  up to 20 steps. It refuses once the pedal is on another preset, and loading, reverting,
   saving or importing clears it.
+- Link previews: sharing the site's address (WhatsApp, Discord, social networks) shows the
+  editor's picture and a description.
+- SECURITY.md (private reports, and every browser storage key the editor uses) and issue forms
+  for bugs and ideas.
+- README: a "Describe a tone" section with an animation of the assistant at work.
+- Groundwork for reading a stored preset without loading it (12 4F, also from the guide): the
+  probe script compares it with the edit buffer; the editor keeps loading a slot to back it up
+  until that check passes on the pedal.
+- Tests: the assistant end to end (simulated pedal and providers) on desktop and phone, in
+  Portuguese and for accessibility; `npm run e2e:live` (with `GROQ_API_KEY` and/or
+  `GEMINI_API_KEY`) checks the real providers.
 
 ### Changed
 
 - The tone tools (turning "AMP gain 70" into an edit, and the preset and model text an
-  assistant reads) moved from the MCP server into the shared core, with a chat version of the
-  tool set for the editor's upcoming tone assistant. The MCP server behaves exactly as before.
-
+  assistant reads) moved from the MCP server into the shared core, so the MCP server and the
+  editor's assistant run the same code. The MCP server behaves exactly as before.
 - The Windows self-update check now closes the "downloaded" box (Later) and then the app,
-  the install-on-quit path; it used to rely on the box's old "close means Restart now"
-  behaviour fixed in 0.13.7. 0.13.7 -> 0.13.8 verified this way.
+  the install-on-quit path. 0.13.7 -> 0.13.8 verified this way.
 
 ### Fixed
 
