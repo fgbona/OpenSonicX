@@ -6,15 +6,6 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Changed
-
-- Easier to read (WCAG AA contrast, now checked in CI): the light theme uses
-  Apple's Increase Contrast colours; off blocks keep their names readable
-  (the dim icon and unlit LED still say they are off); block names, the
-  primary button and the indigo EQ are a little brighter on the dark theme;
-  the Rectifier and British-vintage signatures are darker on their light
-  plates.
-
 ### Added
 
 - End-to-end tests: Playwright drives the editor in Chrome against a
@@ -26,6 +17,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
   gradients, including every amp finish.
 
 ### Changed
+
+- Easier to read (WCAG AA contrast, now checked in CI): the light theme uses
+  Apple's Increase Contrast colours; off blocks keep their names readable
+  (the dim icon and unlit LED still say they are off); block names, the
+  primary button and the indigo EQ are a little brighter on the dark theme;
+  the Rectifier and British-vintage signatures are darker on their light
+  plates.
 
 - The README shows the editor: screenshots of the chain, eight amp
   finishes and the model menu, the tube warming up, and a download table
