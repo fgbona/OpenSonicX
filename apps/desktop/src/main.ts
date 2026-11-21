@@ -59,9 +59,9 @@ function createWindow(): void {
   void win.loadURL(`${ORIGIN}/`);
 }
 
-/** Offers to restart now; otherwise `install` runs when the app quits. */
+/** Offers to restart now; otherwise (also when the box is closed) `install` runs when the app quits. */
 async function offerRestart(version: string, install: (relaunch: boolean) => void): Promise<void> {
-  const { response } = await dialog.showMessageBox({ type: 'info', message: text.ready(version), buttons: [text.restart(), text.later()] });
+  const { response } = await dialog.showMessageBox({ type: 'info', message: text.ready(version), buttons: [text.restart(), text.later()], cancelId: 1 });
   if (response === 0) install(true);
   else app.once('will-quit', () => install(false));
 }
@@ -81,7 +81,7 @@ async function updateMac(version: string, files: readonly { url: string; sha512:
       console.warn('self-update failed, announcing the release instead:', (error as Error).message);
     }
   }
-  const { response } = await dialog.showMessageBox({ type: 'info', message: text.available(version), buttons: [text.download(), text.later()] });
+  const { response } = await dialog.showMessageBox({ type: 'info', message: text.available(version), buttons: [text.download(), text.later()], cancelId: 1 });
   if (response === 0) void shell.openExternal(`${RELEASES}/tag/v${version}`);
 }
 
