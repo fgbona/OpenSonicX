@@ -91,6 +91,10 @@ The screenshots and the tube animation in `docs/media` come from the dev-only
 node scripts/readme-media.mjs http://localhost:3000/preview
 ```
 
+The tone assistant's still and GIF come from an on-demand test with a simulated pedal and
+Gemini: `cd apps/web && MEDIA=1 npx playwright test e2e/media-assistant.spec.ts` (Google
+Chrome and ffmpeg needed).
+
 ## Commits and pull requests
 
 - Conventional commit messages: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`.

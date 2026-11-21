@@ -15,6 +15,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
   back. Each answer says which model gave it; the meter shows every model (Groq's real
   remaining count when the browser can read it). Conversations keep only the texts, and
   every message carries the preset as it is now, so any provider can take the next one.
+- README: a "Describe a tone" section with an animation of the tone assistant at work
+  (`MEDIA=1 npx playwright test e2e/media-assistant.spec.ts` regenerates it and a still,
+  with a simulated pedal and Gemini).
 - The Portuguese and accessibility end-to-end tests cover the tone assistant's chat too
   (messages, what changed, usage), in both themes.
 - `npm run e2e:live` (with `GROQ_API_KEY` and/or `GEMINI_API_KEY`) checks each real
