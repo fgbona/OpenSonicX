@@ -6,6 +6,18 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Desktop app: closing the "update downloaded" box (Esc or its close button) restarted the
+  app at once, as if "Restart now" had been picked; it now means "Later". Closing the
+  "new version available" box no longer opens the download page either.
+
+### Added
+
+- A CI check that installs the previous release on Windows and Linux, lets it find and
+  download the latest one, quits it, and confirms the new version got installed. It runs
+  after every release and on demand.
+
 ### Security
 
 - The desktop app runs on Electron 45.4.1 (was 45.2.3), which carries the latest Chromium

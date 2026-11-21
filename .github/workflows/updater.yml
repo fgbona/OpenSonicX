@@ -1,0 +1,78 @@
+name: Updater
+# Installs the previous release on Windows and Linux, starts it, and checks that it downloads
+# the latest release and installs it when it quits: the path every user of those builds takes.
+# (macOS swaps its own bundle, see apps/desktop/src/mac-update.ts; it is checked by hand.)
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  pull_request:
+    paths: ['.github/workflows/updater.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  update:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    name: Update (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Pick the previous and the latest release
+        shell: bash
+        run: |
+          tags=($(gh release list --exclude-drafts --exclude-pre-releases -L 2 --json tagName -q '.[].tagName'))
+          echo "TO=${tags[0]#v}" >> "$GITHUB_ENV"
+          echo "FROM=${tags[1]#v}" >> "$GITHUB_ENV"
+          echo "Updating ${tags[1]} -> ${tags[0]}"
+
+      - name: Linux, AppImage
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -q && sudo apt-get install -yq libfuse2t64 xvfb
+          mkdir app && cd app
+          gh release download "v$FROM" -p '*-linux-x86_64.AppImage'
+          chmod +x ./*.AppImage
+          xvfb-run -a "./Pocket-Master-Editor-$FROM-linux-x86_64.AppImage" > ../app.log 2>&1 &
+          # electron-updater writes update-info.json once the download is verified.
+          for i in $(seq 120); do ls ~/.cache/*-updater/pending/update-info.json >/dev/null 2>&1 && break; sleep 2; done
+          cat ../app.log
+          ls ~/.cache/*-updater/pending/update-info.json
+          # Quit like a user would: SIGTERM to the main process (not the renderers) runs the quit handlers.
+          for p in $(pgrep -f '/pocket-master-editor'); do grep -qa -- '--type=' /proc/$p/cmdline || kill -TERM $p; done
+          for i in $(seq 60); do [ -e "Pocket-Master-Editor-$TO-linux-x86_64.AppImage" ] && break; sleep 2; done
+          ls -l
+          [ -e "Pocket-Master-Editor-$TO-linux-x86_64.AppImage" ] && [ ! -e "Pocket-Master-Editor-$FROM-linux-x86_64.AppImage" ]
+
+      - name: Windows, NSIS
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          gh release download "v$env:FROM" -p '*-win-x64.exe' -D app
+          Start-Process "app\Pocket-Master-Editor-$env:FROM-win-x64.exe" -ArgumentList '/S' -Wait
+          $exe = (Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter 'Pocket Master Editor.exe' | Select-Object -First 1).FullName
+          $version = { (Get-Item $exe).VersionInfo.ProductVersion }
+          "installed $(& $version) at $exe"
+          if ((& $version) -ne $env:FROM) { throw "expected $env:FROM installed" }
+          $app = Start-Process $exe -PassThru
+          $info = $null
+          foreach ($i in 1..120) {
+            $info = Get-ChildItem "$env:LOCALAPPDATA\*-updater\pending\update-info.json" -ErrorAction SilentlyContinue
+            if ($info) { break }
+            Start-Sleep 2
+          }
+          if (-not $info) { throw 'the update was not downloaded' }
+          Get-Content $info
+          # Quit like a user would: close the windows (no /F), so the quit handlers run the installer.
+          taskkill /PID $app.Id /T
+          foreach ($i in 1..90) { if ((& $version) -eq $env:TO) { break }; Start-Sleep 2 }
+          "installed $(& $version)"
+          Stop-Process -Name 'Pocket Master Editor' -Force -ErrorAction SilentlyContinue
+          if ((& $version) -ne $env:TO) { throw "expected $env:TO installed" }
