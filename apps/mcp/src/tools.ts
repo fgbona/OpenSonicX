@@ -59,7 +59,7 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
     instructions: [
       'Controls a Sonicake Pocket Master guitar pedal over USB.',
       'The loaded preset lives in an edit buffer: edit_preset changes the sound at once but nothing is stored until save_preset.',
-      'select_preset and revert_preset discard unsaved edits; check "unsaved changes" in get_preset and ask the user first.',
+      'select_preset and revert_preset discard unsaved edits; check "unsaved changes" in get_preset and ask the user first. To go back one change instead of all of them, use undo_edit.',
       'save_preset and restore_backup overwrite a user slot: only call them when the user asked for that slot, and pass its label as confirm.',
       'Before building a tone from a reference, call list_preset_files: if an approved tone matches the request, load it with import_preset instead of rebuilding it.',
       'To match a reference tone (an artist, a record, a song), work out the gear used on it, call list_models once to see which pedal models are based on that gear (model names are disguised, e.g. "Calif DualM" is a Mesa/Boogie Dual Rectifier), then build the whole chain with one edit_preset: drive, amp, cabinet, EQ, gate, modulation, delay and reverb, with sensible values. Do not ask for details the user did not give: make reasonable choices, say briefly what you chose and why, and invite them to ask for adjustments by ear. When the user says a tone sounds right, offer to keep it with export_preset and notes naming the reference, so next time it loads at once.',
@@ -105,6 +105,12 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
     description: 'Reloads the loaded preset from its slot, discarding every unsaved edit.',
     annotations: LIVE,
   }, () => reply('revert_preset', options, () => session.revert()));
+
+  server.registerTool('undo_edit', {
+    title: 'Undo the last edit',
+    description: 'Puts the edit buffer back as it was before the last edit_preset (call again to go further back, up to 20). Use it when the user did not like the last change. Only for edits since the preset was loaded: loading, reverting, saving or importing clears it, and it refuses if the pedal is on another preset now. Nothing is saved.',
+    annotations: LIVE,
+  }, () => reply('undo_edit', options, () => session.undo()));
 
   server.registerTool('save_preset', {
     title: 'Save to a user slot',

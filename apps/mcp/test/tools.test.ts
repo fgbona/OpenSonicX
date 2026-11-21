@@ -30,7 +30,7 @@ test('the server lists every tool, marking reads read-only and slot writes destr
   const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
   assert.deepEqual(Object.keys(byName).sort(), [
     'edit_preset', 'export_preset', 'get_global_settings', 'get_preset', 'import_preset', 'install_tone', 'list_models', 'list_preset_files', 'list_presets',
-    'load_ir', 'load_nam', 'rename_slot', 'restore_backup', 'revert_preset', 'save_preset', 'search_tone3000', 'select_preset', 'set_global_settings', 'tone3000_login',
+    'load_ir', 'load_nam', 'rename_slot', 'restore_backup', 'revert_preset', 'save_preset', 'search_tone3000', 'select_preset', 'set_global_settings', 'tone3000_login', 'undo_edit',
   ]);
   for (const name of ['get_preset', 'list_presets', 'list_models']) assert.equal(byName[name]!.annotations?.readOnlyHint, true, name);
   for (const name of ['save_preset', 'restore_backup', 'load_ir', 'load_nam', 'install_tone']) assert.equal(byName[name]!.annotations?.destructiveHint, true, name);

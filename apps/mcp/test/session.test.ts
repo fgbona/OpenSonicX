@@ -389,3 +389,33 @@ test('set_global_settings writes each change once and validates first', async ()
   await assert.rejects(session.setGlobals({}), /Nothing to change/);
   assert.equal(globalWrites.length, 3); // the refused calls sent nothing
 });
+
+test('undo puts the edit buffer back as it was before each edit, last first', async () => {
+  const { session, fake } = setup();
+  const original = fake.editBuffer.slice();
+  await session.edit([{ kind: 'parameter', block: 'amp', parameter: 'gain', value: 70 }]);
+  const afterFirst = fake.editBuffer.slice();
+  await session.edit([{ kind: 'model', block: 'amp', model: 'Calif DualM' }, { kind: 'block', block: 'dly', on: true }]);
+  assert.match(await session.undo(), /^Undid the last edit/);
+  assert.deepEqual(fake.editBuffer, afterFirst);
+  await session.undo();
+  assert.deepEqual(fake.editBuffer, original);
+  await assert.rejects(session.undo(), /Nothing to undo/);
+});
+
+test('undo refuses once the pedal is on another preset, and a revert or a load clears it', async () => {
+  const { session } = setup();
+  await session.edit([{ kind: 'parameter', block: 'amp', parameter: 'gain', value: 70 }]);
+  await session.select('P10');
+  await assert.rejects(session.undo(), /Nothing to undo/);
+  await session.edit([{ kind: 'parameter', block: 'amp', parameter: 'gain', value: 71 }]);
+  await session.revert();
+  await assert.rejects(session.undo(), /Nothing to undo/);
+});
+
+test('undo refuses when the preset changed on the pedal since the edit', async () => {
+  const { session, fake } = setup();
+  await session.edit([{ kind: 'parameter', block: 'amp', parameter: 'gain', value: 70 }]);
+  await fake.selectPreset(9); // the preset knob on the unit
+  await assert.rejects(session.undo(), /P10 is loaded now/);
+});

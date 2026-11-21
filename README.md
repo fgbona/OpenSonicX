@@ -139,7 +139,7 @@ Close the web editor's connection first if both would talk to the pedal at
 the same time.
 
 Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
-`select_preset`, `revert_preset`, `save_preset`, `restore_backup`,
+`select_preset`, `revert_preset`, `undo_edit`, `save_preset`, `restore_backup`,
 `export_preset`, `list_preset_files`, `import_preset`, `load_ir`, `load_nam`,
 `tone3000_login`, `search_tone3000`, `install_tone`, `rename_slot`,
 `get_global_settings`, `set_global_settings`.
