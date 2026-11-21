@@ -58,7 +58,7 @@ jobs:
           gh release download "v$env:FROM" -p '*-win-x64.exe' -D app
           Start-Process "app\Pocket-Master-Editor-$env:FROM-win-x64.exe" -ArgumentList '/S' -Wait
           $exe = (Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter 'Pocket Master Editor.exe' | Select-Object -First 1).FullName
-          $version = { (Get-Item $exe).VersionInfo.ProductVersion }
+          $version = { (Get-Item $exe).VersionInfo.ProductVersion -replace '\.0$' } # 0.13.5.0 -> 0.13.5
           "installed $(& $version) at $exe"
           if ((& $version) -ne $env:FROM) { throw "expected $env:FROM installed" }
           $app = Start-Process $exe -PassThru
