@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -86,4 +86,31 @@ test('list_preset_files is a read-only tool', async () => {
   const { client } = await connected();
   const { tools } = await client.listTools();
   assert.equal(tools.find((t) => t.name === 'list_preset_files')?.annotations?.readOnlyHint, true);
+});
+
+type Schema = { type?: string | string[]; enum?: unknown[]; items?: Schema; properties?: Record<string, Schema>; required?: string[]; anyOf?: Schema[]; oneOf?: Schema[]; const?: unknown };
+
+/** A parameter's shape without its description: what an assistant's call has to match. */
+function shape(s: Schema): string {
+  const union = s.anyOf ?? s.oneOf;
+  if (union) return `(${union.map(shape).join(' | ')})`;
+  if (s.const !== undefined) return JSON.stringify(s.const);
+  if (s.enum) return s.enum.map((v) => JSON.stringify(v)).join(' | ');
+  if (s.type === 'array') return `${shape(s.items ?? {})}[]`;
+  if (s.properties) {
+    return `{ ${Object.entries(s.properties).map(([k, v]) => `${k}${s.required?.includes(k) ? '' : '?'}: ${shape(v)}`).join(', ')} }`;
+  }
+  return [s.type ?? 'any'].flat().join(' | ');
+}
+
+// The tool contract assistants are configured against is frozen for 1.x. A change that fails here
+// is deliberate: rerun with UPDATE_MCP_CONTRACT=1, and record it in the changelog (a removed or
+// renamed tool or parameter, or a new required one, is a breaking change).
+test('the tool contract (names, parameters, types) is unchanged', async () => {
+  const { client } = await connected();
+  const { tools } = await client.listTools();
+  const contract = Object.fromEntries(tools.map((t) => [t.name, shape(t.inputSchema as Schema)]).sort(([a], [b]) => a!.localeCompare(b!)));
+  const file = new URL('./fixtures/tool-contract.json', import.meta.url);
+  if (process.env.UPDATE_MCP_CONTRACT) writeFileSync(file, `${JSON.stringify(contract, null, 2)}\n`);
+  assert.deepEqual(contract, JSON.parse(readFileSync(file, 'utf8')));
 });
