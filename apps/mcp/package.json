@@ -12,13 +12,13 @@
     "sysex",
     "claude"
   ],
-  "homepage": "https://github.com/fgbona/sonicake-pocket-master-editor#readme",
+  "homepage": "https://github.com/fgbona/OpenSonicX#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/fgbona/sonicake-pocket-master-editor.git",
+    "url": "git+https://github.com/fgbona/OpenSonicX.git",
     "directory": "apps/mcp"
   },
-  "bugs": "https://github.com/fgbona/sonicake-pocket-master-editor/issues",
+  "bugs": "https://github.com/fgbona/OpenSonicX/issues",
   "license": "MIT",
   "type": "module",
   "engines": {

@@ -6,6 +6,14 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The project is now **OpenSonicX** (github.com/fgbona/OpenSonicX): open-source tools for
+  Sonicake pedals, starting with the Pocket Master and next the Smart Box. The site moves to
+  https://fgbona.github.io/OpenSonicX/ (the old address stops working; GitHub forwards the old
+  repository links). The desktop app, its updates, the npm package and the container image
+  keep their names.
+
 ### Added
 
 - `docs/smart-box-2.0.md`: what is known about the Sonicake Smart Box before 2.0.0 (the

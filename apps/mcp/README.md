@@ -41,7 +41,7 @@ and macOS and Linux have one.
   `~/.pocket-master-editor/presets` and reuses them.
 
 Tested on firmware V1.3.3. Source, protocol notes and the web editor:
-<https://github.com/fgbona/sonicake-pocket-master-editor>.
+<https://github.com/fgbona/OpenSonicX>.
 
 ## License
 
