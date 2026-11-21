@@ -31,23 +31,33 @@ const EXACT: ReadonlyArray<[string, MessageKey]> = [
   ['not a Pocket Master preset file (invalid JSON)', 'error.notPresetFile'],
   ['the preset file is damaged and cannot be read', 'error.damagedPresetFile'],
 ];
-const OPEN_PORTS_PREFIX = 'Could not open the ports: ';
+/** The editor's English messages that end in a reason from below, which stays as it is. */
+const PREFIXES: ReadonlyArray<[string, MessageKey]> = [
+  ['Could not open the ports: ', 'error.openPorts'],
+  ['Factory reset was not sent: ', 'error.factoryReset'],
+];
 
 /** Translates errors raised by the web layer; protocol and decoder errors stay as they are. */
 export function translateError(lang: Lang, text: string): string {
   const exact = EXACT.find(([source]) => source === text);
   if (exact) return translate(lang, exact[1]);
-  if (text.startsWith(OPEN_PORTS_PREFIX)) return translate(lang, 'error.openPorts', { reason: text.slice(OPEN_PORTS_PREFIX.length) });
+  const prefixed = PREFIXES.find(([prefix]) => text.startsWith(prefix));
+  if (prefixed) return translate(lang, prefixed[1], { reason: text.slice(prefixed[0].length) });
   return text;
 }
 
-/** Core reports progress in English ("Backing up P03"); this maps it to the UI language. */
+/** Core and the editor report progress in English ("Backing up P03"); this maps it to the UI language. */
 const STEPS: ReadonlyArray<[RegExp, MessageKey]> = [
   [/^Backing up (\S+)$/, 'progress.backingUp'],
   [/^Saving (\S+)$/, 'progress.saving'],
   [/^Checking (\S+)$/, 'progress.checking'],
   [/^Saved (\S+)$/, 'progress.saved'],
   [/^Preparing$/, 'progress.preparing'],
+  [/^Loading$/, 'progress.loading'],
+  [/^Renaming$/, 'progress.renaming'],
+  [/^Uploading$/, 'progress.uploading'],
+  [/^Reading settings$/, 'progress.readingSettings'],
+  [/^Factory reset$/, 'progress.factoryReset'],
 ];
 
 export function progressText(lang: Lang, step: string): string {

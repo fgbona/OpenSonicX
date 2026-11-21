@@ -42,6 +42,19 @@ test('progressText translates the save steps', () => {
   assert.equal(progressText('en', 'Saving P03'), 'Saving P03');
 });
 
+test('progressText translates every busy step the editor shows', () => {
+  assert.equal(progressText('pt', 'Loading'), 'Carregando');
+  assert.equal(progressText('pt', 'Renaming'), 'Renomeando');
+  assert.equal(progressText('pt', 'Uploading'), 'Enviando');
+  assert.equal(progressText('pt', 'Reading settings'), 'Lendo as opções');
+  assert.equal(progressText('pt', 'Factory reset'), 'Restaurando os padrões de fábrica');
+  assert.equal(progressText('en', 'Reading settings'), 'Reading settings');
+});
+
+test('translateError translates a factory reset that was not sent', () => {
+  assert.equal(translateError('pt', 'Factory reset was not sent: timeout'), 'A restauração de fábrica não foi enviada: timeout');
+});
+
 test('translateError covers the preset file errors raised by core', () => {
   assert.equal(translateError('pt', 'not a Pocket Master preset file'), 'Este arquivo não é um preset da Pocket Master.');
   assert.equal(translateError('pt', 'not a Pocket Master preset file (invalid JSON)'), 'Este arquivo não é um preset da Pocket Master.');

@@ -8,6 +8,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Portuguese UI: the busy steps "Reading settings" (Global options), "Loading", "Renaming",
+  "Uploading" and "Factory reset" showed in English, as did the error when a factory reset
+  could not be sent; the SysEx log's screen-reader label was English too.
 - On a phone the model menu now sits at the bottom of the screen. In the dark theme it was
   anchored to the panel it opened from (a blurred glass panel captures fixed elements), so
   it could end below the screen's edge; in both themes it ran 12px past the right edge.
@@ -23,6 +26,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - End-to-end tests on a phone screen (Pixel 7, touch): the page fits without sideways
   scrolling, the preset list stays folded until opened, the chain reorders with the arrows
   and the model menu opens inside the screen in both themes.
+- An end-to-end test that opens the editor in a Brazilian browser and walks the main
+  screens, the AMP menu, the save dialog and Global options, failing on any text left in
+  English (the pedal's own names and the SysEx log's protocol notes excepted).
 
 ### Security
 
