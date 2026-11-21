@@ -11,7 +11,7 @@ const ptWords = new Set(Object.values(pt).flatMap(words));
 const englishOnly = new Set(Object.values(en).flatMap(words).filter((w) => !ptWords.has(w)));
 
 /**
- * Visible text and accessible names, without the pedal's own data (preset and model names, quoted names)
+ * Visible text and accessible names, without the pedal's own data (preset, model and parameter names, quoted names)
  * and the SysEx log's lines, which describe the protocol in English on purpose.
  */
 function pageText(page: Page) {
@@ -20,7 +20,7 @@ function pageText(page: Page) {
     for (const el of document.querySelectorAll('[aria-label], [title], [placeholder], [alt]')) {
       for (const a of ['aria-label', 'title', 'placeholder', 'alt']) parts.push(el.getAttribute(a) ?? '');
     }
-    const data = [...document.querySelectorAll('.sidebar-name, .picker-name, .log-line')].flatMap((e) => (e as HTMLElement).innerText.split('\n'));
+    const data = [...document.querySelectorAll('.sidebar-name, .picker-name, .log-line, .editor-params .knob-label, .editor-params .param-name')].flatMap((e) => (e as HTMLElement).innerText.split('\n'));
     // "P41 · Current": a slot and the name stored in it.
     return parts.join('\n').split('\n').filter((line) => !data.includes(line) && !/^P\d\d\b/.test(line)).map((line) => line.replace(/“[^”]*”/g, ''));
   });

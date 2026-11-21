@@ -104,7 +104,13 @@ export function usePocketMaster() {
   // Edits and Revert work on the latest values, not on a stale render.
   const presetRef = useRef<Preset | null>(null);
   const restoreRef = useRef<Preset | null>(null);
+  // Written together with presetRef, so code running right after a read (the tone assistant's
+  // tools) sees the new preset's index and modified flag before React renders the new state.
+  const indexRef = useRef<number | null>(null);
+  const pedalModifiedRef = useRef<boolean | null>(null);
   const historyRef = useRef<History>(EMPTY_HISTORY);
+  /** The latest state, for the tone assistant's tool calls, which read it when they run. */
+  const stateRef = useRef<PocketMasterState>(INITIAL);
   /** Bumped by every edit; a dump requested before the latest edit is stale. */
   const editGeneration = useRef(0);
   const notifyRef = useRef<(f: Frame) => void>(() => undefined);
@@ -171,15 +177,15 @@ export function usePocketMaster() {
         scheduleReread();
         return null;
       }
-      setState((s) => {
-        // A new preset on the pedal gets a new restore point; the same preset keeps the first one.
-        const keep = !options.freshRestorePoint && s.restorePoint && s.presetIndex === index;
-        const restorePoint = keep ? s.restorePoint : preset;
-        restoreRef.current = restorePoint;
-        historyRef.current = keep ? historyRef.current : EMPTY_HISTORY;
-        return { ...s, status: 'connected', preset, presetIndex: index, restorePoint, pedalModified, history: historyRef.current };
-      });
+      // A new preset on the pedal gets a new restore point; the same preset keeps the first one.
+      const keep = !options.freshRestorePoint && restoreRef.current !== null && indexRef.current === index;
+      const restorePoint = keep ? restoreRef.current! : preset;
+      restoreRef.current = restorePoint;
+      indexRef.current = index;
+      pedalModifiedRef.current = pedalModified;
+      historyRef.current = keep ? historyRef.current : EMPTY_HISTORY;
       presetRef.current = preset;
+      setState((s) => ({ ...s, status: 'connected', preset, presetIndex: index, restorePoint, pedalModified, history: historyRef.current }));
       return preset;
     } catch (e) {
       // A read from a link that was closed or replaced must not touch the current state.
@@ -194,13 +200,15 @@ export function usePocketMaster() {
 
   /**
    * Applies edits to the screen at once and queues them for the pedal. A new edit is recorded for
-   * Undo; Undo and Redo pass the history they lead to instead.
+   * Undo; Undo and Redo pass the history they lead to instead. Returns why nothing was sent, or null.
    */
   const send = useCallback(
-    (edits: readonly Edit[], history?: History) => {
+    (edits: readonly Edit[], history?: History): string | null => {
       const current = link.current;
       const preset = presetRef.current;
-      if (!current || !preset || edits.length === 0 || busyRef.current) return;
+      if (!current || !preset) return 'The pedal is not connected.';
+      if (busyRef.current) return 'The editor is busy (saving or loading).';
+      if (edits.length === 0) return null;
       try {
         // Validate and build everything first; queue only when the whole list is good.
         const { next, commands } = edits.reduce(
@@ -214,10 +222,12 @@ export function usePocketMaster() {
         patch({ preset: next, error: null, history: historyRef.current });
         // A model or chain change is followed by a re-read, so the screen shows the pedal's values.
         if (edits.some((e) => e.kind === 'model' || e.kind === 'chain')) scheduleReread();
+        return null;
       } catch (e) {
-        if (e instanceof LinkClosedError) return;
+        if (e instanceof LinkClosedError) return 'The connection to the pedal was closed.';
         console.error('edit failed', e);
         patch({ error: message(e) });
+        return message(e);
       }
     },
     [patch, scheduleReread],
@@ -238,7 +248,10 @@ export function usePocketMaster() {
       const moved = (back ? undoStep : redoStep)(historyRef.current, preset);
       if (!moved) return;
       const edits = diffPresets(preset, moved.target);
-      if (edits.length > 0) return send(edits, moved.history);
+      if (edits.length > 0) {
+        send(edits, moved.history);
+        return;
+      }
       historyRef.current = moved.history; // nothing to send: the pedal already matches
       patch({ history: moved.history });
     },
@@ -248,13 +261,55 @@ export function usePocketMaster() {
   const redo = useCallback(() => step(false), [step]);
 
   /**
+   * The editor as the tone assistant's tools see it (preset reads, edits, Undo, Revert). Loading and
+   * saving need the page's dialogs, so the page completes it into a ToneHost.
+   */
+  /** Throws the reason the assistant cannot change the sound now, if there is one. */
+  const ready = () => {
+    if (!stateRef.current.liveEdit) throw new Error('Live edit is off, so the sound cannot change: the person has to turn it on in the editor first.');
+    if (busyRef.current) throw new Error('The editor is busy (saving or loading); try again in a moment.');
+  };
+  const assistantBase = useMemo(() => ({
+    snapshot: () => {
+      const s = stateRef.current;
+      const preset = presetRef.current;
+      const index = indexRef.current;
+      if (!preset || index === null) throw new Error('No preset has been read from the pedal yet.');
+      return {
+        index, name: (s.names?.[index] ?? '').trim(), preset,
+        slots: { irNames: s.irNames, profileNames: s.profileNames },
+        modified: safeModified(preset, restoreRef.current) || pedalModifiedRef.current === true,
+        names: s.names ?? [],
+      };
+    },
+    async applyEdits(edits: readonly Edit[]) {
+      ready();
+      const failure = send(edits);
+      if (failure) throw new Error(failure);
+    },
+    async undo() {
+      ready();
+      if (historyRef.current.past.length === 0) return false;
+      undoRef.current();
+      return true;
+    },
+    async revert() {
+      ready();
+      if (!(await revertRef.current())) throw new Error('The pedal did not reload the preset.');
+    },
+  }), [send]);
+
+  /**
    * Reloads the preset from its slot, as switching presets on the unit does: the edit buffer goes
    * back to exactly what is saved (undecoded fields included), even if it was edited before connecting.
    */
-  const revert = useCallback(async () => {
+  const undoRef = useRef(() => {});
+  undoRef.current = undo;
+
+  const revert = useCallback(async (): Promise<boolean> => {
     const current = link.current;
     const index = state.presetIndex;
-    if (!state.liveEdit || !current || index === null || busyRef.current) return;
+    if (!state.liveEdit || !current || index === null || busyRef.current) return false;
     busyRef.current = true;
     if (settleTimer.current) clearTimeout(settleTimer.current);
     patch({ busy: { step: 'Preparing', done: 0, total: 1 }, error: null });
@@ -264,12 +319,14 @@ export function usePocketMaster() {
     } catch (e) {
       busyRef.current = false;
       if (!(e instanceof LinkClosedError)) patch({ busy: null, error: message(e) });
-      return;
+      return false;
     }
     busyRef.current = false;
     patch({ busy: null });
-    await read({ freshRestorePoint: true });
+    return (await read({ freshRestorePoint: true })) !== null;
   }, [state.liveEdit, state.presetIndex, read, patch]);
+  const revertRef = useRef(revert);
+  revertRef.current = revert;
 
   /** Re-reads the user IR and captured-profile slot names; they are only labels, so a failure is logged. */
   const refreshSlotNames = useCallback(async () => {
@@ -313,6 +370,8 @@ export function usePocketMaster() {
     transportClose.current = null;
     restoreRef.current = null;
     presetRef.current = null;
+    indexRef.current = null;
+    pedalModifiedRef.current = null;
     historyRef.current = EMPTY_HISTORY;
     patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false, names: null, history: EMPTY_HISTORY, firmware: null });
     try {
@@ -341,6 +400,8 @@ export function usePocketMaster() {
     transportClose.current = null;
     restoreRef.current = null;
     presetRef.current = null;
+    indexRef.current = null;
+    pedalModifiedRef.current = null;
     const idle = () => (access.current ? 'ready' : 'idle') as Status;
     historyRef.current = EMPTY_HISTORY;
     patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false, names: null, history: EMPTY_HISTORY, firmware: null });
@@ -447,8 +508,9 @@ export function usePocketMaster() {
   }, [patch]);
 
   /** Loads another preset, like turning the preset knob; unsaved edits on the pedal are lost. */
-  const loadPreset = useCallback(async (index: number) => {
-    await exclusive('Loading', (current) => linkPedal(current).selectPreset(index));
+  /** True once the pedal loaded it (false when busy or the link failed). */
+  const loadPreset = useCallback(async (index: number): Promise<boolean> => {
+    return (await exclusive('Loading', (current) => linkPedal(current).selectPreset(index))) !== null;
   }, [exclusive]);
 
   const disconnect = useCallback(() => {
@@ -489,6 +551,7 @@ export function usePocketMaster() {
     if (busyRef.current) return; // a save or restore is driving the pedal
     const flag = modifiedFlag(f);
     if (flag !== null) {
+      pedalModifiedRef.current = flag;
       patch({ pedalModified: flag });
       return;
     }
@@ -550,6 +613,8 @@ export function usePocketMaster() {
         editGeneration.current += 1;
         presetRef.current = result.saved;
         restoreRef.current = result.saved;
+        indexRef.current = target;
+        pedalModifiedRef.current = false;
         busyRef.current = false;
         // The slot now holds the edit buffer, so the pedal no longer counts it as modified.
         patch({ busy: null, preset: result.saved, presetIndex: target, restorePoint: result.saved, names, pedalModified: false });
@@ -655,8 +720,10 @@ export function usePocketMaster() {
     [state.preset, state.restorePoint, state.pedalModified],
   );
 
+  stateRef.current = state;
   return {
     ...state,
+    assistantBase,
     modified,
     enable,
     connect,
@@ -673,6 +740,8 @@ export function usePocketMaster() {
     restore,
     loadNames,
     loadPreset: (index: number) => void loadPreset(index),
+    /** loadPreset that can be awaited (the tone assistant waits for the new preset). */
+    loadPresetNow: loadPreset,
     exclusive,
     writeGlobal,
     factoryReset,

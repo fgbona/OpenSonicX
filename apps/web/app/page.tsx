@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { BackupsPanel } from '@/components/BackupsPanel';
 import { ChainView } from '@/components/ChainView';
 import { SaveDialog } from '@/components/SaveDialog';
@@ -8,7 +8,9 @@ import { SettingsDialog } from '@/components/SettingsDialog';
 import { PresetFiles } from '@/components/PresetFiles';
 import { PresetLibrary } from '@/components/PresetLibrary';
 import { addToLibrary } from '@/lib/presetLibrary';
-import { TESTED_FIRMWARE, type PresetFile } from '@pocket-master/core';
+import { presetLabel, TESTED_FIRMWARE, type PresetFile, type ToneHost } from '@pocket-master/core';
+import { AssistantPanel } from '@/components/AssistantPanel';
+import { Dialog } from '@/components/Dialog';
 import { PresetSidebar } from '@/components/PresetSidebar';
 import { SlotsPanel } from '@/components/SlotsPanel';
 import { Tone3000Panel } from '@/components/Tone3000Panel';
@@ -47,6 +49,33 @@ export default function EditorPage() {
     }
   };
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // The tone assistant loads and saves through the same confirmations a person sees.
+  const [assistantLoad, setAssistantLoad] = useState<{ index: number; resolve: (loaded: boolean) => void } | null>(null);
+  const [proposal, setProposal] = useState<{ target: number; name: string; resolve: (r: 'saved' | 'cancelled') => void } | null>(null);
+  const savedRef = useRef(false);
+  const { assistantBase, loadPresetNow, loadNames: readNames } = pm;
+  const toneHost = useMemo<ToneHost>(() => ({
+    ...assistantBase,
+    selectPreset: async (index) => {
+      if (assistantBase.snapshot().modified) {
+        const discard = await new Promise<boolean>((resolve) => setAssistantLoad({ index, resolve }));
+        if (!discard) return false;
+      }
+      if (!(await loadPresetNow(index))) throw new Error(`The pedal did not load ${presetLabel(index)}.`);
+      return true;
+    },
+    proposeSave: (target, name) => new Promise((resolve) => {
+      savedRef.current = false;
+      setProposal({ target, name, resolve });
+      setSaveOpen(true);
+      void readNames();
+    }),
+  }), [assistantBase, loadPresetNow, readNames]);
+  const closeSave = () => {
+    setSaveOpen(false);
+    proposal?.resolve(savedRef.current ? 'saved' : 'cancelled');
+    setProposal(null);
+  };
   // A preset file waiting for the import confirmation, picked from disk or from the library.
   const [importing, setImporting] = useState<PresetFile | null>(null);
   const importPreset = async (file: PresetFile) => {
@@ -151,6 +180,7 @@ export default function EditorPage() {
         )}
         {connected && (
           <>
+            {pm.preset && <AssistantPanel host={toneHost} liveEdit={pm.liveEdit} onLiveEdit={() => pm.setLiveEdit(true)} />}
             <Tone3000Panel connected={connected} busy={pm.busy !== null} irNames={pm.irNames} profileNames={pm.profileNames} exclusive={pm.exclusive} error={pm.error} />
             <SlotsPanel connected={connected} busy={pm.busy !== null} irNames={pm.irNames} profileNames={pm.profileNames} exclusive={pm.exclusive} error={pm.error} />
           </>
@@ -170,6 +200,13 @@ export default function EditorPage() {
         />
         {showLog && <SysexLog log={pm.log} onClear={pm.clearLog} />}
         <p className="page-tools"><button type="button" className="btn-link" onClick={toggleLog}>{t(showLog ? 'log.hide' : 'log.show')}</button></p>
+        <Dialog open={assistantLoad !== null} title={t('presets.unsavedTitle')} onClose={() => { assistantLoad?.resolve(false); setAssistantLoad(null); }}>
+          <p>{t('presets.unsaved', { current: pm.presetIndex === null ? '' : presetLabel(pm.presetIndex), next: assistantLoad ? presetLabel(assistantLoad.index) : '' })}</p>
+          <div className="sheet-actions">
+            <button className="btn" onClick={() => { assistantLoad?.resolve(false); setAssistantLoad(null); }}>{t('action.cancel')}</button>
+            <button className="btn btn-danger" onClick={() => { assistantLoad?.resolve(true); setAssistantLoad(null); }}>{t('presets.discard')}</button>
+          </div>
+        </Dialog>
         <SaveDialog
           open={saveOpen}
           presetIndex={pm.presetIndex}
@@ -180,7 +217,9 @@ export default function EditorPage() {
           storageWarning={pm.storageWarning}
           onDownload={pm.downloadBackup}
           onSave={pm.save}
-          onClose={() => setSaveOpen(false)}
+          onClose={closeSave}
+          proposal={proposal}
+          onSaved={() => { savedRef.current = true; }}
         />
       </main>
       </div>

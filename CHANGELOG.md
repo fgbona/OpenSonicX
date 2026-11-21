@@ -6,6 +6,24 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Tone assistant** in the editor: describe a sound and it is built on the pedal, live.
+  It uses Google Gemini with the person's own free API key, called straight from the editor
+  (no server; Google keeps no conversation, as it runs in stateless mode).
+  - Guided key setup: a link to Google AI Studio and three steps, including creating the
+    key in a project without billing so it can never charge; the key is tested before it is
+    kept, stays on the device, and is never shown in full.
+  - Each answer lists what changed on the pedal; the editor's Undo and Revert work on the
+    assistant's changes; saving opens the Save dialog filled in, and only the person's click
+    saves; loading another preset asks first if there are unsaved changes.
+  - A meter of the free requests used today and when they reset (Pacific midnight); when
+    the quota runs out, the panel says when it comes back and offers Gemini Flash-Lite.
+  - With Live edit off, the assistant asks to turn it on instead of changing anything.
+  - A notice that what is written and the loaded preset go to Google.
+  - `npm run e2e:gemini` (with `GEMINI_API_KEY` set) checks it against the real Gemini;
+    every other test simulates Gemini.
+
 ### Changed
 
 - The tone tools (turning "AMP gain 70" into an edit, and the preset and model text an

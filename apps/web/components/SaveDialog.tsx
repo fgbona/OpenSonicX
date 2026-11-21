@@ -20,6 +20,10 @@ interface Props {
   onDownload: (file: BackupFile) => void;
   onSave: (target: number, name: string, backup: boolean) => Promise<boolean>;
   onClose: () => void;
+  /** A slot and name proposed by the tone assistant, instead of the loaded slot and its name. */
+  proposal?: { readonly target: number; readonly name: string } | null;
+  /** Called once a save succeeded. */
+  onSaved?: () => void;
 }
 
 const slotName = (names: readonly string[] | null, index: number) => (names?.[index] ?? '').trim().slice(0, NAME_LENGTH);
@@ -33,7 +37,7 @@ const nameError = (name: string) => {
   }
 };
 
-export function SaveDialog({ open, presetIndex, names, busy, error: saveError, flowBackups, storageWarning, onDownload, onSave, onClose }: Props) {
+export function SaveDialog({ open, presetIndex, names, busy, error: saveError, flowBackups, storageWarning, onDownload, onSave, onClose, proposal, onSaved }: Props) {
   const initial = presetIndex !== null && presetIndex < USER_PRESETS ? presetIndex : 0;
   const [target, setTarget] = useState(initial);
   const [name, setName] = useState('');
@@ -44,11 +48,11 @@ export function SaveDialog({ open, presetIndex, names, busy, error: saveError, f
   // Every opening starts fresh on the loaded slot, with that slot's name (not last time's).
   useEffect(() => {
     if (!open) return;
-    setTarget(initial);
-    setName(slotName(names, initial));
+    setTarget(proposal?.target ?? initial);
+    setName(proposal?.name ?? slotName(names, proposal?.target ?? initial));
     setDone(false);
     setSkipBackup(false); // backup is on again every time the sheet opens
-  }, [open, initial]);
+  }, [open, initial, proposal]);
 
   // Names can arrive after the dialog opens; fill the name once they do, without overwriting typing.
   useEffect(() => {
@@ -76,7 +80,10 @@ export function SaveDialog({ open, presetIndex, names, busy, error: saveError, f
           onSubmit={async (e) => {
             e.preventDefault();
             if (invalid) return;
-            if (await onSave(target, name, !skipBackup)) setDone(true);
+            if (await onSave(target, name, !skipBackup)) {
+              setDone(true);
+              onSaved?.();
+            }
           }}
         >
           <label className="field">
