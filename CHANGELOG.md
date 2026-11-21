@@ -6,6 +6,18 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Toward 1.0, what others rely on is now pinned by tests that fail on any change:
+  - Preset files: format version 1 is frozen for 1.x and documented in
+    `docs/preset-file-format.md`. A file written by 0.13 is kept in the tests and must
+    keep opening the same way; later 1.x versions may only add optional fields.
+  - The MCP server's tools: names, parameters and their types are recorded in
+    `apps/mcp/test/fixtures/tool-contract.json`, so a change to what assistants call is
+    always deliberate.
+  - Browser data: backups and slot comments as 0.13 stored them must still load, and
+    survive the next write.
+
 ## [0.13.7] - 2026-11-21
 
 Desktop app on Electron 45.4.1, with its self-update now checked on Windows and
