@@ -1,0 +1,81 @@
+/**
+ * The tone assistant's link to Groq (OpenAI-compatible chat completions), called straight from the
+ * editor with the person's own free key. Groq's free plan gives about 1,000 requests a day per model.
+ */
+import { CHAT_INSTRUCTIONS, CHAT_TOOLS, runChatTool, type ChatGuard } from '@pocket-master/core';
+import { KeyError, MAX_REQUESTS, QuotaError, requestText, toToolSchema, type ConverseOptions } from './assistant.ts';
+
+/** The model and its free daily requests (console.groq.com, 2026-11); it calls tools one at a time. */
+export const GROQ_MODEL = { id: 'openai/gpt-oss-120b', freeDailyLimit: 1000 } as const;
+
+const API = 'https://api.groq.com/openai/v1';
+/** When a 429 does not say how long to wait. */
+const DEFAULT_WAIT_MS = 60_000;
+
+type Message =
+  | { role: 'system' | 'user'; content: string }
+  | { role: 'assistant'; content: string | null; tool_calls?: ToolCall[] }
+  | { role: 'tool'; tool_call_id: string; name: string; content: string };
+type ToolCall = { id: string; type: 'function'; function: { name: string; arguments: string } };
+
+const TOOLS = CHAT_TOOLS.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: toToolSchema(t.parameters) } }));
+
+const auth = (key: string) => ({ Authorization: `Bearer ${key}` });
+
+/** Checks a key with the model list, which uses no request quota. */
+export async function testGroqKey(key: string, fetchFn: typeof fetch = fetch): Promise<'ok' | 'invalid' | 'unavailable'> {
+  try {
+    const r = await fetchFn(`${API}/models`, { headers: auth(key) });
+    if (r.ok) return 'ok';
+    return r.status === 401 || r.status === 403 ? 'invalid' : 'unavailable';
+  } catch {
+    return 'unavailable';
+  }
+}
+
+/** Sends one message to Groq, runs the tools it asks for, and returns its answer. */
+export async function converseGroq(options: ConverseOptions): Promise<string> {
+  const { key, host, onRequest, onStep, onLimits, fetchFn = fetch, now = () => new Date() } = options;
+  const messages: Message[] = [
+    { role: 'system', content: CHAT_INSTRUCTIONS },
+    ...options.turns.map((t): Message => ({ role: t.role, content: t.text })),
+    { role: 'user', content: requestText(host, options.turns, options.message) },
+  ];
+  const guard: ChatGuard = { index: host.snapshot().index };
+  for (let request = 0; request < MAX_REQUESTS; request++) {
+    onRequest();
+    const r = await fetchFn(`${API}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...auth(key) },
+      body: JSON.stringify({ model: GROQ_MODEL.id, messages, tools: TOOLS }),
+    });
+    // Readable only if Groq exposes them to the browser; otherwise the meter counts on its own.
+    const remaining = Number(r.headers.get('x-ratelimit-remaining-requests') ?? Number.NaN);
+    const limit = Number(r.headers.get('x-ratelimit-limit-requests') ?? Number.NaN);
+    if (Number.isFinite(remaining) && Number.isFinite(limit)) onLimits?.(remaining, limit);
+    const body = (await r.json().catch(() => ({}))) as { error?: { message?: string }; choices?: { message?: { content?: string | null; tool_calls?: ToolCall[] } }[] };
+    if (r.status === 429) {
+      const seconds = Number(r.headers.get('retry-after'));
+      throw new QuotaError(new Date(now().getTime() + (Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : DEFAULT_WAIT_MS)));
+    }
+    if (r.status === 401 || r.status === 403) throw new KeyError('groq', body.error?.message ?? 'Groq did not accept this key.');
+    if (!r.ok) throw new Error(`Groq answered ${r.status}${body.error?.message ? `: ${body.error.message}` : ''}`);
+    const message = body.choices?.[0]?.message;
+    if (!message) throw new Error('Groq sent no answer this editor understands. Try again in a moment.');
+    const calls = message.tool_calls ?? [];
+    if (calls.length === 0) return (message.content ?? '').trim();
+    messages.push({ role: 'assistant', content: message.content ?? null, tool_calls: calls });
+    for (const c of calls) {
+      let args: unknown = null;
+      try {
+        args = JSON.parse(c.function.arguments);
+      } catch {
+        // left null: the tool answers with what was wrong
+      }
+      const result = await runChatTool(host, c.function.name, args, guard);
+      onStep?.(c.function.name, result.ok, result.text);
+      messages.push({ role: 'tool', tool_call_id: c.id, name: c.function.name, content: result.text });
+    }
+  }
+  throw new Error('The assistant took too many steps for one message. Try asking again, more simply.');
+}

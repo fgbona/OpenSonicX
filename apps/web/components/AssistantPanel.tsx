@@ -3,8 +3,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { comparePresets, type Difference, type ToneHost, type ToneSnapshot } from '@pocket-master/core';
 import { loadKey, maskKey, removeKey, saveKey } from '@/lib/aiKey';
-import { nextReset, recordRequest, usedToday, useAiUsage, type AiModel } from '@/lib/aiUsage';
-import { converse, GEMINI_MODELS, KeyError, QuotaError, testKey, type Step } from '@/lib/gemini';
+import { nextReset, recordRequest, usedToday, useAiUsage } from '@/lib/aiUsage';
+import { ask, KeyError, providerOf, QuotaError, ROUTE, type AiModel, type Converse, type Cooldown, type Provider, type Turn } from '@/lib/assistant';
+import { converseGemini, GEMINI_MODELS, testGeminiKey } from '@/lib/gemini';
+import { converseGroq, GROQ_MODEL, testGroqKey } from '@/lib/groq';
+import type { MessageKey } from '@/lib/i18n';
 import { Changes, DIFF_KEY } from './PresetFiles';
 import { useI18n } from './I18n';
 
@@ -18,121 +21,187 @@ interface Message {
   readonly role: 'user' | 'assistant' | 'error';
   readonly text: string;
   readonly changes?: readonly Difference[];
+  readonly model?: AiModel;
 }
+
+const CONVERSE: Readonly<Record<AiModel, Converse>> = { groq: converseGroq, flash: converseGemini, lite: converseGemini };
+const MODELS: Readonly<Record<AiModel, { readonly name: string; readonly limit: number; readonly pacificReset: boolean }>> = {
+  groq: { name: 'Groq', limit: GROQ_MODEL.freeDailyLimit, pacificReset: false },
+  flash: { name: 'Gemini Flash', limit: GEMINI_MODELS.flash.freeDailyLimit, pacificReset: true },
+  lite: { name: 'Gemini Flash-Lite', limit: GEMINI_MODELS.lite.freeDailyLimit, pacificReset: true },
+};
+const PROVIDER_NAME: Readonly<Record<Provider, string>> = { groq: 'Groq', gemini: 'Google Gemini' };
+
+/** How to get each free key; Groq first, since its free quota is the largest. */
+const SETUP: readonly {
+  readonly provider: Provider;
+  readonly note: MessageKey;
+  readonly link: string;
+  readonly linkText: MessageKey;
+  readonly steps: readonly MessageKey[];
+  readonly label: MessageKey;
+  readonly placeholder: string;
+  readonly test: (key: string) => Promise<'ok' | 'invalid' | 'unavailable'>;
+  readonly usage: string;
+}[] = [
+  {
+    provider: 'groq', note: 'assistant.groqNote', link: 'https://console.groq.com/keys', linkText: 'assistant.openGroq',
+    steps: ['assistant.groqStep1', 'assistant.groqStep2', 'assistant.groqStep3'], label: 'assistant.groqKeyLabel', placeholder: 'gsk_…',
+    test: (k) => testGroqKey(k), usage: 'https://console.groq.com/settings/limits',
+  },
+  {
+    provider: 'gemini', note: 'assistant.geminiNote', link: 'https://aistudio.google.com/apikey', linkText: 'assistant.openStudio',
+    steps: ['assistant.step1', 'assistant.step2', 'assistant.step3'], label: 'assistant.keyLabel', placeholder: 'AIza…',
+    test: (k) => testGeminiKey(k), usage: 'https://aistudio.google.com/rate-limit',
+  },
+];
 
 /** What the reply changed on the loaded preset; nothing when another preset is loaded now. */
 const changed = (before: ToneSnapshot, after: ToneSnapshot) => (before.index === after.index ? comparePresets(before.preset, after.preset) : []);
 
-const STUDIO_KEYS = 'https://aistudio.google.com/apikey';
-const STUDIO_LIMITS = 'https://aistudio.google.com/rate-limit';
+/** One provider's key: how to get it, or the saved one with a way to remove it. */
+function KeySetup({ setup, saved, onSaved, onRemove }: { setup: (typeof SETUP)[number]; saved: string | null; onSaved: (key: string) => void; onRemove: () => void }) {
+  const { t } = useI18n();
+  const [input, setInput] = useState('');
+  const [status, setStatus] = useState<'idle' | 'testing' | 'invalid' | 'unavailable'>('idle');
+  const name = PROVIDER_NAME[setup.provider];
+  const add = async () => {
+    const candidate = input.trim();
+    if (!candidate) return;
+    setStatus('testing');
+    const result = await setup.test(candidate);
+    if (result !== 'ok') return setStatus(result);
+    saveKey(setup.provider, candidate);
+    setInput('');
+    setStatus('idle');
+    onSaved(candidate);
+  };
+  return (
+    <section className="assistant-provider" aria-label={t('assistant.providerAria', { provider: name })}>
+      <h3>{name} <span className="muted small">{t(setup.note)}</span></h3>
+      {saved ? (
+        <p className="assistant-saved">
+          <span>{t('assistant.keySaved', { key: maskKey(saved) })}</span>
+          <button type="button" className="btn btn-small" onClick={onRemove}>{t('assistant.removeKey')}</button>
+        </p>
+      ) : (
+        <>
+          <ol className="steps assistant-steps">
+            {setup.steps.map((s, i) => (
+              <li key={s}>{t(s)}{i === 0 && <> <a href={setup.link} target="_blank" rel="noreferrer">{t(setup.linkText)}</a></>}</li>
+            ))}
+          </ol>
+          <form className="assistant-key" onSubmit={(e) => { e.preventDefault(); void add(); }}>
+            <label className="field">
+              <span>{t(setup.label)}</span>
+              <input type="password" value={input} onChange={(e) => setInput(e.target.value)} autoComplete="off" spellCheck={false} placeholder={setup.placeholder} />
+            </label>
+            <button type="submit" className="btn btn-primary" disabled={!input.trim() || status === 'testing'}>
+              {status === 'testing' ? t('assistant.testing') : t('assistant.saveKey')}
+            </button>
+          </form>
+          {status === 'invalid' && <p className="alert" role="alert">{t('assistant.keyInvalid', { provider: name })}</p>}
+          {status === 'unavailable' && <p className="alert" role="alert">{t('assistant.keyUnavailable', { provider: name })}</p>}
+        </>
+      )}
+    </section>
+  );
+}
 
-/** Chat that builds tones on the pedal from a description, with the person's free Gemini key. */
+/** Chat that builds tones on the pedal from a description, with the person's own free AI keys. */
 export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
   const { t, lang } = useI18n();
-  const [key, setKey] = useState<string | null>(null);
-  const [keyInput, setKeyInput] = useState('');
-  const [keyStatus, setKeyStatus] = useState<'idle' | 'testing' | 'invalid' | 'unavailable'>('idle');
-  const [model, setModel] = useState<AiModel>('flash');
+  const [keys, setKeys] = useState<Partial<Record<Provider, string>>>({});
+  const [managing, setManaging] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [history, setHistory] = useState<Step[]>([]);
+  const [turns, setTurns] = useState<Turn[]>([]);
   const [draft, setDraft] = useState('');
   const [working, setWorking] = useState(false);
-  const [quotaUntil, setQuotaUntil] = useState<Date | null>(null);
+  const [cooldown, setCooldown] = useState<Cooldown>({});
+  const [limits, setLimits] = useState<Partial<Record<AiModel, { remaining: number; limit: number }>>>({});
   const [needLive, setNeedLive] = useState(false);
   const usage = useAiUsage();
   const end = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { setKey(loadKey()); }, []);
+  useEffect(() => {
+    const stored: Partial<Record<Provider, string>> = {};
+    for (const p of ['groq', 'gemini'] as const) {
+      const k = loadKey(p);
+      if (k) stored[p] = k;
+    }
+    setKeys(stored);
+  }, []);
   useEffect(() => { end.current?.scrollIntoView?.({ block: 'nearest' }); }, [messages, working]);
   useEffect(() => { if (liveEdit) setNeedLive(false); }, [liveEdit]);
 
   const time = (d: Date) => d.toLocaleTimeString(lang === 'pt' ? 'pt-BR' : 'en', { hour: '2-digit', minute: '2-digit' });
   const label = (d: Difference) => (d.what === 'param' ? d.name : t(DIFF_KEY[d.what]));
-
-  const addKey = async () => {
-    const candidate = keyInput.trim();
-    if (!candidate) return;
-    setKeyStatus('testing');
-    const result = await testKey(candidate);
-    if (result !== 'ok') return setKeyStatus(result);
-    saveKey(candidate);
-    setKey(candidate);
-    setKeyInput('');
-    setKeyStatus('idle');
-  };
+  const hasKey = Object.keys(keys).length > 0;
 
   const send = async () => {
     const message = draft.trim();
-    if (!message || !key || working) return;
+    if (!message || !hasKey || working) return;
     setDraft('');
     setMessages((m) => [...m, { role: 'user', text: message }]);
     setWorking(true);
     let before: ToneSnapshot | null = null;
     try {
       before = host.snapshot();
-      const result = await converse({
-        key, model, history, message, host,
-        onRequest: () => recordRequest(model),
+      const result = await ask({
+        keys, cooldown, converse: CONVERSE, turns, message, host,
+        onRequest: (model) => recordRequest(model),
+        onLimits: (model, remaining, limit) => setLimits((l) => ({ ...l, [model]: { remaining, limit } })),
         onStep: (_tool, ok, text) => { if (!ok && text.includes('Live edit is off')) setNeedLive(true); },
       });
-      const changes = changed(before, host.snapshot());
-      setHistory(result.history);
-      setMessages((m) => [...m, { role: 'assistant', text: result.reply || '…', changes }]);
+      setCooldown(result.cooldown);
+      const reply = result.reply || '…';
+      setTurns((h) => [...h, { role: 'user', text: message }, { role: 'assistant', text: reply }]);
+      setMessages((m) => [...m, { role: 'assistant', text: reply, model: result.model, changes: changed(before!, host.snapshot()) }]);
     } catch (error) {
-      if (error instanceof QuotaError) setQuotaUntil(error.retryAt);
-      const text = error instanceof QuotaError ? t('assistant.quota', { time: time(error.retryAt) })
-        : error instanceof KeyError ? t('assistant.keyRejected')
+      if (error instanceof QuotaError) setCooldown(Object.fromEntries(ROUTE.filter((m) => keys[providerOf(m)]).map((m) => [m, error.retryAt])));
+      const text = error instanceof QuotaError ? t('assistant.quotaAll', { time: time(error.retryAt) })
+        : error instanceof KeyError ? t('assistant.keyRejected', { provider: PROVIDER_NAME[error.provider] })
           : t('assistant.error', { reason: error instanceof Error ? error.message : String(error) });
-      const changes = before ? changed(before, host.snapshot()) : [];
-      setMessages((m) => [...m, { role: 'error', text, changes }]);
+      setMessages((m) => [...m, { role: 'error', text, changes: before ? changed(before, host.snapshot()) : [] }]);
     } finally {
       setWorking(false);
     }
   };
 
-  const forget = () => {
-    removeKey();
-    setKey(null);
-    setMessages([]);
-    setHistory([]);
-  };
-
-  const limit = GEMINI_MODELS[model].freeDailyLimit;
   const now = new Date();
-  const used = usedToday(usage, model, now);
-  const exhausted = quotaUntil !== null && quotaUntil > now;
+  const usageLine = (model: AiModel) => {
+    const info = MODELS[model];
+    const until = cooldown[model];
+    if (until && until > now) return t('assistant.paused', { model: info.name, time: time(until) });
+    const known = limits[model];
+    if (known) return t('assistant.left', { model: info.name, remaining: known.remaining, limit: known.limit });
+    const used = usedToday(usage, model, now);
+    return info.pacificReset
+      ? t('assistant.usedReset', { model: info.name, used, limit: info.limit, time: time(nextReset(now)) })
+      : t('assistant.used', { model: info.name, used, limit: info.limit });
+  };
 
   return (
     <section className="panel assistant" aria-label={t('assistant.title')}>
       <header className="panel-head">
         <h2>{t('assistant.title')}</h2>
-        {key && (
+        {hasKey && (
           <div className="assistant-head-actions">
-            {messages.length > 0 && <button type="button" className="btn btn-small" onClick={() => { setMessages([]); setHistory([]); }}>{t('assistant.new')}</button>}
-            <button type="button" className="btn btn-small" onClick={forget} title={maskKey(key)}>{t('assistant.removeKey')}</button>
+            {!managing && messages.length > 0 && <button type="button" className="btn btn-small" onClick={() => { setMessages([]); setTurns([]); }}>{t('assistant.new')}</button>}
+            <button type="button" className="btn btn-small" onClick={() => setManaging(!managing)}>{t(managing ? 'assistant.backToChat' : 'assistant.keys')}</button>
           </div>
         )}
       </header>
       <div className="assistant-body">
-        {!key ? (
+        {!hasKey || managing ? (
           <>
-            <p>{t('assistant.intro')}</p>
-            <ol className="steps assistant-steps">
-              <li>{t('assistant.step1')} <a href={STUDIO_KEYS} target="_blank" rel="noreferrer">{t('assistant.openStudio')}</a></li>
-              <li>{t('assistant.step2')}</li>
-              <li>{t('assistant.step3')}</li>
-            </ol>
-            <form className="assistant-key" onSubmit={(e) => { e.preventDefault(); void addKey(); }}>
-              <label className="field">
-                <span>{t('assistant.keyLabel')}</span>
-                <input type="password" value={keyInput} onChange={(e) => setKeyInput(e.target.value)} autoComplete="off" spellCheck={false} placeholder="AIza…" />
-              </label>
-              <button type="submit" className="btn btn-primary" disabled={!keyInput.trim() || keyStatus === 'testing'}>
-                {keyStatus === 'testing' ? t('assistant.testing') : t('assistant.saveKey')}
-              </button>
-            </form>
-            {keyStatus === 'invalid' && <p className="alert" role="alert">{t('assistant.keyInvalid')}</p>}
-            {keyStatus === 'unavailable' && <p className="alert" role="alert">{t('assistant.keyUnavailable')}</p>}
+            {!hasKey && <p>{t('assistant.intro')}</p>}
+            <p className="muted small">{t('assistant.setupHint')}</p>
+            {SETUP.map((s) => (
+              <KeySetup key={s.provider} setup={s} saved={keys[s.provider] ?? null}
+                onSaved={(k) => setKeys((all) => ({ ...all, [s.provider]: k }))}
+                onRemove={() => { removeKey(s.provider); setKeys(({ [s.provider]: _gone, ...rest }) => rest); }} />
+            ))}
             <p className="muted small">{t('assistant.privacy')}</p>
           </>
         ) : (
@@ -143,6 +212,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
                 <li key={i} className={`assistant-message is-${m.role}`}>
                   <p>{m.text}</p>
                   {m.changes && m.changes.length > 0 && <Changes differences={m.changes} label={label} title={t('assistant.changes')} />}
+                  {m.model && <p className="muted small assistant-via">{t('assistant.via', { model: MODELS[m.model].name })}</p>}
                 </li>
               ))}
               {working && <li className="assistant-message is-assistant"><p className="muted">{t('assistant.thinking')}</p></li>}
@@ -153,18 +223,18 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
                 {t('assistant.needLive')} <button type="button" className="btn btn-small btn-primary" onClick={onLiveEdit}>{t('assistant.turnOnLive')}</button>
               </p>
             )}
-            {exhausted && model === 'flash' && (
-              <p className="assistant-quota">
-                <button type="button" className="btn btn-small" onClick={() => { setModel('lite'); setQuotaUntil(null); }}>{t('assistant.useLite')}</button>
-              </p>
-            )}
             <form className="assistant-input" onSubmit={(e) => { e.preventDefault(); void send(); }}>
               <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={t('assistant.placeholder')} aria-label={t('assistant.inputAria')} disabled={working} />
               <button type="submit" className="btn btn-primary" disabled={working || !draft.trim()}>{t('assistant.send')}</button>
             </form>
-            <p className="muted small assistant-usage">
-              {t('assistant.usage', { model: model === 'flash' ? 'Gemini Flash' : 'Gemini Flash-Lite', used, limit, time: time(nextReset(now)) })}{' '}
-              <a href={STUDIO_LIMITS} target="_blank" rel="noreferrer">{t('assistant.usageLink')}</a>
+            <ul className="muted small assistant-usage">
+              {ROUTE.filter((m) => keys[providerOf(m)]).map((m) => <li key={m}>{usageLine(m)}</li>)}
+            </ul>
+            <p className="muted small">
+              {t('assistant.realUsage')}{' '}
+              {SETUP.filter((s) => keys[s.provider]).map((s, i) => (
+                <span key={s.provider}>{i > 0 && ' · '}<a href={s.usage} target="_blank" rel="noreferrer">{PROVIDER_NAME[s.provider]}</a></span>
+              ))}
             </p>
             <p className="muted small">{t('assistant.privacy')}</p>
           </>

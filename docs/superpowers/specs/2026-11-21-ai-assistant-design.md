@@ -156,3 +156,21 @@ Each step is its own PR. Afterwards, on request: Claude and OpenAI adapters for 
 Panel layout details, message rendering, adapter internals, the relay's framework, session
 timeouts within "minutes of inactivity", and the exact Flash / Flash-Lite model ids (read from
 Google's model list when building).
+
+## Addendum (2026-11-21): Groq and routing
+
+Owner's request after Gemini: add more free providers, with routing. Groq's free plan gives
+about 1,000 requests a day on `openai/gpt-oss-120b` (tool calling, no card), and its API
+accepts browser calls (CORS checked for the site and the desktop app). Design:
+
+- Conversations keep only texts (`Turn`); every message carries the preset as it is now, so
+  a different provider can answer the next one. Each provider runs its own tool loop for one
+  message (Gemini Interactions, Groq OpenAI-style chat completions).
+- Router order: Groq, Gemini Flash, Gemini Flash-Lite, among the providers with a key. A 429
+  pauses that model until its retry time and the same message goes to the next; a refused key
+  skips its provider; any other error stops and is shown. All paused: one message with the
+  earliest return time.
+- One key per provider, each guided in the panel (Groq first, recommended). The meter reads
+  Groq's remaining-requests header when the browser can, else counts locally.
+- OpenRouter's free models (50 a day without credits) are left out for now; the
+  OpenAI-style adapter would take them with little change.

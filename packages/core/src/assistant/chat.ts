@@ -149,7 +149,8 @@ export interface ChatGuard {
   index: number;
 }
 
-const CHANGES_SOUND = new Set(['edit_preset', 'undo_edit', 'revert_preset']);
+// save_preset too: it stores what is loaded now, which is not what the model built if the person switched.
+const CHANGES_SOUND = new Set(['edit_preset', 'undo_edit', 'revert_preset', 'save_preset']);
 
 async function run(host: ToneHost, name: string, args: Record<string, unknown>, guard?: ChatGuard): Promise<{ ok: boolean; text: string }> {
   const done = (text: string) => ({ ok: true, text });

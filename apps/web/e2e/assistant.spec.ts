@@ -24,12 +24,37 @@ async function fakeGemini(page: Page, replies: Reply[], keyOk = true) {
 }
 
 const panel = (page: Page) => page.getByRole('region', { name: 'Tone assistant' });
+const geminiSetup = (page: Page) => panel(page).getByRole('region', { name: 'Google Gemini key' });
+const groqSetup = (page: Page) => panel(page).getByRole('region', { name: 'Groq key' });
+const GROQ_KEY = 'gsk_TESTKEY-e2e-00000000000000000000000';
+
+type GroqReply = { status?: number; body: unknown; headers?: Record<string, string> };
+const groqCall = (name: string, args: unknown, id = 'g1'): GroqReply => ({ body: { choices: [{ message: { role: 'assistant', content: null, tool_calls: [{ id, type: 'function', function: { name, arguments: JSON.stringify(args) } }] } }] } });
+const groqSay = (text: string): GroqReply => ({ body: { choices: [{ message: { role: 'assistant', content: text } }] } });
+
+/** Answers Groq requests with `replies` in order; returns the request bodies. */
+async function fakeGroq(page: Page, replies: GroqReply[]) {
+  const requests: Record<string, unknown>[] = [];
+  await page.route('https://api.groq.com/**', async (route: Route) => {
+    if (route.request().url().endsWith('/models')) return route.fulfill({ json: { data: [] } });
+    requests.push(route.request().postDataJSON());
+    const r = replies.shift() ?? groqSay('(no more scripted replies)');
+    return route.fulfill({ status: r.status ?? 200, json: r.body, headers: r.headers });
+  });
+  return requests;
+}
+
+async function addGroqKey(page: Page) {
+  await groqSetup(page).getByLabel('Groq API key').fill(GROQ_KEY);
+  await groqSetup(page).getByRole('button', { name: 'Save key' }).click();
+  await expect(panel(page).getByRole('button', { name: 'Keys' })).toBeVisible();
+}
 const amp = (page: Page) => page.locator('section.block-amp');
 
 async function addKey(page: Page) {
-  await panel(page).getByLabel('Gemini API key').fill(KEY);
-  await panel(page).getByRole('button', { name: 'Save key' }).click();
-  await expect(panel(page).getByRole('button', { name: 'Remove key' })).toBeVisible();
+  await geminiSetup(page).getByLabel('Gemini API key').fill(KEY);
+  await geminiSetup(page).getByRole('button', { name: 'Save key' }).click();
+  await expect(panel(page).getByRole('button', { name: 'Keys' })).toBeVisible();
 }
 
 async function ask(page: Page, text: string) {
@@ -41,10 +66,11 @@ test('the key is checked before it is kept, and never shown back', async ({ page
   await fakeGemini(page, [], false);
   await connect(page, pedal);
   await expect(panel(page).getByRole('link', { name: 'Open Google AI Studio' })).toHaveAttribute('href', 'https://aistudio.google.com/apikey');
+  await expect(panel(page).getByRole('link', { name: 'Open the Groq console' })).toHaveAttribute('href', 'https://console.groq.com/keys');
   await expect(panel(page).getByText(/must say Free tier/)).toBeVisible();
-  await panel(page).getByLabel('Gemini API key').fill('AIza-wrong');
-  await panel(page).getByRole('button', { name: 'Save key' }).click();
-  await expect(panel(page).getByText('Google did not accept this key.', { exact: false })).toBeVisible();
+  await geminiSetup(page).getByLabel('Gemini API key').fill('AIza-wrong');
+  await geminiSetup(page).getByRole('button', { name: 'Save key' }).click();
+  await expect(panel(page).getByText('Google Gemini did not accept this key.', { exact: false })).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem('pocket-master-editor.geminiKey.v1'))).toBeNull();
 
   await page.unroute('https://generativelanguage.googleapis.com/**');
@@ -66,7 +92,8 @@ test('describing a tone builds it live, lists what changed, and Undo takes it ba
   await expect(amp(page).locator('.face-amp')).toHaveAttribute('data-skin', 'mesa');
   await expect.poll(() => pedal.pedal.received).toContain('edit 47');
   await expect(panel(page).getByRole('region', { name: 'What changed' }).getByRole('listitem').filter({ hasText: 'AMP Model' })).toContainText('Brit 800 → Calif DualM');
-  await expect(panel(page).getByText(/1 of 20 free requests|2 of 20 free requests/)).toBeVisible();
+  await expect(panel(page).getByText(/Gemini Flash: 2 of 20 free requests used today/)).toBeVisible();
+  await expect(panel(page).getByText('Answered by Gemini Flash')).toBeVisible();
   // The first message carried the preset and the models; the key only went in a header.
   expect(JSON.stringify(requests[0])).toContain('Loaded preset:');
   expect(JSON.stringify(requests)).not.toContain(KEY);
@@ -101,17 +128,16 @@ test('saving is only a proposal: the Save dialog opens filled in, and Cancel sav
   expect(JSON.stringify(requests[1])).toContain('did not save');
 });
 
-test('a used-up free quota says when it comes back, and offers Flash-Lite', async ({ page, pedal }) => {
+test('a used-up free quota hands the message to the next model on its own', async ({ page, pedal }) => {
   const quota: Reply = { status: 429, body: { error: { code: 429, status: 'RESOURCE_EXHAUSTED', message: 'quota', details: [{ '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '3600s' }] } } };
   const requests = await fakeGemini(page, [quota, say('Hello from Flash-Lite')]);
   await connect(page, pedal);
   await addKey(page);
   await ask(page, 'hi');
-  await expect(panel(page).getByText(/The free quota for now is used up\. It resets at/)).toBeVisible();
-  await panel(page).getByRole('button', { name: /Use Gemini Flash-Lite instead/ }).click();
-  await ask(page, 'hi again');
   await expect(panel(page).getByText('Hello from Flash-Lite')).toBeVisible();
-  expect(requests[1]!.model).toBe('gemini-3.5-flash-lite');
+  await expect(panel(page).getByText('Answered by Gemini Flash-Lite')).toBeVisible();
+  await expect(panel(page).getByText(/Gemini Flash: free requests used up, back at/)).toBeVisible();
+  expect(requests.map((r) => r.model)).toEqual(['gemini-3.8-flash', 'gemini-3.5-flash-lite']);
 });
 
 test('what a tool reports matches the pedal: loading, reverting, and undo with Live edit off', async ({ page, pedal }) => {
@@ -138,4 +164,34 @@ test('what a tool reports matches the pedal: loading, reverting, and undo with L
   const reverted = JSON.stringify((requests[6]!.input as unknown[]).at(-1));
   expect(reverted).toContain('Reverted to the saved preset.');
   expect(reverted).toContain('unsaved changes: no');
+});
+
+test('with a Groq key, Groq builds the tone; when its quota runs out, Gemini takes over', async ({ page, pedal }) => {
+  const groq = await fakeGroq(page, [
+    groqCall('edit_preset', { changes: [{ kind: 'model', block: 'AMP', model: 'Calif DualM' }] }), groqSay('Rectifier on.'),
+    { status: 429, body: { error: { message: 'Rate limit reached for requests per day' } }, headers: { 'retry-after': '3600' } },
+  ]);
+  const gemini = await fakeGemini(page, [say('Gemini here.')]);
+  await connect(page, pedal);
+  await page.getByRole('switch', { name: 'Live edit' }).click();
+  await addGroqKey(page);
+  await ask(page, 'black album rhythm');
+  await expect(panel(page).getByText('Rectifier on.')).toBeVisible();
+  await expect(panel(page).getByText('Answered by Groq')).toBeVisible();
+  await expect(amp(page).locator('.face-amp')).toHaveAttribute('data-skin', 'mesa');
+  expect(JSON.stringify(groq)).not.toContain(GROQ_KEY);
+
+  await panel(page).getByRole('button', { name: 'Keys' }).click();
+  await expect(groqSetup(page).getByText(/Key gsk_…0000 saved on this device/)).toBeVisible();
+  await geminiSetup(page).getByLabel('Gemini API key').fill(KEY);
+  await geminiSetup(page).getByRole('button', { name: 'Save key' }).click();
+  await panel(page).getByRole('button', { name: 'Back to the chat' }).click();
+  await ask(page, 'more');
+  await expect(panel(page).getByText('Gemini here.')).toBeVisible();
+  await expect(panel(page).getByText(/Groq: free requests used up, back at/)).toBeVisible();
+  // Gemini got the conversation so far as text, and the preset as it is now.
+  const input = JSON.stringify(gemini[0]!.input);
+  expect(input).toContain('black album rhythm');
+  expect(input).toContain('Rectifier on.');
+  expect(input).toContain('Loaded preset now:');
 });
