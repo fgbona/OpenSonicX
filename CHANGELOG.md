@@ -6,6 +6,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The tone tools (turning "AMP gain 70" into an edit, and the preset and model text an
+  assistant reads) moved from the MCP server into the shared core, with a chat version of the
+  tool set for the editor's upcoming tone assistant. The MCP server behaves exactly as before.
+
 ### Added
 
 - The editor reads the pedal's firmware version on connecting: *Global options* shows it,

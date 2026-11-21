@@ -17,6 +17,7 @@ export * from './compare.ts';
 export * from './stored-preset.ts';
 export * from './assistant/change.ts';
 export * from './assistant/format.ts';
+export * from './assistant/chat.ts';
 export * from './link.ts';
 export * from './pedal.ts';
 export * from './resolve.ts';
