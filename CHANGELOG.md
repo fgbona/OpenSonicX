@@ -6,6 +6,15 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Save suggested the wrong name: on first opening it took P01's name ("MTL-CLEAN") instead
+  of the loaded slot's, and later it kept the name typed the time before. It now starts from
+  the name of the slot it saves to every time it opens.
+- After a save the preset still counted as modified (header, Revert, and a "Discard the
+  changes?" question when loading another preset), because the pedal's own "modified" flag
+  read before the save was kept. A save now clears it.
+
 ### Added
 
 - Importing a preset file first shows what it changes from the loaded preset (chain order,

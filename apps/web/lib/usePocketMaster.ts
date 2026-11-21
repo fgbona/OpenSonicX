@@ -534,7 +534,8 @@ export function usePocketMaster() {
         presetRef.current = result.saved;
         restoreRef.current = result.saved;
         busyRef.current = false;
-        patch({ busy: null, preset: result.saved, presetIndex: target, restorePoint: result.saved, names });
+        // The slot now holds the edit buffer, so the pedal no longer counts it as modified.
+        patch({ busy: null, preset: result.saved, presetIndex: target, restorePoint: result.saved, names, pedalModified: false });
         return true;
       } catch (e) {
         console.error('save flow failed', e);

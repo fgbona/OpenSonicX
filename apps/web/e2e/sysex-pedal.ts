@@ -47,7 +47,8 @@ export class SysexPedal {
     switch (kind) {
       case 0x41: return this.pedal.editBuffer;
       case 0x43: return [GET, kind, this.pedal.current, 0, 0, 0];
-      case 0x45: return [GET, kind, 0];
+      // Like the unit: "modified" while the edit buffer differs from the loaded slot.
+      case 0x45: return [GET, kind, this.pedal.editBuffer.join() === this.pedal.slots[this.pedal.current]!.join() ? 0 : 1];
       case 0x40: return [GET, kind, ...this.pedal.names.flatMap((name, i) => [...u32(i), ...ascii(name, 16)])];
       case 0x20: return this.#slots(kind, this.irNames);
       case 0x24: return this.#slots(kind, this.profileNames);
