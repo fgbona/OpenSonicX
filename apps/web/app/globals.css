@@ -1,4 +1,5 @@
-/* Apple system fonts and system colors (Human Interface Guidelines values), light and dark. */
+/* Apple system fonts and system colors (Human Interface Guidelines values), light and dark. The light
+   theme uses the Increase Contrast variants where the standard ones are below WCAG AA on white. */
 :root {
   color-scheme: light dark;
   --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
@@ -9,16 +10,16 @@
   --surface: #ffffff;       /* secondarySystemGroupedBackground */
   --surface-2: #f2f2f7;
   --label: #000000;
-  --label-2: rgba(60, 60, 67, 0.6);
+  --label-2: #636366;
   --label-3: rgba(60, 60, 67, 0.3);
   --separator: rgba(60, 60, 67, 0.18);
   --fill: rgba(120, 120, 128, 0.12);
   --fill-strong: rgba(120, 120, 128, 0.2);
   --bar: rgba(249, 249, 249, 0.78);
 
-  --blue: #007aff; --green: #34c759; --red: #ff3b30; --orange: #ff9500; --yellow: #ffcc00;
-  --teal: #30b0c7; --cyan: #32ade6; --indigo: #5856d6; --purple: #af52de; --pink: #ff2d55;
-  --brown: #a2845e; --gray: #8e8e93;
+  --blue: #0040dd; --green: #248a3d; --red: #d70015; --orange: #c93400; --yellow: #a05a00;
+  --teal: #008299; --cyan: #0071a4; --indigo: #3634a3; --purple: #8944ab; --pink: #d30f45;
+  --brown: #7f6545; --gray: #6c6c70;
 
   --radius: 14px;
   --radius-small: 8px;
@@ -40,7 +41,7 @@
     --bar: rgba(29, 29, 31, 0.72);
 
     --blue: #0a84ff; --green: #30d158; --red: #ff453a; --orange: #ff9f0a; --yellow: #ffd60a;
-    --teal: #40c8e0; --cyan: #64d2ff; --indigo: #5e5ce6; --purple: #bf5af2; --pink: #ff375f;
+    --teal: #40c8e0; --cyan: #64d2ff; --indigo: #7d7aff; --purple: #bf5af2; --pink: #ff375f;
     --brown: #ac8e68; --gray: #98989d;
     --shadow: none;
   }
@@ -59,7 +60,7 @@
   --bar: rgba(29, 29, 31, 0.72);
 
   --blue: #0a84ff; --green: #30d158; --red: #ff453a; --orange: #ff9f0a; --yellow: #ffd60a;
-  --teal: #40c8e0; --cyan: #64d2ff; --indigo: #5e5ce6; --purple: #bf5af2; --pink: #ff375f;
+  --teal: #40c8e0; --cyan: #64d2ff; --indigo: #7d7aff; --purple: #bf5af2; --pink: #ff375f;
   --brown: #ac8e68; --gray: #98989d;
   --shadow: none;
 }
@@ -414,8 +415,9 @@ button, select { font: inherit; color: inherit; }
 .tile .module-icon { color: var(--tint); margin-bottom: 2px; }
 .tile-label { font-size: 0.75rem; font-weight: 700; color: var(--tint); letter-spacing: 0.04em; }
 .tile-model { font-size: 0.75rem; color: var(--label-2); max-width: 92px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tile-off .module-icon, .tile-off .tile-label { color: var(--label-3); }
-.tile-off .tile-model { color: var(--label-3); }
+.tile-off .module-icon { color: var(--label-3); }
+/* Off blocks read as off by the dim icon and the unlit LED; their names stay readable. */
+.tile-off .tile-label, .tile-off .tile-model { color: var(--label-2); }
 .tile-led {
   width: 44px; height: 8px; border: 0; padding: 0; border-radius: 4px; background: var(--fill-strong); cursor: pointer;
   transition: background 120ms, box-shadow 120ms;
@@ -582,7 +584,7 @@ button, select { font: inherit; color: inherit; }
 :root[data-theme='dark'] .btn { border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); }
 :root[data-theme='dark'] .btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.09); }
 :root[data-theme='dark'] .btn-primary {
-  border-color: rgba(10, 132, 255, 0.9); background: linear-gradient(180deg, #1a8cff, #0a6fe0);
+  border-color: rgba(10, 132, 255, 0.9); background: linear-gradient(180deg, #0a6ad6, #0052b8); /* white text at 5:1 or more */
   box-shadow: 0 0 16px rgba(10, 132, 255, 0.45), 0 1px 0 rgba(255, 255, 255, 0.25) inset;
 }
 :root[data-theme='dark'] .btn-danger { box-shadow: 0 0 14px rgba(255, 69, 58, 0.45); }
@@ -595,6 +597,8 @@ button, select { font: inherit; color: inherit; }
   text-shadow: 0 0 22px var(--accent-soft), 0 0 2px rgba(255, 200, 120, 0.6);
 }
 :root[data-theme='dark'] .preset-title { color: color-mix(in srgb, var(--accent) 88%, #fff); }
+/* Block names on the dark tiles: their colour, lifted towards white to read at 4.5:1. */
+:root[data-theme='dark'] .tile:not(.tile-off) .tile-label { color: color-mix(in srgb, var(--tint) 78%, #fff); }
 
 /* Signal chain: a lit cable runs behind the pedals. */
 .tiles { position: relative; isolation: isolate; }
@@ -802,7 +806,7 @@ button, select { font: inherit; color: inherit; }
 /* British vintage: fawn tolex, diamond brown grille, copper accents. */
 :root .face-amp[data-skin='vox'] {
   --tint: #c46a2d; --face-ink: #2e1d10; --face-ink-2: rgba(46, 29, 16, 0.75); --face-info: rgba(70, 40, 15, 0.1);
-  --face-script: #9b4a17; --face-script-glow: 0 1px 0 rgba(255, 240, 220, 0.5);
+  --face-script: #7f3a10; --face-script-glow: 0 1px 0 rgba(255, 240, 220, 0.5);
   --face-grille: repeating-linear-gradient(45deg, #4b2e1c 0 3px, #6e4a2f 3px 6px), repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.35) 0 3px, transparent 3px 6px), #5a3a24;
   background:
     radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.2), transparent 60%),
@@ -833,7 +837,7 @@ button, select { font: inherit; color: inherit; }
 /* Rectifier: aluminium diamond plate, red accents. */
 :root .face-amp[data-skin='mesa'] {
   --tint: #d42a2a; --face-ink: #121212; --face-ink-2: rgba(20, 20, 20, 0.8); --face-info: rgba(0, 0, 0, 0.18);
-  --face-script: #b31b1b; --face-script-glow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  --face-script: #8a0f0f; --face-script-glow: 0 1px 0 rgba(255, 255, 255, 0.6);
   --face-grille: radial-gradient(circle, #050505 42%, transparent 47%) 0 0 / 7px 7px, linear-gradient(180deg, #1d1d1f, #0d0d0e);
   background:
     repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.35) 0 2px, transparent 2px 14px),

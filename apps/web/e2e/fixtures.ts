@@ -27,6 +27,8 @@ function installFakeMidi() {
   };
   const access = { inputs: new Map([[input.id, input]]), outputs: new Map([[output.id, output]]), sysexEnabled: true, onstatechange: null };
   Object.defineProperty(navigator, 'requestMIDIAccess', { value: async () => access });
+  // The dev server's indicator sits over the preset list; the published site has none.
+  document.addEventListener('DOMContentLoaded', () => document.head.append(Object.assign(document.createElement('style'), { textContent: 'nextjs-portal { display: none !important; }' })));
 }
 
 export const test = base.extend<{ pedal: SysexPedal }>({
