@@ -16,6 +16,8 @@ exist to keep everyone's pedal safe.
 
 ## Development
 
+Requires Node 22.18 or newer.
+
 ```sh
 npm install
 npm test           # protocol tests (node:test, no extra framework)
