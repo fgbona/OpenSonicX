@@ -71,8 +71,14 @@ jobs:
           }
           if (-not $info) { throw 'the update was not downloaded' }
           Get-Content $info
-          # Quit like a user would: close the windows (no /F), so the quit handlers run the installer.
-          taskkill /PID $app.Id
+          # Like a user: close the "downloaded" box (that means Later), then the app itself. Closing
+          # without /F lets the quit handlers run the installer.
+          Start-Sleep 3
+          foreach ($i in 1..3) {
+            if (-not (Get-Process -Id $app.Id -ErrorAction SilentlyContinue)) { break }
+            taskkill /PID $app.Id
+            Start-Sleep 3
+          }
           foreach ($i in 1..90) { if ((& $version) -eq $env:TO) { break }; Start-Sleep 2 }
           "installed $(& $version)"
           "app still running: $([bool](Get-Process -Id $app.Id -ErrorAction SilentlyContinue))"
