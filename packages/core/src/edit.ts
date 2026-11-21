@@ -16,7 +16,6 @@ export type Edit =
   | { readonly kind: 'model'; readonly module: number; readonly code: number; readonly clone?: boolean }
   | { readonly kind: 'chain'; readonly order: readonly number[] }
   | { readonly kind: 'volume'; readonly value: number }
-  /** Puts a block on FS1 or FS2, or (null) on none. */
 
 /** The preset after an edit, as the pedal will hold it. Returns a new object; the input is not changed. */
 export function applyEdit(preset: Preset, edit: Edit): Preset {
