@@ -3,10 +3,10 @@ name: Desktop
 # so packaging problems show before a release. The installers are kept as artifacts for a week.
 on:
   pull_request:
-    paths: ['apps/desktop/**', '.github/workflows/desktop.yml']
+    paths: ['apps/desktop/**', 'package-lock.json', '.github/workflows/desktop.yml']
   push:
     branches: [main]
-    paths: ['apps/desktop/**', '.github/workflows/desktop.yml']
+    paths: ['apps/desktop/**', 'package-lock.json', '.github/workflows/desktop.yml']
   workflow_dispatch:
 permissions:
   contents: read
