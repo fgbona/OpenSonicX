@@ -105,6 +105,8 @@ export function usePocketMaster() {
   const presetRef = useRef<Preset | null>(null);
   const restoreRef = useRef<Preset | null>(null);
   const historyRef = useRef<History>(EMPTY_HISTORY);
+  /** The latest state, for the tone assistant's tool calls, which read it when they run. */
+  const stateRef = useRef<PocketMasterState>(INITIAL);
   /** Bumped by every edit; a dump requested before the latest edit is stale. */
   const editGeneration = useRef(0);
   const notifyRef = useRef<(f: Frame) => void>(() => undefined);
@@ -248,9 +250,43 @@ export function usePocketMaster() {
   const redo = useCallback(() => step(false), [step]);
 
   /**
+   * The editor as the tone assistant's tools see it (preset reads, edits, Undo, Revert). Loading and
+   * saving need the page's dialogs, so the page completes it into a ToneHost.
+   */
+  const assistantBase = useMemo(() => ({
+    snapshot: () => {
+      const s = stateRef.current;
+      const preset = presetRef.current;
+      if (!preset || s.presetIndex === null) throw new Error('No preset has been read from the pedal yet.');
+      return {
+        index: s.presetIndex, name: (s.names?.[s.presetIndex] ?? '').trim(), preset,
+        slots: { irNames: s.irNames, profileNames: s.profileNames },
+        modified: safeModified(preset, s.restorePoint) || s.pedalModified === true,
+        names: s.names ?? [],
+      };
+    },
+    async applyEdits(edits: readonly Edit[]) {
+      if (!stateRef.current.liveEdit) throw new Error('Live edit is off, so the sound cannot change: the person has to turn it on in the editor first.');
+      if (busyRef.current) throw new Error('The editor is busy (saving or loading); try again in a moment.');
+      send(edits);
+    },
+    async undo() {
+      if (historyRef.current.past.length === 0) return false;
+      undoRef.current();
+      return true;
+    },
+    async revert() {
+      await revertRef.current();
+    },
+  }), [send]);
+
+  /**
    * Reloads the preset from its slot, as switching presets on the unit does: the edit buffer goes
    * back to exactly what is saved (undecoded fields included), even if it was edited before connecting.
    */
+  const undoRef = useRef(() => {});
+  undoRef.current = undo;
+
   const revert = useCallback(async () => {
     const current = link.current;
     const index = state.presetIndex;
@@ -270,6 +306,8 @@ export function usePocketMaster() {
     patch({ busy: null });
     await read({ freshRestorePoint: true });
   }, [state.liveEdit, state.presetIndex, read, patch]);
+  const revertRef = useRef(revert);
+  revertRef.current = revert;
 
   /** Re-reads the user IR and captured-profile slot names; they are only labels, so a failure is logged. */
   const refreshSlotNames = useCallback(async () => {
@@ -655,8 +693,10 @@ export function usePocketMaster() {
     [state.preset, state.restorePoint, state.pedalModified],
   );
 
+  stateRef.current = state;
   return {
     ...state,
+    assistantBase,
     modified,
     enable,
     connect,
@@ -673,6 +713,8 @@ export function usePocketMaster() {
     restore,
     loadNames,
     loadPreset: (index: number) => void loadPreset(index),
+    /** loadPreset that can be awaited (the tone assistant waits for the new preset). */
+    loadPresetNow: loadPreset,
     exclusive,
     writeGlobal,
     factoryReset,

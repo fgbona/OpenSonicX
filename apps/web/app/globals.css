@@ -930,3 +930,21 @@ button, select { font: inherit; color: inherit; }
   box-shadow: inset 0 3px 10px #000, inset 0 0 0 1px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.6), 0 -1px 0 rgba(0, 0, 0, 0.25);
 }
 :root .face-amp[data-skin] .param-select { color: var(--face-ink); background: color-mix(in srgb, var(--face-ink) 12%, transparent); }
+
+/* Tone assistant */
+.assistant-body { padding: 12px 16px 14px; display: grid; gap: 10px; }
+.assistant-body p { margin: 0; }
+.assistant .panel-head { flex-wrap: wrap; gap: 8px; }
+.assistant-head-actions { display: flex; gap: 8px; }
+.assistant-head-actions .btn, .assistant-input .btn { white-space: nowrap; }
+.assistant-steps { margin: 0; }
+.assistant-key { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.assistant-key .field { flex: 1; min-width: 220px; }
+.assistant-messages { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-height: 420px; overflow: auto; }
+.assistant-message { padding: 8px 12px; border-radius: var(--radius-small); background: var(--surface-2); white-space: pre-wrap; }
+.assistant-message.is-user { background: color-mix(in srgb, var(--blue) 14%, transparent); justify-self: end; max-width: 85%; }
+.assistant-message.is-error { background: color-mix(in srgb, var(--red) 12%, transparent); }
+.assistant-message .changes { margin-top: 8px; }
+.assistant-input { display: flex; gap: 8px; }
+.assistant-input input { flex: 1; min-width: 0; padding: 8px 12px; border-radius: var(--radius-small); border: 1px solid var(--separator); background: var(--surface); color: var(--label); font: inherit; }
+.assistant-live { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }

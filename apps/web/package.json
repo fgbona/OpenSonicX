@@ -12,7 +12,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "node --test --test-timeout=5000 'test/**/*.test.ts'",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "e2e:gemini": "playwright test e2e/live-gemini.spec.ts"
   },
   "dependencies": {
     "@pocket-master/core": "*",

@@ -58,6 +58,12 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
   `NEXT_PUBLIC_TONE3000_CLIENT_ID` (in `apps/web/.env.local` for
   `npm run dev`; the `TONE3000_CLIENT_ID` repository variable for the
   release image).
+- A tone assistant: describe a sound ("Black Album rhythm tone", "warmer, less gain", "save
+  it on P45") and it builds it on the pedal, live, listing what changed. It runs on Google
+  Gemini with your own free API key, straight from the editor (no server of ours); saving
+  still goes through the Save dialog you confirm. The panel walks you through creating the
+  key in a project without billing, so it can never charge you, and counts the free requests
+  left today.
 - Comments on captured-profile and IR slots (kept in this browser or app),
   shown next to their names in the menus.
 - *Global options* (gear button): input and USB/Bluetooth levels, boot

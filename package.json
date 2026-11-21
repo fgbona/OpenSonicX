@@ -15,7 +15,8 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "dev": "npm run dev -w @pocket-master/web",
     "build": "npm run build -w @pocket-master/web && npm run build -w sonicake-pocket-master-mcp",
-    "e2e": "npm run e2e -w @pocket-master/web"
+    "e2e": "npm run e2e -w @pocket-master/web",
+    "e2e:gemini": "npm run e2e:gemini -w @pocket-master/web"
   },
   "overrides": {
     "minimatch@>=7.0.0 <11.0.1": "11.0.9"

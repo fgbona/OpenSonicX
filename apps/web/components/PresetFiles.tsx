@@ -76,13 +76,15 @@ export function PresetFiles({ connected, current, busy, error, pending, onPick, 
   );
 }
 
-const DIFF_KEY = { order: 'diff.order', model: 'diff.model', on: 'diff.onOff', volume: 'diff.volume' } as const;
+export const DIFF_KEY = { order: 'diff.order', model: 'diff.model', on: 'diff.onOff', volume: 'diff.volume' } as const;
 
-function Changes({ differences, label }: { differences: readonly Difference[]; label: (d: Difference) => string }) {
+/** A list of differences between two presets, under a heading (the import dialog, the tone assistant). */
+export function Changes({ differences, label, title }: { differences: readonly Difference[]; label: (d: Difference) => string; title?: string }) {
   const { t } = useI18n();
+  const heading = title ?? t('presetFile.changes');
   return (
-    <section className="changes" aria-label={t('presetFile.changes')}>
-      <h3>{t('presetFile.changes')}</h3>
+    <section className="changes" aria-label={heading}>
+      <h3>{heading}</h3>
       {differences.length === 0 ? (
         <p className="muted small">{t('presetFile.same')}</p>
       ) : (
