@@ -50,6 +50,10 @@ async function addGroqKey(page: Page) {
   await expect(panel(page).getByRole('button', { name: 'Keys' })).toBeVisible();
 }
 const amp = (page: Page) => page.locator('section.block-amp');
+async function pickAmp(page: Page, model: string) {
+  await amp(page).locator('.picker-button').click();
+  await page.getByRole('option', { name: new RegExp(`^${model}\\b`) }).click();
+}
 
 async function addKey(page: Page) {
   await geminiSetup(page).getByLabel('Gemini API key').fill(KEY);
@@ -245,4 +249,26 @@ test('a key the browser will not keep says so; a failed answer stays in what the
   const told = JSON.stringify(requests[1]!.input);
   expect(told).toContain('black album');
   expect(told).toContain('answer was interrupted');
+});
+
+test('a tone kept by the assistant goes to the library, and a later conversation loads it from there', async ({ page, pedal }) => {
+  const requests = await fakeGemini(page, [
+    call('keep_tone', { name: 'BLACK RHY', notes: 'Metallica Black Album, rhythm' }), say('Kept it as BLACK RHY.'),
+    call('load_saved_tone', { name: 'BLACK RHY' }, 'c2'), say('Loaded your Black Album tone.'),
+  ]);
+  await connect(page, pedal);
+  await page.getByRole('switch', { name: 'Live edit' }).click();
+  await addKey(page);
+  await ask(page, 'this sounds right, keep it');
+  await expect(panel(page).getByText('Kept it as BLACK RHY.')).toBeVisible();
+  const library = page.getByRole('region', { name: 'Preset library' });
+  await expect(library.getByText('BLACK RHY')).toBeVisible();
+  await expect(library.getByText('Metallica Black Album, rhythm', { exact: false })).toBeVisible();
+
+  await pickAmp(page, 'Calif DualM');
+  await panel(page).getByRole('button', { name: 'New conversation' }).click();
+  await ask(page, 'black album rhythm');
+  await expect(panel(page).getByText('Loaded your Black Album tone.')).toBeVisible();
+  await expect(amp(page).getByText('Brit 800')).toBeVisible();
+  expect(JSON.stringify(requests[2]!.input)).toContain('Saved tones (load_saved_tone):\\n- BLACK RHY: Metallica Black Album, rhythm');
 });

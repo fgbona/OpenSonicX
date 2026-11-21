@@ -91,7 +91,9 @@ test('unknown tools and malformed arguments are errors the model can read, never
 
 test('tools shared with the MCP server take the same parameters as its frozen contract', () => {
   const contract: Record<string, string> = JSON.parse(readFileSync(new URL('../../../apps/mcp/test/fixtures/tool-contract.json', import.meta.url), 'utf8'));
-  const shared = CHAT_TOOLS.filter((t) => t.name !== 'save_preset');
+  // Chat-only: saving as a proposal, and the editor's tone library.
+  const CHAT_ONLY = ['save_preset', 'list_saved_tones', 'load_saved_tone', 'keep_tone'];
+  const shared = CHAT_TOOLS.filter((t) => !CHAT_ONLY.includes(t.name));
   assert.deepEqual(shared.map((t) => t.name).sort(), ['edit_preset', 'get_preset', 'list_models', 'list_presets', 'revert_preset', 'select_preset', 'undo_edit']);
   for (const t of shared) assert.equal(shape(t.parameters as Schema), contract[t.name], t.name);
   assert.equal(shape(CHAT_TOOLS.find((t) => t.name === 'save_preset')!.parameters as Schema), '{ slot: string, name: string }');
@@ -124,4 +126,48 @@ test('loading a preset through the tool moves the guard to it', async () => {
   const guard = { index: 7 };
   await runChatTool(host, 'select_preset', { preset: 'P10' }, guard);
   assert.equal(guard.index, 7, 'the fake host stays on P08, so the guard follows what is loaded');
+});
+
+/** A host with a tone library, as the editor has. */
+function libraryHost() {
+  const base = fakeHost();
+  const kept: string[] = [];
+  const tones = [{ name: 'BLACK RHY', notes: 'Metallica Black Album, rhythm' }];
+  const host: ToneHost = {
+    ...base.host,
+    savedTones: () => tones,
+    async loadSavedTone(name) { base.calls.push(`load ${name}`); return tones.some((t) => t.name.toLowerCase() === name.toLowerCase()); },
+    async keepTone(name, notes) { kept.push(`${name} / ${notes}`); },
+  };
+  return { host, calls: base.calls, kept };
+}
+
+test('saved tones: listed in the first message, loaded by name, and kept with the reference', async () => {
+  const { host, calls, kept } = libraryHost();
+  assert.match(chatContext(host), /\n\nSaved tones \(load_saved_tone\):\n- BLACK RHY: Metallica Black Album, rhythm$/);
+  assert.match((await runChatTool(host, 'list_saved_tones', {})).text, /^- BLACK RHY: Metallica Black Album, rhythm$/);
+  const loaded = await runChatTool(host, 'load_saved_tone', { name: 'black rhy' });
+  assert.equal(loaded.ok, true);
+  assert.match(loaded.text, /^Loaded the saved tone "black rhy"\.\n\nP08/);
+  assert.equal((await runChatTool(host, 'load_saved_tone', { name: 'NOPE' })).ok, false);
+  assert.deepEqual(calls, ['load black rhy', 'load NOPE']);
+  const keep = await runChatTool(host, 'keep_tone', { name: 'AND JUSTIC', notes: 'Metallica ...And Justice, rhythm' });
+  assert.equal(keep.ok, true);
+  assert.deepEqual(kept, ['AND JUSTIC / Metallica ...And Justice, rhythm']);
+  assert.equal((await runChatTool(host, 'keep_tone', { name: 'Way too long name', notes: 'x' })).ok, false, 'names follow the pedal rule');
+});
+
+test('without a library (the MCP server, a bare host) the library tools say so, and the context has none', async () => {
+  const { host } = fakeHost();
+  assert.doesNotMatch(chatContext(host), /Saved tones/);
+  assert.match((await runChatTool(host, 'load_saved_tone', { name: 'X' })).text, /no saved tones here/);
+});
+
+test('loading or keeping a tone also stops when the person loaded another preset mid-reply', async () => {
+  const { host } = libraryHost();
+  const snap = host.snapshot;
+  host.snapshot = () => ({ ...snap(), index: 9 });
+  for (const [tool, args] of [['load_saved_tone', { name: 'BLACK RHY' }], ['keep_tone', { name: 'X', notes: 'y' }]] as const) {
+    assert.match((await runChatTool(host, tool, args, { index: 7 })).text, /preset changed to P10/, tool);
+  }
 });

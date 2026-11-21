@@ -8,7 +8,7 @@ import {
 } from '@pocket-master/core';
 import { LinkClosedError, linkPedal, PocketMasterLink, readProfileNames, readUserIrNames, type LogEntry } from '@pocket-master/core';
 import { openMidi, pickPocketMaster, webMidiPort } from './midi';
-import { addToLibrary } from './presetLibrary';
+import { addToLibrary, libraryNow } from './presetLibrary';
 import { EMPTY_HISTORY, record, redo as redoStep, undo as undoStep, type History } from './history';
 import { connectBluetooth } from './ble';
 import { downloadBackup, downloadJson, loadBackups, storeBackup } from './backupStore';
@@ -297,6 +297,19 @@ export function usePocketMaster() {
       ready();
       if (!(await revertRef.current())) throw new Error('The pedal did not reload the preset.');
     },
+    savedTones: () => libraryNow().map((f) => ({ name: f.name, notes: f.notes })),
+    async loadSavedTone(name: string) {
+      ready();
+      const file = libraryNow().find((f) => f.name.toLowerCase() === name.toLowerCase());
+      if (!file) return false;
+      if (!(await importRef.current(file))) throw new Error(stateRef.current.error ?? 'The pedal did not load the tone.');
+      return true;
+    },
+    async keepTone(name: string, notes: string) {
+      const payload = await exclusiveRef.current('Reading', (current) => linkPedal(current).readEditBuffer());
+      if (!payload) throw new Error('The edit buffer could not be read from the pedal.');
+      addToLibrary(presetFile(payload, name, undefined, notes));
+    },
   }), [send]);
 
   /**
@@ -483,6 +496,8 @@ export function usePocketMaster() {
     }
     return failure ? null : result;
   }, [patch, read, refreshSlotNames]);
+  const exclusiveRef = useRef(exclusive);
+  exclusiveRef.current = exclusive;
 
   /**
    * Factory reset, then disconnect: the pedal reboots and drops the link, so there is nothing to
@@ -668,6 +683,7 @@ export function usePocketMaster() {
   }, [patch]);
 
   /** Loads a preset file into the edit buffer (nothing is saved); Revert still brings back the old one. */
+  const importRef = useRef<(file: PresetFile) => Promise<boolean>>(async () => false);
   const importPreset = useCallback(
     async (file: PresetFile) => {
       const current = link.current;
@@ -695,6 +711,7 @@ export function usePocketMaster() {
     },
     [patch],
   );
+  importRef.current = importPreset;
 
   const loadNames = useCallback(async () => {
     const current = link.current;

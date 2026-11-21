@@ -35,6 +35,12 @@ export interface ToneHost {
   selectPreset(index: number): Promise<boolean>;
   /** Opens the Save dialog filled in; resolves with what the person did. */
   proposeSave(index: number, name: string): Promise<'saved' | 'cancelled'>;
+  /** The person's saved tones (the editor's preset library); absent where there is none. */
+  savedTones?(): readonly { readonly name: string; readonly notes?: string }[];
+  /** Loads a saved tone into the edit buffer; false when no tone has that name. */
+  loadSavedTone?(name: string): Promise<boolean>;
+  /** Keeps the sound as it is now in the library, under a pedal-style name and a note naming the reference. */
+  keepTone?(name: string, notes: string): Promise<void>;
 }
 
 export interface JsonSchema {
@@ -83,6 +89,9 @@ export const CHAT_TOOLS: readonly ChatTool[] = [
   { name: 'undo_edit', description: 'Undoes the last change to the sound (the editor\'s Undo, also the person\'s own knob turns). Call it again to go further back. Nothing is saved.', parameters: NONE },
   { name: 'revert_preset', description: 'Reloads the loaded preset from its slot, discarding every unsaved change.', parameters: NONE },
   { name: 'select_preset', description: 'Loads a preset, like turning the preset knob. If the current one has unsaved changes the editor asks the person first.', parameters: object({ preset: SLOT }, ['preset']) },
+  { name: 'list_saved_tones', description: 'Tones the person kept in the editor\'s library, with the reference each one matches. The first message already lists them.', parameters: NONE },
+  { name: 'load_saved_tone', description: 'Loads a kept tone into the edit buffer, by its name. Prefer it to rebuilding when a kept tone matches the request: it is exact and costs no extra requests.', parameters: object({ name: { type: 'string', description: 'Name of a kept tone, as list_saved_tones shows it' } }, ['name']) },
+  { name: 'keep_tone', description: 'Keeps the sound as it is now in the editor\'s library, so it loads at once next time. Offer it when the person says a tone sounds right; nothing is written to the pedal.', parameters: object({ name: { type: 'string', description: 'Short name, 1..10 printable ASCII characters (like a preset name)' }, notes: { type: 'string', description: 'The reference it matches, e.g. "Metallica, Black Album, rhythm"' } }, ['name', 'notes']) },
   { name: 'save_preset', description: 'Proposes saving the sound to a user slot (P01..P50) under a name: the editor opens its Save dialog filled in, backs the slot up and saves only if the person confirms. Only when the person asked to save.', parameters: object({ slot: SLOT, name: { type: 'string', description: 'Preset name, 1..10 printable ASCII characters' } }, ['slot', 'name']) },
 ];
 
@@ -91,6 +100,7 @@ export const CHAT_INSTRUCTIONS = [
   'Work out the gear used on the reference and pick the pedal models based on it (model names are disguised, e.g. "Calif DualM" is a Mesa/Boogie Dual Rectifier; the first message lists every model with what it is based on), then build the whole chain with one edit_preset: drive, amp, cabinet, EQ, gate, modulation, delay and reverb, with sensible values.',
   'Do not ask for details the person did not give: make reasonable choices, say briefly what you chose and why, and invite them to ask for adjustments by ear.',
   'The editor shows every change live, and the person can undo. Nothing is stored until save_preset, which opens the editor\'s Save dialog for the person to confirm; propose it only when the person asks to save (e.g. "no 45" means slot P45).',
+  'If a kept tone in the first message matches the request, load it with load_saved_tone instead of building it again. When the person says a tone sounds right, offer to keep it with keep_tone, naming the reference in notes.',
   'Use as few calls as possible: edit_preset already returns the resulting preset. Answer in the language the person writes in, in two to four short sentences.',
 ].join(' ');
 
@@ -98,10 +108,14 @@ export const CHAT_INSTRUCTIONS = [
 export function chatContext(host: ToneHost): string {
   const s = host.snapshot();
   const models = s.preset.chain.map((b) => formatModels(b.key, b.label, s.slots)).join('\n\n');
-  return `Loaded preset:\n${preset(s)}\n\n${models}`;
+  const tones = savedTonesText(host);
+  return `Loaded preset:\n${preset(s)}\n\n${models}${tones ? `\n\nSaved tones (load_saved_tone):\n${tones}` : ''}`;
 }
 
 const preset = (s: ToneSnapshot) => formatPreset(s.index, s.name, s.preset, s.slots, s.modified);
+
+const savedTonesText = (host: ToneHost) => (host.savedTones?.() ?? []).map((t) => `- ${t.name}${t.notes ? `: ${t.notes}` : ''}`).join('\n');
+const NO_LIBRARY = 'There are no saved tones here: this editor has no tone library.';
 
 /** The loaded preset as the model reads it, for messages after the first. */
 export function currentPresetText(host: ToneHost): string {
@@ -150,7 +164,7 @@ export interface ChatGuard {
 }
 
 // save_preset too: it stores what is loaded now, which is not what the model built if the person switched.
-const CHANGES_SOUND = new Set(['edit_preset', 'undo_edit', 'revert_preset', 'save_preset']);
+const CHANGES_SOUND = new Set(['edit_preset', 'undo_edit', 'revert_preset', 'save_preset', 'load_saved_tone', 'keep_tone']);
 
 async function run(host: ToneHost, name: string, args: Record<string, unknown>, guard?: ChatGuard): Promise<{ ok: boolean; text: string }> {
   const done = (text: string) => ({ ok: true, text });
@@ -207,6 +221,21 @@ async function run(host: ToneHost, name: string, args: Record<string, unknown>, 
       return done(outcome === 'saved'
         ? `Saved to ${presetLabel(index)} as "${presetName}", confirmed by the person in the Save dialog (the slot was backed up first).`
         : `The person closed the Save dialog: ${presetLabel(index)} was left as it was, so they did not save.`);
+    }
+    case 'list_saved_tones':
+      return done(host.savedTones ? savedTonesText(host) || 'No tones kept yet.' : NO_LIBRARY);
+    case 'load_saved_tone': {
+      const toneName = (str(args, 'name') as string).trim();
+      if (!host.loadSavedTone) return { ok: false, text: NO_LIBRARY };
+      if (!(await host.loadSavedTone(toneName))) return { ok: false, text: `No kept tone is called "${toneName}". Kept tones:\n${savedTonesText(host) || '(none)'}` };
+      return done(`Loaded the saved tone "${toneName}".\n\n${preset(host.snapshot())}`);
+    }
+    case 'keep_tone': {
+      const toneName = (str(args, 'name') as string).trim();
+      encodeName(toneName); // the library stores pedal-style names
+      if (!host.keepTone) return { ok: false, text: NO_LIBRARY };
+      await host.keepTone(toneName, (str(args, 'notes') as string).trim());
+      return done(`Kept "${toneName}" in the library; it loads with load_saved_tone next time.`);
     }
     default:
       return { ok: false, text: `Error: unknown tool ${name}` };
