@@ -11,6 +11,25 @@ export const GROQ_MODEL = { id: 'openai/gpt-oss-120b', freeDailyLimit: 1000 } as
 const API = 'https://api.groq.com/openai/v1';
 /** When a 429 does not say how long to wait. */
 const DEFAULT_WAIT_MS = 60_000;
+/** When a 429 says the daily limit ran out but not when it resets. */
+const DAILY_WAIT_MS = 60 * 60_000;
+
+/** Groq durations such as "2h3m4.5s", "59.56s" or "120ms", in milliseconds; NaN when unreadable. */
+export function parseGroqDuration(text: string | null): number {
+  const m = text?.trim().match(/^(?:(\d+)h)?(?:(\d+)m(?!s))?(?:([\d.]+)s)?(?:(\d+)ms)?$/);
+  if (!m || !text?.trim()) return Number.NaN;
+  const [, h = '0', min = '0', sec = '0', ms = '0'] = m;
+  return ((Number(h) * 60 + Number(min)) * 60 + Number(sec)) * 1000 + Number(ms);
+}
+
+/** When a 429 lets requests through again: retry-after, else the reset Groq states, else a guess. */
+function retryAt(r: Response, message: string | undefined, now: Date): Date {
+  const seconds = Number(r.headers.get('retry-after'));
+  if (Number.isFinite(seconds) && seconds > 0) return new Date(now.getTime() + seconds * 1000);
+  const reset = parseGroqDuration(r.headers.get('x-ratelimit-reset-requests'));
+  if (Number.isFinite(reset) && reset > 0) return new Date(now.getTime() + reset);
+  return new Date(now.getTime() + (/per day|RPD/i.test(message ?? '') ? DAILY_WAIT_MS : DEFAULT_WAIT_MS));
+}
 
 type Message =
   | { role: 'system' | 'user'; content: string }
@@ -42,6 +61,7 @@ export async function converseGroq(options: ConverseOptions): Promise<string> {
     { role: 'user', content: requestText(host, options.turns, options.message) },
   ];
   const guard: ChatGuard = { index: host.snapshot().index };
+  let retriedToolCall = false;
   for (let request = 0; request < MAX_REQUESTS; request++) {
     onRequest();
     const r = await fetchFn(`${API}/chat/completions`, {
@@ -53,12 +73,14 @@ export async function converseGroq(options: ConverseOptions): Promise<string> {
     const remaining = Number(r.headers.get('x-ratelimit-remaining-requests') ?? Number.NaN);
     const limit = Number(r.headers.get('x-ratelimit-limit-requests') ?? Number.NaN);
     if (Number.isFinite(remaining) && Number.isFinite(limit)) onLimits?.(remaining, limit);
-    const body = (await r.json().catch(() => ({}))) as { error?: { message?: string }; choices?: { message?: { content?: string | null; tool_calls?: ToolCall[] } }[] };
-    if (r.status === 429) {
-      const seconds = Number(r.headers.get('retry-after'));
-      throw new QuotaError(new Date(now().getTime() + (Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : DEFAULT_WAIT_MS)));
-    }
+    const body = (await r.json().catch(() => ({}))) as { error?: { message?: string; code?: string }; choices?: { message?: { content?: string | null; tool_calls?: ToolCall[] } }[] };
+    if (r.status === 429) throw new QuotaError(retryAt(r, body.error?.message, now()));
     if (r.status === 401 || r.status === 403) throw new KeyError('groq', body.error?.message ?? 'Groq did not accept this key.');
+    // gpt-oss now and then writes a tool call Groq cannot parse; asking again usually works.
+    if (r.status === 400 && body.error?.code === 'tool_use_failed' && !retriedToolCall) {
+      retriedToolCall = true;
+      continue;
+    }
     if (!r.ok) throw new Error(`Groq answered ${r.status}${body.error?.message ? `: ${body.error.message}` : ''}`);
     const message = body.choices?.[0]?.message;
     if (!message) throw new Error('Groq sent no answer this editor understands. Try again in a moment.');

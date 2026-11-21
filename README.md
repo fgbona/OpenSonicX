@@ -16,6 +16,15 @@ trademarks of their owners, used only to describe the modeled gear.
 > **Status: preview.** Reading, live editing and saving to preset slots work.
 > Every save backs up the slot it overwrites, unless you opt out for that save.
 
+## Describe a tone, get it on the pedal
+
+Type what you want to hear, "Black Album rhythm tone" or "warmer, less gain", and the tone
+assistant picks the models and sets the knobs, live, listing what changed. It runs on your
+own free AI key (Groq or Google Gemini), called straight from the editor; saving still goes
+through the Save dialog you confirm.
+
+![The tone assistant turning "Black Album rhythm tone" into a Mesa Dual Rectifier preset](docs/media/assistant.gif)
+
 ## The amp you picked, on screen
 
 The AMP block dresses like the gear its model is based on (materials and

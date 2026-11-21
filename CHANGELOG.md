@@ -15,11 +15,23 @@ and the project uses [Semantic Versioning](https://semver.org/).
   back. Each answer says which model gave it; the meter shows every model (Groq's real
   remaining count when the browser can read it). Conversations keep only the texts, and
   every message carries the preset as it is now, so any provider can take the next one.
+- README: a "Describe a tone" section with an animation of the tone assistant at work
+  (`MEDIA=1 npx playwright test e2e/media-assistant.spec.ts` regenerates it and a still,
+  with a simulated pedal and Gemini).
+- The Portuguese and accessibility end-to-end tests cover the tone assistant's chat too
+  (messages, what changed, usage), in both themes.
 - `npm run e2e:live` (with `GROQ_API_KEY` and/or `GEMINI_API_KEY`) checks each real
   provider; it replaces `npm run e2e:gemini`.
 
 ### Fixed
 
+- Tone assistant, smaller fixes before release:
+  - A Groq quota without a retry time now waits for the reset Groq states, or an hour for
+    a daily limit, instead of retrying every minute; a Gemini per-minute quota without one
+    pauses a minute instead of until Pacific midnight.
+  - A malformed tool call from Groq's model (`tool_use_failed`) is retried once.
+  - When the browser will not store a key, the panel says it lasts until the page closes.
+  - An interrupted answer is kept in what the next one is told, so the request is not lost.
 - Tone assistant routing (review of the Groq change): a model whose free requests run out
   after it already changed the sound no longer hands the message to the next model, which
   would do it again ("more gain" twice); the panel says the answer was cut and to send it

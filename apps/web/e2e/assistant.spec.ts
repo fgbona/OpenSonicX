@@ -223,3 +223,26 @@ test('a refused Groq key is reported once while Gemini answers; a quota cut mid-
   expect(gemini.map((r) => r.model), 'Flash-Lite was not asked to redo the edit').toEqual(['gemini-3.8-flash', 'gemini-3.8-flash', 'gemini-3.8-flash']);
   expect(pedal.pedal.received.filter((r) => r === 'edit 42')).toHaveLength(1);
 });
+
+test('a key the browser will not keep says so; a failed answer stays in what the next one is told', async ({ page, pedal }) => {
+  await page.addInitScript(() => {
+    const set = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (k: string, v: string) {
+      if (k.includes('Key.v1')) throw new DOMException('blocked', 'SecurityError');
+      return set.call(this, k, v);
+    };
+  });
+  const requests = await fakeGemini(page, [{ status: 500, body: { error: { message: 'backend error' } } }, say('Second try worked.')]);
+  await connect(page, pedal);
+  await addKey(page);
+  await panel(page).getByRole('button', { name: 'Keys' }).click();
+  await expect(geminiSetup(page).getByText(/this browser would not keep the key/)).toBeVisible();
+  await panel(page).getByRole('button', { name: 'Back to the chat' }).click();
+  await ask(page, 'black album');
+  await expect(panel(page).getByText(/Something went wrong: Gemini answered 500/)).toBeVisible();
+  await ask(page, 'try again');
+  await expect(panel(page).getByText('Second try worked.')).toBeVisible();
+  const told = JSON.stringify(requests[1]!.input);
+  expect(told).toContain('black album');
+  expect(told).toContain('answer was interrupted');
+});
