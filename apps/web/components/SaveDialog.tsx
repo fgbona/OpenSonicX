@@ -22,6 +22,8 @@ interface Props {
   onClose: () => void;
 }
 
+const slotName = (names: readonly string[] | null, index: number) => (names?.[index] ?? '').trim().slice(0, NAME_LENGTH);
+
 const nameError = (name: string) => {
   try {
     encodeName(name);
@@ -39,16 +41,18 @@ export function SaveDialog({ open, presetIndex, names, busy, error: saveError, f
   const [skipBackup, setSkipBackup] = useState(false);
   const { t, te } = useI18n();
 
+  // Every opening starts fresh on the loaded slot, with that slot's name (not last time's).
   useEffect(() => {
     if (!open) return;
     setTarget(initial);
+    setName(slotName(names, initial));
     setDone(false);
     setSkipBackup(false); // backup is on again every time the sheet opens
   }, [open, initial]);
 
-  // Names arrive after the dialog opens; fill the name once they do, without overwriting typing.
+  // Names can arrive after the dialog opens; fill the name once they do, without overwriting typing.
   useEffect(() => {
-    if (open && names) setName((n) => n || (names[target] ?? '').trim().slice(0, NAME_LENGTH));
+    if (open && names) setName((n) => n || slotName(names, target));
   }, [open, names, target]);
 
   const current = names?.[target] ?? '';
@@ -80,7 +84,7 @@ export function SaveDialog({ open, presetIndex, names, busy, error: saveError, f
             <select value={target} onChange={(e) => {
               const index = Number(e.target.value);
               setTarget(index);
-              setName((names?.[index] ?? '').slice(0, NAME_LENGTH));
+              setName(slotName(names, index));
             }}>
               {Array.from({ length: USER_PRESETS }, (_, i) => (
                 <option key={i} value={i}>{presetLabel(i)}{names?.[i] ? ` · ${names[i]}` : ''}{i === presetIndex ? ` ${t('save.loaded')}` : ''}</option>

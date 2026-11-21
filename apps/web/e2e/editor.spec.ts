@@ -162,3 +162,36 @@ test('importing a preset file first shows what it changes from the loaded preset
   await dialog.getByRole('button', { name: 'Cancel' }).click();
   await expect(amp(page).getByText('Calif DualM')).toBeVisible();
 });
+
+test('the save dialog suggests the name of the slot it saves to, every time it opens', async ({ page, pedal }) => {
+  await connect(page, pedal);
+  await liveEdit(page);
+  await pickAmp(page, 'Calif DualM');
+  await page.getByRole('button', { name: 'Save…' }).click();
+  const save = page.getByRole('dialog', { name: 'Save to a preset slot' });
+  await expect(save.getByLabel('Name')).toHaveValue('IRON-LEAD');
+  await save.getByLabel('Name').fill('E2E RECT');
+  await save.getByRole('button', { name: 'Cancel' }).click();
+
+  await page.getByRole('button', { name: /Load P10/ }).click();
+  await page.getByRole('button', { name: 'Discard and load' }).click();
+  await expect(page.getByRole('heading', { name: /P10\s*THR-CLEAN/ })).toBeVisible();
+  await pickAmp(page, 'Calif DualM');
+  await page.getByRole('button', { name: 'Save…' }).click();
+  await expect(save.getByLabel('Name')).toHaveValue('THR-CLEAN');
+});
+
+test('after a save the preset is no longer modified: loading another one does not ask', async ({ page, pedal }) => {
+  await connect(page, pedal);
+  await liveEdit(page);
+  await pickAmp(page, 'Calif DualM');
+  await page.getByRole('button', { name: 'Read' }).click(); // the pedal now says "modified" too
+  await page.getByRole('button', { name: 'Save…' }).click();
+  const save = page.getByRole('dialog', { name: 'Save to a preset slot' });
+  await save.getByRole('button', { name: 'Back up and save to P09' }).click();
+  await save.getByRole('button', { name: 'Done' }).click();
+  await expect(page.getByRole('button', { name: 'Revert' })).toBeDisabled();
+  await page.getByRole('button', { name: /Load P10/ }).click();
+  await expect(page.getByRole('heading', { name: /P10\s*THR-CLEAN/ })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Discard the changes?' })).toBeHidden();
+});
