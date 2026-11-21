@@ -150,3 +150,15 @@ test('undo and redo step through live edits, a knob turn counting as one step', 
   await page.keyboard.press('ControlOrMeta+z');
   await expect(amp(page).locator('.face-amp')).toHaveAttribute('data-skin', 'marshall');
 });
+
+test('importing a preset file first shows what it changes from the loaded preset', async ({ page, pedal }) => {
+  await connect(page, pedal);
+  await liveEdit(page);
+  await pickAmp(page, 'Calif DualM');
+  await page.getByText('Import preset').locator('input[type=file]').setInputFiles(new URL('../../../packages/core/test/fixtures/preset-files/v1-iron-lead.json', import.meta.url).pathname);
+  const dialog = page.getByRole('dialog', { name: 'Import a preset' });
+  const changes = dialog.getByRole('region', { name: 'What changes from the loaded preset' });
+  await expect(changes.getByRole('listitem').filter({ hasText: 'AMP Model' })).toContainText('Calif DualM → Brit 800');
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(amp(page).getByText('Calif DualM')).toBeVisible();
+});

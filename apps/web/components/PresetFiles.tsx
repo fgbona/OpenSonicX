@@ -1,13 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { parsePresetFile, type PresetFile, type Progress } from '@pocket-master/core';
+import { comparePresets, decodePreset, fromHex, parsePresetFile, type Difference, type Preset, type PresetFile, type Progress } from '@pocket-master/core';
 import { Dialog } from './Dialog';
 import { ProgressBar } from './ProgressBar';
 import { useI18n } from './I18n';
 
 interface Props {
   connected: boolean;
+  /** The preset on the pedal now, to show what loading a file would change. */
+  current: Preset | null;
   busy: Progress | null;
   error: string | null;
   onExport: () => void;
@@ -16,8 +18,9 @@ interface Props {
 }
 
 /** Export the edit buffer as a file, or load a file into it after a confirmation. */
-export function PresetFiles({ connected, busy, error, onExport, onImport, onError }: Props) {
+export function PresetFiles({ connected, current, busy, error, onExport, onImport, onError }: Props) {
   const { t, te } = useI18n();
+  const label = (d: Difference) => (d.what === 'param' ? d.name : t(DIFF_KEY[d.what]));
   const [pending, setPending] = useState<PresetFile | null>(null);
   const [done, setDone] = useState(false);
   const disabled = !connected || busy !== null;
@@ -56,6 +59,7 @@ export function PresetFiles({ connected, busy, error, onExport, onImport, onErro
               <p><strong>{t('presetFile.confirm', { name })}</strong></p>
               <p>{t('presetFile.note')}</p>
             </div>
+            {current && pending && <Changes differences={comparePresets(current, decodePreset(fromHex(pending.payload)))} label={label} />}
             {error && <p className="alert" role="alert">{te(error)}</p>}
             <div className="sheet-actions">
               <button className="btn" onClick={() => setPending(null)}>{t('action.cancel')}</button>
@@ -67,5 +71,28 @@ export function PresetFiles({ connected, busy, error, onExport, onImport, onErro
         )}
       </Dialog>
     </div>
+  );
+}
+
+const DIFF_KEY = { order: 'diff.order', model: 'diff.model', on: 'diff.onOff', volume: 'diff.volume' } as const;
+
+function Changes({ differences, label }: { differences: readonly Difference[]; label: (d: Difference) => string }) {
+  const { t } = useI18n();
+  return (
+    <section className="changes" aria-label={t('presetFile.changes')}>
+      <h3>{t('presetFile.changes')}</h3>
+      {differences.length === 0 ? (
+        <p className="muted small">{t('presetFile.same')}</p>
+      ) : (
+        <ul>
+          {differences.map((d, i) => (
+            <li key={i}>
+              <span>{'block' in d ? <strong>{d.block} </strong> : null}{label(d)}</span>
+              <span className="changes-values">{d.from} → {d.to}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
