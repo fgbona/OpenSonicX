@@ -6,6 +6,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.13.7] - 2026-11-21
+
+Desktop app on Electron 45.4.1, with its self-update now checked on Windows and
+Linux after every release. Closing the update box no longer restarts the app, the
+model menu stays on a phone's screen, and the Portuguese UI has no English left.
+
 ### Fixed
 
 - Portuguese UI: the busy steps "Reading settings" (Global options), "Loading", "Renaming",
@@ -787,7 +793,8 @@ Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.6...HEAD
+[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.7...HEAD
+[0.13.7]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.6...v0.13.7
 [0.13.6]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.5...v0.13.6
 [0.13.5]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.4...v0.13.5
 [0.13.4]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.3...v0.13.4
