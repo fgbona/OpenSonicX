@@ -7,7 +7,9 @@
  */
 import { useSyncExternalStore } from 'react';
 
-export type AiModel = 'flash' | 'lite';
+import type { AiModel } from './assistant.ts';
+
+export type { AiModel };
 export type Usage = Readonly<Partial<Record<AiModel, { readonly day: string; readonly count: number }>>>;
 
 const KEY = 'pocket-master-editor.geminiUsage.v1';
@@ -49,7 +51,7 @@ export function parseUsage(raw: string | null): Usage {
     const value: unknown = JSON.parse(raw ?? '{}');
     if (!value || typeof value !== 'object') return {};
     return Object.fromEntries(Object.entries(value).filter(([k, v]) =>
-      (k === 'flash' || k === 'lite') && typeof v?.day === 'string' && Number.isInteger(v?.count))) as Usage;
+      (k === 'groq' || k === 'flash' || k === 'lite') && typeof v?.day === 'string' && Number.isInteger(v?.count))) as Usage;
   } catch {
     return {};
   }

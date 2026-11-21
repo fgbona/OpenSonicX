@@ -1,32 +1,37 @@
 'use client';
 
 /**
- * The person's Gemini API key, kept only on this device (localStorage) and sent only to Google.
- * It is never logged or shown back in full.
+ * The person's AI keys (Groq, Gemini), kept only on this device (localStorage) and sent only to
+ * their provider. They are never logged or shown back in full.
  */
-const KEY = 'pocket-master-editor.geminiKey.v1';
+import type { Provider } from './assistant.ts';
 
-export function loadKey(): string | null {
+const KEYS: Readonly<Record<Provider, string>> = {
+  gemini: 'pocket-master-editor.geminiKey.v1',
+  groq: 'pocket-master-editor.groqKey.v1',
+};
+
+export function loadKey(provider: Provider): string | null {
   try {
-    return localStorage.getItem(KEY);
+    return localStorage.getItem(KEYS[provider]);
   } catch {
     return null;
   }
 }
 
 /** False when the browser would not keep it (storage blocked); the key then lasts for this page. */
-export function saveKey(key: string): boolean {
+export function saveKey(provider: Provider, key: string): boolean {
   try {
-    localStorage.setItem(KEY, key.trim());
+    localStorage.setItem(KEYS[provider], key.trim());
     return true;
   } catch {
     return false;
   }
 }
 
-export function removeKey(): void {
+export function removeKey(provider: Provider): void {
   try {
-    localStorage.removeItem(KEY);
+    localStorage.removeItem(KEYS[provider]);
   } catch {
     // nothing stored
   }

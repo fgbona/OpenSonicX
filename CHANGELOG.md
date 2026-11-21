@@ -8,6 +8,28 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Tone assistant: **Groq** as a second free provider (about 1,000 free requests a day on
+  `openai/gpt-oss-120b`, no card), recommended first in the setup. With more than one key,
+  the editor routes on its own: Groq, then Gemini Flash, then Gemini Flash-Lite; a model
+  whose free requests run out hands the message to the next and stays paused until it comes
+  back. Each answer says which model gave it; the meter shows every model (Groq's real
+  remaining count when the browser can read it). Conversations keep only the texts, and
+  every message carries the preset as it is now, so any provider can take the next one.
+- `npm run e2e:live` (with `GROQ_API_KEY` and/or `GEMINI_API_KEY`) checks each real
+  provider; it replaces `npm run e2e:gemini`.
+
+### Fixed
+
+- Tone assistant routing (review of the Groq change): a model whose free requests run out
+  after it already changed the sound no longer hands the message to the next model, which
+  would do it again ("more gain" twice); the panel says the answer was cut and to send it
+  again. A provider that refuses its key while another answers is reported once instead of
+  failing quietly on every message. Each model's pause is kept as the router learns it.
+- Tone assistant: `save_preset` also stops when the person loaded another preset during a
+  reply, like the other tools that change the pedal.
+
+### Added
+
 - **Tone assistant** in the editor: describe a sound and it is built on the pedal, live.
   It uses Google Gemini with the person's own free API key, called straight from the editor
   (no server; Google keeps no conversation, as it runs in stateless mode).

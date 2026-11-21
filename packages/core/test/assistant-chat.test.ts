@@ -109,7 +109,7 @@ test('a preset loaded during a reply makes the change tools refuse, until the mo
   const guard = { index: 7 };
   const snap = host.snapshot;
   host.snapshot = () => ({ ...snap(), index: 9, name: 'THR-CLEAN' }); // the person loaded P10 meanwhile
-  for (const [tool, args] of [['edit_preset', { changes: [{ kind: 'volume', value: 50 }] }], ['undo_edit', {}], ['revert_preset', {}]] as const) {
+  for (const [tool, args] of [['edit_preset', { changes: [{ kind: 'volume', value: 50 }] }], ['undo_edit', {}], ['revert_preset', {}], ['save_preset', { slot: 'P45', name: 'X' }]] as const) {
     const r = await runChatTool(host, tool, args, guard);
     assert.equal(r.ok, false, tool);
     assert.match(r.text, /preset changed to P10/);
