@@ -1,6 +1,7 @@
 import { devices } from '@playwright/test';
 import { test, expect, connect } from './fixtures.ts';
 import type { Page } from '@playwright/test';
+import { openAssistantChat } from './assistant-chat.ts';
 
 // A phone: narrow, touch, no hover (the chain's move arrows stay visible).
 const { defaultBrowserType: _, ...pixel } = devices['Pixel 7'];
@@ -55,3 +56,24 @@ for (const theme of ['dark', 'light'] as const) {
     expect(await sideways(page)).toBeLessThanOrEqual(0);
   });
 }
+
+test('the tone assistant fits a phone: key setup, chat, what changed, and the input', async ({ page, pedal }) => {
+  await connect(page, pedal);
+  await page.getByRole('switch', { name: 'Live edit' }).tap();
+  const panel = page.getByRole('region', { name: 'Tone assistant' });
+  expect(await sideways(page)).toBeLessThanOrEqual(0);
+  await openAssistantChat(page, { panel: 'Tone assistant', keyRegion: 'Google Gemini key', keyLabel: 'Gemini API key', save: 'Save key', input: 'Message to the tone assistant', send: 'Send' },
+    'Built it: Calif DualM (a Mesa Dual Rectifier) with the Dual 4x12 cab and a little room reverb.');
+  expect(await sideways(page)).toBeLessThanOrEqual(0);
+  const screen = page.viewportSize()!;
+  for (const control of [panel.getByRole('textbox', { name: 'Message to the tone assistant' }), panel.getByRole('button', { name: 'Send' }), panel.getByRole('button', { name: 'Keys' }), panel.getByRole('button', { name: 'New conversation' })]) {
+    await control.scrollIntoViewIfNeeded();
+    const box = (await control.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(screen.width);
+    expect(box.height).toBeGreaterThanOrEqual(24); // big enough to tap
+  }
+  const change = panel.getByRole('region', { name: 'What changed' }).getByRole('listitem').first();
+  const row = (await change.boundingBox())!;
+  expect(row.x + row.width).toBeLessThanOrEqual(screen.width);
+});
