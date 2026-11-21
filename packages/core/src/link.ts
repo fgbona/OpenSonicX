@@ -107,23 +107,23 @@ export class PocketMasterLink {
    * error. Queries go out one at a time: replies are matched by kind and joined by packet count,
    * so two in flight could mix (a slow Bluetooth names reply overlapping the preset read).
    */
-  request(kind: QueryKind): Promise<Frame> {
+  request(kind: QueryKind, args: readonly number[] = []): Promise<Frame> {
     // Idle: send now, synchronously, as before. Otherwise wait for every query ahead, queued or
     // running (counted together, so a third query cannot slip in between two).
     const idle = this.#inFlight === 0;
     this.#inFlight += 1;
-    const start = () => this.#requestNow(kind).finally(() => { this.#inFlight -= 1; });
+    const start = () => this.#requestNow(kind, args).finally(() => { this.#inFlight -= 1; });
     const run = idle ? start() : this.#requests.then(start);
     this.#requests = run.catch(() => undefined); // a failed query never blocks the next one
     return run;
   }
 
-  async #requestNow(kind: QueryKind): Promise<Frame> {
+  async #requestNow(kind: QueryKind, args: readonly number[]): Promise<Frame> {
     for (let attempt = 0; attempt <= REQUEST_RETRIES; attempt++) {
       if (this.#closed) throw new LinkClosedError();
       const reply = this.#waitFor(kind);
       try {
-        this.#send(queryFrame(kind));
+        this.#send(queryFrame(kind, args));
       } catch (error) {
         this.#cancelWaits();
         await reply;

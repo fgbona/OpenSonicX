@@ -8,7 +8,7 @@ import { SettingsDialog } from '@/components/SettingsDialog';
 import { PresetFiles } from '@/components/PresetFiles';
 import { PresetLibrary } from '@/components/PresetLibrary';
 import { addToLibrary } from '@/lib/presetLibrary';
-import type { PresetFile } from '@pocket-master/core';
+import { TESTED_FIRMWARE, type PresetFile } from '@pocket-master/core';
 import { PresetSidebar } from '@/components/PresetSidebar';
 import { SlotsPanel } from '@/components/SlotsPanel';
 import { Tone3000Panel } from '@/components/Tone3000Panel';
@@ -108,7 +108,7 @@ export default function EditorPage() {
         onSettings={() => { pm.clearError(); setSettingsOpen(true); }}
         onBluetooth={pm.connectBle}
       />
-      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} exclusive={pm.exclusive} writeGlobal={pm.writeGlobal}
+      <SettingsDialog open={settingsOpen} firmware={pm.firmware} onClose={() => setSettingsOpen(false)} exclusive={pm.exclusive} writeGlobal={pm.writeGlobal}
         busy={pm.busy !== null} error={pm.error} factoryReset={pm.factoryReset} onReset={pm.disconnect} />
       <div className={connected ? 'layout' : 'layout layout-single'}>
       {connected && (
@@ -116,6 +116,9 @@ export default function EditorPage() {
       )}
       <main className="main">
         {pm.error && <p className="alert" role="alert">{te(pm.error)}</p>}
+        {connected && pm.firmware && pm.firmware !== TESTED_FIRMWARE && (
+          <p className="notice" role="status">{t('firmware.untested', { firmware: pm.firmware, tested: TESTED_FIRMWARE })}</p>
+        )}
         {pm.liveEdit && (
           <p className="notice" role="status">
             {t('live.notice')}

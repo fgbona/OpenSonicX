@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  applyEdit, decodeCurrentPreset, fromHex, decodeNotification, decodePreset, diffPresets, editToCommands, MessageType, Query,
+  applyEdit, decodeCurrentPreset, decodeFirmware, fromHex, decodeNotification, decodePreset, diffPresets, editToCommands, MessageType, Query,
   loadIntoEditBuffer, presetFile, presetLabel, restoreFromBackup, saveToSlot,
   type BackupFile, type Edit, type Frame, type Pedal, type Preset, type PresetFile, type Progress, type SaveResult, type SlotBackup,
 } from '@pocket-master/core';
@@ -55,12 +55,14 @@ export interface PocketMasterState {
   readonly pedalModified: boolean | null;
   /** Live edits that Undo and Redo step through; cleared when another preset is read. */
   readonly history: History;
+  /** Firmware version reported by the pedal ("V1.3.3"), null until read or when unknown. */
+  readonly firmware: string | null;
 }
 
 const INITIAL: PocketMasterState = {
   status: 'idle', error: null, inputs: [], outputs: [], inputId: '', outputId: '',
   preset: null, presetIndex: null, restorePoint: null, liveEdit: false, log: [],
-  busy: null, names: null, backups: [], flowBackups: [], storageWarning: null, irNames: null, profileNames: null, pedalModified: null, history: EMPTY_HISTORY,
+  busy: null, names: null, backups: [], flowBackups: [], storageWarning: null, irNames: null, profileNames: null, pedalModified: null, history: EMPTY_HISTORY, firmware: null,
 };
 
 const toOptions = (ports: Iterable<MIDIPort>): PortOption[] =>
@@ -283,6 +285,18 @@ export function usePocketMaster() {
     }
   }, [patch]);
 
+  /** The firmware version, once per connection, from the settings reply; a failure leaves it unknown. */
+  const readFirmware = useCallback(async () => {
+    const current = link.current;
+    if (!current) return;
+    try {
+      const firmware = decodeFirmware((await current.request(Query.GLOBALS)).payload);
+      if (link.current === current) patch({ firmware });
+    } catch (e) {
+      if (!(e instanceof LinkClosedError)) console.warn('could not read the firmware version', e);
+    }
+  }, [patch]);
+
   const connect = useCallback(async () => {
     const midi = access.current;
     const input = midi?.inputs.get(state.inputId);
@@ -300,13 +314,14 @@ export function usePocketMaster() {
     restoreRef.current = null;
     presetRef.current = null;
     historyRef.current = EMPTY_HISTORY;
-    patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false, names: null, history: EMPTY_HISTORY });
+    patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false, names: null, history: EMPTY_HISTORY, firmware: null });
     try {
       await Promise.all([input.open(), output.open()]);
       link.current = new PocketMasterLink(webMidiPort(input, output), appendLog, (f) => notifyRef.current(f));
       patch({ status: 'connected', error: null, irNames: null, profileNames: null });
       await read();
       await refreshSlotNames();
+      await readFirmware();
     } catch (e) {
       console.error('connect failed', e);
       link.current = null;
@@ -314,7 +329,7 @@ export function usePocketMaster() {
     } finally {
       connecting.current = false;
     }
-  }, [state.inputId, state.outputId, patch, appendLog, read, refreshSlotNames]);
+  }, [state.inputId, state.outputId, patch, appendLog, read, refreshSlotNames, readFirmware]);
 
   /** Connects over Bluetooth LE MIDI instead of USB; the browser's chooser needs this click. */
   const connectBle = useCallback(async () => {
@@ -328,7 +343,7 @@ export function usePocketMaster() {
     presetRef.current = null;
     const idle = () => (access.current ? 'ready' : 'idle') as Status;
     historyRef.current = EMPTY_HISTORY;
-    patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false, names: null, history: EMPTY_HISTORY });
+    patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false, names: null, history: EMPTY_HISTORY, firmware: null });
     try {
       const ble = await connectBluetooth(
         (e) => patch({ error: `Bluetooth: ${message(e)}` }),
@@ -344,6 +359,7 @@ export function usePocketMaster() {
       patch({ status: 'connected', error: null, irNames: null, profileNames: null });
       await read();
       await refreshSlotNames();
+      await readFirmware();
     } catch (e) {
       // Closing the chooser without picking is not an error worth showing.
       const cancelled = e instanceof DOMException && e.name === 'NotFoundError';
@@ -355,7 +371,7 @@ export function usePocketMaster() {
     } finally {
       connecting.current = false;
     }
-  }, [patch, appendLog, read, refreshSlotNames]);
+  }, [patch, appendLog, read, refreshSlotNames, readFirmware]);
 
   /** A device-wide setting write (setGlobal / setExpFsTarget bytes); queued like an edit. */
   const writeGlobal = useCallback((bytes: Uint8Array) => {

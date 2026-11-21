@@ -29,6 +29,8 @@ function packets(payload: ArrayLike<number>): Uint8Array[] {
 
 export class SysexPedal {
   readonly pedal = new FakePedal({}, 8);
+  /** The 12 10 reply; tests can change the firmware version in it. */
+  globals: Uint8Array = GLOBALS;
   irNames = ['Marshal 80', 'Brutal Pri', '', '', ''];
   profileNames = ['Randall SA', '', '', '', ''];
 
@@ -52,7 +54,7 @@ export class SysexPedal {
       case 0x40: return [GET, kind, ...this.pedal.names.flatMap((name, i) => [...u32(i), ...ascii(name, 16)])];
       case 0x20: return this.#slots(kind, this.irNames);
       case 0x24: return this.#slots(kind, this.profileNames);
-      case 0x10: return GLOBALS;
+      case 0x10: return this.globals;
       default: return [GET, kind, 0];
     }
   }

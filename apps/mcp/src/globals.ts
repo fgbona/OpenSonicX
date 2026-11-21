@@ -1,4 +1,4 @@
-import { setGlobal, type GlobalSettings } from '@pocket-master/core';
+import { setGlobal, TESTED_FIRMWARE, type GlobalSettings } from '@pocket-master/core';
 
 /**
  * The device-wide settings a Pocket Master (firmware V1.3.3) has. The core also knows Smart Box
@@ -23,6 +23,7 @@ export function describeGlobals(g: GlobalSettings): string {
   const levels = [shown('Input', g.inputLevel, db), shown('FX rec', g.fxRecLevel, db), shown('Monitor', g.monitorLevel, db), shown('BT rec', g.btRecLevel, db)]
     .filter((l) => l !== null);
   return [
+    g.firmware ? `Firmware ${g.firmware}${g.firmware === TESTED_FIRMWARE ? '' : ` (this server was tested on ${TESTED_FIRMWARE}; other versions may behave differently)`}` : null,
     `Master volume ${g.masterVolume}`,
     levels.length > 0 ? `Levels: ${levels.join(', ')}` : null,
     shown('Backlight', g.backlight, String),

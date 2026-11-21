@@ -8,5 +8,6 @@ test('versionCandidates finds a version as text or as the tested version\'s byte
   assert.deepEqual(versionCandidates(Uint8Array.from([0x12, 0x30, ...ascii('V1.3.3'), 0])), ['text "V1.3.3" at byte 2']);
   assert.deepEqual(versionCandidates(Uint8Array.from([0x12, 0x10, 0x00, 1, 3, 3, 9])), ['bytes 01 03 03 at byte 3']);
   assert.deepEqual(versionCandidates(ascii('fw 2.0')), ['text "2.0" at byte 3']);
+  assert.deepEqual(versionCandidates(Uint8Array.from([0x12, 0x10, 1, 1, 4, 0, 3, 3, 1, 1])), ['bytes 03 03 01 at byte 6']);
   assert.deepEqual(versionCandidates(Uint8Array.from([0x12, 0x41, 1, 3, 4])), []);
 });

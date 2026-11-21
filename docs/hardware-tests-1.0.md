@@ -4,14 +4,17 @@ What only the real pedal can check (milestone 1.0.0). About 45 minutes; a guitar
 for step 4. Before anything: close SonicMaster and every other editor tab (another client on the
 port steals replies), and keep a backup: the editor backs up each slot before writing it.
 
-## 1. Firmware version (#101), 2 min
+## 1. Read-only probe, 2 min
 
 Pedal on USB, nothing else connected to it:
 
     node apps/mcp/scripts/probe-pedal.ts
 
-It only reads. If no line says `VERSION?`, run it again with `--scan` (tries the read queries no
-one has mapped, about 1 minute). Send the log file it prints at the end.
+It only reads. Besides the firmware version, it reads the loaded slot without loading it (a
+command from klotznick's guide) and says whether that matches the edit buffer; if it does,
+backups can stop loading each slot. Then run it once more with `--scan` (about a minute; it
+also tries the battery and charge reads, which may only answer over Bluetooth). Send both log
+files it prints at the end.
 
 ## 2. Global options (#90), 10 min
 
@@ -37,5 +40,11 @@ holds Randall SA). Pick it on AMP and play.
 
 On the Android phone: the preset list folds behind its button, the arrows under the tiles move a
 block in the chain, the model menu opens at the bottom of the screen.
+
+## 6. With Claude, if there is time, 10 min
+
+Copying a preset to another slot and turning the tuner on and off are writes the guide
+documents but this project has not tried. They are done together in the session, on a spare
+slot, with a backup first.
 
 Write down for each step: OK, or what happened. Each result closes its issue or turns into a fix.

@@ -14,11 +14,14 @@ export const Query = {
   MODIFIED: 0x45,
   /** Opens the edit session; the pedal only writes user IRs to memory after it (SonicMaster). */
   SESSION: 0x30,
+  /** A stored preset by index, without loading it (stored-preset.ts); not yet used by the editor. */
+  STORED_PRESET: 0x4f,
 } as const;
 export type QueryKind = (typeof Query)[keyof typeof Query];
 
-export function queryFrame(kind: QueryKind): Uint8Array {
-  return buildFrame([MessageType.GET, kind]);
+/** A read query; a few kinds take arguments, such as the stored preset's index. */
+export function queryFrame(kind: QueryKind, args: readonly number[] = []): Uint8Array {
+  return buildFrame([MessageType.GET, kind, ...args]);
 }
 
 /** True only for a well-formed frame whose payload is a GET query. Anything else could write to the pedal. */
