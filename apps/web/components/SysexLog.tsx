@@ -46,7 +46,7 @@ export function SysexLog({ log, onClear }: { log: readonly LogEntry[]; onClear: 
   };
 
   return (
-    <section className="log" aria-label="SysEx log">
+    <section className="log" aria-label={t('log.title')}>
       <header className="log-head">
         <h2>{t('log.title')} <span className="muted">{log.length}</span></h2>
         <div className="log-actions">
