@@ -17,5 +17,6 @@
   "search_tone3000": "{ query: string, format?: \"nam\" | \"ir\", page?: integer }",
   "select_preset": "{ preset: string }",
   "set_global_settings": "{ masterVolume?: integer, inputLevel?: integer, fxRecLevel?: integer, monitorLevel?: integer, btRecLevel?: integer, bootProtection?: integer, backlight?: integer }",
-  "tone3000_login": "{  }"
+  "tone3000_login": "{  }",
+  "undo_edit": "{  }"
 }

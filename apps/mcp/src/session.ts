@@ -5,7 +5,7 @@ import { describeGlobals, globalWrites, type GlobalChanges } from './globals.ts'
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import {
-  applyEdit, blockModelLabel, downloadModel, IR_SLOTS, irSamplesFromWav, irUploadBlob, listModels, parseNam, pollDeviceToken, profileUploadBlob, searchTones, startDeviceLogin, findCloneModel, modelInfo, modelsFor, chainUnits, decodePreset, editToCommands, encodeValue, fromHex, loadIntoEditBuffer,
+  applyEdit, applyPreset, blockModelLabel, downloadModel, IR_SLOTS, irSamplesFromWav, irUploadBlob, listModels, parseNam, pollDeviceToken, profileUploadBlob, searchTones, startDeviceLogin, findCloneModel, modelInfo, modelsFor, chainUnits, decodePreset, editToCommands, encodeValue, fromHex, loadIntoEditBuffer,
   modelChoices, moveInChain, parseBackupFile, parsePresetFile, parsePresetLabel, presetFile, presetLabel,
   resolveBlock, resolveModel, resolveParam, restoreFromBackup, saveToSlot,
   type BackupFile, type CloArrays, type GlobalSettings, type DeviceLogin, type Edit, type ParamSpec, type Tokens, type Pedal, type Preset, type SlotNames,
@@ -71,6 +71,8 @@ export interface Folders {
  * The pedal as the MCP tools see it. Every call opens its own connection and closes it, so an
  * unplugged pedal or the web editor in between never leaves stale state; calls run one at a time.
  */
+const UNDO_LIMIT = 20;
+
 export class Session {
   readonly #connect: () => Connection | Promise<Connection>;
   readonly #folders: Folders;
@@ -78,6 +80,8 @@ export class Session {
 
   readonly #extras: Extras;
   #login: { readonly text: string; readonly done: Promise<void> } | null = null;
+  /** The edit buffer before each edit_preset since the preset was loaded (newest last), for undo. */
+  #undo: readonly { readonly index: number; readonly before: Preset }[] = [];
 
   constructor(connect: () => Connection | Promise<Connection>, folders: Folders, extras: Extras = {}) {
     this.#connect = connect;
@@ -142,6 +146,7 @@ export class Session {
     return this.#use(async (io) => {
       const slots = await this.#slots(io);
       let preset = decodePreset(await io.readEditBuffer());
+      const before = { index: await io.readCurrentIndex(), before: preset };
       const commands: Uint8Array[] = [];
       for (const change of changes) {
         const edit = toEdit(preset, change, slots);
@@ -149,13 +154,31 @@ export class Session {
         preset = applyEdit(preset, edit);
       }
       await io.sendEdits(commands);
+      this.#undo = [...this.#undo, before].slice(-UNDO_LIMIT);
       return this.#describe(io);
+    });
+  }
+
+  /** Puts the edit buffer back as it was before the last edit, checked; refuses on another preset. */
+  undo(): Promise<string> {
+    return this.#use(async (io) => {
+      const last = this.#undo.at(-1);
+      if (!last) throw new Error('Nothing to undo: no edit_preset since the preset was loaded.');
+      const index = await io.readCurrentIndex();
+      if (index !== last.index) {
+        this.#undo = [];
+        throw new Error(`Nothing to undo here: the edits were on ${presetLabel(last.index)}, and ${presetLabel(index)} is loaded now.`);
+      }
+      await applyPreset(io, last.before);
+      this.#undo = this.#undo.slice(0, -1);
+      return `Undid the last edit (${this.#undo.length} more can be undone).\n\n${await this.#describe(io)}`;
     });
   }
 
   async select(label: string): Promise<string> {
     const index = parsePresetLabel(label);
     return this.#use(async (io) => {
+      this.#undo = [];
       await io.selectPreset(index);
       return this.#describe(io);
     });
@@ -164,6 +187,7 @@ export class Session {
   /** Reloads the loaded preset from its slot, discarding unsaved edits. */
   revert(): Promise<string> {
     return this.#use(async (io) => {
+      this.#undo = [];
       await io.selectPreset(await io.readCurrentIndex());
       return this.#describe(io);
     });
@@ -414,6 +438,7 @@ export class Session {
     return this.#use(async (io) => {
       const preset = parsePresetFile(await readFile(inside(this.#folders.presets, file), 'utf8'));
       await loadIntoEditBuffer(io, decodePreset(fromHex(preset.payload)));
+      this.#undo = [];
       return `Loaded "${preset.name}" into the edit buffer (not saved).\n\n${await this.#describe(io)}`;
     });
   }

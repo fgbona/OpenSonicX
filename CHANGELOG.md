@@ -11,6 +11,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - A preset library: every preset you export, or import into the pedal, is kept in this
   browser (or the desktop app), newest first, up to 50. *Load…* opens the import
   confirmation with what it changes from the loaded preset; *Remove* takes it out.
+- MCP server: `undo_edit` puts the edit buffer back as it was before the last
+  `edit_preset`, up to 20 steps, so "I don't like that, go back" no longer means reverting
+  the whole preset. It refuses once the pedal is on another preset, and loading, reverting,
+  saving or importing clears it.
 
 ### Changed
 
