@@ -4,7 +4,7 @@
  * none of the conversation between requests. Tool calls run in the editor through runChatTool.
  */
 import { CHAT_INSTRUCTIONS, CHAT_TOOLS, runChatTool, type ChatGuard } from '@pocket-master/core';
-import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, RegionError, QuotaError, requestText, toToolSchema, type ConverseOptions } from './assistant.ts';
+import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, RegionError, QuotaError, requestTexts, toToolSchema, type ConverseOptions } from './assistant.ts';
 import { nextReset } from './aiUsage.ts';
 
 /** Gemini models and their free daily requests (AI Studio, 2026-11). Check aistudio.google.com/rate-limit when they change. */
@@ -63,8 +63,9 @@ export async function converseGemini(options: ConverseOptions): Promise<string> 
     ...options.turns.map((t): Step => (t.role === 'user'
       ? { type: 'user_input', content: t.text }
       : { type: 'model_output', content: [{ type: 'text', text: t.text }] })),
-    { type: 'user_input', content: requestText(host, options.turns, options.message, options.language) },
   ];
+  const text = requestTexts(host, options.turns, options.message, options.language);
+  const asked = input.push({ type: 'user_input', content: text.first }) - 1;
   const guard: ChatGuard = { index: host.snapshot().index };
   for (let request = 0; request < MAX_REQUESTS; request++) {
     onRequest();
@@ -77,6 +78,7 @@ export async function converseGemini(options: ConverseOptions): Promise<string> 
     if (!r.ok) throw failure(r.status, body, now());
     const steps = body.steps;
     if (!Array.isArray(steps) || steps.length === 0) throw new Error('Gemini sent no answer this editor understands. Try again in a moment.');
+    input[asked] = { type: 'user_input', content: text.later }; // answered once: the model list is not sent again
     input.push(...steps); // model steps go back exactly as received (thoughts included)
     const calls = steps.filter((s) => s.type === 'function_call');
     if (calls.length === 0) {

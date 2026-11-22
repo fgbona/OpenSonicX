@@ -6,6 +6,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Tone assistant: only the first request of a message carries the list of every model; the
+  later ones (after an edit, to answer or save) carry the preset and the request. A tone
+  now spends about 40% fewer tokens, so Groq's free 200,000 tokens a day last for more
+  tones.
+
 ## [0.14.0] - 2026-11-22
 
 **Describe a tone, get it on the pedal.** The new tone assistant turns "Black Album rhythm

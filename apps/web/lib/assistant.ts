@@ -90,10 +90,16 @@ export class KeyError extends Error {
 /** Google does not offer the Gemini API (or its free tier) where the person is. */
 export class RegionError extends Error {}
 
-/** The text of a new message: the first carries the preset and the models, later ones the preset as it is now. */
-export function requestText(host: ToneHost, turns: readonly Turn[], message: string, language?: string): string {
-  const context = turns.length === 0 ? chatContext(host) : `Loaded preset now:\n${currentPresetText(host)}`;
-  return `${context}\n\nRequest: ${message}${language ? `\n\nAnswer in ${language}.` : ''}`;
+/**
+ * The new message's text for the first request, and for the later ones of the same message: the
+ * model list goes only once (the model has picked by then, and list_models is there), which keeps
+ * a tone within Groq's free tokens a minute and a day.
+ */
+export function requestTexts(host: ToneHost, turns: readonly Turn[], message: string, language?: string): { first: string; later: string } {
+  const tail = `\n\nRequest: ${message}${language ? `\n\nAnswer in ${language}.` : ''}`;
+  const preset = currentPresetText(host);
+  const later = `${turns.length === 0 ? 'Loaded preset' : 'Loaded preset now'}:\n${preset}${tail}`;
+  return { first: turns.length === 0 ? `${chatContext(host)}${tail}` : later, later };
 }
 
 /**
