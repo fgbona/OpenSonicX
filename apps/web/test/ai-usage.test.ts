@@ -34,6 +34,6 @@ test('stored usage is read defensively', () => {
 });
 
 test('a key is never shown in full', () => {
-  assert.equal(maskKey('AIzaSyD-1234567890abcdefghijklmnopqrstuv'), 'AIza…stuv');
+  assert.equal(maskKey('fake-1234567890abcdefghijklmnopqrstuv'), 'fake…stuv');
   assert.equal(maskKey('short'), '••••');
 });

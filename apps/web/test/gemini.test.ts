@@ -5,7 +5,7 @@ import { realP08 } from '../../../packages/core/test/fake-pedal.ts';
 import { converseGemini as converse, GEMINI_MODELS, testGeminiKey as testKey } from '../lib/gemini.ts';
 import { BusyError, KeyError, QuotaError, RegionError, toToolSchema as toGeminiSchema } from '../lib/assistant.ts';
 
-const KEY = 'AIzaTESTKEY-0000000000000000000000000';
+const KEY = 'fake-gemini-key-unit-0000';
 const SLOTS = { irNames: [null, null, null, null, null], profileNames: [null, null, null, null, null] };
 
 function host() {

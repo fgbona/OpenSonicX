@@ -13,7 +13,7 @@ export async function openAssistantChat(page: Page, labels: { keyRegion: string;
     route.fulfill({ json: route.request().url().includes('/models') ? { models: [] } : replies.shift() }));
   const panel = page.getByRole('region', { name: labels.panel });
   const setup = panel.getByRole('region', { name: labels.keyRegion });
-  await setup.getByLabel(labels.keyLabel).fill('AIzaTESTKEY-e2e-0000000000000000000000');
+  await setup.getByLabel(labels.keyLabel).fill('fake-gemini-key-e2e-0000');
   await setup.getByRole('button', { name: labels.save }).click();
   await panel.getByRole('textbox', { name: labels.input }).fill('Black Album');
   await panel.getByRole('button', { name: labels.send }).click();

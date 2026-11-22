@@ -12,6 +12,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
   later ones (after an edit, to answer or save) carry the preset and the request. A tone
   now spends about 40% fewer tokens, so Groq's free 200,000 tokens a day last for more
   tones.
+- Tests: the placeholder AI keys no longer look like real Google or Groq keys, so GitHub's
+  secret scanning and push protection do not flag them.
 
 ## [0.14.0] - 2026-11-22
 

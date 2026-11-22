@@ -5,7 +5,7 @@ import { realP08 } from '../../../packages/core/test/fake-pedal.ts';
 import { converseGroq, GROQ_MODEL, testGroqKey } from '../lib/groq.ts';
 import { BusyError, KeyError, QuotaError } from '../lib/assistant.ts';
 
-const KEY = 'gsk_TESTKEY000000000000000000000000000000';
+const KEY = 'fake-groq-key-unit-0000';
 const SLOTS = { irNames: [null, null, null, null, null], profileNames: [null, null, null, null, null] };
 
 function host() {
