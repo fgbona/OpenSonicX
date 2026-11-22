@@ -6,6 +6,14 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Tone assistant: a model under high demand (Gemini's or Groq's 503) no longer stops the
+  chat with "Gemini answered 503"; it is skipped for half a minute and the next model with a
+  key answers. When every model is busy, the chat says so and when to try again.
+- Tone assistant: Groq's 403 is no longer reported as a refused key (a wrong key is a 401);
+  the chat shows Groq's own reason, such as a blocked model or network.
+
 ### Changed
 
 - The project is now **OpenSonicX** (github.com/fgbona/OpenSonicX): open-source tools for

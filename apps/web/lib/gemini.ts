@@ -4,7 +4,7 @@
  * none of the conversation between requests. Tool calls run in the editor through runChatTool.
  */
 import { CHAT_INSTRUCTIONS, CHAT_TOOLS, runChatTool, type ChatGuard } from '@pocket-master/core';
-import { KeyError, MAX_REQUESTS, RegionError, QuotaError, requestText, toToolSchema, type ConverseOptions } from './assistant.ts';
+import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, RegionError, QuotaError, requestText, toToolSchema, type ConverseOptions } from './assistant.ts';
 import { nextReset } from './aiUsage.ts';
 
 /** Gemini models and their free daily requests (AI Studio, 2026-11). Check aistudio.google.com/rate-limit when they change. */
@@ -33,6 +33,7 @@ function failure(status: number, body: ApiError, now: Date): Error {
     const perMinute = details.some((d) => d.violations?.some((v) => /PerMinute/i.test(v.quotaId ?? '')));
     return new QuotaError(perMinute ? new Date(now.getTime() + 60_000) : nextReset(now));
   }
+  if (status === 503) return new BusyError(new Date(now.getTime() + BUSY_WAIT_MS));
   if (status === 401 || status === 403 || details.some((d) => d.reason === 'API_KEY_INVALID')) {
     return new KeyError('gemini', body.error?.message ?? 'Google did not accept this key.');
   }
