@@ -8,6 +8,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Backups → *Import file*: a preset file (from *Export preset*) picked there by mistake now
+  opens as a preset import, ready to load and save to any slot, instead of a refusal shown at
+  the top of the page; other wrong files are explained inside the Backups panel.
+
+### Fixed
+
 - A pedal script log committed by mistake is out of the repository again, and `.gitignore`
   keeps the scripts' logs and copy backups out.
 - Tone assistant: kept tones reach the model with their main gear ("AMP A BassVT (Bass amp…)"),

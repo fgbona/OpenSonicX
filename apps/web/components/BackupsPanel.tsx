@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { parseBackupFile, type BackupFile, type Progress, type SlotBackup } from '@pocket-master/core';
+import { parseBackupFile, parsePresetFile, type BackupFile, type PresetFile, type Progress, type SlotBackup } from '@pocket-master/core';
 import { Dialog } from './Dialog';
 import { FlowBackups } from './FlowBackups';
 import { useI18n } from './I18n';
@@ -16,26 +16,41 @@ interface Props {
   storageWarning: string | null;
   onDownload: (file: BackupFile) => void;
   onImport: (file: BackupFile) => void;
+  /** A preset file picked here by mistake opens as a preset import instead. */
+  onPreset: (file: PresetFile) => void;
   onRestore: (slot: SlotBackup) => Promise<boolean>;
-  onError: (message: string) => void;
 }
 
 /** A date and time in the UI language. */
 export const when = (iso: string, lang: string) => new Date(iso).toLocaleString(lang === 'pt' ? 'pt-BR' : 'en');
 
-export function BackupsPanel({ backups, connected, busy, error, flowBackups, storageWarning, onDownload, onImport, onRestore, onError }: Props) {
+export function BackupsPanel({ backups, connected, busy, error, flowBackups, storageWarning, onDownload, onImport, onPreset, onRestore }: Props) {
   const [pending, setPending] = useState<SlotBackup | null>(null);
   const [done, setDone] = useState(false);
+  /** What the last import here turned out to be, said next to the button rather than at the top of the page. */
+  const [note, setNote] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
   const { t, te, lang } = useI18n();
 
   const importFile = async (input: HTMLInputElement) => {
     const file = input.files?.[0];
     input.value = '';
     if (!file) return;
+    const text = await file.text();
+    setNote(null);
+    setImportError(null);
     try {
-      onImport(parseBackupFile(await file.text()));
+      onImport(parseBackupFile(text));
+      return;
     } catch (e) {
-      onError(e instanceof Error ? e.message : String(e));
+      // An exported preset is the likeliest wrong file: open it where it belongs.
+      try {
+        const preset = parsePresetFile(text);
+        onPreset(preset);
+        setNote(t('backups.presetFile', { name: preset.name }));
+      } catch {
+        setImportError(e instanceof Error ? e.message : String(e));
+      }
     }
   };
 
@@ -48,6 +63,8 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
           <input type="file" accept="application/json,.json" onChange={(e) => void importFile(e.currentTarget)} />
         </label>
       </header>
+      {note && <p className="notice small">{note}</p>}
+      {importError && <p className="alert" role="alert">{te(importError)}</p>}
       {backups.length === 0 ? (
         <p className="muted small panel-empty">{t('backups.empty')}</p>
       ) : (
