@@ -60,3 +60,7 @@ test('translateError covers the preset file errors raised by core', () => {
   assert.equal(translateError('pt', 'not a Pocket Master preset file (invalid JSON)'), 'Este arquivo não é um preset da Pocket Master.');
   assert.equal(translateError('pt', 'the preset file is damaged and cannot be read'), 'O arquivo de preset está danificado e não pode ser lido.');
 });
+
+test('a save whose name check failed is told in Portuguese, with the slot and both names', () => {
+  assert.equal(translateError('pt', 'saved, but P38 is named "Noise Wall" instead of "QClean"'), 'Gravado, mas a pedaleira informa que o P38 se chama “Noise Wall” em vez de “QClean”. Confira na pedaleira; se o nome estiver certo lá, está tudo bem.');
+});
