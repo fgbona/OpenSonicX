@@ -78,7 +78,7 @@ test('saves to the loaded slot after backing it up, and checks it on the pedal',
   await page.getByRole('button', { name: 'Save…' }).click();
   const dialog = page.getByRole('dialog', { name: 'Save to a preset slot' });
   await dialog.getByLabel('Name').fill('E2E RECT');
-  await dialog.getByRole('button', { name: 'Back up and save to P09' }).click();
+  await dialog.getByRole('button', { name: 'Save to P09' }).click();
   await expect(page.getByText('Saved to P09 as “E2E RECT” and checked on the pedal.')).toBeVisible();
   expect(pedal.pedal.names[8]).toBe('E2E RECT');
   expect(pedal.pedal.received).toContain('save 8 E2E RECT');
@@ -97,27 +97,21 @@ test('a comment on a captured profile shows next to it in the AMP menu', async (
   await expect(page.getByRole('option', { name: /Randall SA.*Randall Satan, high gain/ })).toBeVisible();
 });
 
-test('a save backs up the slot first, and that backup puts the slot back as it was', async ({ page, pedal }) => {
+test('a save writes the slot right away, without a backup step', async ({ page, pedal }) => {
   await connect(page, pedal);
-  const original = { name: pedal.pedal.names[8], bytes: Array.from(pedal.pedal.slots[8]!) };
+  const original = Array.from(pedal.pedal.slots[8]!);
   await liveEdit(page);
   await pickAmp(page, 'Calif DualM');
   await page.getByRole('button', { name: 'Save…' }).click();
   const save = page.getByRole('dialog', { name: 'Save to a preset slot' });
+  await expect(save.getByRole('checkbox')).toHaveCount(0);
   await save.getByLabel('Name').fill('E2E RECT');
-  await save.getByRole('button', { name: 'Back up and save to P09' }).click();
+  await save.getByRole('button', { name: 'Save to P09' }).click();
   await expect(page.getByText(/Saved to P09/)).toBeVisible();
-  expect(Array.from(pedal.pedal.slots[8]!)).not.toEqual(original.bytes);
+  expect(pedal.pedal.names[8]).toBe('E2E RECT');
+  expect(Array.from(pedal.pedal.slots[8]!)).not.toEqual(original);
   await save.getByRole('button', { name: 'Done' }).click();
-
-  // The backup was taken before the save: it holds the old name and the old sound.
-  const backups = page.getByRole('region', { name: 'Backups' });
-  await backups.getByText(`P09 “${original.name}”`).click();
-  await backups.getByRole('button', { name: 'Restore to P09' }).click();
-  await page.getByRole('button', { name: 'Back up and restore' }).click();
-  await expect(page.getByText(`P09 is back to “${original.name}”, checked on the pedal.`)).toBeVisible();
-  expect(pedal.pedal.names[8]).toBe(original.name);
-  expect(Array.from(pedal.pedal.slots[8]!)).toEqual(original.bytes);
+  await expect(page.getByRole('region', { name: 'Backups' }).getByText('Backups taken before a restore')).toBeVisible();
 });
 
 test('undo and redo step through live edits, a knob turn counting as one step', async ({ page, pedal }) => {
@@ -188,7 +182,7 @@ test('after a save the preset is no longer modified: loading another one does no
   await page.getByRole('button', { name: 'Read' }).click(); // the pedal now says "modified" too
   await page.getByRole('button', { name: 'Save…' }).click();
   const save = page.getByRole('dialog', { name: 'Save to a preset slot' });
-  await save.getByRole('button', { name: 'Back up and save to P09' }).click();
+  await save.getByRole('button', { name: 'Save to P09' }).click();
   await save.getByRole('button', { name: 'Done' }).click();
   await expect(page.getByRole('button', { name: 'Revert' })).toBeDisabled();
   await page.getByRole('button', { name: /Load P10/ }).click();
