@@ -54,6 +54,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Backups (before a restore, and the all-slots backup) read each slot straight from the
+  pedal's memory instead of loading it: the loaded preset and its unsaved edits are never
+  touched, and the pedal no longer flips between presets. Confirmed on the owner's unit.
 - `docs/hardware-tests-1.0.md` follows the editor as it is: saves have no backup step, Global
   options lists the Pocket Master's settings only, and the tone assistant step (done on
   2026-11-22) is gone.
