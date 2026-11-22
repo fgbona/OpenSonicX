@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { type Difference, type ToneHost, type ToneSnapshot } from '@pocket-master/core';
+import { presetLabel, type Difference, type ToneHost, type ToneSnapshot } from '@pocket-master/core';
 import { loadKey, maskKey, removeKey, saveKey } from '@/lib/aiKey';
 import { nextReset, recordRequest, usedToday, useAiUsage } from '@/lib/aiUsage';
-import { ask, BusyError, KeyError, providerOf, QuotaError, RegionError, ROUTE, type AiModel, type Converse, type Cooldown, type Provider, type Turn } from '@/lib/assistant';
+import { ask, askedToSave, BusyError, KeyError, providerOf, QuotaError, RegionError, ROUTE, type AiModel, type Converse, type Cooldown, type Provider, type Turn } from '@/lib/assistant';
 import { converseGemini, GEMINI_MODELS, testGeminiKey } from '@/lib/gemini';
 import { converseGroq, GROQ_MODEL, testGroqKey } from '@/lib/groq';
 import { toneChanges } from '@/lib/tone-changes';
@@ -162,6 +162,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
     setMessages((m) => [...m, { role: 'user', text: message }]);
     setWorking(true);
     let before: ToneSnapshot | null = null;
+    let proposed = false;
     try {
       before = host.snapshot();
       const result = await ask({
@@ -169,7 +170,10 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
         onRequest: (model) => recordRequest(model),
         onCooldown: setCooldown,
         onLimits: (model, remaining, limit) => setLimits((l) => ({ ...l, [model]: { remaining, limit } })),
-        onStep: (_tool, ok, text) => { if (!ok && text.includes('Live edit is off')) setNeedLive(true); },
+        onStep: (tool, ok, text) => {
+          if (tool === 'save_preset') proposed = true;
+          if (!ok && text.includes('Live edit is off')) setNeedLive(true);
+        },
       });
       setCooldown(result.cooldown);
       const reply = result.reply || '…';
@@ -182,6 +186,12 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
         ...refused.map((p): Message => ({ role: 'error', text: t('assistant.keyRejected', { provider: PROVIDER_NAME[p] }) })),
         { role: 'assistant', text: reply, model: result.model, changes: changed(before!, host.snapshot(), t('assistant.off')) },
       ]);
+      // Asked to save, but the model only said so: open the Save dialog itself; nothing is written until confirmed.
+      const slot = askedToSave(message);
+      if (slot !== null && !proposed) {
+        setMessages((m) => [...m, { role: 'assistant', text: t('assistant.saveOpened', { slot: presetLabel(slot) }) }]);
+        void host.proposeSave(slot, host.snapshot().name);
+      }
     } catch (error) {
       const text = error instanceof BusyError && error.partial && error.model ? t('assistant.busyPartial', { model: MODELS[error.model].name })
         : error instanceof QuotaError && error.partial && error.model ? t('assistant.quotaPartial', { model: MODELS[error.model].name })

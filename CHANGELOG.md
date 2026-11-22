@@ -90,6 +90,13 @@ the pedal's firmware version in Global options.
 
 ### Fixed
 
+- Tone assistant: when the request asks to save in a slot ("salve no P44", "save it to
+  P45") and the model only says it saved, the editor now opens the Save dialog for that slot
+  itself, and says nothing is stored until it is confirmed there. Seen with Gemini
+  Flash-Lite, which ignored the instruction.
+
+### Fixed
+
 - Saving: right after a save the pedal can still report the slot's old name; the editor
   now asks again a few times (up to about a second) before calling the save wrong. Seen on
   the owner's unit: P38 was saved as "QClean" but first reported "Noise Wall". When the
