@@ -3,7 +3,7 @@
  * editor with the person's own free key. Groq's free plan gives about 1,000 requests a day per model.
  */
 import { CHAT_INSTRUCTIONS, CHAT_TOOLS, runChatTool, type ChatGuard } from '@pocket-master/core';
-import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, QuotaError, requestText, toToolSchema, type ConverseOptions } from './assistant.ts';
+import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, QuotaError, requestTexts, toToolSchema, type ConverseOptions } from './assistant.ts';
 
 /**
  * The model and its free daily requests (console.groq.com, 2026-11); it calls tools one at a time.
@@ -64,8 +64,9 @@ export async function converseGroq(options: ConverseOptions): Promise<string> {
   const messages: Message[] = [
     { role: 'system', content: CHAT_INSTRUCTIONS },
     ...options.turns.map((t): Message => ({ role: t.role, content: t.text })),
-    { role: 'user', content: requestText(host, options.turns, options.message, options.language) },
   ];
+  const text = requestTexts(host, options.turns, options.message, options.language);
+  const asked = messages.push({ role: 'user', content: text.first }) - 1;
   const guard: ChatGuard = { index: host.snapshot().index };
   let retriedToolCall = false;
   let waited = 0;
@@ -104,6 +105,7 @@ export async function converseGroq(options: ConverseOptions): Promise<string> {
     if (!r.ok) throw new Error(`Groq answered ${r.status}${body.error?.message ? `: ${body.error.message}` : ''}`);
     const message = body.choices?.[0]?.message;
     if (!message) throw new Error('Groq sent no answer this editor understands. Try again in a moment.');
+    messages[asked] = { role: 'user', content: text.later }; // answered once: the model list is not sent again
     const calls = message.tool_calls ?? [];
     if (calls.length === 0) return (message.content ?? '').trim();
     messages.push({ role: 'assistant', content: message.content ?? null, tool_calls: calls });

@@ -153,3 +153,12 @@ test('a Gemini model under high demand pauses for half a minute so the next mode
   assert.ok(e instanceof BusyError);
   assert.equal(e.retryAt.toISOString(), '2026-11-21T20:00:30.000Z');
 });
+
+test('only the first Gemini request of a message carries the model list', async () => {
+  const { h } = host();
+  const { fetchFn, requests } = scripted(call('edit_preset', { changes: [{ kind: 'parameter', block: 'amp', parameter: 'gain', value: 70 }] }), say('Done.'));
+  await converse({ key: KEY, model: 'flash', turns: [], message: 'black album', host: h, fetchFn, onRequest: () => {} });
+  const user = (i: number) => JSON.stringify((requests[i]!.body.input as { type: string }[]).find((s) => s.type === 'user_input'));
+  assert.match(user(0), /AMP models:/);
+  assert.doesNotMatch(user(1), /AMP models:/);
+});

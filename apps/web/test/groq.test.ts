@@ -142,3 +142,13 @@ test('a short per-minute limit is waited out and the same request sent again', a
   assert.equal(requests.length, 2);
   assert.equal(requests[0]!.body.max_completion_tokens, GROQ_MODEL.maxCompletionTokens);
 });
+
+test('only the first request of a message carries the model list; later ones keep the preset and the request', async () => {
+  const { h } = host();
+  const { fetchFn, requests } = scripted(toolCall('edit_preset', { changes: [{ kind: 'parameter', block: 'amp', parameter: 'gain', value: 70 }] }), say('Done.'));
+  await converseGroq({ key: KEY, model: 'groq', turns: [], message: 'black album', host: h, fetchFn, onRequest: () => {} });
+  const user = (i: number) => (requests[i]!.body.messages as { role: string; content: string }[]).find((m) => m.role === 'user')!.content;
+  assert.match(user(0), /AMP models:/);
+  assert.doesNotMatch(user(1), /AMP models:/);
+  assert.match(user(1), /Loaded preset:[\s\S]*Request: black album/);
+});
