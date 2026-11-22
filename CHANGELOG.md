@@ -20,6 +20,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Copy a preset** (*Copy…*): any stored preset, user or factory, over a user slot, without
+  loading either; the result is read back and checked. Unsaved edits do not go with it.
+- **Tuner** button: turns the pedal's tuner on and off. The pedal does not report the tuner,
+  so the button shows what the editor last sent.
 - Tone assistant: **what each paid answer cost**, estimated ("Answered by Claude · about
   $0.003"), and today's estimate per paid provider under the chat. Prices come from
   OpenRouter's public model catalog (no key needed; OpenRouter's own answers report their

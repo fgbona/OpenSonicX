@@ -6,7 +6,7 @@ import { toHex } from './hex.ts';
 import { isReadOnly, isReply, MessageType, Query, queryFrame, type QueryKind } from './queries.ts';
 import { chunkFrames, isUploadBlob, type UploadDomain } from './ir-upload.ts';
 import { Reassembler } from './reassembler.ts';
-import { decodeAck, isPresetOperation, PresetCommand } from './slots.ts';
+import { decodeAck, isPresetOperation, PresetCommand, tunerMessage } from './slots.ts';
 
 /**
  * The two things the link needs from a MIDI connection, so the same guarded link runs over
@@ -151,6 +151,18 @@ export class PocketMasterLink {
     if (!this.#pumpTimer) this.#pump();
   }
 
+  /** Turns the tuner on or off, after queued edits are written. The pedal neither answers nor reports it. */
+  async setTuner(on: boolean): Promise<void> {
+    if (this.#closed) throw new LinkClosedError();
+    await this.drained();
+    if (this.#closed) throw new LinkClosedError();
+    try {
+      this.#transmit(tunerMessage(on));
+    } catch (error) {
+      throw sendError(error);
+    }
+  }
+
   /**
    * Factory reset, after queued edits are written: every setting and preset returns to factory
    * state and the pedal reboots, so the link drops. Nothing waits for a reply.
@@ -173,13 +185,13 @@ export class PocketMasterLink {
    */
   async presetOperation(bytes: Uint8Array): Promise<boolean> {
     if (this.#closed) throw new LinkClosedError();
-    if (!isPresetOperation(bytes)) throw new Error('Blocked: only preset selections and user-slot saves can be sent here.');
+    if (!isPresetOperation(bytes)) throw new Error('Blocked: only preset selections, user-slot saves and copies can be sent here.');
     await this.drained();
     await this.#editAcks();
     if (this.#closed) throw new LinkClosedError();
     // The pedal acknowledges every selection and every save with 14 08 xx (seen on V1.3.3).
     // Waiting for each one keeps a late selection acknowledge from being read as the save's.
-    const isSave = parseFrame(bytes).payload[1] === PresetCommand.SAVE;
+    const isSave = parseFrame(bytes).payload[1] !== PresetCommand.SELECT; // a save or a copy
     const ack = this.#waitForAck();
     try {
       this.#transmit(bytes);

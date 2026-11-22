@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { BackupsPanel } from '@/components/BackupsPanel';
 import { ChainView } from '@/components/ChainView';
 import { SaveDialog } from '@/components/SaveDialog';
+import { CopyDialog } from '@/components/CopyDialog';
 import { SettingsDialog } from '@/components/SettingsDialog';
 import { PresetFiles } from '@/components/PresetFiles';
 import { PresetLibrary } from '@/components/PresetLibrary';
@@ -30,6 +31,7 @@ export default function EditorPage() {
   const { t, te } = useI18n();
   const desktop = useIsDesktop();
   const [saveOpen, setSaveOpen] = useState(false);
+  const [copyOpen, setCopyOpen] = useState(false);
   // The SysEx log is a diagnostic tool: hidden unless asked for, and the choice is remembered.
   const [showLog, setShowLog] = useState(false);
   useEffect(() => {
@@ -133,6 +135,13 @@ export default function EditorPage() {
           setSaveOpen(true);
           void pm.loadNames();
         }}
+        onCopy={() => {
+          pm.clearError();
+          setCopyOpen(true);
+          void pm.loadNames();
+        }}
+        tuner={pm.tuner}
+        onTuner={pm.setTuner}
         busy={pm.busy !== null}
         canSave={pm.preset !== null}
         onSettings={() => { pm.clearError(); setSettingsOpen(true); }}
@@ -208,6 +217,8 @@ export default function EditorPage() {
             <button className="btn btn-danger" onClick={() => { assistantLoad?.resolve(true); setAssistantLoad(null); }}>{t('presets.discard')}</button>
           </div>
         </Dialog>
+        <CopyDialog open={copyOpen} presetIndex={pm.presetIndex} names={pm.names} busy={pm.busy} error={pm.error}
+          onCopy={pm.copyPreset} onClose={() => setCopyOpen(false)} />
         <SaveDialog
           open={saveOpen}
           presetIndex={pm.presetIndex}
