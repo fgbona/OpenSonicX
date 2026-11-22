@@ -291,3 +291,12 @@ test('Google refusing the free tier in the person\'s region says so, with its li
   await expect(panel(page).getByText(/Google does not offer the Gemini API where you are/)).toBeVisible();
   await expect(panel(page).getByRole('link', { name: 'Where Gemini is available' })).toHaveAttribute('href', 'https://ai.google.dev/gemini-api/docs/available-regions');
 });
+
+test('an answer that changed nothing says so, instead of an empty space where the changes go', async ({ page, pedal }) => {
+  await fakeGemini(page, [say('That is already the tone on the pedal.')]);
+  await connect(page, pedal);
+  await addKey(page);
+  await ask(page, 'black album rhythm tone');
+  await expect(panel(page).getByText('That is already the tone on the pedal.')).toBeVisible();
+  await expect(panel(page).getByText('Nothing changed on the pedal.')).toBeVisible();
+});
