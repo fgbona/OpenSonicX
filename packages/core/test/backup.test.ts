@@ -214,7 +214,10 @@ test('restoreAllFromBackup puts every slot back, after one backup of them as the
   await saveToSlot(pedal, { target: 40, name: 'Also', edited: decodePreset(pedal.editBuffer), pause: async () => {} });
   await pedal.selectPreset(8);
   const kept: BackupFile[] = [];
-  const result = await restoreAllFromBackup(pedal, before, { onBackup: (f) => kept.push(f), pause: async () => {} });
+  const progress: number[] = [];
+  const result = await restoreAllFromBackup(pedal, before, { onBackup: (f) => kept.push(f), pause: async () => {}, onProgress: (p) => progress.push(p.done / p.total) });
+  assert.ok(progress.every((v, i) => i === 0 || v >= progress[i - 1]!), 'one bar that never goes back, across both phases');
+  assert.equal(progress.at(-1), 1);
   assert.equal(result.restored, 50);
   pedal.slots.slice(0, 50).forEach((s, i) => assert.ok(same(decodePreset(s), decodePreset(Uint8Array.from(originals[i]!))), `P${i + 1}`));
   assert.equal(pedal.names[2], 'MTL-LEAD');

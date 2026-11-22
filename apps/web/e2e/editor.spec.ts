@@ -298,3 +298,18 @@ test('importing a backup file says what it holds and opens it, ready to restore'
   await expect(backups.getByText(/Backup imported: All user presets \(50 slots/)).toBeVisible();
   await expect(backups.getByRole('button', { name: 'Restore all' })).toBeVisible();
 });
+
+test('restoring all shows one progress bar with its percentage while it works', async ({ page, pedal }) => {
+  test.setTimeout(120_000);
+  await connect(page, pedal);
+  const backups = page.getByRole('region', { name: 'Backups' });
+  await backups.getByRole('button', { name: 'Back up all presets' }).click();
+  await backups.getByText('All user presets').click();
+  await backups.getByRole('button', { name: 'Restore all' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Restore all 50 presets' });
+  await dialog.getByRole('button', { name: 'Back up and restore all' }).click();
+  await expect(dialog.getByRole('progressbar')).toBeVisible();
+  await expect(dialog.getByText(/Restoring P\d\d… \d+%/)).toBeVisible({ timeout: 60_000 });
+  await expect(dialog.getByText('Keep the pedal connected and this window open.', { exact: false })).toBeVisible();
+  await expect(dialog.getByText('50 presets restored, each checked on the pedal.')).toBeVisible({ timeout: 100_000 });
+});

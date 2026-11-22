@@ -114,7 +114,10 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
       )}
       <Dialog open={pendingAll !== null} title={t('restoreAll.title', { count: pendingAll?.slots.length ?? 0 })} onClose={() => setPendingAll(null)} locked={busy !== null}>
         {busy ? (
-          <ProgressBar progress={busy} />
+          <>
+            <ProgressBar progress={busy} />
+            <p className="muted small">{t('restoreAll.working')}</p>
+          </>
         ) : doneAll ? (
           <>
             <p>{t('restoreAll.done', { count: pendingAll?.slots.length ?? 0 })}</p>
