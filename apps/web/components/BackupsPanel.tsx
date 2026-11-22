@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { parseBackupFile, type BackupFile, type Progress, type SlotBackup } from '@pocket-master/core';
+import { parseBackupFile, parsePresetFile, type BackupFile, type PresetFile, type Progress, type SlotBackup } from '@pocket-master/core';
 import { Dialog } from './Dialog';
 import { FlowBackups } from './FlowBackups';
 import { useI18n } from './I18n';
@@ -16,26 +16,45 @@ interface Props {
   storageWarning: string | null;
   onDownload: (file: BackupFile) => void;
   onImport: (file: BackupFile) => void;
+  /** A preset file picked here by mistake opens as a preset import instead. */
+  onPreset: (file: PresetFile) => void;
   onRestore: (slot: SlotBackup) => Promise<boolean>;
-  onError: (message: string) => void;
+  onBackupAll: () => Promise<boolean>;
+  onRestoreAll: (file: BackupFile) => Promise<boolean>;
 }
 
 /** A date and time in the UI language. */
 export const when = (iso: string, lang: string) => new Date(iso).toLocaleString(lang === 'pt' ? 'pt-BR' : 'en');
 
-export function BackupsPanel({ backups, connected, busy, error, flowBackups, storageWarning, onDownload, onImport, onRestore, onError }: Props) {
+export function BackupsPanel({ backups, connected, busy, error, flowBackups, storageWarning, onDownload, onImport, onPreset, onRestore, onBackupAll, onRestoreAll }: Props) {
   const [pending, setPending] = useState<SlotBackup | null>(null);
   const [done, setDone] = useState(false);
+  const [pendingAll, setPendingAll] = useState<BackupFile | null>(null);
+  const [doneAll, setDoneAll] = useState(false);
+  /** What the last import here turned out to be, said next to the button rather than at the top of the page. */
+  const [note, setNote] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
   const { t, te, lang } = useI18n();
 
   const importFile = async (input: HTMLInputElement) => {
     const file = input.files?.[0];
     input.value = '';
     if (!file) return;
+    const text = await file.text();
+    setNote(null);
+    setImportError(null);
     try {
-      onImport(parseBackupFile(await file.text()));
+      onImport(parseBackupFile(text));
+      return;
     } catch (e) {
-      onError(e instanceof Error ? e.message : String(e));
+      // An exported preset is the likeliest wrong file: open it where it belongs.
+      try {
+        const preset = parsePresetFile(text);
+        onPreset(preset);
+        setNote(t('backups.presetFile', { name: preset.name }));
+      } catch {
+        setImportError(e instanceof Error ? e.message : String(e));
+      }
     }
   };
 
@@ -43,11 +62,14 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
     <section className="panel" aria-label={t('backups.title')}>
       <header className="panel-head">
         <h2>{t('backups.title')} <span className="muted">{backups.length}</span></h2>
+        <button type="button" className="btn btn-small btn-primary" disabled={!connected || busy !== null} onClick={() => void onBackupAll()}>{t('backups.backupAll')}</button>
         <label className="btn btn-small file-button">
           {t('backups.import')}
           <input type="file" accept="application/json,.json" onChange={(e) => void importFile(e.currentTarget)} />
         </label>
       </header>
+      {note && <p className="notice small">{note}</p>}
+      {importError && <p className="alert" role="alert">{te(importError)}</p>}
       {backups.length === 0 ? (
         <p className="muted small panel-empty">{t('backups.empty')}</p>
       ) : (
@@ -61,6 +83,9 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
                 </summary>
                 <div className="backup-actions">
                   <button type="button" className="btn btn-small" onClick={() => onDownload(b)}>{t('backups.download')}</button>
+                  {b.slots.length > 1 && (
+                    <button type="button" className="btn btn-small" disabled={!connected || busy !== null} onClick={() => { setDoneAll(false); setPendingAll(b); }}>{t('backups.restoreAll')}</button>
+                  )}
                 </div>
                 <ul className="backup-slots">
                   {b.slots.map((s) => (
@@ -77,6 +102,25 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
           ))}
         </ul>
       )}
+      <Dialog open={pendingAll !== null} title={t('restoreAll.title', { count: pendingAll?.slots.length ?? 0 })} onClose={() => setPendingAll(null)} locked={busy !== null}>
+        {busy ? (
+          <ProgressBar progress={busy} />
+        ) : doneAll ? (
+          <>
+            <p>{t('restoreAll.done', { count: pendingAll?.slots.length ?? 0 })}</p>
+            <div className="sheet-actions"><button className="btn btn-primary" onClick={() => setPendingAll(null)}>{t('action.done')}</button></div>
+          </>
+        ) : pendingAll ? (
+          <>
+            <div className="sheet-note"><p>{t('restoreAll.note')}</p></div>
+            {error && <p className="alert" role="alert">{te(error)}</p>}
+            <div className="sheet-actions">
+              <button className="btn" onClick={() => setPendingAll(null)}>{t('action.cancel')}</button>
+              <button className="btn btn-danger" onClick={async () => { if (await onRestoreAll(pendingAll)) setDoneAll(true); }}>{t('restoreAll.submit')}</button>
+            </div>
+          </>
+        ) : null}
+      </Dialog>
       <Dialog open={pending !== null} title={t('restore.title', { slot: pending?.label ?? '' })} onClose={() => setPending(null)} locked={busy !== null}>
         {busy ? (
           <ProgressBar progress={busy} />

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   applyEdit, decodeCurrentPreset, decodeFirmware, fromHex, decodeNotification, decodePreset, diffPresets, editToCommands, MessageType, Query,
-  loadIntoEditBuffer, presetFile, presetLabel, restoreFromBackup, saveToSlot,
+  backupAllSlots, loadIntoEditBuffer, presetFile, presetLabel, restoreAllFromBackup, restoreFromBackup, saveToSlot,
   type BackupFile, type Edit, type Frame, type Pedal, type Preset, type PresetFile, type Progress, type SaveResult, type SlotBackup,
 } from '@pocket-master/core';
 import { copyStoredPreset, LinkClosedError, linkPedal, PocketMasterLink, readProfileNames, readUserIrNames, toneGear, type LogEntry } from '@pocket-master/core';
@@ -690,6 +690,47 @@ export function usePocketMaster() {
     }
   }, [patch]);
 
+  /** Backs up all 50 user presets (read without loading them), keeps it in the list and downloads the file. */
+  const backupAll = useCallback(async () => {
+    const current = link.current;
+    if (!current || busyRef.current) return false;
+    busyRef.current = true;
+    patch({ busy: { step: 'Preparing', done: 0, total: 1 }, error: null, flowBackups: [] });
+    try {
+      await current.drained();
+      const file = await backupAllSlots(linkPedal(current), { edited: presetRef.current, onProgress: (busy) => patch({ busy }), onBackup: keepBackup });
+      downloadBackup(file);
+      busyRef.current = false;
+      patch({ busy: null });
+      return true;
+    } catch (e) {
+      busyRef.current = false;
+      patch({ busy: null, error: e instanceof LinkClosedError ? null : message(e) });
+      return false;
+    }
+  }, [patch, keepBackup]);
+
+  /** Writes a whole backup file back (after backing up the slots as they are now), then re-reads the pedal. */
+  const restoreAll = useCallback(async (file: BackupFile) => {
+    const current = link.current;
+    if (!current || busyRef.current) return false;
+    busyRef.current = true;
+    patch({ busy: { step: 'Preparing', done: 0, total: 1 }, error: null, flowBackups: [] });
+    try {
+      await current.drained();
+      await restoreAllFromBackup(linkPedal(current), file, { onProgress: (busy) => patch({ busy }), onBackup: keepBackup });
+      busyRef.current = false;
+      patch({ busy: null });
+      await read({ freshRestorePoint: true });
+      await refreshSlotNames();
+      return true;
+    } catch (e) {
+      busyRef.current = false;
+      patch({ busy: null, error: e instanceof LinkClosedError ? null : message(e) });
+      return false;
+    }
+  }, [patch, keepBackup, read, refreshSlotNames]);
+
   /** Turns the pedal's tuner on or off. */
   const setTuner = useCallback(async (on: boolean) => {
     const current = link.current;
@@ -802,6 +843,8 @@ export function usePocketMaster() {
     canRedo: state.liveEdit && state.history.future.length > 0,
     save,
     copyPreset,
+    backupAll,
+    restoreAll,
     setTuner,
     restore,
     loadNames,

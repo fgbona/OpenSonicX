@@ -12,8 +12,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
 OpenRouter, Claude, OpenAI, Gemini, Groq, xAI (Grok), DeepSeek, Mistral or Cerebras. Paid
 providers get fuller requests (every model described, more thought about the reference's
 actual rig), show what each answer cost, and you choose which provider answers first. The
-editor can also copy a preset over another slot and turn the tuner on and off, both checked
-on the owner's pedal.
+editor can also copy a preset over another slot, turn the tuner on and off, and back up all
+50 presets to a file and restore them, all checked on the owner's pedal.
 
 ### Added
 
@@ -37,6 +37,10 @@ on the owner's pedal.
   loading either; read back and checked. Unsaved edits do not go with it.
 - **Tuner** button: turns the pedal's tuner on and off (CC 58). The pedal does not report it,
   so the button shows what the editor last sent.
+- **Back up all presets** (Backups panel): the 50 user presets, read without loading any of
+  them, into a file downloaded at once. **Restore all** writes such a file back: first a backup
+  of the slots as they are now (so it can be undone), then every slot, each checked, then back
+  to the loaded preset. Single slots can still be restored one by one.
 - `apps/mcp/scripts/try-copy-tuner.ts`, the supervised script that first tried copy and the
   tuner on the owner's pedal.
 
@@ -58,6 +62,9 @@ on the owner's pedal.
   a kept bass tone named "Pantera B").
 - Over Bluetooth, the toolbar shows "Bluetooth · Pocket Master" instead of the USB MIDI
   input and output pickers.
+- Backups → *Import file*: a preset file picked there by mistake opens as a preset import
+  (load it, then save to any slot) instead of a refusal shown out of sight at the top of the
+  page.
 - A pedal script log committed by mistake is out of the repository, and `.gitignore` keeps
   such logs and copy backups out.
 
