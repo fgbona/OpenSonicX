@@ -8,6 +8,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Tone assistant: shapes the sound with the amp's own tone controls first and keeps the EQ
+  block to small corrections (±12 of its -50..50), and describes changes in the same terms
+  as the values. It used to push EQ bands to -30 or +20 while calling it "a slight cut".
 - Tone assistant: answers come in the editor's language (Portuguese or English); Groq used
   to drift to English, the language of the preset text it gets.
 
