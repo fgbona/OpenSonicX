@@ -3,7 +3,7 @@
  * editor with the person's own free key. Groq's free plan gives about 1,000 requests a day per model.
  */
 import { CHAT_INSTRUCTIONS, CHAT_TOOLS, runChatTool, type ChatGuard } from '@pocket-master/core';
-import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, QuotaError, requestText, toToolSchema, type ConverseOptions } from './assistant.ts';
+import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, QuotaError, requestText, toToolSchema, type ConverseOptions } from './assistant.ts';
 
 /** The model and its free daily requests (console.groq.com, 2026-11); it calls tools one at a time. */
 export const GROQ_MODEL = { id: 'openai/gpt-oss-120b', freeDailyLimit: 1000 } as const;
@@ -64,11 +64,11 @@ export async function converseGroq(options: ConverseOptions): Promise<string> {
   let retriedToolCall = false;
   for (let request = 0; request < MAX_REQUESTS; request++) {
     onRequest();
-    const r = await fetchFn(`${API}/chat/completions`, {
+    const r = await post(fetchFn, `${API}/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...auth(key) },
       body: JSON.stringify({ model: GROQ_MODEL.id, messages, tools: TOOLS }),
-    });
+    }, now);
     // Readable only if Groq exposes them to the browser; otherwise the meter counts on its own.
     const remaining = Number(r.headers.get('x-ratelimit-remaining-requests') ?? Number.NaN);
     const limit = Number(r.headers.get('x-ratelimit-limit-requests') ?? Number.NaN);

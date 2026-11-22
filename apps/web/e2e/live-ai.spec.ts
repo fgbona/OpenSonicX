@@ -4,7 +4,7 @@ import { test, expect, connect } from './fixtures.ts';
 // pedal. Each runs only when its key is in the environment:
 //   GROQ_API_KEY=gsk_... GEMINI_API_KEY=AIza... npm run e2e:live
 // Each uses one or two of the day's free requests and never prints the key.
-test.setTimeout(120_000);
+test.setTimeout(240_000);
 
 const PROVIDERS = [
   { name: 'Groq', env: 'GROQ_API_KEY', region: 'Groq key', label: 'Groq API key', via: 'Answered by Groq' },
@@ -24,7 +24,7 @@ for (const p of PROVIDERS) {
     await expect(panel.getByRole('button', { name: 'Keys' })).toBeVisible({ timeout: 20_000 });
     await panel.getByRole('textbox', { name: 'Message to the tone assistant' }).fill('Metallica Black Album rhythm tone');
     await panel.getByRole('button', { name: 'Send' }).click();
-    await expect(panel.getByText('Working on it…')).toBeHidden({ timeout: 90_000 });
+    await expect(panel.getByText('Working on it…')).toBeHidden({ timeout: 180_000 });
     console.log(`\n${p.name} answered:\n${await panel.locator('.assistant-message').last().innerText()}\n`);
     await expect(panel.locator('.assistant-message.is-error')).toHaveCount(0);
     await expect(panel.getByText(p.via)).toBeVisible();
