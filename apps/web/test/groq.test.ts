@@ -129,3 +129,14 @@ test('the request names the language to answer in, the one the editor is shown i
   const user = (requests[0]!.body.messages as { role: string; content: string }[]).at(-1)!;
   assert.match(user.content, /Request: black album\n\nAnswer in Brazilian Portuguese\.$/);
 });
+
+test('a short per-minute limit is waited out and the same request sent again', async () => {
+  const { h } = host();
+  const waits: number[] = [];
+  const { fetchFn, requests } = scripted({ status: 429, body: { error: { message: 'Rate limit reached on tokens per minute (TPM)' } }, headers: { 'retry-after': '7' } }, say('Pronto.'));
+  const reply = await converseGroq({ key: KEY, model: 'groq', turns: [], message: 'x', host: h, fetchFn, onRequest: () => {}, wait: async (ms) => { waits.push(ms); } });
+  assert.equal(reply, 'Pronto.');
+  assert.deepEqual(waits, [7000]);
+  assert.equal(requests.length, 2);
+  assert.equal(requests[0]!.body.max_completion_tokens, GROQ_MODEL.maxCompletionTokens);
+});
