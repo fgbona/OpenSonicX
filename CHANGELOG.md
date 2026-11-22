@@ -6,7 +6,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [0.14.0] - 2026-11-21
+## [0.14.0] - 2026-11-22
 
 **Describe a tone, get it on the pedal.** The new tone assistant turns "Black Album rhythm
 tone" or "warmer, less gain" into models and knob settings, live, and lists what changed. It
@@ -979,8 +979,8 @@ Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.14.0...HEAD
-[0.14.0]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.8...v0.14.0
+[Unreleased]: https://github.com/fgbona/OpenSonicX/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/fgbona/OpenSonicX/compare/v0.13.8...v0.14.0
 [0.13.8]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.7...v0.13.8
 [0.13.7]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.6...v0.13.7
 [0.13.6]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.5...v0.13.6
