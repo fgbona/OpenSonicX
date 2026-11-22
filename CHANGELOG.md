@@ -90,6 +90,15 @@ the pedal's firmware version in Global options.
 
 ### Fixed
 
+- Saving: right after a save the pedal can still report the slot's old name; the editor
+  now asks again a few times (up to about a second) before calling the save wrong. Seen on
+  the owner's unit: P38 was saved as "QClean" but first reported "Noise Wall". When the
+  name really differs, the message is in the editor's language.
+- Tone assistant on Groq's free plan (8,000 tokens a minute): the first message was larger
+  than a whole minute's allowance, so Groq refused it. The model list it carries is now one
+  short line per model (name, what it is based on, parameters; list_models still gives the
+  full text), Groq's answers are capped at 2,500 tokens, and a per-minute limit of up to
+  45 seconds is waited out within the message instead of failing it.
 - Tone assistant: a long "What changed" list no longer scrolls inside the scrolling
   conversation (two scroll bars); only the conversation scrolls, and it is taller. A new
   answer shows from the question that asked for it, not from its end.

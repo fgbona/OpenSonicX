@@ -111,7 +111,7 @@ test('parseBackupFile accepts a written file and rejects anything else', async (
 
 test('an acknowledged save whose name did not change is reported as a failure', async () => {
   const pedal = new FakePedal({ saveKeepsName: true });
-  await assert.rejects(saveToSlot(pedal, { target: 2, name: 'My Lead', edited: edited(pedal) }), /named "MTL-LEAD" instead of "My Lead"/);
+  await assert.rejects(saveToSlot(pedal, { target: 2, name: 'My Lead', edited: edited(pedal), pause: async () => {} }), /named "MTL-LEAD" instead of "My Lead"/);
 });
 
 test('an acknowledged save whose content differs is reported as a failure', async () => {
@@ -177,4 +177,11 @@ test('saveToSlot waits for the backup to be stored and does not save when storin
   );
   assert.equal(failing.received.some((r) => r.startsWith('save')), false, 'nothing saved without a stored backup');
   assert.deepEqual(failing.slots[2], old);
+});
+
+test('a name read that still answers the old name right after the save is read again', async () => {
+  const pedal = new FakePedal({ staleNameReads: 2 });
+  const result = await saveToSlot(pedal, { target: 2, name: 'QClean', edited: edited(pedal), backup: false, pause: async () => {} });
+  assert.equal(pedal.names[2], 'QClean');
+  assert.ok(result.saved);
 });

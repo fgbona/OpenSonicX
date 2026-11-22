@@ -37,6 +37,8 @@ export interface FakeOptions {
   nack?: boolean;
   /** The save is never acknowledged. */
   noAck?: boolean;
+  /** After a save, this many name reads still answer with the names from before it. */
+  staleNameReads?: number;
   /** The save is acknowledged but writes a different volume into the slot. */
   saveCorrupts?: boolean;
   /** The save is acknowledged but the slot keeps its old name. */
@@ -72,7 +74,16 @@ export class FakePedal implements Pedal {
 
   async readCurrentIndex() { return this.current; }
   async readEditBuffer() { return this.editBuffer.slice(); }
-  async readNames() { return [...this.names]; }
+  private staleNames: string[] | null = null;
+  private staleReads = 0;
+
+  async readNames() {
+    if (this.staleNames && this.staleReads > 0) {
+      this.staleReads -= 1;
+      return [...this.staleNames];
+    }
+    return [...this.names];
+  }
 
   async selectPreset(index: number) {
     this.received.push(`select ${index}`);
@@ -88,6 +99,8 @@ export class FakePedal implements Pedal {
     this.received.push(`save ${index} ${name}`);
     if (this.options.noAck) throw new Error('no acknowledge from the pedal');
     if (this.options.nack) return false;
+    this.staleNames = [...this.names];
+    this.staleReads = this.options.staleNameReads ?? 0;
     this.slots[index] = this.editBuffer.slice();
     if (this.options.saveCorrupts) new DataView(this.slots[index]!.buffer).setUint32(recordAt(this.slots[index]!, TAG.VOLUME), 3, true);
     if (!this.options.saveKeepsName) this.names[index] = name;

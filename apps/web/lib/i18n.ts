@@ -37,10 +37,19 @@ const PREFIXES: ReadonlyArray<[string, MessageKey]> = [
   ['Factory reset was not sent: ', 'error.factoryReset'],
 ];
 
+/** Core messages with values inside, by pattern; the named groups fill the placeholders. */
+const PATTERNS: ReadonlyArray<[RegExp, MessageKey]> = [
+  [/^saved, but (?<slot>P\d\d) is named "(?<got>.*)" instead of "(?<want>.*)"$/, 'error.savedOtherName'],
+];
+
 /** Translates errors raised by the web layer; protocol and decoder errors stay as they are. */
 export function translateError(lang: Lang, text: string): string {
   const exact = EXACT.find(([source]) => source === text);
   if (exact) return translate(lang, exact[1]);
+  for (const [pattern, key] of PATTERNS) {
+    const groups = pattern.exec(text)?.groups;
+    if (groups) return translate(lang, key, groups);
+  }
   const prefixed = PREFIXES.find(([prefix]) => text.startsWith(prefix));
   if (prefixed) return translate(lang, prefixed[1], { reason: text.slice(prefixed[0].length) });
   return text;

@@ -146,7 +146,13 @@ type SaveOptions = FlowOptions & {
   name: string;
   /** Back up the target slot before writing it. Default true; the user can opt out per save. */
   backup?: boolean;
+  /** Waits between name checks; tests pass a fake. */
+  pause?: (ms: number) => Promise<void>;
 };
+
+/** Right after a save the pedal can still report the slot's old name (seen on the unit, 2026-11-22). */
+const NAME_CHECKS = 4;
+const NAME_CHECK_PAUSE_MS = 400;
 
 /**
  * A block whose model the catalog does not know decodes without parameters. Re-creating it by
@@ -196,7 +202,12 @@ async function saveEdited(pedal: Pedal, options: SaveOptions, original: number, 
   if (!ok) throw new Error(`the pedal reported that the save failed; ${presetLabel(target)} was not changed`);
 
   options.onProgress?.({ step: `Checking ${presetLabel(target)}`, done: 2, total: 3 });
-  const savedName = (await pedal.readNames())[target];
+  const pause = options.pause ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  let savedName = (await pedal.readNames())[target];
+  for (let check = 1; check < NAME_CHECKS && savedName !== name; check++) {
+    await pause(NAME_CHECK_PAUSE_MS);
+    savedName = (await pedal.readNames())[target];
+  }
   if (savedName !== name) throw new Error(`saved, but ${presetLabel(target)} is named "${savedName}" instead of "${name}"`);
   await pedal.selectPreset(target);
   const saved = decodePreset(await pedal.readEditBuffer());
