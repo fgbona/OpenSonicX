@@ -8,6 +8,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `docs/hardware-tests-1.0.md` follows the editor as it is: saves have no backup step, Global
+  options lists the Pocket Master's settings only, and the tone assistant step (done on
+  2026-11-22) is gone.
 - Tone assistant: only the first request of a message carries the list of every model; the
   later ones (after an edit, to answer or save) carry the preset and the request. A tone
   now spends about 40% fewer tokens, so Groq's free 200,000 tokens a day last for more
