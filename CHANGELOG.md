@@ -6,6 +6,14 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Saving no longer backs up the target slot first (owner's request: the extra step loaded
+  the slot and slowed every save). The Save dialog has no backup checkbox; it states the
+  slot will be overwritten and saves at once. Restoring a backup still backs up the slot
+  first, and older backups stay in the Backups panel. The MCP server's `save_preset` is
+  unchanged.
+
 ### Fixed
 
 - Tone assistant: a long "What changed" list no longer scrolls inside the scrolling
