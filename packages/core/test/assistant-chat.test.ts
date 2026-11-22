@@ -179,3 +179,9 @@ test('changing a block that stays off says it is not heard, so the model can tur
   const on = await runChatTool(fakeHost().host, 'edit_preset', { changes: [{ kind: 'parameter', block: 'dly', parameter: 'mix', value: 30 }, { kind: 'block', block: 'dly', on: true }] });
   assert.doesNotMatch(on.text, /Note:/);
 });
+
+test('the instructions keep the EQ block for small corrections and the words true to the values', () => {
+  assert.match(CHAT_INSTRUCTIONS, /amp's own Bass, Middle, Treble and Presence first/);
+  assert.match(CHAT_INSTRUCTIONS, /between -12 and \+12/);
+  assert.match(CHAT_INSTRUCTIONS, /"a slight cut" is a few units/);
+});
