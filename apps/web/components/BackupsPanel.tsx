@@ -34,6 +34,8 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
   /** What the last import here turned out to be, said next to the button rather than at the top of the page. */
   const [note, setNote] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  /** The backup to show open in the list (the one just imported). */
+  const [opened, setOpened] = useState<string | null>(null);
   const { t, te, lang } = useI18n();
 
   const importFile = async (input: HTMLInputElement) => {
@@ -44,7 +46,15 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
     setNote(null);
     setImportError(null);
     try {
-      onImport(parseBackupFile(text));
+      const backup = parseBackupFile(text);
+      onImport(backup);
+      // The list may already hold it (same file): say what came in and open it, ready to restore.
+      setOpened(`${backup.kind}-${backup.createdAt}`);
+      setNote(t('backups.imported', {
+        what: backup.kind === 'session' ? t('backups.all') : `${backup.slots[0]?.label} “${backup.slots[0]?.name}”`,
+        count: backup.slots.length,
+        when: when(backup.createdAt, lang),
+      }));
       return;
     } catch (e) {
       // An exported preset is the likeliest wrong file: open it where it belongs.
@@ -76,7 +86,7 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
         <ul className="backups">
           {backups.map((b) => (
             <li key={`${b.kind}-${b.createdAt}`} className="backup">
-              <details>
+              <details open={opened === `${b.kind}-${b.createdAt}` || undefined}>
                 <summary>
                   <span className="backup-kind">{b.kind === 'session' ? t('backups.all') : `${b.slots[0]?.label} “${b.slots[0]?.name}”`}</span>
                   <span className="muted small">{when(b.createdAt, lang)} · {b.slots.length === 1 ? t('backups.oneSlot') : t('backups.slots', { count: b.slots.length })}</span>
