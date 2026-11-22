@@ -6,7 +6,7 @@ import {
   loadIntoEditBuffer, presetFile, presetLabel, restoreFromBackup, saveToSlot,
   type BackupFile, type Edit, type Frame, type Pedal, type Preset, type PresetFile, type Progress, type SaveResult, type SlotBackup,
 } from '@pocket-master/core';
-import { LinkClosedError, linkPedal, PocketMasterLink, readProfileNames, readUserIrNames, toneGear, type LogEntry } from '@pocket-master/core';
+import { copyStoredPreset, LinkClosedError, linkPedal, PocketMasterLink, readProfileNames, readUserIrNames, toneGear, type LogEntry } from '@pocket-master/core';
 import { openMidi, pickPocketMaster, webMidiPort } from './midi';
 import { addToLibrary, libraryNow } from './presetLibrary';
 import { EMPTY_HISTORY, record, redo as redoStep, undo as undoStep, type History } from './history';
@@ -68,13 +68,15 @@ export interface PocketMasterState {
   readonly history: History;
   /** Firmware version reported by the pedal ("V1.3.3"), null until read or when unknown. */
   readonly firmware: string | null;
+  /** The tuner as the editor last set it; the pedal does not report it. */
+  readonly tuner: boolean;
 }
 
 const INITIAL: PocketMasterState = {
   transport: null,
   status: 'idle', error: null, inputs: [], outputs: [], inputId: '', outputId: '',
   preset: null, presetIndex: null, restorePoint: null, liveEdit: false, log: [],
-  busy: null, names: null, backups: [], flowBackups: [], storageWarning: null, irNames: null, profileNames: null, pedalModified: null, history: EMPTY_HISTORY, firmware: null,
+  busy: null, names: null, backups: [], flowBackups: [], storageWarning: null, irNames: null, profileNames: null, pedalModified: null, history: EMPTY_HISTORY, firmware: null, tuner: false,
 };
 
 const toOptions = (ports: Iterable<MIDIPort>): PortOption[] =>
@@ -398,7 +400,7 @@ export function usePocketMaster() {
     indexRef.current = null;
     pedalModifiedRef.current = null;
     historyRef.current = EMPTY_HISTORY;
-    patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false, names: null, history: EMPTY_HISTORY, firmware: null });
+    patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false, names: null, history: EMPTY_HISTORY, firmware: null, tuner: false });
     try {
       await Promise.all([input.open(), output.open()]);
       link.current = new PocketMasterLink(webMidiPort(input, output), appendLog, (f) => notifyRef.current(f));
@@ -429,7 +431,7 @@ export function usePocketMaster() {
     pedalModifiedRef.current = null;
     const idle = () => (access.current ? 'ready' : 'idle') as Status;
     historyRef.current = EMPTY_HISTORY;
-    patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false, names: null, history: EMPTY_HISTORY, firmware: null });
+    patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false, names: null, history: EMPTY_HISTORY, firmware: null, tuner: false });
     try {
       const ble = await connectBluetooth(
         (e) => patch({ error: `Bluetooth: ${message(e)}` }),
@@ -546,7 +548,7 @@ export function usePocketMaster() {
     link.current = null;
     transportClose.current?.();
     transportClose.current = null;
-    patch({ status: access.current ? 'ready' : 'idle', transport: null, liveEdit: false });
+    patch({ status: access.current ? 'ready' : 'idle', transport: null, liveEdit: false, tuner: false });
   }, [patch]);
 
   // Skip the Enable MIDI click when the visitor already granted access earlier; never prompts by itself.
@@ -667,6 +669,39 @@ export function usePocketMaster() {
     [runFlow, keepBackup],
   );
 
+  /** Copies a stored preset over a user slot (checked by reading both back); the loaded preset is untouched. */
+  const copyPreset = useCallback(async (destination: number, source: number) => {
+    const current = link.current;
+    if (!current || busyRef.current) return false;
+    busyRef.current = true;
+    patch({ busy: { step: `Copying ${presetLabel(source)} to ${presetLabel(destination)}`, done: 0, total: 1 }, error: null });
+    try {
+      await current.drained();
+      await copyStoredPreset(current, destination, source);
+      const names = await linkPedal(current).readNames();
+      busyRef.current = false;
+      patch({ busy: null, names });
+      return true;
+    } catch (e) {
+      busyRef.current = false;
+      if (e instanceof LinkClosedError) patch({ busy: null });
+      else patch({ busy: null, error: message(e) });
+      return false;
+    }
+  }, [patch]);
+
+  /** Turns the pedal's tuner on or off. */
+  const setTuner = useCallback(async (on: boolean) => {
+    const current = link.current;
+    if (!current) return;
+    try {
+      await current.setTuner(on);
+      patch({ tuner: on });
+    } catch (e) {
+      if (!(e instanceof LinkClosedError)) patch({ error: message(e) });
+    }
+  }, [patch]);
+
   const restore = useCallback(
     (slot: SlotBackup) =>
       runFlow(slot.index, (pedal, onProgress) =>
@@ -766,6 +801,8 @@ export function usePocketMaster() {
     canUndo: state.liveEdit && state.history.past.length > 0,
     canRedo: state.liveEdit && state.history.future.length > 0,
     save,
+    copyPreset,
+    setTuner,
     restore,
     loadNames,
     loadPreset: (index: number) => void loadPreset(index),

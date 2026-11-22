@@ -225,3 +225,29 @@ test('the firmware version shows in Global options, and a different one gets a n
   await page.getByRole('button', { name: 'Connect', exact: true }).click();
   await expect(page.getByText('This pedal reports firmware V1.4.0; the editor was tested on V1.3.3.', { exact: false })).toBeVisible();
 });
+
+test('a preset is copied over another slot without loading either, checked on the pedal', async ({ page, pedal }) => {
+  await connect(page, pedal);
+  const loaded = Array.from(pedal.pedal.editBuffer);
+  await page.getByRole('button', { name: 'Copy…' }).click();
+  const copy = page.getByRole('dialog', { name: 'Copy a preset' });
+  await expect(copy.getByLabel('Copy')).toHaveValue('8');
+  await copy.getByLabel('Over').selectOption('11');
+  await copy.getByRole('button', { name: 'Copy to P12' }).click();
+  await expect(copy.getByText('P12 now holds P09 “IRON-LEAD”, checked on the pedal.')).toBeVisible();
+  expect(Array.from(pedal.pedal.slots[11]!)).toEqual(Array.from(pedal.pedal.slots[8]!));
+  expect(pedal.pedal.names[11]).toBe('IRON-LEAD');
+  expect(Array.from(pedal.pedal.editBuffer)).toEqual(loaded);
+  await copy.getByRole('button', { name: 'Done' }).click();
+  await expect(page.getByRole('heading', { name: /P09\s*IRON-LEAD/ })).toBeVisible();
+});
+
+test('the tuner button turns the pedal\'s tuner on and off', async ({ page, pedal }) => {
+  await connect(page, pedal);
+  const tuner = page.getByRole('button', { name: 'Tuner' });
+  await tuner.click();
+  await expect(tuner).toHaveAttribute('aria-pressed', 'true');
+  await tuner.click();
+  await expect(tuner).toHaveAttribute('aria-pressed', 'false');
+  expect(pedal.controls).toEqual(['B0 3A 7F', 'B0 3A 00']);
+});
