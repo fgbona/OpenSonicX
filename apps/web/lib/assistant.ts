@@ -38,8 +38,8 @@ export class QuotaError extends Error {
 
 /** The model is overloaded for now (Google's "high demand", Groq's 503): it is paused like a used-up quota, briefly. */
 export class BusyError extends QuotaError {
-  constructor(retryAt: Date) {
-    super(retryAt);
+  constructor(retryAt: Date, stopped?: { model: AiModel }) {
+    super(retryAt, stopped);
     this.message = 'The model is busy right now.';
   }
 }
@@ -162,7 +162,7 @@ export async function ask(options: Omit<ConverseOptions, 'key' | 'model' | 'onRe
         cooldown = { ...cooldown, [model]: error.retryAt };
         options.onCooldown?.(cooldown);
         // Part of the request is already on the pedal: another model would do it again ("more gain" twice).
-        if (acted) throw busy ? error : new QuotaError(error.retryAt, { model });
+        if (acted) throw error instanceof BusyError ? new BusyError(error.retryAt, { model }) : new QuotaError(error.retryAt, { model });
       } else if (error instanceof KeyError) {
         badKeys.push(error.provider);
         keyError = error;

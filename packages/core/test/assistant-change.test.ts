@@ -33,3 +33,7 @@ test('moves are 1-based and range-checked; volume passes through', () => {
   assert.equal(toEdit(p08, { kind: 'move', block: 'dly', position: 5 }, SLOTS).kind, 'chain');
   assert.deepEqual(toEdit(p08, { kind: 'volume', value: 50 }, SLOTS), { kind: 'volume', value: 50 });
 });
+
+test('the NR block has one model, so a model change is refused before anything is sent', () => {
+  assert.throws(() => toEdit(p08, { kind: 'model', block: 'NR', model: 'Gate' }, SLOTS), /NR has a single model \(Gate\); change its parameters instead/);
+});

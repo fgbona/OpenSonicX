@@ -8,6 +8,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Tone assistant: a model that gets overloaded after it already changed the sound now says
+  the answer was cut in the middle and to send it again, instead of only "overloaded".
+- Tone assistant and MCP server: a model change on the NR block (it only has the Gate) is
+  refused with a clear reason before anything is sent, instead of an editor error banner.
 - Tone assistant: a model request that gets no answer within a minute (Gemini under high
   demand sometimes never answers) is given up; that model is skipped for half a minute and
   the next one answers, instead of "Working on it…" forever.

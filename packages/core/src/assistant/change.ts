@@ -47,6 +47,7 @@ export function toEdit(preset: Preset, change: Change, slots: SlotNames): Edit {
     case 'block':
       return { kind: 'on', module: block.module, on: change.on };
     case 'model': {
+      if (block.key === 'nr') throw new Error('NR has a single model (Gate); change its parameters instead.');
       const model = resolveModel(block.key, change.model, slots);
       return { kind: 'model', module: block.module, code: model.code, clone: model.clone };
     }
