@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { comparePresets, type Difference, type ToneHost, type ToneSnapshot } from '@pocket-master/core';
 import { loadKey, maskKey, removeKey, saveKey } from '@/lib/aiKey';
 import { nextReset, recordRequest, usedToday, useAiUsage } from '@/lib/aiUsage';
-import { ask, KeyError, providerOf, QuotaError, RegionError, ROUTE, type AiModel, type Converse, type Cooldown, type Provider, type Turn } from '@/lib/assistant';
+import { ask, BusyError, KeyError, providerOf, QuotaError, RegionError, ROUTE, type AiModel, type Converse, type Cooldown, type Provider, type Turn } from '@/lib/assistant';
 import { converseGemini, GEMINI_MODELS, testGeminiKey } from '@/lib/gemini';
 import { converseGroq, GROQ_MODEL, testGroqKey } from '@/lib/groq';
 import type { MessageKey } from '@/lib/i18n';
@@ -175,6 +175,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
       ]);
     } catch (error) {
       const text = error instanceof QuotaError && error.partial && error.model ? t('assistant.quotaPartial', { model: MODELS[error.model].name })
+        : error instanceof BusyError ? t('assistant.busy', { time: time(error.retryAt) })
         : error instanceof QuotaError ? t('assistant.quotaAll', { time: time(error.retryAt) })
         : error instanceof KeyError ? t('assistant.keyRejected', { provider: PROVIDER_NAME[error.provider] })
         : error instanceof RegionError ? t('assistant.region')

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ask, KeyError, QuotaError, ROUTE, type AiModel, type Converse } from '../lib/assistant.ts';
+import { ask, BusyError, KeyError, QuotaError, ROUTE, type AiModel, type Converse } from '../lib/assistant.ts';
 import type { ToneHost } from '@pocket-master/core';
 
 const host = {} as ToneHost;
@@ -89,4 +89,14 @@ test('a read-only step before the quota ran out still hands the message on', asy
     lite: async () => 'from lite',
   } as unknown as Record<AiModel, Converse>;
   assert.equal((await ask({ ...base, keys: { groq: 'g', gemini: 'k' }, cooldown: {}, converse })).model, 'flash');
+});
+
+test('a busy model hands the message on; when all are busy or used up, the error says busy', async () => {
+  const m = models({ flash: new BusyError(later(0.5)) });
+  const r = await ask({ ...base, keys: { gemini: 'k' }, cooldown: {}, converse: m.converse });
+  assert.equal(r.model, 'lite');
+  const all = models({ groq: new QuotaError(later(30)), flash: new BusyError(later(0.5)), lite: new BusyError(later(0.5)) });
+  const e = await ask({ ...base, keys: { groq: 'g', gemini: 'k' }, cooldown: {}, converse: all.converse }).catch((x) => x);
+  assert.ok(e instanceof BusyError);
+  assert.equal(e.retryAt.getTime(), later(0.5).getTime());
 });

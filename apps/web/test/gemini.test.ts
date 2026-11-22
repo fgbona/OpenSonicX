@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { decodePreset, applyEdit, type Edit, type Preset, type ToneHost } from '@pocket-master/core';
 import { realP08 } from '../../../packages/core/test/fake-pedal.ts';
 import { converseGemini as converse, GEMINI_MODELS, testGeminiKey as testKey } from '../lib/gemini.ts';
-import { KeyError, QuotaError, RegionError, toToolSchema as toGeminiSchema } from '../lib/assistant.ts';
+import { BusyError, KeyError, QuotaError, RegionError, toToolSchema as toGeminiSchema } from '../lib/assistant.ts';
 
 const KEY = 'AIzaTESTKEY-0000000000000000000000000';
 const SLOTS = { irNames: [null, null, null, null, null], profileNames: [null, null, null, null, null] };
@@ -143,4 +143,13 @@ test('Google refusing the free tier where the person is gives a region error, no
   const other = { status: 400, body: { error: { code: 400, status: 'FAILED_PRECONDITION', message: 'Something else.' } } };
   const e2 = await converse({ key: KEY, model: 'flash', turns: [], message: 'x', host: h, fetchFn: scripted(other).fetchFn, onRequest: () => {} }).catch((x) => x);
   assert.ok(!(e2 instanceof RegionError));
+});
+
+test('a Gemini model under high demand pauses for half a minute so the next model answers', async () => {
+  const { h } = host();
+  const now = new Date('2026-11-21T20:00:00Z');
+  const busy = { status: 503, body: { error: { code: 503, status: 'UNAVAILABLE', message: 'gemini-3.8-flash is currently experiencing high demand.' } } };
+  const e = await converse({ key: KEY, model: 'flash', turns: [], message: 'x', host: h, fetchFn: scripted(busy).fetchFn, onRequest: () => {}, now: () => now }).catch((x) => x);
+  assert.ok(e instanceof BusyError);
+  assert.equal(e.retryAt.toISOString(), '2026-11-21T20:00:30.000Z');
 });

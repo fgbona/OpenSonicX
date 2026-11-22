@@ -85,6 +85,11 @@ the pedal's firmware version in Global options.
 
 ### Fixed
 
+- Tone assistant: a model under high demand (Gemini's or Groq's 503) no longer stops the
+  chat with "Gemini answered 503"; it is skipped for half a minute and the next model with a
+  key answers. When every model is busy, the chat says so and when to try again.
+- Tone assistant: Groq's 403 is no longer reported as a refused key (a wrong key is a 401);
+  the chat shows Groq's own reason, such as a blocked model or network.
 - Tone assistant, smaller fixes before release:
   - A Groq quota without a retry time now waits for the reset Groq states, or an hour for
     a daily limit, instead of retrying every minute; a Gemini per-minute quota without one

@@ -36,6 +36,17 @@ export class QuotaError extends Error {
   }
 }
 
+/** The model is overloaded for now (Google's "high demand", Groq's 503): it is paused like a used-up quota, briefly. */
+export class BusyError extends QuotaError {
+  constructor(retryAt: Date) {
+    super(retryAt);
+    this.message = 'The model is busy right now.';
+  }
+}
+
+/** How long an overloaded model is skipped. */
+export const BUSY_WAIT_MS = 30_000;
+
 /** Tools whose success changes the pedal (or opens the Save dialog): a request that ran one is not repeated elsewhere. */
 const ACTS = new Set(['edit_preset', 'undo_edit', 'revert_preset', 'select_preset', 'save_preset', 'load_saved_tone', 'keep_tone']);
 
@@ -114,6 +125,7 @@ export async function ask(options: Omit<ConverseOptions, 'key' | 'model' | 'onRe
   let cooldown: Cooldown = options.cooldown;
   const badKeys: Provider[] = [];
   let keyError: KeyError | null = null;
+  let busy = false;
   const candidates = ROUTE.filter((m) => options.keys[providerOf(m)]);
   if (candidates.length === 0) throw new Error('No AI key is set up.');
   for (const model of candidates) {
@@ -133,10 +145,11 @@ export async function ask(options: Omit<ConverseOptions, 'key' | 'model' | 'onRe
       return { reply, model, cooldown, badKeys };
     } catch (error) {
       if (error instanceof QuotaError) {
+        busy ||= error instanceof BusyError;
         cooldown = { ...cooldown, [model]: error.retryAt };
         options.onCooldown?.(cooldown);
         // Part of the request is already on the pedal: another model would do it again ("more gain" twice).
-        if (acted) throw new QuotaError(error.retryAt, { model });
+        if (acted) throw busy ? error : new QuotaError(error.retryAt, { model });
       } else if (error instanceof KeyError) {
         badKeys.push(error.provider);
         keyError = error;
@@ -145,5 +158,6 @@ export async function ask(options: Omit<ConverseOptions, 'key' | 'model' | 'onRe
   }
   if (keyError && candidates.every((m) => badKeys.includes(providerOf(m)))) throw keyError;
   const waits = candidates.map((m) => cooldown[m]).filter((d): d is Date => d !== undefined);
-  throw new QuotaError(new Date(Math.min(...waits.map((d) => d.getTime()))));
+  const first = new Date(Math.min(...waits.map((d) => d.getTime())));
+  throw busy ? new BusyError(first) : new QuotaError(first);
 }

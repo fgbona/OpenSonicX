@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { decodePreset, applyEdit, type Edit, type Preset, type ToneHost } from '@pocket-master/core';
 import { realP08 } from '../../../packages/core/test/fake-pedal.ts';
 import { converseGroq, GROQ_MODEL, testGroqKey } from '../lib/groq.ts';
-import { KeyError, QuotaError } from '../lib/assistant.ts';
+import { BusyError, KeyError, QuotaError } from '../lib/assistant.ts';
 
 const KEY = 'gsk_TESTKEY000000000000000000000000000000';
 const SLOTS = { irNames: [null, null, null, null, null], profileNames: [null, null, null, null, null] };
@@ -104,4 +104,20 @@ test('a malformed tool call from the model (400 tool_use_failed) is retried once
   assert.equal(ok.requests.length, 2);
   const twice = scripted(failed, failed);
   await assert.rejects(converseGroq({ key: KEY, model: 'groq', turns: [], message: 'x', host: h, fetchFn: twice.fetchFn, onRequest: () => {} }), /Groq answered 400/);
+});
+
+test('a 403 is not a wrong key: Groq\'s own reason is shown', async () => {
+  const { h } = host();
+  const denied = { status: 403, body: { error: { message: 'Access denied. Please check your network settings.' } } };
+  const e = await converseGroq({ key: KEY, model: 'groq', turns: [], message: 'x', host: h, fetchFn: scripted(denied).fetchFn, onRequest: () => {} }).catch((x) => x);
+  assert.ok(!(e instanceof KeyError));
+  assert.match(e.message, /Groq answered 403: Access denied/);
+});
+
+test('an overloaded Groq pauses for half a minute so the next model answers', async () => {
+  const { h } = host();
+  const now = new Date('2026-11-21T20:00:00Z');
+  const e = await converseGroq({ key: KEY, model: 'groq', turns: [], message: 'x', host: h, fetchFn: scripted({ status: 503, body: { error: { message: 'Service Unavailable' } } }).fetchFn, onRequest: () => {}, now: () => now }).catch((x) => x);
+  assert.ok(e instanceof BusyError);
+  assert.equal(e.retryAt.toISOString(), '2026-11-21T20:00:30.000Z');
 });
