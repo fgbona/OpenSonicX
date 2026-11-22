@@ -6,6 +6,14 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Back up all presets** (Backups panel): the 50 user presets, read without loading any of
+  them, into a file downloaded at once and kept in the list. **Restore all** writes such a
+  file back: first a backup of the slots as they are now (so it can be undone), then every
+  slot, each checked, then back to the loaded preset. Single slots can still be restored one
+  by one.
+
 ### Fixed
 
 - Backups → *Import file*: a preset file (from *Export preset*) picked there by mistake now
