@@ -73,3 +73,41 @@ export function savePaid(list: readonly PaidEntry[]): boolean {
     return false;
   }
 }
+
+const ORDER_KEY = 'pocket-master-editor.aiOrder.v1';
+const ROTATE_KEY = 'pocket-master-editor.aiRotate.v1';
+
+/** The answer order the person set (model ids), oldest first; empty when never set. */
+export function loadOrder(): string[] {
+  try {
+    const list: unknown = JSON.parse(localStorage.getItem(ORDER_KEY) ?? '[]');
+    return Array.isArray(list) ? list.filter((m): m is string => typeof m === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveOrder(order: readonly string[]): void {
+  try {
+    localStorage.setItem(ORDER_KEY, JSON.stringify(order));
+  } catch {
+    // the order then lasts for this page
+  }
+}
+
+export function loadRotate(): boolean {
+  try {
+    return localStorage.getItem(ROTATE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function saveRotate(on: boolean): void {
+  try {
+    if (on) localStorage.setItem(ROTATE_KEY, 'true');
+    else localStorage.removeItem(ROTATE_KEY);
+  } catch {
+    // the choice then lasts for this page
+  }
+}
