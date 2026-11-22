@@ -63,7 +63,7 @@ export async function converseGemini(options: ConverseOptions): Promise<string> 
     ...options.turns.map((t): Step => (t.role === 'user'
       ? { type: 'user_input', content: t.text }
       : { type: 'model_output', content: [{ type: 'text', text: t.text }] })),
-    { type: 'user_input', content: requestText(host, options.turns, options.message) },
+    { type: 'user_input', content: requestText(host, options.turns, options.message, options.language) },
   ];
   const guard: ChatGuard = { index: host.snapshot().index };
   for (let request = 0; request < MAX_REQUESTS; request++) {

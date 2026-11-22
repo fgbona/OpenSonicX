@@ -58,7 +58,7 @@ export async function converseGroq(options: ConverseOptions): Promise<string> {
   const messages: Message[] = [
     { role: 'system', content: CHAT_INSTRUCTIONS },
     ...options.turns.map((t): Message => ({ role: t.role, content: t.text })),
-    { role: 'user', content: requestText(host, options.turns, options.message) },
+    { role: 'user', content: requestText(host, options.turns, options.message, options.language) },
   ];
   const guard: ChatGuard = { index: host.snapshot().index };
   let retriedToolCall = false;

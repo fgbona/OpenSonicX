@@ -157,7 +157,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
     try {
       before = host.snapshot();
       const result = await ask({
-        keys, cooldown, converse: CONVERSE, turns, message, host,
+        keys, cooldown, converse: CONVERSE, turns, message, host, language: lang === 'pt' ? 'Brazilian Portuguese' : 'English',
         onRequest: (model) => recordRequest(model),
         onCooldown: setCooldown,
         onLimits: (model, remaining, limit) => setLimits((l) => ({ ...l, [model]: { remaining, limit } })),
