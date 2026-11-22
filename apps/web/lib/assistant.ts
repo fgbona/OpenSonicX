@@ -108,6 +108,8 @@ export interface ConverseOptions {
   readonly host: ToneHost;
   /** The editor's language; models otherwise drift to English, the language of the preset text. */
   readonly language?: string;
+  /** Pauses inside a message (a short per-minute limit); tests pass a fake. */
+  readonly wait?: (ms: number) => Promise<void>;
   readonly fetchFn?: typeof fetch;
   /** Called before every request, for the usage meter. */
   readonly onRequest: () => void;

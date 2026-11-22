@@ -35,6 +35,27 @@ export function formatModels(blockKey: string, label: string, slots: SlotNames):
   return `${label} models:\n${lines.join('\n')}`;
 }
 
+/**
+ * The same choices in one line each, for the chat's first message: the name, what it is based on
+ * (or, without one, the short description) and the parameter names, with a range only when it is
+ * not 0..100. Groq's free plan allows 8,000 tokens a minute; list_models gives the full text.
+ */
+export function formatModelsCompact(blockKey: string, label: string, slots: SlotNames): string {
+  const lines = modelChoices(blockKey, slots).map((choice) => {
+    const catalogModel = choice.clone ? findCloneModel(choice.code) : modelsFor(blockKey).find((m) => m.code === choice.code);
+    const about = choice.clone ? 'captured profile' : choice.basedOn ?? firstSentence(catalogModel ? modelInfo(blockKey, catalogModel.name)?.about : undefined);
+    const params = (catalogModel?.params ?? []).map(compactParam).join(', ');
+    return `- ${choice.name}${about ? ` (${about.replace(/\.$/, '')})` : ''}${params ? `: ${params}` : ''}`;
+  });
+  return `${label} models:\n${lines.join('\n')}`;
+}
+
+/** "Bass overdrive with clean blend. Added after…" → "Bass overdrive with clean blend". */
+const firstSentence = (text: string | undefined) => text?.split(/[.:;] /)[0];
+
+const compactParam = (p: ParamSpec): string =>
+  p.type === undefined && (p.min ?? 0) === 0 && (p.max ?? 100) === 100 && !p.unit ? p.name : formatParamSpec(p);
+
 export function formatParamSpec(p: ParamSpec): string {
   if (p.type === 'switch') return `${p.name} on/off`;
   if (p.type === 'select') return `${p.name} (${(p.options ?? []).join('/')})`;

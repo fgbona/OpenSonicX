@@ -5,8 +5,14 @@
 import { CHAT_INSTRUCTIONS, CHAT_TOOLS, runChatTool, type ChatGuard } from '@pocket-master/core';
 import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, QuotaError, requestText, toToolSchema, type ConverseOptions } from './assistant.ts';
 
-/** The model and its free daily requests (console.groq.com, 2026-11); it calls tools one at a time. */
-export const GROQ_MODEL = { id: 'openai/gpt-oss-120b', freeDailyLimit: 1000 } as const;
+/**
+ * The model and its free daily requests (console.groq.com, 2026-11); it calls tools one at a time.
+ * The free plan also allows 8,000 tokens a minute, counting the longest answer a request allows,
+ * so the answer is capped: a tone's edit list and reasoning fit in it.
+ */
+export const GROQ_MODEL = { id: 'openai/gpt-oss-120b', freeDailyLimit: 1000, maxCompletionTokens: 2500 } as const;
+/** A per-minute limit shorter than this is waited out inside the message instead of handed on. */
+const SHORT_WAIT_MS = 45_000;
 
 const API = 'https://api.groq.com/openai/v1';
 /** When a 429 does not say how long to wait. */
@@ -54,7 +60,7 @@ export async function testGroqKey(key: string, fetchFn: typeof fetch = fetch): P
 
 /** Sends one message to Groq, runs the tools it asks for, and returns its answer. */
 export async function converseGroq(options: ConverseOptions): Promise<string> {
-  const { key, host, onRequest, onStep, onLimits, fetchFn = fetch, now = () => new Date() } = options;
+  const { key, host, onRequest, onStep, onLimits, fetchFn = fetch, now = () => new Date(), wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms)) } = options;
   const messages: Message[] = [
     { role: 'system', content: CHAT_INSTRUCTIONS },
     ...options.turns.map((t): Message => ({ role: t.role, content: t.text })),
@@ -62,19 +68,31 @@ export async function converseGroq(options: ConverseOptions): Promise<string> {
   ];
   const guard: ChatGuard = { index: host.snapshot().index };
   let retriedToolCall = false;
+  let waited = 0;
   for (let request = 0; request < MAX_REQUESTS; request++) {
     onRequest();
     const r = await post(fetchFn, `${API}/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...auth(key) },
-      body: JSON.stringify({ model: GROQ_MODEL.id, messages, tools: TOOLS }),
+      body: JSON.stringify({ model: GROQ_MODEL.id, messages, tools: TOOLS, max_completion_tokens: GROQ_MODEL.maxCompletionTokens }),
     }, now);
     // Readable only if Groq exposes them to the browser; otherwise the meter counts on its own.
     const remaining = Number(r.headers.get('x-ratelimit-remaining-requests') ?? Number.NaN);
     const limit = Number(r.headers.get('x-ratelimit-limit-requests') ?? Number.NaN);
     if (Number.isFinite(remaining) && Number.isFinite(limit)) onLimits?.(remaining, limit);
     const body = (await r.json().catch(() => ({}))) as { error?: { message?: string; code?: string }; choices?: { message?: { content?: string | null; tool_calls?: ToolCall[] } }[] };
-    if (r.status === 429) throw new QuotaError(retryAt(r, body.error?.message, now()));
+    if (r.status === 429) {
+      const at = retryAt(r, body.error?.message, now());
+      const ms = at.getTime() - now().getTime();
+      // The free plan's tokens-a-minute fill up on a tone's second request: wait a few seconds, same request.
+      if (ms <= SHORT_WAIT_MS && waited < 2) {
+        waited += 1;
+        await wait(ms);
+        request -= 1;
+        continue;
+      }
+      throw new QuotaError(at);
+    }
     if (r.status === 503 || r.status === 498) throw new BusyError(new Date(now().getTime() + BUSY_WAIT_MS));
     // 403 is not a wrong key (that is 401): a blocked model or network, so Groq's reason is shown as is.
     if (r.status === 401) throw new KeyError('groq', body.error?.message ?? 'Groq did not accept this key.');
