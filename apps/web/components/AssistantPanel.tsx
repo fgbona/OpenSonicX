@@ -140,7 +140,15 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
     }
     setKeys(stored);
   }, []);
-  useEffect(() => { end.current?.scrollIntoView?.({ block: 'nearest' }); }, [messages, working]);
+  const list = useRef<HTMLOListElement>(null);
+  useEffect(() => {
+    // Scroll the conversation to the start of the last question, so a long answer is read from the top.
+    const ol = list.current;
+    const asked = ol?.querySelectorAll<HTMLElement>('.assistant-message.is-user');
+    const last = asked?.[asked.length - 1];
+    if (ol && last) ol.scrollTop += last.getBoundingClientRect().top - ol.getBoundingClientRect().top;
+    end.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [messages, working]);
   useEffect(() => { if (liveEdit) setNeedLive(false); }, [liveEdit]);
 
   const time = (d: Date) => d.toLocaleTimeString(lang === 'pt' ? 'pt-BR' : 'en', { hour: '2-digit', minute: '2-digit' });
@@ -246,7 +254,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
                 ))}
               </div>
             )}
-            <ol className="assistant-messages" aria-live="polite">
+            <ol ref={list} className="assistant-messages" aria-live="polite">
               {messages.map((m, i) => (
                 <li key={i} className={`assistant-message is-${m.role}`}>
                   <p>{m.text}{m.link && <> <a href={m.link.href} target="_blank" rel="noreferrer">{m.link.text}</a></>}</p>

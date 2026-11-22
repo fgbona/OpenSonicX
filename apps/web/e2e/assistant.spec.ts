@@ -313,4 +313,8 @@ test('a long change list scrolls with the conversation, not on its own', async (
   const list = panel(page).getByRole('region', { name: 'What changed' }).locator('ul');
   await expect(list.getByRole('listitem')).not.toHaveCount(0);
   expect(await list.evaluate((ul) => getComputedStyle(ul).overflowY)).toBe('visible');
+  // The conversation shows the question at its top, so the answer is read from the start.
+  const conversation = await panel(page).locator('.assistant-messages').boundingBox();
+  const question = await panel(page).locator('.assistant-message.is-user').last().boundingBox();
+  expect(Math.abs(question!.y - conversation!.y)).toBeLessThan(2);
 });
