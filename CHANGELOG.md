@@ -6,6 +6,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Connected over Bluetooth, the toolbar showed the USB MIDI input and output pickers (often
+  another device's ports, such as an audio interface), as if they were in use. It now shows
+  "Bluetooth · Pocket Master" while the pedal is connected that way.
+
 ### Added
 
 - Tone assistant: **paid providers** with your own key: OpenRouter, Claude (Anthropic),
