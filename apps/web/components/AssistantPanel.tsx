@@ -2,14 +2,17 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { presetLabel, type Difference, type ToneHost, type ToneSnapshot } from '@pocket-master/core';
-import { loadKey, maskKey, removeKey, saveKey } from '@/lib/aiKey';
+import { loadKey, loadPaid, maskKey, removeKey, saveKey, savePaid, type PaidEntry } from '@/lib/aiKey';
 import { nextReset, recordRequest, usedToday, useAiUsage } from '@/lib/aiUsage';
 import { ask, askedToSave, BusyError, KeyError, providerOf, QuotaError, RegionError, ROUTE, type AiModel, type Converse, type Cooldown, type Provider, type Turn } from '@/lib/assistant';
 import { converseGemini, GEMINI_MODELS, testGeminiKey } from '@/lib/gemini';
 import { converseGroq, GROQ_MODEL, testGroqKey } from '@/lib/groq';
+import { converseChat } from '@/lib/openai-compat';
+import { paidById } from '@/lib/providers';
 import { toneChanges } from '@/lib/tone-changes';
 import type { MessageKey } from '@/lib/i18n';
 import { Changes, DIFF_KEY } from './PresetFiles';
+import { PaidProviders } from './PaidProviders';
 import { useI18n } from './I18n';
 
 interface Props {
@@ -29,17 +32,18 @@ interface Message {
 const REGIONS = 'https://ai.google.dev/gemini-api/docs/available-regions';
 const EXAMPLES = ['assistant.example1', 'assistant.example2', 'assistant.example3'] as const;
 
-const CONVERSE: Readonly<Record<AiModel, Converse>> = { groq: converseGroq, flash: converseGemini, lite: converseGemini };
-const MODELS: Readonly<Record<AiModel, { readonly name: string; readonly limit: number; readonly pacificReset: boolean }>> = {
+const FREE_CONVERSE: Readonly<Partial<Record<AiModel, Converse>>> = { groq: converseGroq, flash: converseGemini, lite: converseGemini };
+const MODELS: Readonly<Partial<Record<AiModel, { readonly name: string; readonly limit: number; readonly pacificReset: boolean }>>> = {
   groq: { name: 'Groq', limit: GROQ_MODEL.freeDailyLimit, pacificReset: false },
   flash: { name: 'Gemini Flash', limit: GEMINI_MODELS.flash.freeDailyLimit, pacificReset: true },
   lite: { name: 'Gemini Flash-Lite', limit: GEMINI_MODELS.lite.freeDailyLimit, pacificReset: true },
 };
-const PROVIDER_NAME: Readonly<Record<Provider, string>> = { groq: 'Groq', gemini: 'Google Gemini' };
+const FREE_NAME: Readonly<Partial<Record<Provider, string>>> = { groq: 'Groq', gemini: 'Google Gemini' };
+const providerName = (p: Provider) => FREE_NAME[p] ?? paidById(p)?.name ?? p;
 
 /** How to get each free key; Groq first, since its free quota is the largest. */
 const SETUP: readonly {
-  readonly provider: Provider;
+  readonly provider: 'groq' | 'gemini';
   readonly note: MessageKey;
   readonly link: string;
   readonly linkText: MessageKey;
@@ -69,7 +73,7 @@ function KeySetup({ setup, saved, kept, onSaved, onRemove }: { setup: (typeof SE
   const { t } = useI18n();
   const [input, setInput] = useState('');
   const [status, setStatus] = useState<'idle' | 'testing' | 'invalid' | 'unavailable'>('idle');
-  const name = PROVIDER_NAME[setup.provider];
+  const name = providerName(setup.provider);
   const add = async () => {
     const candidate = input.trim();
     if (!candidate) return;
@@ -117,6 +121,7 @@ function KeySetup({ setup, saved, kept, onSaved, onRemove }: { setup: (typeof SE
 export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
   const { t, lang } = useI18n();
   const [keys, setKeys] = useState<Partial<Record<Provider, string>>>({});
+  const [paid, setPaid] = useState<readonly PaidEntry[]>([]);
   /** Keys the browser refused to store: they last for this page only. */
   const [notKept, setNotKept] = useState<readonly Provider[]>([]);
   const [managing, setManaging] = useState(false);
@@ -139,6 +144,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
       if (k) stored[p] = k;
     }
     setKeys(stored);
+    setPaid(loadPaid((id) => paidById(id) !== undefined));
   }, []);
   const list = useRef<HTMLOListElement>(null);
   useEffect(() => {
@@ -153,7 +159,15 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
 
   const time = (d: Date) => d.toLocaleTimeString(lang === 'pt' ? 'pt-BR' : 'en', { hour: '2-digit', minute: '2-digit' });
   const label = (d: Difference) => (d.what === 'param' ? d.name : t(DIFF_KEY[d.what]));
-  const hasKey = Object.keys(keys).length > 0;
+  const hasKey = Object.keys(keys).length > 0 || paid.length > 0;
+  // Paid providers first, in the order they were added, then the free models.
+  const route: readonly AiModel[] = [...paid.map((e) => e.id), ...ROUTE];
+  const allKeys: Partial<Record<Provider, string>> = { ...keys, ...Object.fromEntries(paid.map((e) => [e.id, e.key])) };
+  const converse: Partial<Record<AiModel, Converse>> = {
+    ...FREE_CONVERSE,
+    ...Object.fromEntries(paid.map((e) => [e.id, (o: Parameters<Converse>[0]) => converseChat({ provider: e.id, name: paidById(e.id)!.name, api: paidById(e.id)!.api, model: e.model }, o)])),
+  };
+  const modelName = (m: AiModel) => MODELS[m]?.name ?? `${paidById(m)?.name ?? m} · ${paid.find((e) => e.id === m)?.model ?? ''}`;
 
   /** Asked to save, but the model did not propose it: open the Save dialog itself; nothing is written until confirmed. */
   const offerSave = (message: string) => {
@@ -174,7 +188,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
     try {
       before = host.snapshot();
       const result = await ask({
-        keys, cooldown, converse: CONVERSE, turns, message, host, language: lang === 'pt' ? 'Brazilian Portuguese' : 'English',
+        keys: allKeys, cooldown, converse, route, turns, message, host, language: lang === 'pt' ? 'Brazilian Portuguese' : 'English',
         onRequest: (model) => recordRequest(model),
         onCooldown: setCooldown,
         onLimits: (model, remaining, limit) => setLimits((l) => ({ ...l, [model]: { remaining, limit } })),
@@ -191,16 +205,16 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
       setTurns((h) => [...h, { role: 'user', text: message }, { role: 'assistant', text: reply }]);
       setMessages((m) => [
         ...m,
-        ...refused.map((p): Message => ({ role: 'error', text: t('assistant.keyRejected', { provider: PROVIDER_NAME[p] }) })),
+        ...refused.map((p): Message => ({ role: 'error', text: t('assistant.keyRejected', { provider: providerName(p) }) })),
         { role: 'assistant', text: reply, model: result.model, changes: changed(before!, host.snapshot(), t('assistant.off')) },
       ]);
       if (!proposed) offerSave(message);
     } catch (error) {
-      const text = error instanceof BusyError && error.partial && error.model ? t('assistant.busyPartial', { model: MODELS[error.model].name })
-        : error instanceof QuotaError && error.partial && error.model ? t('assistant.quotaPartial', { model: MODELS[error.model].name, time: time(error.retryAt) })
+      const text = error instanceof BusyError && error.partial && error.model ? t('assistant.busyPartial', { model: modelName(error.model) })
+        : error instanceof QuotaError && error.partial && error.model ? t('assistant.quotaPartial', { model: modelName(error.model), time: time(error.retryAt) })
         : error instanceof BusyError ? t('assistant.busy', { time: time(error.retryAt) })
         : error instanceof QuotaError ? t('assistant.quotaAll', { time: time(error.retryAt) })
-        : error instanceof KeyError ? t('assistant.keyRejected', { provider: PROVIDER_NAME[error.provider] })
+        : error instanceof KeyError ? t('assistant.keyRejected', { provider: providerName(error.provider) })
         : error instanceof RegionError ? t('assistant.region')
           : t('assistant.error', { reason: error instanceof Error ? error.message : String(error) });
       // The next answer is told this one was cut, so a model does not lose the request (the preset it gets is current).
@@ -217,6 +231,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
   const now = new Date();
   const usageLine = (model: AiModel) => {
     const info = MODELS[model];
+    if (!info) return t('assistant.paidLine', { model: modelName(model) });
     const until = cooldown[model];
     if (until && until > now) return t('assistant.paused', { model: info.name, time: time(until) });
     const known = limits[model];
@@ -257,6 +272,11 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
                   if (Object.keys(rest).length === 0) setManaging(false); // the next key added goes straight to the chat
                 }} />
             ))}
+            <PaidProviders entries={paid} onChange={(list) => {
+              setPaid(list);
+              savePaid(list);
+              if (list.length === 0 && Object.keys(keys).length === 0) setManaging(false);
+            }} />
             <p className="muted small">{t('assistant.privacy')}</p>
           </>
         ) : (
@@ -275,7 +295,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
                   <p>{m.text}{m.link && <> <a href={m.link.href} target="_blank" rel="noreferrer">{m.link.text}</a></>}</p>
                   {m.changes && m.changes.length > 0 && <Changes differences={m.changes} label={label} title={t('assistant.changes')} />}
                   {m.role === 'assistant' && m.changes?.length === 0 && <p className="muted small">{t('assistant.noChanges')}</p>}
-                  {m.model && <p className="muted small assistant-via">{t('assistant.via', { model: MODELS[m.model].name })}</p>}
+                  {m.model && <p className="muted small assistant-via">{t('assistant.via', { model: modelName(m.model) })}</p>}
                 </li>
               ))}
               {working && <li className="assistant-message is-assistant"><p className="muted">{t('assistant.thinking')}</p></li>}
@@ -291,12 +311,12 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
               <button type="submit" className="btn btn-primary" disabled={working || !draft.trim()}>{t('assistant.send')}</button>
             </form>
             <ul className="muted small assistant-usage">
-              {ROUTE.filter((m) => keys[providerOf(m)]).map((m) => <li key={m}>{usageLine(m)}</li>)}
+              {route.filter((m) => allKeys[providerOf(m)]).map((m) => <li key={m}>{usageLine(m)}</li>)}
             </ul>
             <p className="muted small">
               {t('assistant.realUsage')}{' '}
               {SETUP.filter((s) => keys[s.provider]).map((s, i) => (
-                <span key={s.provider}>{i > 0 && ' · '}<a href={s.usage} target="_blank" rel="noreferrer">{PROVIDER_NAME[s.provider]}</a></span>
+                <span key={s.provider}>{i > 0 && ' · '}<a href={s.usage} target="_blank" rel="noreferrer">{providerName(s.provider)}</a></span>
               ))}
             </p>
             <p className="muted small">{t('assistant.privacy')}</p>

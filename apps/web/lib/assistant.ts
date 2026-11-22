@@ -6,11 +6,14 @@
  */
 import { chatContext, currentPresetText, type JsonSchema, type ToneHost } from '@pocket-master/core';
 
-export type Provider = 'groq' | 'gemini';
-/** A model the router can use, in the order it tries them. */
-export type AiModel = 'groq' | 'flash' | 'lite';
+/** Paid providers, each used with the model the person picked (providers.ts). */
+export type PaidId = 'openrouter' | 'openai' | 'xai' | 'deepseek' | 'mistral' | 'cerebras';
+export type Provider = 'groq' | 'gemini' | PaidId;
+/** A model the router can use: the free ones, or a paid provider with its picked model. */
+export type AiModel = 'groq' | 'flash' | 'lite' | PaidId;
+/** The free models, in the order they are tried. */
 export const ROUTE: readonly AiModel[] = ['groq', 'flash', 'lite'];
-export const providerOf = (model: AiModel): Provider => (model === 'groq' ? 'groq' : 'gemini');
+export const providerOf = (model: AiModel): Provider => (model === 'flash' || model === 'lite' ? 'gemini' : model);
 
 /** One message of the conversation as text; tool calls stay inside the request that made them. */
 export interface Turn {
@@ -153,7 +156,9 @@ export type Cooldown = Readonly<Partial<Record<AiModel, Date>>>;
 export async function ask(options: Omit<ConverseOptions, 'key' | 'model' | 'onRequest' | 'onLimits'> & {
   readonly keys: Readonly<Partial<Record<Provider, string>>>;
   readonly cooldown: Cooldown;
-  readonly converse: Readonly<Record<AiModel, Converse>>;
+  readonly converse: Readonly<Partial<Record<AiModel, Converse>>>;
+  /** The models to try, in order; the free ones when not given. */
+  readonly route?: readonly AiModel[];
   readonly onRequest: (model: AiModel) => void;
   readonly onLimits?: (model: AiModel, remaining: number, limit: number) => void;
   /** Called with the pauses as soon as one changes, so they survive any error. */
@@ -164,14 +169,14 @@ export async function ask(options: Omit<ConverseOptions, 'key' | 'model' | 'onRe
   const badKeys: Provider[] = [];
   let keyError: KeyError | null = null;
   let busy = false;
-  const candidates = ROUTE.filter((m) => options.keys[providerOf(m)]);
+  const candidates = (options.route ?? ROUTE).filter((m) => options.keys[providerOf(m)] && options.converse[m]);
   if (candidates.length === 0) throw new Error('No AI key is set up.');
   for (const model of candidates) {
     const key = options.keys[providerOf(model)]!;
     if (badKeys.includes(providerOf(model)) || (cooldown[model] && cooldown[model]! > now)) continue;
     let acted = false;
     try {
-      const reply = await options.converse[model]({
+      const reply = await options.converse[model]!({
         ...options, key, model,
         onRequest: () => options.onRequest(model),
         onLimits: (remaining, limit) => options.onLimits?.(model, remaining, limit),

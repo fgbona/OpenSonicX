@@ -129,3 +129,10 @@ test('a request to save names a user slot, in Portuguese or English; otherwise n
   assert.equal(askedToSave('salve no preset 51'), null, 'not a user slot');
   assert.equal(askedToSave('salve isso'), null, 'no slot');
 });
+
+test('a route with a paid provider tries it before the free models', async () => {
+  const m = models({});
+  const converse = { ...m.converse, openai: async () => 'answer from openai' } as Record<AiModel, Converse>;
+  const r = await ask({ ...base, keys: { openai: 'k', groq: 'g' }, cooldown: {}, converse, route: ['openai', ...ROUTE] });
+  assert.deepEqual([r.model, r.reply], ['openai', 'answer from openai']);
+});

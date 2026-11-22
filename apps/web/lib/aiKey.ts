@@ -1,11 +1,13 @@
 'use client';
 
 /**
- * The person's AI keys (Groq, Gemini), kept only on this device (localStorage) and sent only to
- * their provider. They are never logged or shown back in full.
+ * The person's AI keys, kept only on this device (localStorage) and sent only to their provider.
+ * They are never logged or shown back in full. The free ones (Groq, Gemini) keep their 1.x keys;
+ * paid providers are one list with the model picked for each.
  */
-import type { Provider } from './assistant.ts';
+import type { PaidId } from './assistant.ts';
 
+type Provider = 'groq' | 'gemini';
 const KEYS: Readonly<Record<Provider, string>> = {
   gemini: 'pocket-master-editor.geminiKey.v1',
   groq: 'pocket-master-editor.groqKey.v1',
@@ -40,4 +42,34 @@ export function removeKey(provider: Provider): void {
 /** "AIza…stuv": enough to recognise a key, not to use it. */
 export function maskKey(key: string): string {
   return key.length < 12 ? '••••' : `${key.slice(0, 4)}…${key.slice(-4)}`;
+}
+
+/** A paid provider the person added: its key and the model they picked. */
+export interface PaidEntry {
+  readonly id: PaidId;
+  readonly key: string;
+  readonly model: string;
+}
+
+const PAID_KEY = 'pocket-master-editor.aiProviders.v1';
+
+export function loadPaid(isPaid: (id: string) => boolean): PaidEntry[] {
+  try {
+    const list: unknown = JSON.parse(localStorage.getItem(PAID_KEY) ?? '[]');
+    if (!Array.isArray(list)) return [];
+    return list.filter((e): e is PaidEntry => typeof e?.id === 'string' && isPaid(e.id) && typeof e.key === 'string' && typeof e.model === 'string');
+  } catch {
+    return [];
+  }
+}
+
+/** False when the browser would not keep them (storage blocked); they then last for this page. */
+export function savePaid(list: readonly PaidEntry[]): boolean {
+  try {
+    if (list.length === 0) localStorage.removeItem(PAID_KEY);
+    else localStorage.setItem(PAID_KEY, JSON.stringify(list));
+    return true;
+  } catch {
+    return false;
+  }
 }

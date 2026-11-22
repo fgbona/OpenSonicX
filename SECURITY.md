@@ -22,6 +22,7 @@ desktop app), and nowhere else, it keeps:
 |---|---|
 | Backups made before each save | `pocket-master-editor.backups.v1` |
 | Groq and Gemini keys, if you added them | `pocket-master-editor.groqKey.v1`, `pocket-master-editor.geminiKey.v1` |
+| Paid AI providers you added: key and chosen model | `pocket-master-editor.aiProviders.v1` |
 | How many assistant requests were sent today | `pocket-master-editor.geminiUsage.v1` |
 | Your preset library | `pocket-master-editor.presetLibrary.v1` |
 | Notes on slots | `pocket-master-editor.slotNotes.v1` |
