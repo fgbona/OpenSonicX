@@ -4,10 +4,11 @@ import type { CloArrays } from './clo/generate.ts';
 import { profileRenameBlob, profileUploadBlob } from './clo/codec.ts';
 import { irRenameBlob, irSamplesFromWav, irUploadBlob, UploadDomain } from './ir-upload.ts';
 import type { PocketMasterLink } from './link.ts';
-import { decodeCurrentPreset } from './presets.ts';
+import { diffPresets } from './edit.ts';
+import { decodeCurrentPreset, presetLabel } from './presets.ts';
 import { Query } from './queries.ts';
-import { storedAsEditBuffer, storedPresetArgs } from './stored-preset.ts';
-import { decodePresetNames, decodeSlotNames, savePreset, selectPreset, type SlotName } from './slots.ts';
+import { copyPreset, decodePresetNames, decodeSlotNames, savePreset, selectPreset, type SlotName } from './slots.ts';
+import { readStoredPreset, storedAsEditBuffer, storedPresetArgs } from './stored-preset.ts';
 
 /** After its acknowledge the pedal still needs a moment before it reports the new preset (V1.3.3: ~250 ms works). */
 const SELECT_SETTLE_MS = 250;
@@ -25,6 +26,18 @@ export async function readGlobals(link: PocketMasterLink): Promise<GlobalSetting
   const globals = decodeGlobals((await link.request(Query.GLOBALS)).payload);
   if (!globals) throw new Error('The pedal answered the settings query with a reply this editor cannot read.');
   return globals;
+}
+
+/**
+ * Copies stored preset `source` over user slot `destination` (the loaded preset is untouched),
+ * then reads both back without loading them and checks the destination holds the source's sound.
+ */
+export async function copyStoredPreset(link: PocketMasterLink, destination: number, source: number): Promise<void> {
+  const ok = await link.presetOperation(copyPreset(destination, source));
+  if (!ok) throw new Error(`the pedal reported that the copy failed; ${presetLabel(destination)} was not changed`);
+  const from = await readStoredPreset(link, source);
+  const to = await readStoredPreset(link, destination);
+  if (diffPresets(to.preset, from.preset).length > 0) throw new Error(`copied, but ${presetLabel(destination)} does not hold the same preset as ${presetLabel(source)}`);
 }
 
 /** Names of the five captured-profile (clone) slots (read only). */

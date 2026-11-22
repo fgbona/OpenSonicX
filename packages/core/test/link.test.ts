@@ -174,7 +174,7 @@ test('a reply that answers a request is not reported as a notification', async (
 });
 
 // --- preset operations ------------------------------------------------------
-import { selectPreset, savePreset } from '../src/index.ts';
+import { selectPreset, savePreset, copyPreset } from '../src/index.ts';
 
 test('presetOperation refuses anything but a selection or a user-slot save', async () => {
   const f = fakes();
@@ -456,4 +456,15 @@ test('a query with arguments sends them, and its reply is matched by kind', asyn
   assert.equal(f.sent[0], toHex(buildFrame([0x12, 0x4f, 8, 0, 0, 0])));
   f.receive(buildFrame([0x12, 0x4f, 0xff, 0xff, 0xff, 0xff]));
   assert.equal(toHex((await pending).payload), '12 4F FF FF FF FF');
+});
+
+test('a copy waits for its acknowledge; the tuner goes out as its exact control change', async () => {
+  const f = fakes();
+  const copy = f.link.presetOperation(copyPreset(48, 41));
+  await flush();
+  f.receive(buildFrame([0x14, 0x08, 0x00]));
+  assert.equal(await copy, true);
+  await f.link.setTuner(true);
+  await f.link.setTuner(false);
+  assert.deepEqual(f.sent.slice(1), ['B0 3A 7F', 'B0 3A 00']);
 });

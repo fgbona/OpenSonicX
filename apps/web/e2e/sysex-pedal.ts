@@ -33,13 +33,21 @@ export class SysexPedal {
   globals: Uint8Array = GLOBALS;
   irNames = ['Marshal 80', 'Brutal Pri', '', '', ''];
   profileNames = ['Randall SA', '', '', '', ''];
+  /** Control changes received (the tuner), as hex. */
+  readonly controls: string[] = [];
 
   /** The frames the pedal sends back for one frame from the editor. */
   async receive(sysex: Uint8Array): Promise<Uint8Array[]> {
+    if (sysex[0] === 0xb0) {
+      this.controls.push(Array.from(sysex, (b) => b.toString(16).toUpperCase().padStart(2, '0')).join(' '));
+      return [];
+    }
     const p = parseFrame(sysex).payload;
+    if (p[0] === GET && p[1] === 0x4f) return packets(this.#stored(p[2]! | (p[3]! << 8)));
     if (p[0] === GET) return packets(this.#answer(p[1]!));
     if (p[0] !== SET) return [];
     if (p[1] === 0x43) await this.pedal.selectPreset(p[2]!);
+    else if (p[1] === 0x4b) this.#copy(p[2]! | (p[3]! << 8), p[4]! | (p[5]! << 8));
     else if (p[1] === 0x4a) await this.pedal.savePreset(p[2]!, String.fromCharCode(...p.subarray(6, 16)).replace(/\0.*$/, ''));
     else if ([0x42, 0x44, 0x47, 0x48, 0x49].includes(p[1]!)) await this.pedal.sendEdits([sysex]);
     return [buildFrame(ACK_OK)];
@@ -57,6 +65,17 @@ export class SysexPedal {
       case 0x10: return this.globals;
       default: return [GET, kind, 0];
     }
+  }
+
+  /** 12 4F: a stored preset without loading it: FF FF FF FF, a 16-byte name, then the edit buffer's body. */
+  #stored(index: number): number[] {
+    return [GET, 0x4f, 0xff, 0xff, 0xff, 0xff, ...ascii(this.pedal.names[index]!, 16), ...Array.from(this.pedal.slots[index]!).slice(2)];
+  }
+
+  /** 11 4B: the source slot (and its name) over the destination, the loaded preset untouched. */
+  #copy(destination: number, source: number) {
+    this.pedal.slots[destination] = this.pedal.slots[source]!.slice();
+    this.pedal.names[destination] = this.pedal.names[source]!;
   }
 
   #slots(kind: number, names: string[]) {

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
-  selectPreset, savePreset, encodeName, setPresetVolume, isPresetOperation, decodePresetNames, decodeAck,
+  selectPreset, savePreset, encodeName, setPresetVolume, isPresetOperation, decodePresetNames, decodeAck, copyPreset, tunerMessage,
 } from '../src/slots.ts';
 import { isAllowedEdit, setParam } from '../src/commands.ts';
 import { buildFrame, parseFrame, expand, crc8 } from '../src/frame.ts';
@@ -92,4 +92,18 @@ test('select and save match the real commands from the owner\'s save, and the re
   // The pedal acknowledges a selection too (14 08 00), not only a save.
   assert.equal(decodeAck(parseFrame(c[2]!.bytes).payload), true);
   assert.equal(decodeAck(parseFrame(c[6]!.bytes).payload), true);
+});
+
+test('copyPreset is 11 4B + destination u16 + source u16, as the owner\'s unit took it (P42 to P49)', () => {
+  assert.equal(toHex(parseFrame(copyPreset(48, 41)).payload), '11 4B 30 00 29 00');
+  assert.equal(isPresetOperation(copyPreset(48, 41)), true);
+  assert.equal(isPresetOperation(copyPreset(0, 75)), true, 'a factory preset can be the source');
+  assert.throws(() => copyPreset(50, 1), /destination/, 'factory presets cannot be written');
+  assert.throws(() => copyPreset(3, 3), /another preset/);
+  assert.equal(isPresetOperation(buildFrame([0x11, 0x4b, 50, 0, 1, 0])), false);
+});
+
+test('the tuner is CC 58 on channel 1, on at 127 and off at 0', () => {
+  assert.deepEqual(Array.from(tunerMessage(true)), [0xb0, 0x3a, 0x7f]);
+  assert.deepEqual(Array.from(tunerMessage(false)), [0xb0, 0x3a, 0x00]);
 });

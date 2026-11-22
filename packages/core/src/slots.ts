@@ -3,7 +3,7 @@ import { MessageType, Query } from './queries.ts';
 import { PRESET_COUNT, USER_PRESETS } from './presets.ts';
 
 /** Second payload byte of preset operations: they change which preset is loaded or what a slot holds. */
-export const PresetCommand = { VOLUME: 0x42, SELECT: 0x43, SAVE: 0x4a } as const;
+export const PresetCommand = { VOLUME: 0x42, SELECT: 0x43, SAVE: 0x4a, COPY: 0x4b } as const;
 const CMD_ACK = 0x08;
 export const NAME_LENGTH = 10;
 const NAME_RECORD = 20; // u32 slot + char[16]
@@ -49,7 +49,25 @@ export function savePreset(index: number, name: string): Uint8Array {
   return buildFrame([MessageType.SET, PresetCommand.SAVE, ...u32(index), ...encodeName(name), 0, 0, 0]);
 }
 
-/** True only for a well-formed preset selection (0..99) or a save to a user slot (0..49). */
+const u16 = (v: number) => [v & 0xff, (v >>> 8) & 0xff];
+
+/**
+ * Copies stored preset `source` (P01..P50 or F01..F50) over user slot `destination`, without
+ * loading either: 11 4B + destination u16 + source u16 (klotznick's guide; checked on the owner's
+ * V1.3.3, P42 to P49, 2026-11-22). The pedal acknowledges it like a save.
+ */
+export function copyPreset(destination: number, source: number): Uint8Array {
+  if (!Number.isInteger(destination) || destination < 0 || destination >= USER_PRESETS) throw new Error(`the destination must be a user preset P01..P${USER_PRESETS}`);
+  if (!Number.isInteger(source) || source < 0 || source >= PRESET_COUNT || source === destination) throw new Error('the source must be another preset, P01..P50 or F01..F50');
+  return buildFrame([MessageType.SET, PresetCommand.COPY, ...u16(destination), ...u16(source)]);
+}
+
+/** The tuner on or off: CC 58 on channel 1 (127 on, 0 off). The pedal does not answer or report it. */
+export function tunerMessage(on: boolean): Uint8Array {
+  return Uint8Array.from([0xb0, 0x3a, on ? 0x7f : 0x00]);
+}
+
+/** True only for a well-formed preset selection (0..99), a save to a user slot (0..49) or a copy into one. */
 export function isPresetOperation(sysex: Uint8Array): boolean {
   try {
     const f = parseFrame(sysex);
@@ -57,6 +75,12 @@ export function isPresetOperation(sysex: Uint8Array): boolean {
     const view = new DataView(f.payload.buffer, f.payload.byteOffset, f.payload.byteLength);
     if (f.payload[1] === PresetCommand.SELECT) return f.payload.length === 6 && view.getUint32(2, true) < PRESET_COUNT;
     if (f.payload[1] === PresetCommand.SAVE) return f.payload.length === SAVE_PAYLOAD && view.getUint32(2, true) < USER_PRESETS;
+    if (f.payload[1] === PresetCommand.COPY) {
+      if (f.payload.length !== 6) return false;
+      const destination = view.getUint16(2, true);
+      const source = view.getUint16(4, true);
+      return destination < USER_PRESETS && source < PRESET_COUNT && source !== destination;
+    }
     return false;
   } catch {
     return false;
