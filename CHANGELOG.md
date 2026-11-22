@@ -6,6 +6,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Backups → *Import file*: importing a backup now says what it holds ("All user presets, 50
+  slots, date") and opens it in the list, ready to restore one slot or all. Importing a file
+  that was already in the list (the backup just made) used to change nothing on screen.
+
 ## [0.15.0] - 2026-11-22
 
 **Your own paid AI, copy and the tuner.** The tone assistant now also takes paid keys:

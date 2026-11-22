@@ -287,3 +287,14 @@ test('back up all presets to a file, then restore them all', async ({ page, peda
   expect(pedal.pedal.names[3]).not.toBe('CHANGED');
   expect(pedal.pedal.current).toBe(8);
 });
+
+test('importing a backup file says what it holds and opens it, ready to restore', async ({ page, pedal }) => {
+  await connect(page, pedal);
+  const backups = page.getByRole('region', { name: 'Backups' });
+  const download = page.waitForEvent('download');
+  await backups.getByRole('button', { name: 'Back up all presets' }).click();
+  const path = await (await download).path();
+  await backups.locator('input[type=file]').setInputFiles(path!);
+  await expect(backups.getByText(/Backup imported: All user presets \(50 slots/)).toBeVisible();
+  await expect(backups.getByRole('button', { name: 'Restore all' })).toBeVisible();
+});
