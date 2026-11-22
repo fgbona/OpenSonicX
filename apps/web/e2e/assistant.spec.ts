@@ -351,7 +351,7 @@ test('a paid provider added with its key answers first, with the model picked fr
   await page.route('https://api.openai.com/**', async (route: Route) => {
     if (route.request().url().endsWith('/models')) return route.fulfill({ json: { data: [{ id: 'gpt-9' }, { id: 'tts-1' }, { id: 'gpt-9-mini' }] } });
     requests.push({ ...route.request().postDataJSON(), auth: route.request().headers().authorization });
-    return route.fulfill({ json: { choices: [{ message: { role: 'assistant', content: 'From the paid model.' } }] } });
+    return route.fulfill({ json: { choices: [{ message: { role: 'assistant', content: 'From the paid model.' } }], usage: { prompt_tokens: 1500, completion_tokens: 150 } } });
   });
   await fakeGroq(page, []);
   await connect(page, pedal);
@@ -369,7 +369,9 @@ test('a paid provider added with its key answers first, with the model picked fr
 
   await ask(page, 'black album rhythm tone');
   await expect(panel(page).getByText('From the paid model.')).toBeVisible();
-  await expect(panel(page).getByText('Answered by OpenAI · gpt-9')).toBeVisible();
+  // 1,500 × $0.000001 + 150 × $0.000004 = $0.0021, from the price catalog.
+  await expect(panel(page).getByText('Answered by OpenAI · gpt-9 · about $0.0021')).toBeVisible();
+  await expect(panel(page).getByText('OpenAI · gpt-9: paid · about $0.0021 today (estimated)')).toBeVisible();
   expect(requests[0]).toMatchObject({ model: 'gpt-9', auth: 'Bearer fake-openai-key-e2e-0000' });
   expect(await page.evaluate(() => localStorage.getItem('pocket-master-editor.aiProviders.v1'))).toContain('"model":"gpt-9"');
   await expect(page.locator('body')).not.toContainText('fake-openai-key-e2e-0000');

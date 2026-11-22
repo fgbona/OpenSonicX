@@ -78,7 +78,7 @@ export const converseGemini = (options: ConverseOptions): Promise<string> =>
 
 /** Sends one message to a Gemini model by id (a paid key's choice included), runs the tools, and returns the answer. */
 export async function converseGeminiModel(modelId: string, options: ConverseOptions): Promise<string> {
-  const { key, host, onRequest, onStep, fetchFn = fetch, now = () => new Date() } = options;
+  const { key, host, onRequest, onStep, onUsage, fetchFn = fetch, now = () => new Date() } = options;
   const model = { id: modelId };
   const input: Step[] = [
     ...options.turns.map((t): Step => (t.role === 'user'
@@ -95,7 +95,8 @@ export async function converseGeminiModel(modelId: string, options: ConverseOpti
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify({ model: model.id, store: false, system_instruction: instructions(options.thorough), tools: TOOLS, input }),
     }, now);
-    const body = (await r.json().catch(() => ({}))) as ApiError & { steps?: Step[] };
+    const body = (await r.json().catch(() => ({}))) as ApiError & { steps?: Step[]; usage?: { total_input_tokens?: number; total_output_tokens?: number; input_tokens?: number; output_tokens?: number } };
+    if (body.usage) onUsage?.(body.usage.total_input_tokens ?? body.usage.input_tokens ?? 0, body.usage.total_output_tokens ?? body.usage.output_tokens ?? 0);
     if (!r.ok) throw failure(r.status, body, now());
     const steps = body.steps;
     if (!Array.isArray(steps) || steps.length === 0) throw new Error('Gemini sent no answer this editor understands. Try again in a moment.');

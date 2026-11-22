@@ -69,11 +69,13 @@ export interface ChatEndpoint {
   readonly shortWaitMs?: number;
   /** A 400 with this error code means a malformed tool call; it is asked once more. */
   readonly retryCode?: string;
+  /** Extra request fields, e.g. OpenRouter's usage accounting. */
+  readonly extra?: Readonly<Record<string, unknown>>;
 }
 
 /** Sends one message to an OpenAI-style provider, runs the tools it asks for, and returns its answer. */
 export async function converseChat(endpoint: ChatEndpoint, options: ConverseOptions): Promise<string> {
-  const { key, host, onRequest, onStep, onLimits, fetchFn = fetch, now = () => new Date(), wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms)) } = options;
+  const { key, host, onRequest, onStep, onLimits, onUsage, fetchFn = fetch, now = () => new Date(), wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms)) } = options;
   const messages: Message[] = [
     { role: 'system', content: instructions(options.thorough) },
     ...options.turns.map((t): Message => ({ role: t.role, content: t.text })),
@@ -88,13 +90,14 @@ export async function converseChat(endpoint: ChatEndpoint, options: ConverseOpti
     const r = await post(fetchFn, `${endpoint.api}/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...auth(key) },
-      body: JSON.stringify({ model: endpoint.model, messages, tools: TOOLS, ...(endpoint.cap ? { [endpoint.cap.field]: endpoint.cap.tokens } : {}) }),
+      body: JSON.stringify({ model: endpoint.model, messages, tools: TOOLS, ...(endpoint.cap ? { [endpoint.cap.field]: endpoint.cap.tokens } : {}), ...endpoint.extra }),
     }, now);
     // Readable only if the provider exposes them to the browser; otherwise the meter counts on its own.
     const remaining = Number(r.headers.get('x-ratelimit-remaining-requests') ?? Number.NaN);
     const limit = Number(r.headers.get('x-ratelimit-limit-requests') ?? Number.NaN);
     if (Number.isFinite(remaining) && Number.isFinite(limit)) onLimits?.(remaining, limit);
-    const body = (await r.json().catch(() => ({}))) as { error?: { message?: string; code?: string }; choices?: { message?: { content?: string | null; tool_calls?: ToolCall[] } }[] };
+    const body = (await r.json().catch(() => ({}))) as { error?: { message?: string; code?: string }; choices?: { message?: { content?: string | null; tool_calls?: ToolCall[] } }[]; usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number } };
+    if (body.usage) onUsage?.(body.usage.prompt_tokens ?? 0, body.usage.completion_tokens ?? 0, body.usage.cost);
     if (r.status === 429) {
       const at = retryAt(r, body.error?.message, now());
       const ms = at.getTime() - now().getTime();

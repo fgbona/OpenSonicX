@@ -9,6 +9,8 @@ import { converseGemini, GEMINI_MODELS, testGeminiKey } from '@/lib/gemini';
 import { converseGroq, GROQ_MODEL, testGroqKey } from '@/lib/groq';
 import { converseWith, paidById, paidName } from '@/lib/providers';
 import { moveInOrder, orderRoute, rotated } from '@/lib/route-order';
+import { answerCost, loadPrices, priceOf, type Usage } from '@/lib/prices';
+import { recordSpend, spentToday } from '@/lib/spend';
 import { toneChanges } from '@/lib/tone-changes';
 import type { MessageKey } from '@/lib/i18n';
 import { Changes, DIFF_KEY } from './PresetFiles';
@@ -28,6 +30,8 @@ interface Message {
   readonly text: string;
   readonly changes?: readonly Difference[];
   readonly model?: AiModel;
+  /** Estimated US dollars, for a paid provider's answer. */
+  readonly cost?: number;
   readonly link?: { readonly href: string; readonly text: string };
 }
 
@@ -166,6 +170,8 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
   }, [messages, working]);
   useEffect(() => { if (liveEdit) setNeedLive(false); }, [liveEdit]);
 
+  /** US dollars to two significant digits: US$ 0,0031. */
+  const money = (usd: number) => new Intl.NumberFormat(lang === 'pt' ? 'pt-BR' : 'en-US', { style: 'currency', currency: 'USD', maximumSignificantDigits: 2 }).format(usd);
   const time = (d: Date) => d.toLocaleTimeString(lang === 'pt' ? 'pt-BR' : 'en', { hour: '2-digit', minute: '2-digit' });
   const label = (d: Difference) => (d.what === 'param' ? d.name : t(DIFF_KEY[d.what]));
   const hasKey = Object.keys(keys).length > 0 || paid.length > 0;
@@ -195,6 +201,19 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
     setWorking(true);
     let before: ToneSnapshot | null = null;
     let proposed = false;
+    const used: Partial<Record<AiModel, Usage>> = {};
+    /** What each paid provider this message reached cost; kept as today's spend. Undefined when unknown. */
+    const settleCosts = async (): Promise<Partial<Record<AiModel, number>>> => {
+      const costs: Partial<Record<AiModel, number>> = {};
+      const reached = paid.filter((e) => used[e.id]);
+      if (reached.length === 0) return costs;
+      const prices = await loadPrices();
+      for (const e of reached) {
+        const cost = answerCost(used[e.id]!, priceOf(prices, e.model));
+        if (cost !== null) { costs[e.id] = cost; recordSpend(e.id, cost); }
+      }
+      return costs;
+    };
     try {
       before = host.snapshot();
       const result = await ask({
@@ -202,6 +221,10 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
         onRequest: (model) => recordRequest(model),
         onCooldown: setCooldown,
         onLimits: (model, remaining, limit) => setLimits((l) => ({ ...l, [model]: { remaining, limit } })),
+        onModelUsage: (model, input, output, cost) => {
+          const u = used[model] ?? { input: 0, output: 0 };
+          used[model] = { input: u.input + input, output: u.output + output, ...(cost !== undefined || u.cost !== undefined ? { cost: (u.cost ?? 0) + (cost ?? 0) } : {}) };
+        },
         onStep: (tool, ok, text) => {
           if (tool === 'save_preset') proposed = true;
           if (!ok && text.includes('Live edit is off')) setNeedLive(true);
@@ -212,11 +235,12 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
       // A key the provider refused, while another provider answered: say it once, or it fails silently on every message.
       const refused = result.badKeys.filter((p) => !warnedKeys.current.has(p));
       refused.forEach((p) => warnedKeys.current.add(p));
+      const costs = await settleCosts();
       setTurns((h) => [...h, { role: 'user', text: message }, { role: 'assistant', text: reply }]);
       setMessages((m) => [
         ...m,
         ...refused.map((p): Message => ({ role: 'error', text: t('assistant.keyRejected', { provider: providerName(p, t('assistant.paidTag')) }) })),
-        { role: 'assistant', text: reply, model: result.model, changes: changed(before!, host.snapshot(), t('assistant.off')) },
+        { role: 'assistant', text: reply, model: result.model, cost: costs[result.model], changes: changed(before!, host.snapshot(), t('assistant.off')) },
       ]);
       if (!proposed) offerSave(message);
     } catch (error) {
@@ -231,6 +255,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
       setTurns((h) => [...h, { role: 'user', text: message }, { role: 'assistant', text: `(This answer was interrupted: ${error instanceof Error ? error.message : String(error)})` }]);
       const link = error instanceof RegionError ? { href: REGIONS, text: t('assistant.regionLink') } : undefined;
       setMessages((m) => [...m, { role: 'error', text, link, changes: before ? changed(before, host.snapshot(), t('assistant.off')) : undefined }]);
+      void settleCosts(); // a cut answer was paid for too
       // Cut after the sound changed: the tone is there, so the save that was asked for is still offered.
       if (!proposed && error instanceof QuotaError && error.partial) offerSave(message);
     } finally {
@@ -241,7 +266,10 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
   const now = new Date();
   const usageLine = (model: AiModel) => {
     const info = MODELS[model];
-    if (!info) return t('assistant.paidLine', { model: modelName(model) });
+    if (!info) {
+      const spent = spentToday(model, now);
+      return spent > 0 ? t('assistant.paidSpent', { model: modelName(model), cost: money(spent) }) : t('assistant.paidLine', { model: modelName(model) });
+    }
     const until = cooldown[model];
     if (until && until > now) return t('assistant.paused', { model: info.name, time: time(until) });
     const known = limits[model];
@@ -308,7 +336,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
                   <p>{m.text}{m.link && <> <a href={m.link.href} target="_blank" rel="noreferrer">{m.link.text}</a></>}</p>
                   {m.changes && m.changes.length > 0 && <Changes differences={m.changes} label={label} title={t('assistant.changes')} />}
                   {m.role === 'assistant' && m.changes?.length === 0 && <p className="muted small">{t('assistant.noChanges')}</p>}
-                  {m.model && <p className="muted small assistant-via">{t('assistant.via', { model: modelName(m.model) })}</p>}
+                  {m.model && <p className="muted small assistant-via">{m.cost !== undefined ? t('assistant.viaCost', { model: modelName(m.model), cost: money(m.cost) }) : t('assistant.via', { model: modelName(m.model) })}</p>}
                 </li>
               ))}
               {working && <li className="assistant-message is-assistant"><p className="muted">{t('assistant.thinking')}</p></li>}

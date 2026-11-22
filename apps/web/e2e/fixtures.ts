@@ -36,6 +36,8 @@ export const test = base.extend<{ pedal: SysexPedal }>({
     const pedal = new SysexPedal();
     await page.exposeFunction('__pedalSend', async (bytes: number[]) => (await pedal.receive(Uint8Array.from(bytes))).map((f) => Array.from(f)));
     await page.addInitScript(installFakeMidi);
+    // The price catalog the assistant reads for paid answers: a small fixed one, never the network.
+    await page.route('https://openrouter.ai/api/v1/models', (route) => route.fulfill({ json: { data: [{ id: 'openai/gpt-9', pricing: { prompt: '0.000001', completion: '0.000004' } }] } }));
     await use(pedal);
   },
 });

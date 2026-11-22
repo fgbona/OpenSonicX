@@ -168,3 +168,12 @@ test('free requests stay compact; a paid (thorough) request carries full descrip
   assert.doesNotMatch(freeUser!.content, /Chorus with depth, rate and tone/);
   assert.match(paidUser!.content, /Chorus with depth, rate and tone/);
 });
+
+test('each request\'s token usage is reported, with the provider\'s own cost when it sends one', async () => {
+  const { h } = host();
+  const usage: [number, number, number | undefined][] = [];
+  const withUsage = (r: { body: Record<string, unknown> }, u: Record<string, number>) => ({ ...r, body: { ...r.body, usage: u } });
+  const { fetchFn } = scripted(withUsage(toolCall('get_preset', {}), { prompt_tokens: 3000, completion_tokens: 100 }), withUsage(say('ok'), { prompt_tokens: 3200, completion_tokens: 50, cost: 0.0009 }));
+  await converseGroq({ key: KEY, model: 'groq', turns: [], message: 'x', host: h, fetchFn, onRequest: () => {}, onUsage: (i, o, c) => usage.push([i, o, c]) });
+  assert.deepEqual(usage, [[3000, 100, undefined], [3200, 50, 0.0009]]);
+});
