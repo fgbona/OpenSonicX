@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { decodePreset, applyEdit, type Edit, type Preset, type ToneHost } from '@pocket-master/core';
 import { realP08 } from '../../../packages/core/test/fake-pedal.ts';
-import { converseGemini as converse, GEMINI_MODELS, testGeminiKey as testKey } from '../lib/gemini.ts';
+import { converseGemini as converse, GEMINI_MODELS, listGeminiModels, testGeminiKey as testKey } from '../lib/gemini.ts';
 import { BusyError, KeyError, QuotaError, RegionError, toToolSchema as toGeminiSchema } from '../lib/assistant.ts';
 
 const KEY = 'fake-gemini-key-unit-0000';
@@ -161,4 +161,14 @@ test('only the first Gemini request of a message carries the model list', async 
   const user = (i: number) => JSON.stringify((requests[i]!.body.input as { type: string }[]).find((s) => s.type === 'user_input'));
   assert.match(user(0), /AMP models:/);
   assert.doesNotMatch(user(1), /AMP models:/);
+});
+
+test('the Gemini model list of a key gives model ids that generate content', async () => {
+  const list = scripted({ body: { models: [
+    { name: 'models/gemini-9-pro', supportedGenerationMethods: ['generateContent'] },
+    { name: 'models/text-embedding-9', supportedGenerationMethods: ['embedContent'] },
+  ] } });
+  assert.deepEqual(await listGeminiModels(KEY, list.fetchFn), ['gemini-9-pro']);
+  assert.equal(list.requests[0]!.headers['x-goog-api-key'], KEY);
+  assert.equal(await listGeminiModels(KEY, scripted({ status: 400, body: { error: { details: [{ reason: 'API_KEY_INVALID' }] } } }).fetchFn), 'invalid');
 });

@@ -6,6 +6,7 @@
  * default (good with tools, inexpensive), which the person can change.
  */
 import { converseClaude, listClaudeModels } from './anthropic.ts';
+import { converseGeminiModel, listGeminiModels } from './gemini.ts';
 import type { Converse, PaidId } from './assistant.ts';
 import { converseChat, listModels } from './openai-compat.ts';
 
@@ -22,7 +23,9 @@ export interface PaidProvider {
   /** Default model, first match wins; otherwise the first chat model. */
   readonly prefer: readonly RegExp[];
   /** The API's shape; OpenAI-style when not given. */
-  readonly dialect?: 'anthropic';
+  readonly dialect?: 'anthropic' | 'gemini';
+  /** A provider that also has the free setup: shown as "(paid)" next to its name. */
+  readonly paidPlan?: true;
 }
 
 export const PAID: readonly PaidProvider[] = [
@@ -39,6 +42,14 @@ export const PAID: readonly PaidProvider[] = [
     id: 'openai', name: 'OpenAI', api: 'https://api.openai.com/v1', keys: 'https://platform.openai.com/api-keys',
     limits: 'https://platform.openai.com/settings/organization/limits', placeholder: 'sk-…',
     prefer: [/^gpt-[\d.]+-mini$/, /^gpt-[\d.]+$/],
+  },
+  {
+    id: 'gemini-paid', name: 'Google Gemini', api: 'https://generativelanguage.googleapis.com/v1beta', keys: 'https://aistudio.google.com/apikey',
+    limits: 'https://aistudio.google.com/usage', placeholder: 'AIza…', prefer: [/^gemini-[\d.]+-pro$/, /^gemini-[\d.]+-flash$/], dialect: 'gemini', paidPlan: true,
+  },
+  {
+    id: 'groq-paid', name: 'Groq', api: 'https://api.groq.com/openai/v1', keys: 'https://console.groq.com/keys',
+    limits: 'https://console.groq.com/settings/billing', placeholder: 'gsk_…', prefer: [/gpt-oss-120b/, /llama-[\d.]+-70b/], paidPlan: true,
   },
   {
     id: 'xai', name: 'xAI (Grok)', api: 'https://api.x.ai/v1', keys: 'https://console.x.ai', limits: 'https://console.x.ai',
@@ -80,10 +91,16 @@ export function pickModel(provider: PaidProvider, ids: readonly string[]): strin
 
 /** The key's model ids from the provider's own list (which also checks the key). */
 export const listProviderModels = (provider: PaidProvider, key: string) =>
-  provider.dialect === 'anthropic' ? listClaudeModels(key) : listModels(provider.api, key);
+  provider.dialect === 'anthropic' ? listClaudeModels(key)
+    : provider.dialect === 'gemini' ? listGeminiModels(key)
+      : listModels(provider.api, key);
 
-/** How a message reaches a provider with the model the person picked. */
-export const converseWith = (provider: PaidProvider, model: string): Converse =>
-  provider.dialect === 'anthropic'
-    ? (options) => converseClaude(model, options)
-    : (options) => converseChat({ provider: provider.id, name: provider.name, api: provider.api, model }, options);
+/** How a message reaches a paid provider with the model the person picked: always the thorough request. */
+export function converseWith(provider: PaidProvider, model: string): Converse {
+  if (provider.dialect === 'anthropic') return (options) => converseClaude(model, { ...options, thorough: true });
+  if (provider.dialect === 'gemini') return (options) => converseGeminiModel(model, { ...options, thorough: true });
+  return (options) => converseChat({ provider: provider.id, name: provider.name, api: provider.api, model }, { ...options, thorough: true });
+}
+
+/** The provider's name as shown, with the "(paid)" tag for one that also has the free setup. */
+export const paidName = (provider: PaidProvider, paidTag: string) => (provider.paidPlan ? `${provider.name} ${paidTag}` : provider.name);

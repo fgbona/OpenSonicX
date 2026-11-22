@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { CHAT_INSTRUCTIONS, CHAT_TOOLS, chatContext, runChatTool, type ToneHost } from '../src/assistant/chat.ts';
+import { CHAT_INSTRUCTIONS, CHAT_INSTRUCTIONS_THOROUGH, CHAT_TOOLS, chatContext, runChatTool, type ToneHost } from '../src/assistant/chat.ts';
 import { toneGear } from '../src/assistant/format.ts';
 import { decodePreset, type Preset } from '../src/dump.ts';
 import { applyEdit, type Edit } from '../src/edit.ts';
@@ -211,4 +211,11 @@ test('kept tones reach the model with their main gear, and are reused only when 
   assert.match(toneGear(p08), /^DRV Scream \(Ibanez TS-808 Tube Screamer\), AMP Brit 800 \(Marshall JCM800\), IR BritGN 4x12/);
   assert.match(chatContext(withLibrary), /- Pantera B: Cowboys from Hell \[DRV Scream/);
   assert.match(CHAT_INSTRUCTIONS, /only when it matches the request: the same instrument \(guitar or bass\), part and reference/);
+});
+
+test('a paid request can carry the full model descriptions and a more thorough instruction', () => {
+  const { host } = fakeHost();
+  assert.doesNotMatch(chatContext(host), /Chorus with depth, rate and tone/);
+  assert.match(chatContext(host, 'full'), /A-Chorus: based on Arion SCH-1 Stereo Chorus\. Chorus with depth, rate and tone\./);
+  assert.match(CHAT_INSTRUCTIONS_THOROUGH, /actual rig/);
 });

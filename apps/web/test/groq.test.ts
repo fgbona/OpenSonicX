@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { decodePreset, applyEdit, type Edit, type Preset, type ToneHost } from '@pocket-master/core';
 import { realP08 } from '../../../packages/core/test/fake-pedal.ts';
 import { converseGroq, GROQ_MODEL, testGroqKey } from '../lib/groq.ts';
+import { converseChat } from '../lib/openai-compat.ts';
 import { BusyError, KeyError, QuotaError } from '../lib/assistant.ts';
 
 const KEY = 'fake-groq-key-unit-0000';
@@ -151,4 +152,19 @@ test('only the first request of a message carries the model list; later ones kee
   assert.match(user(0), /AMP models:/);
   assert.doesNotMatch(user(1), /AMP models:/);
   assert.match(user(1), /Loaded preset:[\s\S]*Request: black album/);
+});
+
+test('free requests stay compact; a paid (thorough) request carries full descriptions and the longer instruction', async () => {
+  const { h } = host();
+  const free = scripted(say('ok'));
+  await converseGroq({ key: KEY, model: 'groq', turns: [], message: 'x', host: h, fetchFn: free.fetchFn, onRequest: () => {} });
+  const paid = scripted(say('ok'));
+  await converseChat({ provider: 'openai', name: 'OpenAI', api: 'https://api.openai.com/v1', model: 'm' }, { key: KEY, model: 'openai', turns: [], message: 'x', host: h, fetchFn: paid.fetchFn, onRequest: () => {}, thorough: true });
+  const messages = (r: { body: Record<string, unknown> }) => r.body.messages as { role: string; content: string }[];
+  const [freeSystem, freeUser] = messages(free.requests[0]!);
+  const [paidSystem, paidUser] = messages(paid.requests[0]!);
+  assert.doesNotMatch(freeSystem!.content, /actual rig/);
+  assert.match(paidSystem!.content, /actual rig/);
+  assert.doesNotMatch(freeUser!.content, /Chorus with depth, rate and tone/);
+  assert.match(paidUser!.content, /Chorus with depth, rate and tone/);
 });

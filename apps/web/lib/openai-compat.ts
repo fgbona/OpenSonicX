@@ -4,8 +4,8 @@
  * the person's own key. One message runs one tool loop; quotas, overloads and refused keys become
  * the router's errors.
  */
-import { CHAT_INSTRUCTIONS, CHAT_TOOLS, runChatTool, type ChatGuard } from '@pocket-master/core';
-import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, QuotaError, requestTexts, toToolSchema, type ConverseOptions, type Provider } from './assistant.ts';
+import { CHAT_TOOLS, runChatTool, type ChatGuard } from '@pocket-master/core';
+import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, QuotaError, instructions, requestTexts, toToolSchema, type ConverseOptions, type Provider } from './assistant.ts';
 
 /** When a 429 does not say how long to wait. */
 const DEFAULT_WAIT_MS = 60_000;
@@ -75,10 +75,10 @@ export interface ChatEndpoint {
 export async function converseChat(endpoint: ChatEndpoint, options: ConverseOptions): Promise<string> {
   const { key, host, onRequest, onStep, onLimits, fetchFn = fetch, now = () => new Date(), wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms)) } = options;
   const messages: Message[] = [
-    { role: 'system', content: CHAT_INSTRUCTIONS },
+    { role: 'system', content: instructions(options.thorough) },
     ...options.turns.map((t): Message => ({ role: t.role, content: t.text })),
   ];
-  const text = requestTexts(host, options.turns, options.message, options.language);
+  const text = requestTexts(host, options.turns, options.message, options.language, options.thorough);
   const asked = messages.push({ role: 'user', content: text.first }) - 1;
   const guard: ChatGuard = { index: host.snapshot().index };
   let retriedToolCall = false;

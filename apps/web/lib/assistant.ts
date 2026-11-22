@@ -4,10 +4,10 @@
  * so any provider can take the next message. Free quotas: Groq first (about 1,000 requests a day),
  * then Gemini Flash, then Gemini Flash-Lite; a used-up model hands the message to the next.
  */
-import { chatContext, currentPresetText, type JsonSchema, type ToneHost } from '@pocket-master/core';
+import { CHAT_INSTRUCTIONS, CHAT_INSTRUCTIONS_THOROUGH, chatContext, currentPresetText, type JsonSchema, type ToneHost } from '@pocket-master/core';
 
 /** Paid providers, each used with the model the person picked (providers.ts). */
-export type PaidId = 'openrouter' | 'anthropic' | 'openai' | 'xai' | 'deepseek' | 'mistral' | 'cerebras';
+export type PaidId = 'openrouter' | 'anthropic' | 'openai' | 'gemini-paid' | 'groq-paid' | 'xai' | 'deepseek' | 'mistral' | 'cerebras';
 export type Provider = 'groq' | 'gemini' | PaidId;
 /** A model the router can use: the free ones, or a paid provider with its picked model. */
 export type AiModel = 'groq' | 'flash' | 'lite' | PaidId;
@@ -93,16 +93,19 @@ export class KeyError extends Error {
 /** Google does not offer the Gemini API (or its free tier) where the person is. */
 export class RegionError extends Error {}
 
+/** The system instructions: free plans get the short ones; paid providers the thorough ones too. */
+export const instructions = (thorough?: boolean) => (thorough ? `${CHAT_INSTRUCTIONS} ${CHAT_INSTRUCTIONS_THOROUGH}` : CHAT_INSTRUCTIONS);
+
 /**
  * The new message's text for the first request, and for the later ones of the same message: the
  * model list goes only once (the model has picked by then, and list_models is there), which keeps
  * a tone within Groq's free tokens a minute and a day.
  */
-export function requestTexts(host: ToneHost, turns: readonly Turn[], message: string, language?: string): { first: string; later: string } {
+export function requestTexts(host: ToneHost, turns: readonly Turn[], message: string, language?: string, thorough = false): { first: string; later: string } {
   const tail = `\n\nRequest: ${message}${language ? `\n\nAnswer in ${language}.` : ''}`;
   const preset = currentPresetText(host);
   const later = `${turns.length === 0 ? 'Loaded preset' : 'Loaded preset now'}:\n${preset}${tail}`;
-  return { first: turns.length === 0 ? `${chatContext(host)}${tail}` : later, later };
+  return { first: turns.length === 0 ? `${chatContext(host, thorough ? 'full' : 'compact')}${tail}` : later, later };
 }
 
 /**
@@ -134,6 +137,8 @@ export interface ConverseOptions {
   readonly language?: string;
   /** Pauses inside a message (a short per-minute limit); tests pass a fake. */
   readonly wait?: (ms: number) => Promise<void>;
+  /** Paid providers: the full model descriptions and the more thorough instructions (no free-plan token budget). */
+  readonly thorough?: boolean;
   readonly fetchFn?: typeof fetch;
   /** Called before every request, for the usage meter. */
   readonly onRequest: () => void;

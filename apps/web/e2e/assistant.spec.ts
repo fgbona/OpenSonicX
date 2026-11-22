@@ -422,3 +422,27 @@ test('the answer order is the person\'s, and rotation starts each new conversati
   expect(await page.evaluate(() => [localStorage.getItem('pocket-master-editor.aiOrder.v1'), localStorage.getItem('pocket-master-editor.aiRotate.v1')]))
     .toEqual(['["groq","openai"]', 'true']);
 });
+
+test('a paid Gemini key answers with the model picked from its list and the thorough request; the keys screen explains free and paid', async ({ page, pedal }) => {
+  const sent: Record<string, unknown>[] = [];
+  await page.route('https://generativelanguage.googleapis.com/**', async (route: Route) => {
+    if (route.request().url().includes('/models')) {
+      return route.fulfill({ json: { models: [{ name: 'models/gemini-9-flash', supportedGenerationMethods: ['generateContent'] }, { name: 'models/gemini-9-pro', supportedGenerationMethods: ['generateContent'] }] } });
+    }
+    sent.push(route.request().postDataJSON());
+    return route.fulfill({ json: { status: 'completed', steps: [{ type: 'model_output', content: [{ type: 'text', text: 'From paid Gemini.' }] }] } });
+  });
+  await connect(page, pedal);
+  await expect(panel(page).getByRole('note', { name: /Free keys: no cost/ })).toBeVisible();
+  const paidSection = panel(page).getByRole('region', { name: 'Paid providers' });
+  await expect(paidSection.getByRole('note', { name: /Paid keys: you pay the provider/ })).toBeVisible();
+  await paidSection.getByLabel('Add a paid provider').selectOption({ label: 'Google Gemini (paid)' });
+  await paidSection.getByLabel('Google Gemini (paid) API key').fill('fake-gemini-key-e2e-paid');
+  await paidSection.getByRole('button', { name: 'Save key' }).click();
+  await ask(page, 'black album rhythm tone');
+  await expect(panel(page).getByText('From paid Gemini.')).toBeVisible();
+  await expect(panel(page).getByText('Answered by Google Gemini (paid) · gemini-9-pro')).toBeVisible();
+  expect(sent[0]).toMatchObject({ model: 'gemini-9-pro' });
+  expect(String(sent[0]!.system_instruction)).toContain('actual rig');
+  expect(JSON.stringify(sent[0]!.input)).toContain('Chorus with depth, rate and tone');
+});
