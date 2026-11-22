@@ -6,22 +6,98 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-22
+
+**Describe a tone, get it on the pedal.** The new tone assistant turns "Black Album rhythm
+tone" or "warmer, less gain" into models and knob settings, live, and lists what changed. It
+runs on your own free AI key, Groq (about 1,000 requests a day) or Google Gemini, called
+straight from the editor and the desktop app, with no server of ours; saving still goes
+through the Save dialog you confirm. Also new: a preset library, and
+the pedal's firmware version in Global options.
+
+![The tone assistant building a Black Album rhythm tone](https://raw.githubusercontent.com/fgbona/OpenSonicX/main/docs/media/assistant.jpg)
+
+### Added
+
+- **Tone assistant** in the editor and the desktop app: describe a sound ("Black Album rhythm
+  tone", "warmer, less gain", in English or Portuguese) and it is built on the pedal, live.
+  - It runs on the person's own free key, called straight from the editor, with no server of
+    ours: **Groq** (about 1,000 free requests a day on `openai/gpt-oss-120b`, no card;
+    recommended first) and/or **Google Gemini** (Flash and Flash-Lite, stateless, so Google
+    keeps no conversation).
+  - Guided key setup per provider, with a link to its console; each key is tested before it
+    is kept, stays on the device, and is never shown in full.
+  - With more than one key the editor routes on its own: Groq, then Gemini Flash, then Gemini
+    Flash-Lite. A model whose free requests run out passes the message to the next and stays
+    paused until it comes back; one that runs out after it already changed the sound stops
+    instead, so nothing is done twice. Each answer says which model gave it.
+  - A meter of each model's free requests (Groq's real remaining count when the browser can
+    read it) and when they reset.
+  - Each answer lists what changed on the pedal. The editor's Undo and Revert work on the
+    assistant's changes; saving opens the Save dialog filled in, and only the person's click
+    saves; loading another preset asks first if there are unsaved changes. With Live edit
+    off, it asks to turn it on instead of changing anything.
+  - When a tone sounds right, the assistant keeps it in the preset library with the reference
+    it matches ("BLACK RHY — Metallica Black Album, rhythm"); asking for it again loads the
+    kept tone exactly, without spending extra requests.
+  - Three example requests under the empty chat; a click puts one in the message box.
+  - Clear messages when a key is refused, when every free quota is used up (and until when),
+    and when Google does not offer Gemini in the person's region (with Google's list).
+  - A notice that what is written and the loaded preset go to the provider.
+- A preset library: every preset you export, or import into the pedal, is kept in this
+  browser (or the desktop app), newest first, up to 50. *Load…* opens the import
+  confirmation with what it changes from the loaded preset.
+- The editor reads the pedal's firmware version on connecting: *Global options* shows it,
+  and a notice appears when it is not V1.3.3, the version the editor was tested on. The MCP
+  server's `get_global_settings` names it too (record 01 01 of the settings reply, as
+  documented in klotznick's CC0 Pocket Master Interoperability Guide).
+- MCP server: `undo_edit` puts the edit buffer back as it was before the last `edit_preset`,
+  up to 20 steps. It refuses once the pedal is on another preset, and loading, reverting,
+  saving or importing clears it.
+- `docs/smart-box-2.0.md`: what is known about the Sonicake Smart Box before 2.0.0 (the
+  features and models SonicMaster offers only on it, where their data comes from, a read-only
+  first session). The probe script now finds a Smart Box too and
+  prints the port it opened.
+- Link previews: sharing the site's address (WhatsApp, Discord, social networks) shows the
+  editor's picture and a description.
+- SECURITY.md (private reports, and every browser storage key the editor uses) and issue forms
+  for bugs and ideas.
+- README: a "Describe a tone" section with an animation of the assistant at work.
+- Groundwork for reading a stored preset without loading it (12 4F, also from the guide): the
+  probe script compares it with the edit buffer; the editor keeps loading a slot to back it up
+  until that check passes on the pedal.
+- Tests: the assistant end to end (simulated pedal and providers) on desktop and phone, in
+  Portuguese and for accessibility; `npm run e2e:live` (with `GROQ_API_KEY` and/or
+  `GEMINI_API_KEY`) checks the real providers.
+
+### Changed
+
+- Saving no longer backs up the target slot first (owner's request: the extra step loaded
+  the slot and slowed every save). The Save dialog has no backup checkbox; it states the
+  slot will be overwritten and saves at once. Restoring a backup still backs up the slot
+  first, and older backups stay in the Backups panel. The MCP server's `save_preset` is
+  unchanged.
+- The project is now **OpenSonicX** (github.com/fgbona/OpenSonicX): open-source tools for
+  Sonicake pedals, starting with the Pocket Master and next the Smart Box. The site moves to
+  https://fgbona.github.io/OpenSonicX/ (the old address stops working; GitHub forwards the old
+  repository links). The desktop app, its updates, the npm package and the container image
+  keep their names.
+- The tone tools (turning "AMP gain 70" into an edit, and the preset and model text an
+  assistant reads) moved from the MCP server into the shared core, so the MCP server and the
+  editor's assistant run the same code. The MCP server behaves exactly as before.
+- The Windows self-update check now closes the "downloaded" box (Later) and then the app,
+  the install-on-quit path. 0.13.7 -> 0.13.8 verified this way.
+
 ### Fixed
 
 - Tone assistant: an answer cut by a free limit after the sound had changed still opens the
   Save dialog that was asked for, and the message says when the model is free again instead
   of "the free requests ran out" (Groq's free plan often stops for a minute, not a day). A
   Groq per-minute pause of up to 90 seconds is now waited out within the message.
-
-### Fixed
-
 - Tone assistant: when the request asks to save in a slot ("salve no P44", "save it to
   P45") and the model only says it saved, the editor now opens the Save dialog for that slot
   itself, and says nothing is stored until it is confirmed there. Seen with Gemini
   Flash-Lite, which ignored the instruction.
-
-### Fixed
-
 - Saving: right after a save the pedal can still report the slot's old name; the editor
   now asks again a few times (up to about a second) before calling the save wrong. Seen on
   the owner's unit: P38 was saved as "QClean" but first reported "Noise Wall". When the
@@ -31,17 +107,6 @@ and the project uses [Semantic Versioning](https://semver.org/).
   short line per model (name, what it is based on, parameters; list_models still gives the
   full text), Groq's answers are capped at 2,500 tokens, and a per-minute limit of up to
   45 seconds is waited out within the message instead of failing it.
-
-### Changed
-
-- Saving no longer backs up the target slot first (owner's request: the extra step loaded
-  the slot and slowed every save). The Save dialog has no backup checkbox; it states the
-  slot will be overwritten and saves at once. Restoring a backup still backs up the slot
-  first, and older backups stay in the Backups panel. The MCP server's `save_preset` is
-  unchanged.
-
-### Fixed
-
 - Tone assistant: a long "What changed" list no longer scrolls inside the scrolling
   conversation (two scroll bars); only the conversation scrolls, and it is taller. A new
   answer shows from the question that asked for it, not from its end.
@@ -53,9 +118,6 @@ and the project uses [Semantic Versioning](https://semver.org/).
   as the values. It used to push EQ bands to -30 or +20 while calling it "a slight cut".
 - Tone assistant: answers come in the editor's language (Portuguese or English); Groq used
   to drift to English, the language of the preset text it gets.
-
-### Fixed
-
 - Tone assistant: when it changes a block that stays off (a reverb tuned but never turned
   on), it is told the changes are not heard, so it can turn the block on.
 - Tone assistant, "What changed": parameter rows name the block's model and say when the
@@ -72,53 +134,6 @@ and the project uses [Semantic Versioning](https://semver.org/).
   key answers. When every model is busy, the chat says so and when to try again.
 - Tone assistant: Groq's 403 is no longer reported as a refused key (a wrong key is a 401);
   the chat shows Groq's own reason, such as a blocked model or network.
-
-### Changed
-
-- The project is now **OpenSonicX** (github.com/fgbona/OpenSonicX): open-source tools for
-  Sonicake pedals, starting with the Pocket Master and next the Smart Box. The site moves to
-  https://fgbona.github.io/OpenSonicX/ (the old address stops working; GitHub forwards the old
-  repository links). The desktop app, its updates, the npm package and the container image
-  keep their names.
-
-### Added
-
-- `docs/smart-box-2.0.md`: what is known about the Sonicake Smart Box before 2.0.0 (the
-  features and models SonicMaster offers only on it, where their data comes from, a read-only
-  first session). The probe script now finds a Smart Box too and
-  prints the port it opened.
-- Link previews: sharing the site's address (WhatsApp, Discord, social networks) shows the
-  editor's picture and a description that names Bluetooth, TONE3000 and the tone assistant.
-- SECURITY.md: how to report a security problem privately, and everything the editor keeps in
-  the browser, under which storage key. Issue forms for bugs (where, version, USB or Bluetooth,
-  system, pedal firmware, MIDI log) and ideas.
-- Tone assistant: three example requests under the empty chat ("Black Album rhythm tone", a
-  clean chorus, an AC/DC crunch); a click puts one in the message box, so a first-time user
-  only has to press Send. The README animation now starts from one.
-- Tone assistant: when Google does not offer the Gemini API in the person's region, the chat
-  says so, with a link to Google's list of regions, instead of "Gemini answered 400".
-- Tone assistant and the preset library: when a tone sounds right, the assistant keeps it in
-  the library under a short name with the reference it matches ("BLACK RHY — Metallica Black
-  Album, rhythm"); the library goes with the first message, so asking for it again loads the
-  kept tone exactly, without building it anew or spending extra free requests.
-- An end-to-end test of the tone assistant on a phone.
-- Tone assistant: **Groq** as a second free provider (about 1,000 free requests a day on
-  `openai/gpt-oss-120b`, no card), recommended first in the setup. With more than one key,
-  the editor routes on its own: Groq, then Gemini Flash, then Gemini Flash-Lite; a model
-  whose free requests run out hands the message to the next and stays paused until it comes
-  back. Each answer says which model gave it; the meter shows every model (Groq's real
-  remaining count when the browser can read it). Conversations keep only the texts, and
-  every message carries the preset as it is now, so any provider can take the next one.
-- README: a "Describe a tone" section with an animation of the tone assistant at work
-  (`MEDIA=1 npx playwright test e2e/media-assistant.spec.ts` regenerates it and a still,
-  with a simulated pedal and Gemini).
-- The Portuguese and accessibility end-to-end tests cover the tone assistant's chat too
-  (messages, what changed, usage), in both themes.
-- `npm run e2e:live` (with `GROQ_API_KEY` and/or `GEMINI_API_KEY`) checks each real
-  provider; it replaces `npm run e2e:gemini`.
-
-### Fixed
-
 - Tone assistant, smaller fixes before release:
   - A Groq quota without a retry time now waits for the reset Groq states, or an hour for
     a daily limit, instead of retrying every minute; a Gemini per-minute quota without one
@@ -133,53 +148,6 @@ and the project uses [Semantic Versioning](https://semver.org/).
   failing quietly on every message. Each model's pause is kept as the router learns it.
 - Tone assistant: `save_preset` also stops when the person loaded another preset during a
   reply, like the other tools that change the pedal.
-
-### Added
-
-- **Tone assistant** in the editor: describe a sound and it is built on the pedal, live.
-  It uses Google Gemini with the person's own free API key, called straight from the editor
-  (no server; Google keeps no conversation, as it runs in stateless mode).
-  - Guided key setup: a link to Google AI Studio and three steps, including creating the
-    key in a project without billing so it can never charge; the key is tested before it is
-    kept, stays on the device, and is never shown in full.
-  - Each answer lists what changed on the pedal; the editor's Undo and Revert work on the
-    assistant's changes; saving opens the Save dialog filled in, and only the person's click
-    saves; loading another preset asks first if there are unsaved changes.
-  - A meter of the free requests used today and when they reset (Pacific midnight); when
-    the quota runs out, the panel says when it comes back and offers Gemini Flash-Lite.
-  - With Live edit off, the assistant asks to turn it on instead of changing anything.
-  - A notice that what is written and the loaded preset go to Google.
-  - `npm run e2e:gemini` (with `GEMINI_API_KEY` set) checks it against the real Gemini;
-    every other test simulates Gemini.
-
-### Changed
-
-- The tone tools (turning "AMP gain 70" into an edit, and the preset and model text an
-  assistant reads) moved from the MCP server into the shared core, with a chat version of the
-  tool set for the editor's upcoming tone assistant. The MCP server behaves exactly as before.
-
-### Added
-
-- The editor reads the pedal's firmware version on connecting: *Global options* shows it,
-  and a notice appears when it is not V1.3.3, the version the editor was tested on. The MCP
-  server's `get_global_settings` names it too. The version comes from the settings reply
-  (record 01 01), as documented in klotznick's CC0 Pocket Master Interoperability Guide.
-- Groundwork for reading a stored preset without loading it (12 4F, also from the guide):
-  the core can request and decode it, and the probe script compares it with the edit buffer.
-  The editor keeps loading a slot to back it up until that check passes on the pedal.
-- A preset library: every preset you export, or import into the pedal, is kept in this
-  browser (or the desktop app), newest first, up to 50. *Load…* opens the import
-  confirmation with what it changes from the loaded preset; *Remove* takes it out.
-- MCP server: `undo_edit` puts the edit buffer back as it was before the last
-  `edit_preset`, up to 20 steps, so "I don't like that, go back" no longer means reverting
-  the whole preset. It refuses once the pedal is on another preset, and loading, reverting,
-  saving or importing clears it.
-
-### Changed
-
-- The Windows self-update check now closes the "downloaded" box (Later) and then the app,
-  the install-on-quit path; it used to rely on the box's old "close means Restart now"
-  behaviour fixed in 0.13.7. 0.13.7 -> 0.13.8 verified this way.
 
 ## [0.13.8] - 2026-11-21
 
@@ -1011,7 +979,8 @@ Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.8...HEAD
+[Unreleased]: https://github.com/fgbona/OpenSonicX/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/fgbona/OpenSonicX/compare/v0.13.8...v0.14.0
 [0.13.8]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.7...v0.13.8
 [0.13.7]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.6...v0.13.7
 [0.13.6]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.5...v0.13.6
