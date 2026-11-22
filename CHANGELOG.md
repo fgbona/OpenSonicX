@@ -8,6 +8,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Tone assistant: when it changes a block that stays off (a reverb tuned but never turned
+  on), it is told the changes are not heard, so it can turn the block on.
+- Tone assistant, "What changed": parameter rows name the block's model and say when the
+  block is off ("RVB · Plate 2 (off)"), and a new model is followed by the values it now has.
 - Tone assistant: a model that gets overloaded after it already changed the sound now says
   the answer was cut in the middle and to send it again, instead of only "overloaded".
 - Tone assistant and MCP server: a model change on the NR block (it only has the Gate) is

@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { comparePresets, type Difference, type ToneHost, type ToneSnapshot } from '@pocket-master/core';
+import { type Difference, type ToneHost, type ToneSnapshot } from '@pocket-master/core';
 import { loadKey, maskKey, removeKey, saveKey } from '@/lib/aiKey';
 import { nextReset, recordRequest, usedToday, useAiUsage } from '@/lib/aiUsage';
 import { ask, BusyError, KeyError, providerOf, QuotaError, RegionError, ROUTE, type AiModel, type Converse, type Cooldown, type Provider, type Turn } from '@/lib/assistant';
 import { converseGemini, GEMINI_MODELS, testGeminiKey } from '@/lib/gemini';
 import { converseGroq, GROQ_MODEL, testGroqKey } from '@/lib/groq';
+import { toneChanges } from '@/lib/tone-changes';
 import type { MessageKey } from '@/lib/i18n';
 import { Changes, DIFF_KEY } from './PresetFiles';
 import { useI18n } from './I18n';
@@ -61,7 +62,7 @@ const SETUP: readonly {
 ];
 
 /** What the reply changed on the loaded preset; nothing when another preset is loaded now. */
-const changed = (before: ToneSnapshot, after: ToneSnapshot) => (before.index === after.index ? comparePresets(before.preset, after.preset) : []);
+const changed = (before: ToneSnapshot, after: ToneSnapshot, off: string) => (before.index === after.index ? toneChanges(before.preset, after.preset, off) : []);
 
 /** One provider's key: how to get it, or the saved one with a way to remove it. */
 function KeySetup({ setup, saved, kept, onSaved, onRemove }: { setup: (typeof SETUP)[number]; saved: string | null; kept: boolean; onSaved: (key: string, kept: boolean) => void; onRemove: () => void }) {
@@ -171,7 +172,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
       setMessages((m) => [
         ...m,
         ...refused.map((p): Message => ({ role: 'error', text: t('assistant.keyRejected', { provider: PROVIDER_NAME[p] }) })),
-        { role: 'assistant', text: reply, model: result.model, changes: changed(before!, host.snapshot()) },
+        { role: 'assistant', text: reply, model: result.model, changes: changed(before!, host.snapshot(), t('assistant.off')) },
       ]);
     } catch (error) {
       const text = error instanceof BusyError && error.partial && error.model ? t('assistant.busyPartial', { model: MODELS[error.model].name })
@@ -184,7 +185,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
       // The next answer is told this one was cut, so a model does not lose the request (the preset it gets is current).
       setTurns((h) => [...h, { role: 'user', text: message }, { role: 'assistant', text: `(This answer was interrupted: ${error instanceof Error ? error.message : String(error)})` }]);
       const link = error instanceof RegionError ? { href: REGIONS, text: t('assistant.regionLink') } : undefined;
-      setMessages((m) => [...m, { role: 'error', text, link, changes: before ? changed(before, host.snapshot()) : [] }]);
+      setMessages((m) => [...m, { role: 'error', text, link, changes: before ? changed(before, host.snapshot(), t('assistant.off')) : [] }]);
     } finally {
       setWorking(false);
     }
