@@ -85,6 +85,9 @@ the pedal's firmware version in Global options.
 
 ### Fixed
 
+- Tone assistant: asked to save ("save it in 43"), it now always opens the Save dialog once
+  the sound is ready, even when a kept tone already matched, and never says a tone is saved
+  unless the person saved it. An answer that changed nothing on the pedal now says so.
 - Tone assistant: shapes the sound with the amp's own tone controls first and keeps the EQ
   block to small corrections (±12 of its -50..50), and describes changes in the same terms
   as the values. It used to push EQ bands to -30 or +20 while calling it "a slight cut".
