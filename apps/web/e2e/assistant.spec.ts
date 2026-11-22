@@ -300,3 +300,21 @@ test('an answer that changed nothing says so, instead of an empty space where th
   await expect(panel(page).getByText('That is already the tone on the pedal.')).toBeVisible();
   await expect(panel(page).getByText('Nothing changed on the pedal.')).toBeVisible();
 });
+
+test('a long change list scrolls with the conversation, not on its own', async ({ page, pedal }) => {
+  await fakeGemini(page, [
+    call('edit_preset', { changes: [{ kind: 'model', block: 'AMP', model: 'Calif DualM' }, { kind: 'model', block: 'DRV', model: 'Butter OD' }, { kind: 'model', block: 'RVB', model: 'Room' }, { kind: 'block', block: 'RVB', on: true }] }),
+    say('Done.'),
+  ]);
+  await connect(page, pedal);
+  await page.getByRole('switch', { name: 'Live edit' }).click();
+  await addKey(page);
+  await ask(page, 'black album rhythm tone');
+  const list = panel(page).getByRole('region', { name: 'What changed' }).locator('ul');
+  await expect(list.getByRole('listitem')).not.toHaveCount(0);
+  expect(await list.evaluate((ul) => getComputedStyle(ul).overflowY)).toBe('visible');
+  // The conversation shows the question at its top, so the answer is read from the start.
+  const conversation = await panel(page).locator('.assistant-messages').boundingBox();
+  const question = await panel(page).locator('.assistant-message.is-user').last().boundingBox();
+  expect(Math.abs(question!.y - conversation!.y)).toBeLessThan(2);
+});

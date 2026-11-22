@@ -85,6 +85,9 @@ the pedal's firmware version in Global options.
 
 ### Fixed
 
+- Tone assistant: a long "What changed" list no longer scrolls inside the scrolling
+  conversation (two scroll bars); only the conversation scrolls, and it is taller. A new
+  answer shows from the question that asked for it, not from its end.
 - Tone assistant: asked to save ("save it in 43"), it now always opens the Save dialog once
   the sound is ready, even when a kept tone already matched, and never says a tone is saved
   unless the person saved it. An answer that changed nothing on the pedal now says so.
