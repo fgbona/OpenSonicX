@@ -345,3 +345,32 @@ test('an answer cut after the sound changed still opens the Save dialog that was
   await expect(save.getByLabel('Slot')).toHaveValue('42');
   await save.getByRole('button', { name: 'Cancel' }).click();
 });
+
+test('a paid provider added with its key answers first, with the model picked from its list', async ({ page, pedal }) => {
+  const requests: Record<string, unknown>[] = [];
+  await page.route('https://api.openai.com/**', async (route: Route) => {
+    if (route.request().url().endsWith('/models')) return route.fulfill({ json: { data: [{ id: 'gpt-9' }, { id: 'tts-1' }, { id: 'gpt-9-mini' }] } });
+    requests.push({ ...route.request().postDataJSON(), auth: route.request().headers().authorization });
+    return route.fulfill({ json: { choices: [{ message: { role: 'assistant', content: 'From the paid model.' } }] } });
+  });
+  await fakeGroq(page, []);
+  await connect(page, pedal);
+  await addGroqKey(page);
+  await panel(page).getByRole('button', { name: 'Keys' }).click();
+  const paidSection = panel(page).getByRole('region', { name: 'Paid providers' });
+  await paidSection.getByLabel('Add a paid provider').selectOption('openai');
+  await paidSection.getByLabel('OpenAI API key').fill('fake-openai-key-e2e-0000');
+  await paidSection.getByRole('button', { name: 'Save key' }).click();
+  const openai = paidSection.getByRole('group', { name: 'OpenAI' });
+  await expect(openai.getByLabel('Model')).toHaveValue('gpt-9-mini');
+  await expect(openai.getByLabel('Model').locator('option')).toHaveText(['gpt-9', 'gpt-9-mini']);
+  await openai.getByLabel('Model').selectOption('gpt-9');
+  await panel(page).getByRole('button', { name: 'Back to the chat' }).click();
+
+  await ask(page, 'black album rhythm tone');
+  await expect(panel(page).getByText('From the paid model.')).toBeVisible();
+  await expect(panel(page).getByText('Answered by OpenAI · gpt-9')).toBeVisible();
+  expect(requests[0]).toMatchObject({ model: 'gpt-9', auth: 'Bearer fake-openai-key-e2e-0000' });
+  expect(await page.evaluate(() => localStorage.getItem('pocket-master-editor.aiProviders.v1'))).toContain('"model":"gpt-9"');
+  await expect(page.locator('body')).not.toContainText('fake-openai-key-e2e-0000');
+});
