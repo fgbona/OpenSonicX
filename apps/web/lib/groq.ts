@@ -3,7 +3,7 @@
  * editor with the person's own free key. Groq's free plan gives about 1,000 requests a day per model.
  */
 import { CHAT_INSTRUCTIONS, CHAT_TOOLS, runChatTool, type ChatGuard } from '@pocket-master/core';
-import { KeyError, MAX_REQUESTS, QuotaError, requestText, toToolSchema, type ConverseOptions } from './assistant.ts';
+import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, QuotaError, requestText, toToolSchema, type ConverseOptions } from './assistant.ts';
 
 /** The model and its free daily requests (console.groq.com, 2026-11); it calls tools one at a time. */
 export const GROQ_MODEL = { id: 'openai/gpt-oss-120b', freeDailyLimit: 1000 } as const;
@@ -75,7 +75,9 @@ export async function converseGroq(options: ConverseOptions): Promise<string> {
     if (Number.isFinite(remaining) && Number.isFinite(limit)) onLimits?.(remaining, limit);
     const body = (await r.json().catch(() => ({}))) as { error?: { message?: string; code?: string }; choices?: { message?: { content?: string | null; tool_calls?: ToolCall[] } }[] };
     if (r.status === 429) throw new QuotaError(retryAt(r, body.error?.message, now()));
-    if (r.status === 401 || r.status === 403) throw new KeyError('groq', body.error?.message ?? 'Groq did not accept this key.');
+    if (r.status === 503 || r.status === 498) throw new BusyError(new Date(now().getTime() + BUSY_WAIT_MS));
+    // 403 is not a wrong key (that is 401): a blocked model or network, so Groq's reason is shown as is.
+    if (r.status === 401) throw new KeyError('groq', body.error?.message ?? 'Groq did not accept this key.');
     // gpt-oss now and then writes a tool call Groq cannot parse; asking again usually works.
     if (r.status === 400 && body.error?.code === 'tool_use_failed' && !retriedToolCall) {
       retriedToolCall = true;
