@@ -20,6 +20,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Tone assistant: **Groq and Google Gemini as paid providers** too ("Groq (paid)", "Google
+  Gemini (paid)"), with the model picked from the key's list (Gemini Pro preselected) and
+  none of the free plans' limits. **Paid providers get fuller requests**: every model's
+  description and ranges, and instructions to think through the reference's actual rig and
+  explain the choices; free keys keep the compact requests that fit their limits. An "i"
+  next to each section explains the difference between free and paid keys.
 - Tone assistant: **answer order**. *Keys* lists every provider with a key, free and paid,
   with ↑↓ to choose which answers first (the next takes over when one fails or runs out), and
   an optional **rotation**: each new conversation starts with the next provider in the list.

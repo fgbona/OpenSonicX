@@ -3,8 +3,8 @@
  * with the person's own paid key. The browser header is what Anthropic asks of calls made from a
  * page; the key goes only in x-api-key.
  */
-import { CHAT_INSTRUCTIONS, CHAT_TOOLS, runChatTool, type ChatGuard } from '@pocket-master/core';
-import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, QuotaError, requestTexts, toToolSchema, type ConverseOptions } from './assistant.ts';
+import { CHAT_TOOLS, runChatTool, type ChatGuard } from '@pocket-master/core';
+import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, QuotaError, instructions, requestTexts, toToolSchema, type ConverseOptions } from './assistant.ts';
 
 const API = 'https://api.anthropic.com/v1';
 /** A tone's edit list and a few sentences fit well within this. */
@@ -44,7 +44,7 @@ export async function listClaudeModels(key: string, fetchFn: typeof fetch = fetc
 export async function converseClaude(model: string, options: ConverseOptions): Promise<string> {
   const { key, host, onRequest, onStep, fetchFn = fetch, now = () => new Date() } = options;
   const messages: Message[] = options.turns.map((t) => ({ role: t.role, content: t.text }));
-  const text = requestTexts(host, options.turns, options.message, options.language);
+  const text = requestTexts(host, options.turns, options.message, options.language, options.thorough);
   const asked = messages.push({ role: 'user', content: text.first }) - 1;
   const guard: ChatGuard = { index: host.snapshot().index };
   for (let request = 0; request < MAX_REQUESTS; request++) {
@@ -52,7 +52,7 @@ export async function converseClaude(model: string, options: ConverseOptions): P
     const r = await post(fetchFn, `${API}/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers(key) },
-      body: JSON.stringify({ model, max_tokens: MAX_TOKENS, system: CHAT_INSTRUCTIONS, tools: TOOLS, messages }),
+      body: JSON.stringify({ model, max_tokens: MAX_TOKENS, system: instructions(options.thorough), tools: TOOLS, messages }),
     }, now);
     const body = (await r.json().catch(() => ({}))) as ApiError & { content?: Block[] };
     if (r.status === 429) {

@@ -3,8 +3,8 @@
  * (no server in between). Uses the Interactions API in stateless mode (store: false): Google keeps
  * none of the conversation between requests. Tool calls run in the editor through runChatTool.
  */
-import { CHAT_INSTRUCTIONS, CHAT_TOOLS, runChatTool, type ChatGuard } from '@pocket-master/core';
-import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, RegionError, QuotaError, requestTexts, toToolSchema, type ConverseOptions } from './assistant.ts';
+import { CHAT_TOOLS, runChatTool, type ChatGuard } from '@pocket-master/core';
+import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, RegionError, QuotaError, instructions, requestTexts, toToolSchema, type ConverseOptions } from './assistant.ts';
 import { nextReset } from './aiUsage.ts';
 
 /** Gemini models and their free daily requests (AI Studio, 2026-11). Check aistudio.google.com/rate-limit when they change. */
@@ -55,16 +55,37 @@ export async function testGeminiKey(key: string, fetchFn: typeof fetch = fetch):
   }
 }
 
-/** Sends one message to Gemini, runs the tools it asks for, and returns its answer. */
-export async function converseGemini(options: ConverseOptions): Promise<string> {
+/**
+ * The key's Gemini model ids that generate content, which also checks the key: 'invalid' when
+ * Google refused it, 'unavailable' when it could not answer.
+ */
+export async function listGeminiModels(key: string, fetchFn: typeof fetch = fetch): Promise<readonly string[] | 'invalid' | 'unavailable'> {
+  try {
+    const r = await fetchFn(`${API}/models?pageSize=1000`, { headers: { 'x-goog-api-key': key } });
+    const body = (await r.json().catch(() => ({}))) as ApiError & { models?: { name?: string; supportedGenerationMethods?: string[] }[] };
+    if (!r.ok) return failure(r.status, body, new Date()) instanceof KeyError ? 'invalid' : 'unavailable';
+    return (body.models ?? [])
+      .filter((m) => m.supportedGenerationMethods?.includes('generateContent') && m.name?.startsWith('models/gemini'))
+      .map((m) => m.name!.slice('models/'.length));
+  } catch {
+    return 'unavailable';
+  }
+}
+
+/** Sends one message to Gemini's free models (Flash, or Flash-Lite), runs the tools it asks for, and returns its answer. */
+export const converseGemini = (options: ConverseOptions): Promise<string> =>
+  converseGeminiModel((options.model === 'lite' ? GEMINI_MODELS.lite : GEMINI_MODELS.flash).id, options);
+
+/** Sends one message to a Gemini model by id (a paid key's choice included), runs the tools, and returns the answer. */
+export async function converseGeminiModel(modelId: string, options: ConverseOptions): Promise<string> {
   const { key, host, onRequest, onStep, fetchFn = fetch, now = () => new Date() } = options;
-  const model = options.model === 'lite' ? GEMINI_MODELS.lite : GEMINI_MODELS.flash;
+  const model = { id: modelId };
   const input: Step[] = [
     ...options.turns.map((t): Step => (t.role === 'user'
       ? { type: 'user_input', content: t.text }
       : { type: 'model_output', content: [{ type: 'text', text: t.text }] })),
   ];
-  const text = requestTexts(host, options.turns, options.message, options.language);
+  const text = requestTexts(host, options.turns, options.message, options.language, options.thorough);
   const asked = input.push({ type: 'user_input', content: text.first }) - 1;
   const guard: ChatGuard = { index: host.snapshot().index };
   for (let request = 0; request < MAX_REQUESTS; request++) {
@@ -72,7 +93,7 @@ export async function converseGemini(options: ConverseOptions): Promise<string> 
     const r = await post(fetchFn, `${API}/interactions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify({ model: model.id, store: false, system_instruction: CHAT_INSTRUCTIONS, tools: TOOLS, input }),
+      body: JSON.stringify({ model: model.id, store: false, system_instruction: instructions(options.thorough), tools: TOOLS, input }),
     }, now);
     const body = (await r.json().catch(() => ({}))) as ApiError & { steps?: Step[] };
     if (!r.ok) throw failure(r.status, body, now());

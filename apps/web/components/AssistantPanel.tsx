@@ -7,13 +7,14 @@ import { nextReset, recordRequest, usedToday, useAiUsage } from '@/lib/aiUsage';
 import { ask, askedToSave, BusyError, KeyError, providerOf, QuotaError, RegionError, ROUTE, type AiModel, type Converse, type Cooldown, type Provider, type Turn } from '@/lib/assistant';
 import { converseGemini, GEMINI_MODELS, testGeminiKey } from '@/lib/gemini';
 import { converseGroq, GROQ_MODEL, testGroqKey } from '@/lib/groq';
-import { converseWith, paidById } from '@/lib/providers';
+import { converseWith, paidById, paidName } from '@/lib/providers';
 import { moveInOrder, orderRoute, rotated } from '@/lib/route-order';
 import { toneChanges } from '@/lib/tone-changes';
 import type { MessageKey } from '@/lib/i18n';
 import { Changes, DIFF_KEY } from './PresetFiles';
 import { PaidProviders } from './PaidProviders';
 import { AnswerOrder } from './AnswerOrder';
+import { InfoTip } from './InfoTip';
 import { useI18n } from './I18n';
 
 interface Props {
@@ -40,7 +41,8 @@ const MODELS: Readonly<Partial<Record<AiModel, { readonly name: string; readonly
   lite: { name: 'Gemini Flash-Lite', limit: GEMINI_MODELS.lite.freeDailyLimit, pacificReset: true },
 };
 const FREE_NAME: Readonly<Partial<Record<Provider, string>>> = { groq: 'Groq', gemini: 'Google Gemini' };
-const providerName = (p: Provider) => FREE_NAME[p] ?? paidById(p)?.name ?? p;
+/** A provider's name; a paid one that also has the free setup carries its "(paid)" tag. */
+const providerName = (p: Provider, paidTag = '') => FREE_NAME[p] ?? (paidById(p) ? paidName(paidById(p)!, paidTag) : p);
 
 /** How to get each free key; Groq first, since its free quota is the largest. */
 const SETUP: readonly {
@@ -175,7 +177,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
     ...FREE_CONVERSE,
     ...Object.fromEntries(paid.map((e) => [e.id, converseWith(paidById(e.id)!, e.model)])),
   };
-  const modelName = (m: AiModel) => MODELS[m]?.name ?? `${paidById(m)?.name ?? m} · ${paid.find((e) => e.id === m)?.model ?? ''}`;
+  const modelName = (m: AiModel) => MODELS[m]?.name ?? `${providerName(m as Provider, t('assistant.paidTag'))} · ${paid.find((e) => e.id === m)?.model ?? ''}`;
 
   /** Asked to save, but the model did not propose it: open the Save dialog itself; nothing is written until confirmed. */
   const offerSave = (message: string) => {
@@ -213,7 +215,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
       setTurns((h) => [...h, { role: 'user', text: message }, { role: 'assistant', text: reply }]);
       setMessages((m) => [
         ...m,
-        ...refused.map((p): Message => ({ role: 'error', text: t('assistant.keyRejected', { provider: providerName(p) }) })),
+        ...refused.map((p): Message => ({ role: 'error', text: t('assistant.keyRejected', { provider: providerName(p, t('assistant.paidTag')) }) })),
         { role: 'assistant', text: reply, model: result.model, changes: changed(before!, host.snapshot(), t('assistant.off')) },
       ]);
       if (!proposed) offerSave(message);
@@ -222,7 +224,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
         : error instanceof QuotaError && error.partial && error.model ? t('assistant.quotaPartial', { model: modelName(error.model), time: time(error.retryAt) })
         : error instanceof BusyError ? t('assistant.busy', { time: time(error.retryAt) })
         : error instanceof QuotaError ? t('assistant.quotaAll', { time: time(error.retryAt) })
-        : error instanceof KeyError ? t('assistant.keyRejected', { provider: providerName(error.provider) })
+        : error instanceof KeyError ? t('assistant.keyRejected', { provider: providerName(error.provider, t('assistant.paidTag')) })
         : error instanceof RegionError ? t('assistant.region')
           : t('assistant.error', { reason: error instanceof Error ? error.message : String(error) });
       // The next answer is told this one was cut, so a model does not lose the request (the preset it gets is current).
@@ -265,7 +267,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
         {!hasKey || managing ? (
           <>
             {!hasKey && <p>{t('assistant.intro')}</p>}
-            <p className="muted small">{t('assistant.setupHint')}</p>
+            <p className="muted small">{t('assistant.setupHint')}<InfoTip text={t('assistant.freeInfo')} /></p>
             {SETUP.map((s) => (
               <KeySetup key={s.provider} setup={s} saved={keys[s.provider] ?? null} kept={!notKept.includes(s.provider)}
                 onSaved={(k, kept) => {

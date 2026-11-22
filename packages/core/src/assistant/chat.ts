@@ -106,10 +106,24 @@ export const CHAT_INSTRUCTIONS = [
   'Use as few calls as possible: edit_preset already returns the resulting preset. Answer in the language the person writes in, in two to four short sentences.',
 ].join(' ');
 
-/** The first message's context: the preset and every block's models, so a tone needs one or two requests. */
-export function chatContext(host: ToneHost): string {
+/**
+ * Added to the instructions for paid providers, which have no free plan's token limits to fit:
+ * more thought about the reference, and a fuller explanation.
+ */
+export const CHAT_INSTRUCTIONS_THOROUGH = [
+  'You have room to be thorough. Before choosing, recall the reference recording\'s actual rig: guitar and pickups, amp and channel, cabinet and speakers, pedals and their order, tuning, and how it was recorded; then match each block to it, including the effects (on or off) and their settings.',
+  'Explain your choices in four to six sentences, naming the real gear each model stands for, and say what to try first if it does not sound right.',
+].join(' ');
+
+/**
+ * The first message's context: the preset and every block's models, so a tone needs one or two
+ * requests. 'compact' (one line a model) keeps free plans within their tokens; 'full' adds each
+ * model's description and parameter ranges, for paid providers.
+ */
+export function chatContext(host: ToneHost, detail: 'compact' | 'full' = 'compact'): string {
   const s = host.snapshot();
-  const models = s.preset.chain.map((b) => formatModelsCompact(b.key, b.label, s.slots)).join('\n\n');
+  const format = detail === 'full' ? formatModels : formatModelsCompact;
+  const models = s.preset.chain.map((b) => format(b.key, b.label, s.slots)).join('\n\n');
   const tones = savedTonesText(host);
   return `Loaded preset:\n${preset(s)}\n\n${models}${tones ? `\n\nSaved tones (load_saved_tone):\n${tones}` : ''}`;
 }
