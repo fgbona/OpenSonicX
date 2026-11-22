@@ -222,7 +222,7 @@ test('a refused Groq key is reported once while Gemini answers; a quota cut mid-
   await expect(panel(page).getByText('Groq refused the saved key.', { exact: false })).toHaveCount(1);
 
   await ask(page, 'louder');
-  await expect(panel(page).getByText(/The free requests of Gemini Flash ran out in the middle of this answer/)).toBeVisible();
+  await expect(panel(page).getByText(/Gemini Flash reached its free limit \(back at .+\) in the middle of this answer/)).toBeVisible();
   await expect(panel(page).getByText('Groq refused the saved key.', { exact: false })).toHaveCount(1);
   expect(gemini.map((r) => r.model), 'Flash-Lite was not asked to redo the edit').toEqual(['gemini-3.8-flash', 'gemini-3.8-flash', 'gemini-3.8-flash']);
   expect(pedal.pedal.received.filter((r) => r === 'edit 42')).toHaveLength(1);
@@ -328,5 +328,20 @@ test('asked to save, the editor opens the Save dialog even when the model only s
   await expect(save).toBeVisible();
   await expect(save.getByLabel('Slot')).toHaveValue('44');
   await expect(panel(page).getByText('The Save dialog is open for P45')).toBeVisible();
+  await save.getByRole('button', { name: 'Cancel' }).click();
+});
+
+test('an answer cut after the sound changed still opens the Save dialog that was asked for', async ({ page, pedal }) => {
+  await fakeGemini(page, [
+    call('edit_preset', { changes: [{ kind: 'volume', value: 50 }] }),
+    { status: 429, body: { error: { status: 'RESOURCE_EXHAUSTED', details: [{ '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '600s' }] } } },
+  ]);
+  await connect(page, pedal);
+  await page.getByRole('switch', { name: 'Live edit' }).click();
+  await addKey(page);
+  await ask(page, 'ratt body talk rhythm, save it to P43');
+  const save = page.getByRole('dialog', { name: 'Save to a preset slot' });
+  await expect(save).toBeVisible();
+  await expect(save.getByLabel('Slot')).toHaveValue('42');
   await save.getByRole('button', { name: 'Cancel' }).click();
 });

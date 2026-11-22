@@ -8,6 +8,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Tone assistant: an answer cut by a free limit after the sound had changed still opens the
+  Save dialog that was asked for, and the message says when the model is free again instead
+  of "the free requests ran out" (Groq's free plan often stops for a minute, not a day). A
+  Groq per-minute pause of up to 90 seconds is now waited out within the message.
+
+### Fixed
+
 - Tone assistant: when the request asks to save in a slot ("salve no P44", "save it to
   P45") and the model only says it saved, the editor now opens the Save dialog for that slot
   itself, and says nothing is stored until it is confirmed there. Seen with Gemini
