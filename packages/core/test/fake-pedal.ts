@@ -37,6 +37,8 @@ export interface FakeOptions {
   nack?: boolean;
   /** The save is never acknowledged. */
   noAck?: boolean;
+  /** No stored-preset read (12 4F): backups must load each slot, as before 0.15. */
+  noStoredRead?: boolean;
   /** After a save, this many name reads still answer with the names from before it. */
   staleNameReads?: number;
   /** The save is acknowledged but writes a different volume into the slot. */
@@ -61,6 +63,7 @@ export class FakePedal implements Pedal {
   readonly options: FakeOptions;
   constructor(options: FakeOptions = {}, start = 8) {
     this.options = options;
+    if (options.noStoredRead) this.readStoredPreset = undefined;
     const base = realP08();
     this.slots = Array.from({ length: 100 }, (_, i) => {
       const p = base.slice();
@@ -76,6 +79,12 @@ export class FakePedal implements Pedal {
   async readEditBuffer() { return this.editBuffer.slice(); }
   private staleNames: string[] | null = null;
   private staleReads = 0;
+
+  /** 12 4F, as linkPedal turns it into an edit-buffer payload; absent with noStoredRead. */
+  readStoredPreset?: (index: number) => Promise<Uint8Array> = async (index) => {
+    this.received.push(`stored ${index}`);
+    return this.slots[index]!.slice();
+  };
 
   async readNames() {
     if (this.staleNames && this.staleReads > 0) {

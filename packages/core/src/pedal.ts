@@ -6,6 +6,7 @@ import { irRenameBlob, irSamplesFromWav, irUploadBlob, UploadDomain } from './ir
 import type { PocketMasterLink } from './link.ts';
 import { decodeCurrentPreset } from './presets.ts';
 import { Query } from './queries.ts';
+import { storedAsEditBuffer, storedPresetArgs } from './stored-preset.ts';
 import { decodePresetNames, decodeSlotNames, savePreset, selectPreset, type SlotName } from './slots.ts';
 
 /** After its acknowledge the pedal still needs a moment before it reports the new preset (V1.3.3: ~250 ms works). */
@@ -56,6 +57,9 @@ export function linkPedal(link: PocketMasterLink): Pedal {
     },
     async savePreset(index, name) {
       return link.presetOperation(savePreset(index, name));
+    },
+    async readStoredPreset(index) {
+      return storedAsEditBuffer((await link.request(Query.STORED_PRESET, storedPresetArgs(index))).payload);
     },
   };
 }
