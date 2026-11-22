@@ -76,9 +76,9 @@ export class KeyError extends Error {
 export class RegionError extends Error {}
 
 /** The text of a new message: the first carries the preset and the models, later ones the preset as it is now. */
-export function requestText(host: ToneHost, turns: readonly Turn[], message: string): string {
+export function requestText(host: ToneHost, turns: readonly Turn[], message: string, language?: string): string {
   const context = turns.length === 0 ? chatContext(host) : `Loaded preset now:\n${currentPresetText(host)}`;
-  return `${context}\n\nRequest: ${message}`;
+  return `${context}\n\nRequest: ${message}${language ? `\n\nAnswer in ${language}.` : ''}`;
 }
 
 /**
@@ -106,6 +106,8 @@ export interface ConverseOptions {
   readonly turns: readonly Turn[];
   readonly message: string;
   readonly host: ToneHost;
+  /** The editor's language; models otherwise drift to English, the language of the preset text. */
+  readonly language?: string;
   readonly fetchFn?: typeof fetch;
   /** Called before every request, for the usage meter. */
   readonly onRequest: () => void;
