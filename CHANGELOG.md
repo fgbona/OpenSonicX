@@ -6,6 +6,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Tests: the placeholder AI keys no longer look like real Google or Groq keys, so GitHub's
+  secret scanning and push protection do not flag them.
+
 ## [0.14.0] - 2026-11-22
 
 **Describe a tone, get it on the pedal.** The new tone assistant turns "Black Album rhythm
