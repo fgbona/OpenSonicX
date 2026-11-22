@@ -71,7 +71,9 @@ test('429 and a refused key are told apart, with when the quota comes back', asy
   const e = await converseGroq({ key: KEY, model: 'groq', turns: [], message: 'x', host: h, fetchFn: scripted(quota).fetchFn, onRequest: () => {}, now: () => now }).catch((x) => x);
   assert.ok(e instanceof QuotaError);
   assert.equal(e.retryAt.toISOString(), '2026-11-21T20:02:00.000Z');
-  const noHeader = await converseGroq({ key: KEY, model: 'groq', turns: [], message: 'x', host: h, fetchFn: scripted({ status: 429, body: {} }).fetchFn, onRequest: () => {}, now: () => now }).catch((x) => x);
+  // A minute when Groq does not say; that is short enough to wait out twice before giving up.
+  const minute = { status: 429, body: {} };
+  const noHeader = await converseGroq({ key: KEY, model: 'groq', turns: [], message: 'x', host: h, fetchFn: scripted(minute, minute, minute).fetchFn, onRequest: () => {}, now: () => now, wait: async () => {} }).catch((x) => x);
   assert.equal(noHeader.retryAt.toISOString(), '2026-11-21T20:01:00.000Z', 'a minute when Groq does not say');
   const bad = await converseGroq({ key: KEY, model: 'groq', turns: [], message: 'x', host: h, fetchFn: scripted({ status: 401, body: { error: { message: 'Invalid API Key' } } }).fetchFn, onRequest: () => {} }).catch((x) => x);
   assert.ok(bad instanceof KeyError);
@@ -90,7 +92,7 @@ test('a 429 without retry-after waits for the reset Groq states, or longer for a
   const { h } = host();
   const now = new Date('2026-11-21T20:00:00Z');
   const run = (r: { status: number; body: unknown; headers?: Record<string, string> }) =>
-    converseGroq({ key: KEY, model: 'groq', turns: [], message: 'x', host: h, fetchFn: scripted(r).fetchFn, onRequest: () => {}, now: () => now }).then(() => { throw new Error('expected a quota error'); }, (x) => x as QuotaError);
+    converseGroq({ key: KEY, model: 'groq', turns: [], message: 'x', host: h, fetchFn: scripted(r, r, r).fetchFn, onRequest: () => {}, now: () => now, wait: async () => {} }).then(() => { throw new Error('expected a quota error'); }, (x) => x as QuotaError);
   assert.equal((await run({ status: 429, body: {}, headers: { 'x-ratelimit-reset-requests': '2h3m4.5s' } })).retryAt.toISOString(), '2026-11-21T22:03:04.500Z');
   assert.equal((await run({ status: 429, body: { error: { message: 'Rate limit reached ... on requests per day (RPD): Limit 1000' } } })).retryAt.toISOString(), '2026-11-21T21:00:00.000Z', 'an hour for a daily limit');
   assert.equal((await run({ status: 429, body: {} })).retryAt.toISOString(), '2026-11-21T20:01:00.000Z');
