@@ -139,6 +139,8 @@ export interface ConverseOptions {
   readonly wait?: (ms: number) => Promise<void>;
   /** Paid providers: the full model descriptions and the more thorough instructions (no free-plan token budget). */
   readonly thorough?: boolean;
+  /** Each request's token usage, and its cost in US dollars when the provider reports it. */
+  readonly onUsage?: (input: number, output: number, cost?: number) => void;
   readonly fetchFn?: typeof fetch;
   /** Called before every request, for the usage meter. */
   readonly onRequest: () => void;
@@ -166,6 +168,8 @@ export async function ask(options: Omit<ConverseOptions, 'key' | 'model' | 'onRe
   readonly route?: readonly AiModel[];
   readonly onRequest: (model: AiModel) => void;
   readonly onLimits?: (model: AiModel, remaining: number, limit: number) => void;
+  /** Each request's token usage, by the model that made it (and its cost, when the provider says). */
+  readonly onModelUsage?: (model: AiModel, input: number, output: number, cost?: number) => void;
   /** Called with the pauses as soon as one changes, so they survive any error. */
   readonly onCooldown?: (cooldown: Cooldown) => void;
 }): Promise<{ reply: string; model: AiModel; cooldown: Cooldown; badKeys: Provider[] }> {
@@ -185,6 +189,7 @@ export async function ask(options: Omit<ConverseOptions, 'key' | 'model' | 'onRe
         ...options, key, model,
         onRequest: () => options.onRequest(model),
         onLimits: (remaining, limit) => options.onLimits?.(model, remaining, limit),
+        onUsage: (input, output, cost) => options.onModelUsage?.(model, input, output, cost),
         onStep: (tool, ok, text) => {
           if (ok && ACTS.has(tool)) acted = true;
           options.onStep?.(tool, ok, text);

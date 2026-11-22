@@ -20,6 +20,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Tone assistant: **what each paid answer cost**, estimated ("Answered by Claude · about
+  $0.003"), and today's estimate per paid provider under the chat. Prices come from
+  OpenRouter's public model catalog (no key needed; OpenRouter's own answers report their
+  exact cost); a model it does not list shows no cost rather than a guess. Stored per day on
+  this device (`aiSpend.v1`); the provider's dashboard has the real figure.
 - Tone assistant: **Groq and Google Gemini as paid providers** too ("Groq (paid)", "Google
   Gemini (paid)"), with the model picked from the key's list (Gemini Pro preselected) and
   none of the free plans' limits. **Paid providers get fuller requests**: every model's

@@ -99,7 +99,9 @@ export const listProviderModels = (provider: PaidProvider, key: string) =>
 export function converseWith(provider: PaidProvider, model: string): Converse {
   if (provider.dialect === 'anthropic') return (options) => converseClaude(model, { ...options, thorough: true });
   if (provider.dialect === 'gemini') return (options) => converseGeminiModel(model, { ...options, thorough: true });
-  return (options) => converseChat({ provider: provider.id, name: provider.name, api: provider.api, model }, { ...options, thorough: true });
+  // OpenRouter adds the answer's cost to its usage when asked.
+  const extra = provider.id === 'openrouter' ? { usage: { include: true } } : undefined;
+  return (options) => converseChat({ provider: provider.id, name: provider.name, api: provider.api, model, extra }, { ...options, thorough: true });
 }
 
 /** The provider's name as shown, with the "(paid)" tag for one that also has the free setup. */

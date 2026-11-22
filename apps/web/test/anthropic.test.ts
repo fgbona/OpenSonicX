@@ -77,3 +77,11 @@ test('the Claude model list checks the key and lists the model ids', async () =>
   assert.equal(await listClaudeModels(KEY, scripted({ status: 401, body: {} }).fetchFn), 'invalid');
   assert.equal(await listClaudeModels(KEY, scripted({ status: 500, body: {} }).fetchFn), 'unavailable');
 });
+
+test('Claude reports each request\'s token usage', async () => {
+  const { h } = host();
+  const usage: [number, number][] = [];
+  const reply = { body: { stop_reason: 'end_turn', content: [{ type: 'text', text: 'ok' }], usage: { input_tokens: 4000, output_tokens: 300 } } };
+  await converseClaude('m', { ...options(h, scripted(reply).fetchFn), onUsage: (i, o) => usage.push([i, o]) });
+  assert.deepEqual(usage, [[4000, 300]]);
+});

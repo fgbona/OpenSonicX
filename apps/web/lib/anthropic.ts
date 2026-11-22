@@ -42,7 +42,7 @@ export async function listClaudeModels(key: string, fetchFn: typeof fetch = fetc
 
 /** Sends one message to Claude, runs the tools it asks for, and returns its answer. */
 export async function converseClaude(model: string, options: ConverseOptions): Promise<string> {
-  const { key, host, onRequest, onStep, fetchFn = fetch, now = () => new Date() } = options;
+  const { key, host, onRequest, onStep, onUsage, fetchFn = fetch, now = () => new Date() } = options;
   const messages: Message[] = options.turns.map((t) => ({ role: t.role, content: t.text }));
   const text = requestTexts(host, options.turns, options.message, options.language, options.thorough);
   const asked = messages.push({ role: 'user', content: text.first }) - 1;
@@ -54,7 +54,8 @@ export async function converseClaude(model: string, options: ConverseOptions): P
       headers: { 'Content-Type': 'application/json', ...headers(key) },
       body: JSON.stringify({ model, max_tokens: MAX_TOKENS, system: instructions(options.thorough), tools: TOOLS, messages }),
     }, now);
-    const body = (await r.json().catch(() => ({}))) as ApiError & { content?: Block[] };
+    const body = (await r.json().catch(() => ({}))) as ApiError & { content?: Block[]; usage?: { input_tokens?: number; output_tokens?: number } };
+    if (body.usage) onUsage?.(body.usage.input_tokens ?? 0, body.usage.output_tokens ?? 0);
     if (r.status === 429) {
       const seconds = Number(r.headers.get('retry-after'));
       throw new QuotaError(new Date(now().getTime() + (Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : DEFAULT_WAIT_MS)));
