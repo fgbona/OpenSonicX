@@ -88,15 +88,15 @@ test('a backup failure stops the save before it is written (loading path)', asyn
   assert.ok(!pedal.received.some((r) => r.startsWith('save')));
 });
 
-test('restoreFromBackup writes a backed-up slot back, after backing up what is there now', async () => {
+test('restoreFromBackup writes a backed-up slot back, without another backup first', async () => {
   const pedal = new FakePedal();
   const backups: BackupFile[] = [];
   await saveToSlot(pedal, { target: 2, name: 'My Lead', edited: edited(pedal), onBackup: (f) => backups.push(f) });
   const original = backups[0]!; // slot backup of P03 before the save
-  await restoreFromBackup(pedal, original.slots[0]!, { onBackup: (f) => backups.push(f) });
+  await restoreFromBackup(pedal, original.slots[0]!, { onBackup: (f) => backups.push(f), pause: async () => {} });
   assert.ok(same(decodePreset(pedal.slots[2]!), slotPreset(original, 2)));
   assert.equal(pedal.names[2], 'MTL-LEAD');
-  assert.equal(backups.at(-1)!.slots[0]!.name, 'My Lead', 'the overwritten content was backed up first');
+  assert.equal(backups.length, 1, 'the restore takes no backup of its own (owner, 2026-11-22)');
 });
 
 test('parseBackupFile accepts a written file and rejects anything else', async () => {
@@ -206,7 +206,7 @@ test('restoreFromBackup also works on a pedal without the stored-preset read (lo
   assert.equal(pedal.names[2], 'MTL-LEAD');
 });
 
-test('restoreAllFromBackup puts every slot back, after one backup of them as they are now, and returns to the loaded preset', async () => {
+test('restoreAllFromBackup puts every slot back, with no backup first, and returns to the loaded preset', async () => {
   const pedal = new FakePedal();
   const before = await backupAllSlots(pedal, { edited: null });
   const originals = pedal.slots.slice(0, 50).map((s) => Array.from(s));
@@ -215,13 +215,15 @@ test('restoreAllFromBackup puts every slot back, after one backup of them as the
   await pedal.selectPreset(8);
   const kept: BackupFile[] = [];
   const progress: number[] = [];
+  const stored = () => pedal.received.filter((r) => r.startsWith('stored')).length;
+  const readsBefore = stored();
   const result = await restoreAllFromBackup(pedal, before, { onBackup: (f) => kept.push(f), pause: async () => {}, onProgress: (p) => progress.push(p.done / p.total) });
-  assert.ok(progress.every((v, i) => i === 0 || v >= progress[i - 1]!), 'one bar that never goes back, across both phases');
+  assert.ok(progress.every((v, i) => i === 0 || v >= progress[i - 1]!), 'one bar that never goes back');
   assert.equal(progress.at(-1), 1);
   assert.equal(result.restored, 50);
   pedal.slots.slice(0, 50).forEach((s, i) => assert.ok(same(decodePreset(s), decodePreset(Uint8Array.from(originals[i]!))), `P${i + 1}`));
   assert.equal(pedal.names[2], 'MTL-LEAD');
-  assert.deepEqual(kept.map((f) => [f.kind, f.slots.length]), [['session', 50]], 'one backup of the slots as they were');
-  assert.equal(kept[0]!.slots[2]!.name, 'Changed');
+  assert.equal(kept.length, 0, 'no backup of its own');
+  assert.equal(stored(), readsBefore, 'the slots are not read first');
   assert.equal(pedal.current, 8, 'back on the preset that was loaded');
 });

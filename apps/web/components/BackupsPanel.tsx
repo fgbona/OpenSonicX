@@ -72,11 +72,13 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
     <section className="panel" aria-label={t('backups.title')}>
       <header className="panel-head">
         <h2>{t('backups.title')} <span className="muted">{backups.length}</span></h2>
-        <button type="button" className="btn btn-small btn-primary" disabled={!connected || busy !== null} onClick={() => void onBackupAll()}>{t('backups.backupAll')}</button>
-        <label className="btn btn-small file-button">
-          {t('backups.import')}
-          <input type="file" accept="application/json,.json" onChange={(e) => void importFile(e.currentTarget)} />
-        </label>
+        <div className="backup-actions">
+          <button type="button" className="btn btn-small btn-primary" disabled={!connected || busy !== null} onClick={() => void onBackupAll()}>{t('backups.backupAll')}</button>
+          <label className="btn btn-small file-button">
+            {t('backups.import')}
+            <input type="file" accept="application/json,.json" onChange={(e) => void importFile(e.currentTarget)} />
+          </label>
+        </div>
       </header>
       {note && <p className="notice small">{note}</p>}
       {importError && <p className="alert" role="alert">{te(importError)}</p>}
@@ -84,32 +86,44 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
         <p className="muted small panel-empty">{t('backups.empty')}</p>
       ) : (
         <ul className="backups">
-          {backups.map((b) => (
-            <li key={`${b.kind}-${b.createdAt}`} className="backup">
-              <details open={opened === `${b.kind}-${b.createdAt}` || undefined}>
-                <summary>
-                  <span className="backup-kind">{b.kind === 'session' ? t('backups.all') : `${b.slots[0]?.label} “${b.slots[0]?.name}”`}</span>
-                  <span className="muted small">{when(b.createdAt, lang)} · {b.slots.length === 1 ? t('backups.oneSlot') : t('backups.slots', { count: b.slots.length })}</span>
-                </summary>
-                <div className="backup-actions">
-                  <button type="button" className="btn btn-small" onClick={() => onDownload(b)}>{t('backups.download')}</button>
-                  {b.slots.length > 1 && (
-                    <button type="button" className="btn btn-small" disabled={!connected || busy !== null} onClick={() => { setDoneAll(false); setPendingAll(b); }}>{t('backups.restoreAll')}</button>
-                  )}
+          {backups.map((b) => {
+            const id = `${b.kind}-${b.createdAt}`;
+            const restoreSlot = (slot: SlotBackup) => { setDone(false); setPending(slot); };
+            return (
+              <li key={id} className={`backup${opened === id ? ' is-new' : ''}`}>
+                {/* The actions are on the card itself; only the slot list folds away. */}
+                <div className="backup-head">
+                  <div className="backup-title">
+                    <strong>{b.kind === 'session' ? t('backups.all') : `${b.slots[0]?.label} “${b.slots[0]?.name}”`}</strong>
+                    <span className="muted small">{when(b.createdAt, lang)} · {b.slots.length === 1 ? t('backups.oneSlot') : t('backups.slots', { count: b.slots.length })}</span>
+                  </div>
+                  <div className="backup-actions">
+                    {b.slots.length > 1 ? (
+                      <button type="button" className="btn btn-small btn-primary" disabled={!connected || busy !== null} onClick={() => { setDoneAll(false); setPendingAll(b); }}>{t('backups.restoreAll')}</button>
+                    ) : b.slots[0] && (
+                      <button type="button" className="btn btn-small btn-primary" disabled={!connected || busy !== null} onClick={() => restoreSlot(b.slots[0]!)}>{t('backups.restoreTo', { slot: b.slots[0].label })}</button>
+                    )}
+                    <button type="button" className="btn btn-small" onClick={() => onDownload(b)}>{t('backups.download')}</button>
+                  </div>
                 </div>
-                <ul className="backup-slots">
-                  {b.slots.map((s) => (
-                    <li key={s.index}>
-                      <span>{s.label} · {s.name || t('backups.unnamed')}</span>
-                      <button type="button" className="btn btn-small" disabled={!connected || busy !== null} onClick={() => { setDone(false); setPending(s); }}>
-                        {t('backups.restoreTo', { slot: s.label })}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            </li>
-          ))}
+                {b.slots.length > 1 && (
+                  <details open={opened === id || undefined}>
+                    <summary className="btn btn-small backup-toggle">{t('backups.showSlots', { count: b.slots.length })}</summary>
+                    <ul className="backup-slots">
+                      {b.slots.map((s) => (
+                        <li key={s.index}>
+                          <span>{s.label} · {s.name || t('backups.unnamed')}</span>
+                          <button type="button" className="btn btn-small" disabled={!connected || busy !== null} onClick={() => restoreSlot(s)}>
+                            {t('backups.restoreTo', { slot: s.label })}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
       <Dialog open={pendingAll !== null} title={t('restoreAll.title', { count: pendingAll?.slots.length ?? 0 })} onClose={() => setPendingAll(null)} locked={busy !== null}>
@@ -140,7 +154,6 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
         ) : done ? (
           <>
             <p>{t('restore.done', { slot: pending?.label ?? '', name: pending?.name ?? '' })}</p>
-            <FlowBackups backups={flowBackups} warning={storageWarning} onDownload={onDownload} />
             <div className="sheet-actions"><button className="btn btn-primary" onClick={() => setPending(null)}>{t('action.done')}</button></div>
           </>
         ) : pending ? (
