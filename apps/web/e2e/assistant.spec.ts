@@ -318,3 +318,15 @@ test('a long change list scrolls with the conversation, not on its own', async (
   const question = await panel(page).locator('.assistant-message.is-user').last().boundingBox();
   expect(Math.abs(question!.y - conversation!.y)).toBeLessThan(2);
 });
+
+test('asked to save, the editor opens the Save dialog even when the model only says it saved', async ({ page, pedal }) => {
+  await fakeGemini(page, [say('Saved to P45 as BLACK.')]);
+  await connect(page, pedal);
+  await addKey(page);
+  await ask(page, 'black album rhythm tone, save it to P45');
+  const save = page.getByRole('dialog', { name: 'Save to a preset slot' });
+  await expect(save).toBeVisible();
+  await expect(save.getByLabel('Slot')).toHaveValue('44');
+  await expect(panel(page).getByText('The Save dialog is open for P45')).toBeVisible();
+  await save.getByRole('button', { name: 'Cancel' }).click();
+});

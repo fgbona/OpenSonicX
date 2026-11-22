@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ask, BUSY_WAIT_MS, BusyError, KeyError, post, QuotaError, ROUTE, type AiModel, type Converse } from '../lib/assistant.ts';
+import { ask, askedToSave, BUSY_WAIT_MS, BusyError, KeyError, post, QuotaError, ROUTE, type AiModel, type Converse } from '../lib/assistant.ts';
 import type { ToneHost } from '@pocket-master/core';
 
 const host = {} as ToneHost;
@@ -117,4 +117,15 @@ test('a model that gets busy after the sound changed stops and says the request 
   assert.ok(e instanceof BusyError);
   assert.equal(e.partial, true);
   assert.equal(e.model, 'flash');
+});
+
+test('a request to save names a user slot, in Portuguese or English; otherwise none', () => {
+  assert.equal(askedToSave('timbre do black album do metallica e salve no p47'), 46);
+  assert.equal(askedToSave('salve no preset 44 o timbre de base do dream theater'), 43);
+  assert.equal(askedToSave('grave no 38 o clean do Queensrÿche'), 37);
+  assert.equal(askedToSave('save it to P45, please'), 44);
+  assert.equal(askedToSave('store this in slot 9'), 8);
+  assert.equal(askedToSave('o preset 40 está grave demais'), null, 'no save verb');
+  assert.equal(askedToSave('salve no preset 51'), null, 'not a user slot');
+  assert.equal(askedToSave('salve isso'), null, 'no slot');
 });
