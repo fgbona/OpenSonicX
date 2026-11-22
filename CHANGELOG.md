@@ -6,80 +6,67 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Added
+## [0.15.0] - 2026-11-22
 
-- **Back up all presets** (Backups panel): the 50 user presets, read without loading any of
-  them, into a file downloaded at once and kept in the list. **Restore all** writes such a
-  file back: first a backup of the slots as they are now (so it can be undone), then every
-  slot, each checked, then back to the loaded preset. Single slots can still be restored one
-  by one.
-
-### Fixed
-
-- Backups → *Import file*: a preset file (from *Export preset*) picked there by mistake now
-  opens as a preset import, ready to load and save to any slot, instead of a refusal shown at
-  the top of the page; other wrong files are explained inside the Backups panel.
-
-### Fixed
-
-- A pedal script log committed by mistake is out of the repository again, and `.gitignore`
-  keeps the scripts' logs and copy backups out.
-- Tone assistant: kept tones reach the model with their main gear ("AMP A BassVT (Bass amp…)"),
-  and one is reused only when it matches the request's instrument, part and reference. Asked
-  for Pantera's *Cowboys from Hell* guitar tone, Claude Haiku had loaded a kept bass tone
-  named "Pantera B".
-- Connected over Bluetooth, the toolbar showed the USB MIDI input and output pickers (often
-  another device's ports, such as an audio interface), as if they were in use. It now shows
-  "Bluetooth · Pocket Master" while the pedal is connected that way.
+**Your own paid AI, copy and the tuner.** The tone assistant now also takes paid keys:
+OpenRouter, Claude, OpenAI, Gemini, Groq, xAI (Grok), DeepSeek, Mistral or Cerebras. Paid
+providers get fuller requests (every model described, more thought about the reference's
+actual rig), show what each answer cost, and you choose which provider answers first. The
+editor can also copy a preset over another slot, turn the tuner on and off, and back up all
+50 presets to a file and restore them, all checked on the owner's pedal.
 
 ### Added
 
+- Tone assistant, **paid providers** with your own key (*Keys → Add a paid provider*):
+  - OpenRouter, Claude (Anthropic), OpenAI, Google Gemini, Groq, xAI (Grok), DeepSeek,
+    Mistral and Cerebras. The key is checked against its model list, a good inexpensive model
+    is preselected (Claude Haiku, an OpenAI "mini", Gemini Pro…) and can be changed. Keys
+    stay on this device (`aiProviders.v1`) and go only to their provider, straight from the
+    editor and the desktop app; Claude uses Anthropic's own API.
+  - Paid requests are fuller: every model's description and ranges, and instructions to
+    think through the reference recording's rig and explain the choices. Free keys keep the
+    compact requests that fit their limits. An "i" next to each section explains the
+    difference.
+  - **What each answer cost**, estimated ("Answered by Claude · about $0.003"), and today's
+    estimate per provider (`aiSpend.v1`). Prices come from OpenRouter's public catalog; a
+    model it does not list shows no cost rather than a guess.
+  - **Answer order**: every provider with a key, free and paid, with ↑↓ (`aiOrder.v1`); the
+    next takes over when one fails or runs out. Optional **rotation**: each new conversation
+    starts with the next provider (`aiRotate.v1`).
 - **Copy a preset** (*Copy…*): any stored preset, user or factory, over a user slot, without
-  loading either; the result is read back and checked. Unsaved edits do not go with it.
-- **Tuner** button: turns the pedal's tuner on and off. The pedal does not report the tuner,
+  loading either; read back and checked. Unsaved edits do not go with it.
+- **Tuner** button: turns the pedal's tuner on and off (CC 58). The pedal does not report it,
   so the button shows what the editor last sent.
-- Tone assistant: **what each paid answer cost**, estimated ("Answered by Claude · about
-  $0.003"), and today's estimate per paid provider under the chat. Prices come from
-  OpenRouter's public model catalog (no key needed; OpenRouter's own answers report their
-  exact cost); a model it does not list shows no cost rather than a guess. Stored per day on
-  this device (`aiSpend.v1`); the provider's dashboard has the real figure.
-- Tone assistant: **Groq and Google Gemini as paid providers** too ("Groq (paid)", "Google
-  Gemini (paid)"), with the model picked from the key's list (Gemini Pro preselected) and
-  none of the free plans' limits. **Paid providers get fuller requests**: every model's
-  description and ranges, and instructions to think through the reference's actual rig and
-  explain the choices; free keys keep the compact requests that fit their limits. An "i"
-  next to each section explains the difference between free and paid keys.
-- Tone assistant: **answer order**. *Keys* lists every provider with a key, free and paid,
-  with ↑↓ to choose which answers first (the next takes over when one fails or runs out), and
-  an optional **rotation**: each new conversation starts with the next provider in the list.
-- `apps/mcp/scripts/try-copy-tuner.ts`: a supervised first try, on the owner's pedal, of
-  copying a stored preset (`11 4B`, from klotznick's guide) and of the tuner (CC 58): the
-  destination is saved to a file first, the copy needs typing COPY, and the result is read back
-  without loading the slot. Confirmed on the unit (2026-11-22): reading a stored preset that
-  way (`12 4F`) gives exactly the edit buffer.
-- Tone assistant: **paid providers** with your own key: OpenRouter, Claude (Anthropic),
-  OpenAI, xAI (Grok), DeepSeek, Mistral and Cerebras. *Keys → Add a paid provider* checks the key, reads its
-  models and preselects a good inexpensive one (changeable); paid providers answer first,
-  then the free ones. Keys stay on this device (`aiProviders.v1`, listed in SECURITY.md) and
-  go only to their provider, called straight from the editor and the desktop app.
-  Claude uses Anthropic's own API (with the header Anthropic asks of calls from a page).
-  Design: `docs/superpowers/specs/2026-11-22-paid-providers-design.md`; the order list,
-  rotation and the cost per answer come next.
+- **Back up all presets** (Backups panel): the 50 user presets, read without loading any of
+  them, into a file downloaded at once. **Restore all** writes such a file back: first a backup
+  of the slots as they are now (so it can be undone), then every slot, each checked, then back
+  to the loaded preset. Single slots can still be restored one by one.
+- `apps/mcp/scripts/try-copy-tuner.ts`, the supervised script that first tried copy and the
+  tuner on the owner's pedal.
 
 ### Changed
 
 - Backups (before a restore, and the all-slots backup) read each slot straight from the
-  pedal's memory instead of loading it: the loaded preset and its unsaved edits are never
-  touched, and the pedal no longer flips between presets. Confirmed on the owner's unit.
-- `docs/hardware-tests-1.0.md` follows the editor as it is: saves have no backup step, Global
-  options lists the Pocket Master's settings only, and the tone assistant step (done on
-  2026-11-22) is gone.
-- Tone assistant: only the first request of a message carries the list of every model; the
-  later ones (after an edit, to answer or save) carry the preset and the request. A tone
-  now spends about 40% fewer tokens, so Groq's free 200,000 tokens a day last for more
-  tones.
-- Tests: the placeholder AI keys no longer look like real Google or Groq keys, so GitHub's
-  secret scanning and push protection do not flag them.
+  pedal's memory (`12 4F`, confirmed on the owner's unit) instead of loading it: the loaded
+  preset and its unsaved edits are never touched.
+- Tone assistant: only a message's first request carries the model list, so a tone spends
+  about 40% fewer tokens and Groq's free 200,000 tokens a day last longer.
+- `docs/hardware-tests-1.0.md` follows the editor as it is.
+- Tests: placeholder AI keys no longer look like real ones, so secret scanning does not flag
+  them.
+
+### Fixed
+
+- Tone assistant: kept tones reach the model with their main gear, and one is reused only
+  when it matches the request's instrument, part and reference (a guitar request had loaded
+  a kept bass tone named "Pantera B").
+- Over Bluetooth, the toolbar shows "Bluetooth · Pocket Master" instead of the USB MIDI
+  input and output pickers.
+- Backups → *Import file*: a preset file picked there by mistake opens as a preset import
+  (load it, then save to any slot) instead of a refusal shown out of sight at the top of the
+  page.
+- A pedal script log committed by mistake is out of the repository, and `.gitignore` keeps
+  such logs and copy backups out.
 
 ## [0.14.0] - 2026-11-22
 
@@ -1054,7 +1041,8 @@ Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/OpenSonicX/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/fgbona/OpenSonicX/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/fgbona/OpenSonicX/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/fgbona/OpenSonicX/compare/v0.13.8...v0.14.0
 [0.13.8]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.7...v0.13.8
 [0.13.7]: https://github.com/fgbona/sonicake-pocket-master-editor/compare/v0.13.6...v0.13.7
