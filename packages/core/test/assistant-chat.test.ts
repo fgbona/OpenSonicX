@@ -185,3 +185,8 @@ test('the instructions keep the EQ block for small corrections and the words tru
   assert.match(CHAT_INSTRUCTIONS, /between -12 and \+12/);
   assert.match(CHAT_INSTRUCTIONS, /"a slight cut" is a few units/);
 });
+
+test('the instructions ask for save_preset whenever the person asks to save, and never claim a save it did not get', () => {
+  assert.match(CHAT_INSTRUCTIONS, /call save_preset once the sound is ready, even when nothing had to change/);
+  assert.match(CHAT_INSTRUCTIONS, /Never say a tone is saved unless save_preset answered that the person saved it/);
+});

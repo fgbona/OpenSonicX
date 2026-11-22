@@ -61,8 +61,8 @@ const SETUP: readonly {
   },
 ];
 
-/** What the reply changed on the loaded preset; nothing when another preset is loaded now. */
-const changed = (before: ToneSnapshot, after: ToneSnapshot, off: string) => (before.index === after.index ? toneChanges(before.preset, after.preset, off) : []);
+/** What the reply changed on the loaded preset; undefined when another preset is loaded now (nothing to compare). */
+const changed = (before: ToneSnapshot, after: ToneSnapshot, off: string) => (before.index === after.index ? toneChanges(before.preset, after.preset, off) : undefined);
 
 /** One provider's key: how to get it, or the saved one with a way to remove it. */
 function KeySetup({ setup, saved, kept, onSaved, onRemove }: { setup: (typeof SETUP)[number]; saved: string | null; kept: boolean; onSaved: (key: string, kept: boolean) => void; onRemove: () => void }) {
@@ -185,7 +185,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
       // The next answer is told this one was cut, so a model does not lose the request (the preset it gets is current).
       setTurns((h) => [...h, { role: 'user', text: message }, { role: 'assistant', text: `(This answer was interrupted: ${error instanceof Error ? error.message : String(error)})` }]);
       const link = error instanceof RegionError ? { href: REGIONS, text: t('assistant.regionLink') } : undefined;
-      setMessages((m) => [...m, { role: 'error', text, link, changes: before ? changed(before, host.snapshot(), t('assistant.off')) : [] }]);
+      setMessages((m) => [...m, { role: 'error', text, link, changes: before ? changed(before, host.snapshot(), t('assistant.off')) : undefined }]);
     } finally {
       setWorking(false);
     }
@@ -251,6 +251,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
                 <li key={i} className={`assistant-message is-${m.role}`}>
                   <p>{m.text}{m.link && <> <a href={m.link.href} target="_blank" rel="noreferrer">{m.link.text}</a></>}</p>
                   {m.changes && m.changes.length > 0 && <Changes differences={m.changes} label={label} title={t('assistant.changes')} />}
+                  {m.role === 'assistant' && m.changes?.length === 0 && <p className="muted small">{t('assistant.noChanges')}</p>}
                   {m.model && <p className="muted small assistant-via">{t('assistant.via', { model: MODELS[m.model].name })}</p>}
                 </li>
               ))}
