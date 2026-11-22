@@ -262,3 +262,28 @@ test('a preset file picked in Backups opens as a preset import, and a wrong file
   await backups.locator('input[type=file]').setInputFiles({ name: 'other.json', mimeType: 'application/json', buffer: Buffer.from('{"hello":1}') });
   await expect(backups.getByRole('alert')).toContainText('not a Pocket Master backup');
 });
+
+test('back up all presets to a file, then restore them all', async ({ page, pedal }) => {
+  test.setTimeout(120_000);
+  await connect(page, pedal);
+  const originals = pedal.pedal.slots.slice(0, 50).map((s) => Array.from(s));
+  const backups = page.getByRole('region', { name: 'Backups' });
+  const download = page.waitForEvent('download');
+  await backups.getByRole('button', { name: 'Back up all presets' }).click();
+  expect((await download).suggestedFilename()).toMatch(/\.json$/);
+  await expect(backups.getByText('All user presets')).toBeVisible();
+  expect(pedal.pedal.received.filter((r) => r.startsWith('select'))).toHaveLength(0);
+
+  // Two slots change on the pedal; restoring all puts them back.
+  pedal.pedal.slots[3] = pedal.pedal.slots[10]!.slice();
+  pedal.pedal.names[3] = 'CHANGED';
+  pedal.pedal.slots[40] = pedal.pedal.slots[11]!.slice();
+  await backups.getByText('All user presets').click();
+  await backups.getByRole('button', { name: 'Restore all' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Restore all 50 presets' });
+  await dialog.getByRole('button', { name: 'Back up and restore all' }).click();
+  await expect(dialog.getByText('50 presets restored, each checked on the pedal.')).toBeVisible({ timeout: 100_000 });
+  pedal.pedal.slots.slice(0, 50).forEach((s, i) => expect(Array.from(s), `P${i + 1}`).toEqual(originals[i]));
+  expect(pedal.pedal.names[3]).not.toBe('CHANGED');
+  expect(pedal.pedal.current).toBe(8);
+});

@@ -207,6 +207,8 @@ export default function EditorPage() {
           onImport={pm.importBackup}
           onPreset={(file) => { pm.clearError(); setImporting(file); }}
           onRestore={pm.restore}
+          onBackupAll={pm.backupAll}
+          onRestoreAll={pm.restoreAll}
         />
         {showLog && <SysexLog log={pm.log} onClear={pm.clearLog} />}
         <p className="page-tools"><button type="button" className="btn-link" onClick={toggleLog}>{t(showLog ? 'log.hide' : 'log.show')}</button></p>

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { backupAllSlots, saveToSlot, restoreFromBackup, parseBackupFile, type BackupFile } from '../src/backup.ts';
+import { backupAllSlots, saveToSlot, restoreAllFromBackup, restoreFromBackup, parseBackupFile, type BackupFile } from '../src/backup.ts';
 import { decodePreset, type Preset } from '../src/dump.ts';
 import { applyEdit, diffPresets, editToCommands, type Edit } from '../src/edit.ts';
 import { modelsFor } from '../src/catalog.ts';
@@ -204,4 +204,21 @@ test('restoreFromBackup also works on a pedal without the stored-preset read (lo
   await restoreFromBackup(pedal, backups[0]!.slots[0]!, { onBackup: (f) => backups.push(f) });
   assert.ok(same(decodePreset(pedal.slots[2]!), slotPreset(backups[0]!, 2)));
   assert.equal(pedal.names[2], 'MTL-LEAD');
+});
+
+test('restoreAllFromBackup puts every slot back, after one backup of them as they are now, and returns to the loaded preset', async () => {
+  const pedal = new FakePedal();
+  const before = await backupAllSlots(pedal, { edited: null });
+  const originals = pedal.slots.slice(0, 50).map((s) => Array.from(s));
+  await saveToSlot(pedal, { target: 2, name: 'Changed', edited: edited(pedal), pause: async () => {} });
+  await saveToSlot(pedal, { target: 40, name: 'Also', edited: decodePreset(pedal.editBuffer), pause: async () => {} });
+  await pedal.selectPreset(8);
+  const kept: BackupFile[] = [];
+  const result = await restoreAllFromBackup(pedal, before, { onBackup: (f) => kept.push(f), pause: async () => {} });
+  assert.equal(result.restored, 50);
+  pedal.slots.slice(0, 50).forEach((s, i) => assert.ok(same(decodePreset(s), decodePreset(Uint8Array.from(originals[i]!))), `P${i + 1}`));
+  assert.equal(pedal.names[2], 'MTL-LEAD');
+  assert.deepEqual(kept.map((f) => [f.kind, f.slots.length]), [['session', 50]], 'one backup of the slots as they were');
+  assert.equal(kept[0]!.slots[2]!.name, 'Changed');
+  assert.equal(pedal.current, 8, 'back on the preset that was loaded');
 });
