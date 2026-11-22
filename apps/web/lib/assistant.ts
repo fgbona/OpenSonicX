@@ -18,6 +18,21 @@ export interface Turn {
   readonly text: string;
 }
 
+// "grave" alone is also "low-pitched" in Portuguese, so it counts only as "grave no/na/em".
+const SAVE_VERB = /\b(salv\w*|save|store|gravar?|grave\s+(?:no|na|em)\b)/i;
+const SLOT_WORD = /\b(?:p|preset|slot)\s*0?(\d{1,2})\b/i;
+const SLOT_AFTER = /\b(?:no|na|em|in|to|into)\s+0?(\d{1,2})\b/i;
+
+/**
+ * The user slot (0-based) a message asks to save in ("salve no p47", "save it to P45"), or null.
+ * Weaker models sometimes say "saved" without proposing the save; the editor opens it instead.
+ */
+export function askedToSave(message: string): number | null {
+  if (!SAVE_VERB.test(message)) return null;
+  const slot = Number((SLOT_WORD.exec(message) ?? SLOT_AFTER.exec(message))?.[1]);
+  return slot >= 1 && slot <= 50 ? slot - 1 : null;
+}
+
 /** Model requests per message: a tone takes one or two; more means the model is going in circles. */
 export const MAX_REQUESTS = 6;
 
