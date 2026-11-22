@@ -72,6 +72,11 @@ the pedal's firmware version in Global options.
 
 ### Changed
 
+- Saving no longer backs up the target slot first (owner's request: the extra step loaded
+  the slot and slowed every save). The Save dialog has no backup checkbox; it states the
+  slot will be overwritten and saves at once. Restoring a backup still backs up the slot
+  first, and older backups stay in the Backups panel. The MCP server's `save_preset` is
+  unchanged.
 - The project is now **OpenSonicX** (github.com/fgbona/OpenSonicX): open-source tools for
   Sonicake pedals, starting with the Pocket Master and next the Smart Box. The site moves to
   https://fgbona.github.io/OpenSonicX/ (the old address stops working; GitHub forwards the old

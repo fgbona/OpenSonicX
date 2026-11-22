@@ -15,9 +15,9 @@ test('every message uses the same placeholders in both languages', () => {
 });
 
 test('translate fills placeholders and leaves unknown ones visible', () => {
-  assert.equal(translate('pt', 'save.submit', { slot: 'P03' }), 'Fazer backup e salvar em P03');
-  assert.equal(translate('en', 'save.submit', { slot: 'P03' }), 'Back up and save to P03');
-  assert.equal(translate('en', 'save.submit', {}), 'Back up and save to {slot}');
+  assert.equal(translate('pt', 'save.submit', { slot: 'P03' }), 'Salvar em P03');
+  assert.equal(translate('en', 'save.submit', { slot: 'P03' }), 'Save to P03');
+  assert.equal(translate('en', 'save.submit', {}), 'Save to {slot}');
 });
 
 test('detectLang picks Portuguese for any pt locale and English otherwise', () => {

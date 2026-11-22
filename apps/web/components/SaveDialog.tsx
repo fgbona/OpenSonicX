@@ -42,7 +42,6 @@ export function SaveDialog({ open, presetIndex, names, busy, error: saveError, f
   const [target, setTarget] = useState(initial);
   const [name, setName] = useState('');
   const [done, setDone] = useState(false);
-  const [skipBackup, setSkipBackup] = useState(false);
   const { t, te } = useI18n();
 
   // Every opening starts fresh on the loaded slot, with that slot's name (not last time's).
@@ -51,7 +50,6 @@ export function SaveDialog({ open, presetIndex, names, busy, error: saveError, f
     setTarget(proposal?.target ?? initial);
     setName(proposal?.name ?? slotName(names, proposal?.target ?? initial));
     setDone(false);
-    setSkipBackup(false); // backup is on again every time the sheet opens
   }, [open, initial, proposal]);
 
   // Names can arrive after the dialog opens; fill the name once they do, without overwriting typing.
@@ -70,7 +68,7 @@ export function SaveDialog({ open, presetIndex, names, busy, error: saveError, f
         <ProgressBar progress={busy} />
       ) : done ? (
         <>
-          <p>{t(skipBackup ? 'save.doneNoBackup' : 'save.done', vars)}</p>
+          <p>{t('save.done', vars)}</p>
           <FlowBackups backups={flowBackups} warning={storageWarning} onDownload={onDownload} />
           <div className="sheet-actions"><button className="btn btn-primary" onClick={onClose}>{t('action.done')}</button></div>
         </>
@@ -80,7 +78,7 @@ export function SaveDialog({ open, presetIndex, names, busy, error: saveError, f
           onSubmit={async (e) => {
             e.preventDefault();
             if (invalid) return;
-            if (await onSave(target, name, !skipBackup)) {
+            if (await onSave(target, name, false)) {
               setDone(true);
               onSaved?.();
             }
@@ -105,17 +103,12 @@ export function SaveDialog({ open, presetIndex, names, busy, error: saveError, f
           {invalid && name.length > 0 && <p className="field-error" id="save-name-error">{t('save.nameRule')}</p>}
           {saveError && <p className="alert" role="alert">{te(saveError)}</p>}
           {saveError && flowBackups.length > 0 && <FlowBackups backups={flowBackups} warning={storageWarning} onDownload={onDownload} />}
-          <label className="check">
-            <input type="checkbox" checked={skipBackup} onChange={(e) => setSkipBackup(e.target.checked)} />
-            <span>{t('save.skipBackup', vars)}</span>
-          </label>
           <div className="sheet-note">
             <p><strong>{current ? t('save.overwriteNamed', { slot: label, name: current }) : t('save.overwrite', vars)}</strong></p>
-            <p>{t(skipBackup ? 'save.noBackupNote' : 'save.backupNote', vars)}</p>
           </div>
           <div className="sheet-actions">
             <button type="button" className="btn" onClick={onClose}>{t('action.cancel')}</button>
-            <button type="submit" className="btn btn-danger" disabled={invalid}>{t(skipBackup ? 'save.submitNoBackup' : 'save.submit', vars)}</button>
+            <button type="submit" className="btn btn-danger" disabled={invalid}>{t('save.submit', vars)}</button>
           </div>
         </form>
       )}
