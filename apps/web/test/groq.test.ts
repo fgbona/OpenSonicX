@@ -121,3 +121,11 @@ test('an overloaded Groq pauses for half a minute so the next model answers', as
   assert.ok(e instanceof BusyError);
   assert.equal(e.retryAt.toISOString(), '2026-11-21T20:00:30.000Z');
 });
+
+test('the request names the language to answer in, the one the editor is shown in', async () => {
+  const { h } = host();
+  const { fetchFn, requests } = scripted(say('Pronto.'));
+  await converseGroq({ key: KEY, model: 'groq', turns: [], message: 'black album', host: h, fetchFn, onRequest: () => {}, language: 'Brazilian Portuguese' });
+  const user = (requests[0]!.body.messages as { role: string; content: string }[]).at(-1)!;
+  assert.match(user.content, /Request: black album\n\nAnswer in Brazilian Portuguese\.$/);
+});

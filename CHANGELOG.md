@@ -8,6 +8,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Tone assistant: answers come in the editor's language (Portuguese or English); Groq used
+  to drift to English, the language of the preset text it gets.
+
+### Fixed
+
 - Tone assistant: when it changes a block that stays off (a reverb tuned but never turned
   on), it is told the changes are not heard, so it can turn the block on.
 - Tone assistant, "What changed": parameter rows name the block's model and say when the
