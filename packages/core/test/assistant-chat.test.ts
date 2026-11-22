@@ -190,3 +190,15 @@ test('the instructions ask for save_preset whenever the person asks to save, and
   assert.match(CHAT_INSTRUCTIONS, /call save_preset once the sound is ready, even when nothing had to change/);
   assert.match(CHAT_INSTRUCTIONS, /Never say a tone is saved unless save_preset answered that the person saved it/);
 });
+
+test('the first message fits a free Groq minute: models are listed compactly, with what they are based on', () => {
+  const { host } = fakeHost();
+  const context = chatContext(host);
+  assert.match(context, /^- A-Chorus \(Arion SCH-1 Stereo Chorus\): Depth, Rate 0\.1\.\.10 Hz, Tone$/m);
+  assert.match(context, /^- Brit 800 \(Marshall JCM800\): /m);
+  assert.doesNotMatch(context, /Chorus with depth, rate and tone/, 'descriptions are left to list_models');
+  // Groq's free plan allows 8,000 tokens a minute, counting the answer it may write (2,500 at most,
+  // apps/web/lib/groq.ts). 15,500 characters of names, numbers and JSON are about 4,500 tokens.
+  const total = CHAT_INSTRUCTIONS.length + JSON.stringify(CHAT_TOOLS).length + context.length;
+  assert.ok(total < 15_500, `first request is ${total} characters`);
+});

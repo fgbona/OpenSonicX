@@ -11,7 +11,7 @@ import { presetLabel, USER_PRESETS } from '../presets.ts';
 import { parsePresetLabel, resolveBlock, type SlotNames } from '../resolve.ts';
 import { encodeName } from '../slots.ts';
 import { toEdit, type Change } from './change.ts';
-import { formatModels, formatPreset } from './format.ts';
+import { formatModels, formatModelsCompact, formatPreset } from './format.ts';
 
 export interface ToneSnapshot {
   readonly index: number;
@@ -109,7 +109,7 @@ export const CHAT_INSTRUCTIONS = [
 /** The first message's context: the preset and every block's models, so a tone needs one or two requests. */
 export function chatContext(host: ToneHost): string {
   const s = host.snapshot();
-  const models = s.preset.chain.map((b) => formatModels(b.key, b.label, s.slots)).join('\n\n');
+  const models = s.preset.chain.map((b) => formatModelsCompact(b.key, b.label, s.slots)).join('\n\n');
   const tones = savedTonesText(host);
   return `Loaded preset:\n${preset(s)}\n\n${models}${tones ? `\n\nSaved tones (load_saved_tone):\n${tones}` : ''}`;
 }

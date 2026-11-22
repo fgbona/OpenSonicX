@@ -6,6 +6,14 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Tone assistant on Groq's free plan (8,000 tokens a minute): the first message was larger
+  than a whole minute's allowance, so Groq refused it. The model list it carries is now one
+  short line per model (name, what it is based on, parameters; list_models still gives the
+  full text), Groq's answers are capped at 2,500 tokens, and a per-minute limit of up to
+  45 seconds is waited out within the message instead of failing it.
+
 ### Changed
 
 - Saving no longer backs up the target slot first (owner's request: the extra step loaded
