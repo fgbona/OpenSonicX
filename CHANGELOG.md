@@ -8,8 +8,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Restoring (one preset or all) no longer backs up what it overwrites first (owner's request:
-  a restore is a deliberate choice, confirmed in its dialog).
+- Restoring in the editor (one preset or all) no longer backs up what it overwrites first
+  (owner's request: a restore is a deliberate choice, confirmed in its dialog). The MCP
+  server's restore, run by an assistant, still backs up first.
 - Each backup in the Backups panel is a card with *Restore all* (or *Restore to Pxx*) and
   *Download file* in sight; *Show the 50 presets* opens its list to restore one preset. The
   backup list was easy to miss behind a click on its title.

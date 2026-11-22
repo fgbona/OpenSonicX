@@ -209,7 +209,7 @@ export class Session {
     const slot = slots[0]!;
     requireConfirm(options.confirm, slot.label);
     return this.#use(async (io) => {
-      const { paths } = await this.#keepingBackups((onBackup) => restoreFromBackup(io, slot, { onBackup }));
+      const { paths } = await this.#keepingBackups((onBackup) => restoreFromBackup(io, slot, { onBackup, backup: true }));
       const note = paths.map((path) => `\nBackup of what it replaced: ${path}`).join('');
       return `Restored ${slot.label} "${slot.name}".${note}\n\n${await this.#describe(io)}`;
     });

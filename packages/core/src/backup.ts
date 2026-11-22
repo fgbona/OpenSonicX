@@ -236,10 +236,11 @@ async function saveEdited(pedal: Pedal, options: SaveOptions, original: number, 
 export async function restoreFromBackup(
   pedal: Pedal,
   slot: SlotBackup,
-  options: FlowOptions & { pause?: (ms: number) => Promise<void> },
+  options: FlowOptions & { pause?: (ms: number) => Promise<void>; backup?: boolean },
 ): Promise<SaveResult> {
-  // No backup of what it overwrites (owner, 2026-11-22: a restore is a deliberate choice, confirmed in the dialog).
-  return restoreSlot(pedal, slot, options, false);
+  // The editor restores without a backup (owner, 2026-11-22: a restore is a deliberate choice,
+  // confirmed in its dialog); the MCP server, where an assistant restores, still asks for one.
+  return restoreSlot(pedal, slot, options, options.backup === true);
 }
 
 async function restoreSlot(pedal: Pedal, slot: SlotBackup, options: FlowOptions & { pause?: (ms: number) => Promise<void> }, backup: boolean): Promise<SaveResult> {
