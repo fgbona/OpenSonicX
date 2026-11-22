@@ -8,7 +8,6 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [0.14.0] - 2026-11-21
 
-<<<<<<< HEAD
 **Describe a tone, get it on the pedal.** The new tone assistant turns "Black Album rhythm
 tone" or "warmer, less gain" into models and knob settings, live, and lists what changed. It
 runs on your own free AI key, Groq (about 1,000 requests a day) or Google Gemini, called
@@ -70,16 +69,6 @@ the pedal's firmware version in Global options.
 - Tests: the assistant end to end (simulated pedal and providers) on desktop and phone, in
   Portuguese and for accessibility; `npm run e2e:live` (with `GROQ_API_KEY` and/or
   `GEMINI_API_KEY`) checks the real providers.
-=======
-- Tone assistant: a model request that gets no answer within a minute (Gemini under high
-  demand sometimes never answers) is given up; that model is skipped for half a minute and
-  the next one answers, instead of "Working on it…" forever.
-- Tone assistant: a model under high demand (Gemini's or Groq's 503) no longer stops the
-  chat with "Gemini answered 503"; it is skipped for half a minute and the next model with a
-  key answers. When every model is busy, the chat says so and when to try again.
-- Tone assistant: Groq's 403 is no longer reported as a refused key (a wrong key is a 401);
-  the chat shows Groq's own reason, such as a blocked model or network.
->>>>>>> origin/main
 
 ### Changed
 
@@ -96,6 +85,9 @@ the pedal's firmware version in Global options.
 
 ### Fixed
 
+- Tone assistant: a model request that gets no answer within a minute (Gemini under high
+  demand sometimes never answers) is given up; that model is skipped for half a minute and
+  the next one answers, instead of "Working on it…" forever.
 - Tone assistant: a model under high demand (Gemini's or Groq's 503) no longer stops the
   chat with "Gemini answered 503"; it is skipped for half a minute and the next model with a
   key answers. When every model is busy, the chat says so and when to try again.
