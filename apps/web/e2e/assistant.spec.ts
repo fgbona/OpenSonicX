@@ -2,7 +2,7 @@ import { test, expect, connect } from './fixtures.ts';
 import type { Page, Route } from '@playwright/test';
 
 // Gemini is simulated: every call to Google is answered here, so nothing leaves the machine.
-const KEY = 'AIzaTESTKEY-e2e-0000000000000000000000';
+const KEY = 'fake-gemini-key-e2e-0000';
 
 type Reply = { status?: number; body: unknown };
 const call = (name: string, args: unknown, id = 'c1'): Reply => ({ body: { status: 'requires_action', steps: [{ type: 'function_call', id, name, arguments: args }] } });
@@ -26,7 +26,7 @@ async function fakeGemini(page: Page, replies: Reply[], keyOk = true) {
 const panel = (page: Page) => page.getByRole('region', { name: 'Tone assistant' });
 const geminiSetup = (page: Page) => panel(page).getByRole('region', { name: 'Google Gemini key' });
 const groqSetup = (page: Page) => panel(page).getByRole('region', { name: 'Groq key' });
-const GROQ_KEY = 'gsk_TESTKEY-e2e-00000000000000000000000';
+const GROQ_KEY = 'fake-groq-key-e2e-0000';
 
 type GroqReply = { status?: number; body: unknown; headers?: Record<string, string> };
 const groqCall = (name: string, args: unknown, id = 'g1'): GroqReply => ({ body: { choices: [{ message: { role: 'assistant', content: null, tool_calls: [{ id, type: 'function', function: { name, arguments: JSON.stringify(args) } }] } }] } });
@@ -186,7 +186,7 @@ test('with a Groq key, Groq builds the tone; when its quota runs out, Gemini tak
   expect(JSON.stringify(groq)).not.toContain(GROQ_KEY);
 
   await panel(page).getByRole('button', { name: 'Keys' }).click();
-  await expect(groqSetup(page).getByText(/Key gsk_…0000 saved on this device/)).toBeVisible();
+  await expect(groqSetup(page).getByText(/Key fake…0000 saved on this device/)).toBeVisible();
   await geminiSetup(page).getByLabel('Gemini API key').fill(KEY);
   await geminiSetup(page).getByRole('button', { name: 'Save key' }).click();
   await panel(page).getByRole('button', { name: 'Back to the chat' }).click();

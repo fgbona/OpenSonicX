@@ -36,7 +36,7 @@ test('assistant media', async ({ page, pedal }) => {
   await page.getByRole('switch', { name: 'Live edit' }).click();
   const panel = page.getByRole('region', { name: 'Tone assistant' });
   const setup = panel.getByRole('region', { name: 'Google Gemini key' });
-  await setup.getByLabel('Gemini API key').fill('AIzaTESTKEY-media-000000000000000000000');
+  await setup.getByLabel('Gemini API key').fill('fake-gemini-key-media-0000');
   await setup.getByRole('button', { name: 'Save key' }).click();
   await page.evaluate(() => document.fonts.ready);
 
