@@ -8,6 +8,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A pedal script log committed by mistake is out of the repository again, and `.gitignore`
+  keeps the scripts' logs and copy backups out.
 - Tone assistant: kept tones reach the model with their main gear ("AMP A BassVT (Bass amp…)"),
   and one is reused only when it matches the request's instrument, part and reference. Asked
   for Pantera's *Cowboys from Hell* guitar tone, Claude Haiku had loaded a kept bass tone

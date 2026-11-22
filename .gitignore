@@ -13,3 +13,8 @@ apps/web/public/convert-worker.js
 # Playwright
 test-results/
 playwright-report/
+
+# Logs of the pedal scripts (probe-pedal, try-copy-tuner), if copied into the repository
+/probe-*.txt
+/try-*.txt
+/copy-backup-*.json
