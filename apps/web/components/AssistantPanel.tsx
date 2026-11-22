@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { comparePresets, type Difference, type ToneHost, type ToneSnapshot } from '@pocket-master/core';
+import { type Difference, type ToneHost, type ToneSnapshot } from '@pocket-master/core';
 import { loadKey, maskKey, removeKey, saveKey } from '@/lib/aiKey';
 import { nextReset, recordRequest, usedToday, useAiUsage } from '@/lib/aiUsage';
 import { ask, BusyError, KeyError, providerOf, QuotaError, RegionError, ROUTE, type AiModel, type Converse, type Cooldown, type Provider, type Turn } from '@/lib/assistant';
 import { converseGemini, GEMINI_MODELS, testGeminiKey } from '@/lib/gemini';
 import { converseGroq, GROQ_MODEL, testGroqKey } from '@/lib/groq';
+import { toneChanges } from '@/lib/tone-changes';
 import type { MessageKey } from '@/lib/i18n';
 import { Changes, DIFF_KEY } from './PresetFiles';
 import { useI18n } from './I18n';
@@ -61,7 +62,7 @@ const SETUP: readonly {
 ];
 
 /** What the reply changed on the loaded preset; nothing when another preset is loaded now. */
-const changed = (before: ToneSnapshot, after: ToneSnapshot) => (before.index === after.index ? comparePresets(before.preset, after.preset) : []);
+const changed = (before: ToneSnapshot, after: ToneSnapshot) => (before.index === after.index ? toneChanges(before.preset, after.preset) : []);
 
 /** One provider's key: how to get it, or the saved one with a way to remove it. */
 function KeySetup({ setup, saved, kept, onSaved, onRemove }: { setup: (typeof SETUP)[number]; saved: string | null; kept: boolean; onSaved: (key: string, kept: boolean) => void; onRemove: () => void }) {
