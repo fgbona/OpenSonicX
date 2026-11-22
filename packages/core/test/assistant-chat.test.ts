@@ -171,3 +171,11 @@ test('loading or keeping a tone also stops when the person loaded another preset
     assert.match((await runChatTool(host, tool, args, { index: 7 })).text, /preset changed to P10/, tool);
   }
 });
+
+test('changing a block that stays off says it is not heard, so the model can turn it on', async () => {
+  const { host } = fakeHost();
+  const off = await runChatTool(host, 'edit_preset', { changes: [{ kind: 'parameter', block: 'dly', parameter: 'mix', value: 30 }] });
+  assert.match(off.text, /Note: DLY is off, so these changes are not heard\. Turn it on if it should be heard\./);
+  const on = await runChatTool(fakeHost().host, 'edit_preset', { changes: [{ kind: 'parameter', block: 'dly', parameter: 'mix', value: 30 }, { kind: 'block', block: 'dly', on: true }] });
+  assert.doesNotMatch(on.text, /Note:/);
+});

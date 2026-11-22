@@ -21,7 +21,7 @@ function pageText(page: Page) {
     for (const el of document.querySelectorAll('[aria-label], [title], [placeholder], [alt]')) {
       for (const a of ['aria-label', 'title', 'placeholder', 'alt']) parts.push(el.getAttribute(a) ?? '');
     }
-    const data = [...document.querySelectorAll('.sidebar-name, .picker-name, .log-line, .editor-params .knob-label, .editor-params .param-name, .assistant-message > p:first-child')].flatMap((e) => (e as HTMLElement).innerText.split('\n'));
+    const data = [...document.querySelectorAll('.sidebar-name, .picker-name, .log-line, .editor-params .knob-label, .editor-params .param-name, .changes-param, .assistant-message > p:first-child')].flatMap((e) => (e as HTMLElement).innerText.split('\n'));
     // "P41 · Current": a slot and the name stored in it.
     return parts.join('\n').split('\n').filter((line) => !data.includes(line) && !/^P\d\d\b/.test(line)).map((line) => line.replace(/“[^”]*”/g, ''));
   });

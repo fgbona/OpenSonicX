@@ -197,7 +197,11 @@ async function run(host: ToneHost, name: string, args: Record<string, unknown>, 
         { preset: s.preset, edits: [] as Edit[] },
       );
       await host.applyEdits(edits);
-      return done(preset(host.snapshot()));
+      const after = host.snapshot();
+      // Models tune a block and forget it is off (a reverb set up but never heard): say so.
+      const silent = after.preset.chain.filter((b) => !b.on && edits.some((e) => (e.kind === 'param' || e.kind === 'model') && e.module === b.module));
+      const notes = silent.map((b) => `\n\nNote: ${b.label} is off, so these changes are not heard. Turn it on if it should be heard.`);
+      return done(preset(after) + notes.join(''));
     }
     case 'undo_edit':
       if (!(await host.undo())) return done('Nothing to undo: no change since the preset was loaded.');
