@@ -281,7 +281,7 @@ test('back up all presets to a file, then restore them all', async ({ page, peda
   await backups.getByText('All user presets').click();
   await backups.getByRole('button', { name: 'Restore all' }).click();
   const dialog = page.getByRole('dialog', { name: 'Restore all 50 presets' });
-  await dialog.getByRole('button', { name: 'Back up and restore all' }).click();
+  await dialog.getByRole('button', { name: 'Restore all' }).click();
   await expect(dialog.getByText('50 presets restored, each checked on the pedal.')).toBeVisible({ timeout: 100_000 });
   pedal.pedal.slots.slice(0, 50).forEach((s, i) => expect(Array.from(s), `P${i + 1}`).toEqual(originals[i]));
   expect(pedal.pedal.names[3]).not.toBe('CHANGED');
@@ -307,9 +307,27 @@ test('restoring all shows one progress bar with its percentage while it works', 
   await backups.getByText('All user presets').click();
   await backups.getByRole('button', { name: 'Restore all' }).click();
   const dialog = page.getByRole('dialog', { name: 'Restore all 50 presets' });
-  await dialog.getByRole('button', { name: 'Back up and restore all' }).click();
+  await dialog.getByRole('button', { name: 'Restore all' }).click();
   await expect(dialog.getByRole('progressbar')).toBeVisible();
   await expect(dialog.getByText(/Restoring P\d\d… \d+%/)).toBeVisible({ timeout: 60_000 });
   await expect(dialog.getByText('Keep the pedal connected and this window open.', { exact: false })).toBeVisible();
   await expect(dialog.getByText('50 presets restored, each checked on the pedal.')).toBeVisible({ timeout: 100_000 });
+});
+
+test('a backup card shows its actions at once; one preset restores from its list, with no backup of its own', async ({ page, pedal }) => {
+  await connect(page, pedal);
+  const backups = page.getByRole('region', { name: 'Backups' });
+  await backups.getByRole('button', { name: 'Back up all presets' }).click();
+  await expect(backups.getByRole('button', { name: 'Restore all' })).toBeVisible();
+  await expect(backups.getByRole('button', { name: 'Restore to P04' })).toBeHidden();
+  const original = Array.from(pedal.pedal.slots[3]!);
+  pedal.pedal.slots[3] = pedal.pedal.slots[10]!.slice();
+  await backups.getByText('Show the 50 presets').click();
+  await backups.getByRole('button', { name: 'Restore to P04' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Restore P04' });
+  await dialog.getByRole('button', { name: 'Restore', exact: true }).click();
+  await expect(dialog.getByText(/P04 is back to/)).toBeVisible();
+  expect(Array.from(pedal.pedal.slots[3]!)).toEqual(original);
+  await dialog.getByRole('button', { name: 'Done' }).click();
+  await expect(backups.locator('.backup')).toHaveCount(1);
 });

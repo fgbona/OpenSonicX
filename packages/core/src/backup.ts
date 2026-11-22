@@ -236,10 +236,11 @@ async function saveEdited(pedal: Pedal, options: SaveOptions, original: number, 
 export async function restoreFromBackup(
   pedal: Pedal,
   slot: SlotBackup,
-  options: FlowOptions & { pause?: (ms: number) => Promise<void> },
+  options: FlowOptions & { pause?: (ms: number) => Promise<void>; backup?: boolean },
 ): Promise<SaveResult> {
-  // A restore always backs up what it overwrites: it exists to undo, so it must be undoable too.
-  return restoreSlot(pedal, slot, options, true);
+  // The editor restores without a backup (owner, 2026-11-22: a restore is a deliberate choice,
+  // confirmed in its dialog); the MCP server, where an assistant restores, still asks for one.
+  return restoreSlot(pedal, slot, options, options.backup === true);
 }
 
 async function restoreSlot(pedal: Pedal, slot: SlotBackup, options: FlowOptions & { pause?: (ms: number) => Promise<void> }, backup: boolean): Promise<SaveResult> {
@@ -256,9 +257,8 @@ async function restoreSlot(pedal: Pedal, slot: SlotBackup, options: FlowOptions 
 }
 
 /**
- * Writes every slot of a backup file back to the pedal: first one backup of all user slots as
- * they are now (so this, too, can be undone), then each slot in turn, then back to the preset that
- * was loaded. Unsaved edits on the loaded preset are lost: each restore loads its slot.
+ * Writes every slot of a backup file back to the pedal, each checked, then goes back to the
+ * preset that was loaded. Unsaved edits on the loaded preset are lost: each restore loads its slot.
  */
 export async function restoreAllFromBackup(
   pedal: Pedal,
@@ -267,12 +267,10 @@ export async function restoreAllFromBackup(
 ): Promise<{ restored: number }> {
   const original = await pedal.readCurrentIndex();
   file.slots.forEach((slot) => requireKnownModels(decodePreset(fromHex(slot.payload)))); // refuse before anything changes
-  // One bar across both phases: the backup is the first part, the restore the rest.
   const count = file.slots.length;
-  const total = USER_PRESETS + count;
-  await backupAllSlots(pedal, { ...options, edited: null, onProgress: (p) => options.onProgress?.({ step: p.step, done: p.done, total }) });
+  const total = count;
   for (const [i, slot] of file.slots.entries()) {
-    await restoreSlot(pedal, slot, { ...options, onProgress: () => options.onProgress?.({ step: `Restoring ${slot.label}`, done: USER_PRESETS + i, total }) }, false);
+    await restoreSlot(pedal, slot, { ...options, onProgress: () => options.onProgress?.({ step: `Restoring ${slot.label}`, done: i, total }) }, false);
   }
   options.onProgress?.({ step: 'Loading', done: total, total });
   await pedal.selectPreset(original);
