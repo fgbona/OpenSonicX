@@ -6,6 +6,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Saving: right after a save the pedal can still report the slot's old name; the editor
+  now asks again a few times (up to about a second) before calling the save wrong. Seen on
+  the owner's unit: P38 was saved as "QClean" but first reported "Noise Wall". When the
+  name really differs, the message is in the editor's language.
+
 ### Changed
 
 - Saving no longer backs up the target slot first (owner's request: the extra step loaded
