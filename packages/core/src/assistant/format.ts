@@ -50,6 +50,22 @@ export function formatModelsCompact(blockKey: string, label: string, slots: Slot
   return `${label} models:\n${lines.join('\n')}`;
 }
 
+/**
+ * A tone's main gear, for the list of kept tones: the drive, amp and cab that are on, each with
+ * what it is based on ("AMP A BassVT (Bass amp with 3-band EQ…)"), so a bass tone is not taken
+ * for a guitar one by its name.
+ */
+export function toneGear(preset: Preset): string {
+  return preset.chain
+    .filter((b) => b.on && (b.key === 'drv' || b.key === 'amp' || b.key === 'ir'))
+    .map((b) => {
+      const info = modelInfo(b.key, b.model);
+      const about = info?.basedOn ?? firstSentence(info?.about);
+      return `${b.label} ${b.model}${about ? ` (${about})` : ''}`;
+    })
+    .join(', ');
+}
+
 /** "Bass overdrive with clean blend. Added after…" → "Bass overdrive with clean blend". */
 const firstSentence = (text: string | undefined) => text?.split(/[.:;] /)[0];
 

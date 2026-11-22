@@ -8,6 +8,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Tone assistant: kept tones reach the model with their main gear ("AMP A BassVT (Bass amp…)"),
+  and one is reused only when it matches the request's instrument, part and reference. Asked
+  for Pantera's *Cowboys from Hell* guitar tone, Claude Haiku had loaded a kept bass tone
+  named "Pantera B".
 - Connected over Bluetooth, the toolbar showed the USB MIDI input and output pickers (often
   another device's ports, such as an audio interface), as if they were in use. It now shows
   "Bluetooth · Pocket Master" while the pedal is connected that way.
