@@ -7,8 +7,7 @@ import { nextReset, recordRequest, usedToday, useAiUsage } from '@/lib/aiUsage';
 import { ask, askedToSave, BusyError, KeyError, providerOf, QuotaError, RegionError, ROUTE, type AiModel, type Converse, type Cooldown, type Provider, type Turn } from '@/lib/assistant';
 import { converseGemini, GEMINI_MODELS, testGeminiKey } from '@/lib/gemini';
 import { converseGroq, GROQ_MODEL, testGroqKey } from '@/lib/groq';
-import { converseChat } from '@/lib/openai-compat';
-import { paidById } from '@/lib/providers';
+import { converseWith, paidById } from '@/lib/providers';
 import { toneChanges } from '@/lib/tone-changes';
 import type { MessageKey } from '@/lib/i18n';
 import { Changes, DIFF_KEY } from './PresetFiles';
@@ -165,7 +164,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
   const allKeys: Partial<Record<Provider, string>> = { ...keys, ...Object.fromEntries(paid.map((e) => [e.id, e.key])) };
   const converse: Partial<Record<AiModel, Converse>> = {
     ...FREE_CONVERSE,
-    ...Object.fromEntries(paid.map((e) => [e.id, (o: Parameters<Converse>[0]) => converseChat({ provider: e.id, name: paidById(e.id)!.name, api: paidById(e.id)!.api, model: e.model }, o)])),
+    ...Object.fromEntries(paid.map((e) => [e.id, converseWith(paidById(e.id)!, e.model)])),
   };
   const modelName = (m: AiModel) => MODELS[m]?.name ?? `${paidById(m)?.name ?? m} · ${paid.find((e) => e.id === m)?.model ?? ''}`;
 

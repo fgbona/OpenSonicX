@@ -7,7 +7,7 @@
 import { chatContext, currentPresetText, type JsonSchema, type ToneHost } from '@pocket-master/core';
 
 /** Paid providers, each used with the model the person picked (providers.ts). */
-export type PaidId = 'openrouter' | 'openai' | 'xai' | 'deepseek' | 'mistral' | 'cerebras';
+export type PaidId = 'openrouter' | 'anthropic' | 'openai' | 'xai' | 'deepseek' | 'mistral' | 'cerebras';
 export type Provider = 'groq' | 'gemini' | PaidId;
 /** A model the router can use: the free ones, or a paid provider with its picked model. */
 export type AiModel = 'groq' | 'flash' | 'lite' | PaidId;

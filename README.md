@@ -20,8 +20,8 @@ trademarks of their owners, used only to describe the modeled gear.
 
 Type what you want to hear, "Black Album rhythm tone" or "warmer, less gain", and the tone
 assistant picks the models and sets the knobs, live, listing what changed. It runs on your
-own free AI key (Groq or Google Gemini) or a paid one (OpenRouter, OpenAI, xAI Grok,
-DeepSeek, Mistral, Cerebras), called straight from the editor; saving still goes through the
+own free AI key (Groq or Google Gemini) or a paid one (OpenRouter, Claude, OpenAI, xAI
+Grok, DeepSeek, Mistral, Cerebras), called straight from the editor; saving still goes through the
 Save dialog you confirm.
 
 ![The tone assistant turning "Black Album rhythm tone" into a Mesa Dual Rectifier preset](docs/media/assistant.gif)

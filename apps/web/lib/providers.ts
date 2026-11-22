@@ -1,10 +1,13 @@
 /**
- * The paid providers the tone assistant can use with the person's own key: all take OpenAI-style
- * chat completions with tools (openai-compat.ts). The one place to add or update one. Models come
+ * The paid providers the tone assistant can use with the person's own key: OpenAI-style chat
+ * completions with tools (openai-compat.ts), or Anthropic's Messages API (anthropic.ts). The one
+ * place to add or update one. Models come
  * from the key's own model list, so new ones appear without a release; `prefer` picks a sensible
  * default (good with tools, inexpensive), which the person can change.
  */
-import type { PaidId } from './assistant.ts';
+import { converseClaude, listClaudeModels } from './anthropic.ts';
+import type { Converse, PaidId } from './assistant.ts';
+import { converseChat, listModels } from './openai-compat.ts';
 
 export interface PaidProvider {
   readonly id: PaidId;
@@ -18,6 +21,8 @@ export interface PaidProvider {
   readonly placeholder: string;
   /** Default model, first match wins; otherwise the first chat model. */
   readonly prefer: readonly RegExp[];
+  /** The API's shape; OpenAI-style when not given. */
+  readonly dialect?: 'anthropic';
 }
 
 export const PAID: readonly PaidProvider[] = [
@@ -25,6 +30,10 @@ export const PAID: readonly PaidProvider[] = [
     id: 'openrouter', name: 'OpenRouter', api: 'https://openrouter.ai/api/v1', keys: 'https://openrouter.ai/settings/keys',
     limits: 'https://openrouter.ai/settings/keys', placeholder: 'sk-or-…',
     prefer: [/^anthropic\/claude-.*haiku/, /^openai\/gpt-[\d.]+-mini$/, /^google\/gemini-[\d.]+-flash$/],
+  },
+  {
+    id: 'anthropic', name: 'Claude (Anthropic)', api: 'https://api.anthropic.com/v1', keys: 'https://console.anthropic.com/settings/keys',
+    limits: 'https://console.anthropic.com/settings/limits', placeholder: 'sk-ant-…', prefer: [/haiku/, /sonnet/], dialect: 'anthropic',
   },
   {
     id: 'openai', name: 'OpenAI', api: 'https://api.openai.com/v1', keys: 'https://platform.openai.com/api-keys',
@@ -68,3 +77,13 @@ export function pickModel(provider: PaidProvider, ids: readonly string[]): strin
   }
   return chat[0] ?? null;
 }
+
+/** The key's model ids from the provider's own list (which also checks the key). */
+export const listProviderModels = (provider: PaidProvider, key: string) =>
+  provider.dialect === 'anthropic' ? listClaudeModels(key) : listModels(provider.api, key);
+
+/** How a message reaches a provider with the model the person picked. */
+export const converseWith = (provider: PaidProvider, model: string): Converse =>
+  provider.dialect === 'anthropic'
+    ? (options) => converseClaude(model, options)
+    : (options) => converseChat({ provider: provider.id, name: provider.name, api: provider.api, model }, options);
