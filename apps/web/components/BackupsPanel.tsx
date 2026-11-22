@@ -21,16 +21,18 @@ interface Props {
   onRestore: (slot: SlotBackup) => Promise<boolean>;
   onBackupAll: () => Promise<boolean>;
   onRestoreAll: (file: BackupFile) => Promise<boolean>;
+  onDelete: (file: BackupFile) => void;
 }
 
 /** A date and time in the UI language. */
 export const when = (iso: string, lang: string) => new Date(iso).toLocaleString(lang === 'pt' ? 'pt-BR' : 'en');
 
-export function BackupsPanel({ backups, connected, busy, error, flowBackups, storageWarning, onDownload, onImport, onPreset, onRestore, onBackupAll, onRestoreAll }: Props) {
+export function BackupsPanel({ backups, connected, busy, error, flowBackups, storageWarning, onDownload, onImport, onPreset, onRestore, onBackupAll, onRestoreAll, onDelete }: Props) {
   const [pending, setPending] = useState<SlotBackup | null>(null);
   const [done, setDone] = useState(false);
   const [pendingAll, setPendingAll] = useState<BackupFile | null>(null);
   const [doneAll, setDoneAll] = useState(false);
+  const [deleting, setDeleting] = useState<BackupFile | null>(null);
   /** What the last import here turned out to be, said next to the button rather than at the top of the page. */
   const [note, setNote] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -104,6 +106,7 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
                       <button type="button" className="btn btn-small btn-primary" disabled={!connected || busy !== null} onClick={() => restoreSlot(b.slots[0]!)}>{t('backups.restoreTo', { slot: b.slots[0].label })}</button>
                     )}
                     <button type="button" className="btn btn-small" onClick={() => onDownload(b)}>{t('backups.download')}</button>
+                    <button type="button" className="btn btn-small" disabled={busy !== null} onClick={() => setDeleting(b)}>{t('backups.delete')}</button>
                   </div>
                 </div>
                 {b.slots.length > 1 && (
@@ -126,6 +129,18 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
           })}
         </ul>
       )}
+      <Dialog open={deleting !== null} title={t('backups.deleteTitle')} onClose={() => setDeleting(null)}>
+        {deleting && (
+          <>
+            <p>{t('backups.deleteNote', { what: deleting.kind === 'session' ? t('backups.all') : `${deleting.slots[0]?.label} “${deleting.slots[0]?.name}”`, when: when(deleting.createdAt, lang) })}</p>
+            <div className="sheet-actions">
+              <button className="btn" onClick={() => onDownload(deleting)}>{t('backups.download')}</button>
+              <button className="btn" onClick={() => setDeleting(null)}>{t('action.cancel')}</button>
+              <button className="btn btn-danger" onClick={() => { onDelete(deleting); setDeleting(null); }}>{t('backups.delete')}</button>
+            </div>
+          </>
+        )}
+      </Dialog>
       <Dialog open={pendingAll !== null} title={t('restoreAll.title', { count: pendingAll?.slots.length ?? 0 })} onClose={() => setPendingAll(null)} locked={busy !== null}>
         {busy ? (
           <>

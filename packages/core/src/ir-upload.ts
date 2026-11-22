@@ -4,8 +4,8 @@
  * announces the flash write with 12 1B 04 (12 1B 01 for presets, seen on the owner's unit).
  *
  * Ported to TypeScript from SonicMaster (github.com/skyggedans/SonicMaster, MIT; ir_upload_frame,
- * sysex_chunk_upload and wav_ir at 931a68f). Clearing a slot (11 23) is left out on purpose:
- * SonicMaster found it leaves the pedal refusing further IR writes until it is power-cycled.
+ * sysex_chunk_upload and wav_ir at 931a68f). Clearing a slot (11 23) works, but SonicMaster found
+ * it leaves the pedal refusing further IR writes until it is power-cycled; the editor says so.
  */
 import { buildFrame } from './frame.ts';
 import { encodeName } from './slots.ts';
@@ -31,8 +31,8 @@ export type UploadDomain = (typeof UploadDomain)[keyof typeof UploadDomain];
 
 /** Magic of each blob the upload path may carry, per domain. */
 const UPLOAD_MAGIC: Readonly<Record<number, readonly (readonly [number, number])[]>> = {
-  [UploadDomain.IR]: [[0x11, 0x21], [0x11, 0x22]],
-  [UploadDomain.PROFILE]: [[0x11, 0x25], [0x11, 0x26]],
+  [UploadDomain.IR]: [[0x11, 0x21], [0x11, 0x22], [0x11, 0x23]],
+  [UploadDomain.PROFILE]: [[0x11, 0x25], [0x11, 0x26], [0x11, 0x27]],
 };
 
 export function isUploadBlob(blob: Uint8Array, domain: UploadDomain): boolean {
@@ -67,6 +67,12 @@ export function irRenameBlob(slot: number, name: string): Uint8Array {
   blob.set([0x11, 0x22, slot, 0x00, FLAG, NAME_CAPACITY]);
   blob.set(nameBytes, 6);
   return blob;
+}
+
+/** Blob that empties user IR `slot`: the official tool's fixed 6-byte clear (SonicMaster). */
+export function irClearBlob(slot: number): Uint8Array {
+  checkSlot(slot);
+  return Uint8Array.from([0x11, 0x23, slot, 0x00, FLAG, NAME_CAPACITY]);
 }
 
 /** The blob as SysEx chunks: 19 bytes each, numbered 0..n-1 of n. */

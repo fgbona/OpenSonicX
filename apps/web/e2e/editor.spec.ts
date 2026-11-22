@@ -331,3 +331,38 @@ test('a backup card shows its actions at once; one preset restores from its list
   await dialog.getByRole('button', { name: 'Done' }).click();
   await expect(backups.locator('.backup')).toHaveCount(1);
 });
+
+test('a capture or IR slot can be deleted, after a warning about switching the pedal off and on', async ({ page, pedal }) => {
+  await connect(page, pedal);
+  const slots = page.getByRole('region', { name: 'Pedal slots' });
+  const irs = slots.locator('li', { hasText: 'Brutal Pri' });
+  await irs.getByRole('button', { name: 'Delete' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Delete “Brutal Pri”?' });
+  await expect(dialog.getByText(/switch the pedal off and on/)).toBeVisible();
+  await dialog.getByRole('button', { name: 'Delete' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(slots.getByText('Brutal Pri')).toBeHidden();
+  expect(pedal.irNames[1]).toBe('');
+  await slots.locator('li', { hasText: 'Randall SA' }).getByRole('button', { name: 'Delete' }).click();
+  const second = page.getByRole('dialog', { name: 'Delete “Randall SA”?' });
+  await second.getByRole('button', { name: 'Delete' }).click();
+  await expect(second).toBeHidden();
+  await expect(slots.getByText('Randall SA')).toBeHidden();
+  expect(pedal.profileNames[0]).toBe('');
+});
+
+test('a backup can be deleted from the list, after a confirmation', async ({ page, pedal }) => {
+  await connect(page, pedal);
+  const backups = page.getByRole('region', { name: 'Backups' });
+  await backups.getByRole('button', { name: 'Back up all presets' }).click();
+  await expect(backups.locator('.backup')).toHaveCount(1);
+  await backups.locator('.backup').getByRole('button', { name: 'Delete' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Delete this backup?' });
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(backups.locator('.backup')).toHaveCount(1);
+  await backups.locator('.backup').getByRole('button', { name: 'Delete' }).click();
+  await dialog.getByRole('button', { name: 'Delete' }).click();
+  await expect(backups.locator('.backup')).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('region', { name: 'Backups' }).locator('.backup')).toHaveCount(0);
+});

@@ -205,6 +205,7 @@ export default function EditorPage() {
           storageWarning={pm.storageWarning}
           onDownload={pm.downloadBackup}
           onImport={pm.importBackup}
+          onDelete={pm.deleteBackup}
           onPreset={(file) => { pm.clearError(); setImporting(file); }}
           onRestore={pm.restore}
           onBackupAll={pm.backupAll}

@@ -20,7 +20,7 @@ function gearOf(payload: string): string | undefined {
     return undefined;
   }
 }
-import { downloadBackup, downloadJson, loadBackups, storeBackup } from './backupStore';
+import { downloadBackup, downloadJson, loadBackups, removeBackup, storeBackup } from './backupStore';
 
 export const LOG_LIMIT = 2000;
 /** After a model or chain change the pedal applies defaults; re-read once it settles. */
@@ -820,6 +820,15 @@ export function usePocketMaster() {
     [patch],
   );
 
+  const deleteBackup = useCallback(
+    (file: BackupFile) => {
+      const { list, stored } = removeBackup(backupsRef.current, file);
+      backupsRef.current = list;
+      patch({ backups: list, storageWarning: stored ? null : 'This browser could not save the change; the backup may come back after a reload.' });
+    },
+    [patch],
+  );
+
   const modified = useMemo(
     () => safeModified(state.preset, state.restorePoint) || state.pedalModified === true,
     [state.preset, state.restorePoint, state.pedalModified],
@@ -856,6 +865,7 @@ export function usePocketMaster() {
     factoryReset,
     refreshSlotNames,
     importBackup,
+    deleteBackup,
     exportPreset: () => void exportPreset(),
     importPreset,
     downloadBackup,

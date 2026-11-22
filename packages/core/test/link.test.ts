@@ -346,7 +346,7 @@ test('without the flash-write notice the upload fails and says it was not saved'
 test('the upload path only carries upload blobs for that domain', async () => {
   const f = fakes();
   await assert.rejects(f.link.upload(Uint8Array.of(0x11, 0x4a, 0, 0, 0, 0), UploadDomain.IR), /Blocked/);
-  await assert.rejects(f.link.upload(Uint8Array.of(0x11, 0x23, 0, 0, 0x10, 0x0a), UploadDomain.IR), /Blocked/);
+  await assert.rejects(f.link.upload(Uint8Array.of(0x11, 0x23, 0, 0, 0x10, 0x0a), UploadDomain.PROFILE), /Blocked/);
   assert.equal(f.sent.length, 0);
 });
 
