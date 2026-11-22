@@ -155,6 +155,14 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
   const label = (d: Difference) => (d.what === 'param' ? d.name : t(DIFF_KEY[d.what]));
   const hasKey = Object.keys(keys).length > 0;
 
+  /** Asked to save, but the model did not propose it: open the Save dialog itself; nothing is written until confirmed. */
+  const offerSave = (message: string) => {
+    const slot = askedToSave(message);
+    if (slot === null) return;
+    setMessages((m) => [...m, { role: 'assistant', text: t('assistant.saveOpened', { slot: presetLabel(slot) }) }]);
+    void host.proposeSave(slot, host.snapshot().name);
+  };
+
   const send = async () => {
     const message = draft.trim();
     if (!message || !hasKey || working) return;
@@ -186,15 +194,10 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
         ...refused.map((p): Message => ({ role: 'error', text: t('assistant.keyRejected', { provider: PROVIDER_NAME[p] }) })),
         { role: 'assistant', text: reply, model: result.model, changes: changed(before!, host.snapshot(), t('assistant.off')) },
       ]);
-      // Asked to save, but the model only said so: open the Save dialog itself; nothing is written until confirmed.
-      const slot = askedToSave(message);
-      if (slot !== null && !proposed) {
-        setMessages((m) => [...m, { role: 'assistant', text: t('assistant.saveOpened', { slot: presetLabel(slot) }) }]);
-        void host.proposeSave(slot, host.snapshot().name);
-      }
+      if (!proposed) offerSave(message);
     } catch (error) {
       const text = error instanceof BusyError && error.partial && error.model ? t('assistant.busyPartial', { model: MODELS[error.model].name })
-        : error instanceof QuotaError && error.partial && error.model ? t('assistant.quotaPartial', { model: MODELS[error.model].name })
+        : error instanceof QuotaError && error.partial && error.model ? t('assistant.quotaPartial', { model: MODELS[error.model].name, time: time(error.retryAt) })
         : error instanceof BusyError ? t('assistant.busy', { time: time(error.retryAt) })
         : error instanceof QuotaError ? t('assistant.quotaAll', { time: time(error.retryAt) })
         : error instanceof KeyError ? t('assistant.keyRejected', { provider: PROVIDER_NAME[error.provider] })
@@ -204,6 +207,8 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
       setTurns((h) => [...h, { role: 'user', text: message }, { role: 'assistant', text: `(This answer was interrupted: ${error instanceof Error ? error.message : String(error)})` }]);
       const link = error instanceof RegionError ? { href: REGIONS, text: t('assistant.regionLink') } : undefined;
       setMessages((m) => [...m, { role: 'error', text, link, changes: before ? changed(before, host.snapshot(), t('assistant.off')) : undefined }]);
+      // Cut after the sound changed: the tone is there, so the save that was asked for is still offered.
+      if (!proposed && error instanceof QuotaError && error.partial) offerSave(message);
     } finally {
       setWorking(false);
     }

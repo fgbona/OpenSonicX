@@ -12,7 +12,7 @@ import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, QuotaError, requ
  */
 export const GROQ_MODEL = { id: 'openai/gpt-oss-120b', freeDailyLimit: 1000, maxCompletionTokens: 2500 } as const;
 /** A per-minute limit shorter than this is waited out inside the message instead of handed on. */
-const SHORT_WAIT_MS = 45_000;
+const SHORT_WAIT_MS = 90_000;
 
 const API = 'https://api.groq.com/openai/v1';
 /** When a 429 does not say how long to wait. */
