@@ -8,7 +8,7 @@ import { diffPresets } from './edit.ts';
 import { decodeCurrentPreset, presetLabel } from './presets.ts';
 import { Query } from './queries.ts';
 import { copyPreset, decodePresetNames, decodeSlotNames, savePreset, selectPreset, type SlotName } from './slots.ts';
-import { readStoredPreset } from './stored-preset.ts';
+import { readStoredPreset, storedAsEditBuffer, storedPresetArgs } from './stored-preset.ts';
 
 /** After its acknowledge the pedal still needs a moment before it reports the new preset (V1.3.3: ~250 ms works). */
 const SELECT_SETTLE_MS = 250;
@@ -70,6 +70,9 @@ export function linkPedal(link: PocketMasterLink): Pedal {
     },
     async savePreset(index, name) {
       return link.presetOperation(savePreset(index, name));
+    },
+    async readStoredPreset(index) {
+      return storedAsEditBuffer((await link.request(Query.STORED_PRESET, storedPresetArgs(index))).payload);
     },
   };
 }

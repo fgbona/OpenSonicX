@@ -35,8 +35,8 @@ test('backupAllSlots reads the 50 user slots and puts the edits back on the load
   assert.ok(same(decodePreset(pedal.editBuffer), mine), 'edits restored in the edit buffer');
 });
 
-test('backupAllSlots stops when the pedal loads a different slot than asked', async () => {
-  const pedal = new FakePedal({ wrongSelect: true });
+test('backupAllSlots stops when the pedal loads a different slot than asked (loading path)', async () => {
+  const pedal = new FakePedal({ wrongSelect: true, noStoredRead: true });
   await assert.rejects(backupAllSlots(pedal, { edited: null }), /asked for P01 but the pedal loaded P02/);
 });
 
@@ -55,8 +55,8 @@ test('saveToSlot backs up the target slot first, saves, and verifies', async () 
   assert.equal(result.targetBackup?.kind, 'slot');
 });
 
-test('saveToSlot does not sweep the other slots', async () => {
-  const pedal = new FakePedal();
+test('saveToSlot does not sweep the other slots (a pedal without the stored-preset read)', async () => {
+  const pedal = new FakePedal({ noStoredRead: true });
   await saveToSlot(pedal, { target: 2, name: 'My Lead', edited: edited(pedal) });
   const selected = pedal.received.filter((r) => r.startsWith('select')).map((r) => Number(r.split(' ')[1]));
   assert.deepEqual(selected, [2, 8, 2], 'target backup, back to the loaded preset, verify');
@@ -82,8 +82,8 @@ test('a factory target or a bad name is refused before anything is sent', async 
   }
 });
 
-test('a backup failure stops the save before it is written', async () => {
-  const pedal = new FakePedal({ wrongSelect: true });
+test('a backup failure stops the save before it is written (loading path)', async () => {
+  const pedal = new FakePedal({ wrongSelect: true, noStoredRead: true });
   await assert.rejects(saveToSlot(pedal, { target: 2, name: 'x', edited: null }));
   assert.ok(!pedal.received.some((r) => r.startsWith('save')));
 });
@@ -184,4 +184,24 @@ test('a name read that still answers the old name right after the save is read a
   const result = await saveToSlot(pedal, { target: 2, name: 'QClean', edited: edited(pedal), backup: false, pause: async () => {} });
   assert.equal(pedal.names[2], 'QClean');
   assert.ok(result.saved);
+});
+
+test('with the stored-preset read, backups never load a slot: no selection, edits untouched', async () => {
+  const pedal = new FakePedal();
+  const mine = edited(pedal);
+  const file = await backupAllSlots(pedal, { edited: mine });
+  assert.equal(file.slots.length, 50);
+  file.slots.forEach((s) => assert.equal(slotPreset(file, s.index).volume, s.index, `slot ${s.label}`));
+  await saveToSlot(pedal, { target: 2, name: 'My Lead', edited: mine, pause: async () => {} });
+  const selected = pedal.received.filter((r) => r.startsWith('select')).map((r) => Number(r.split(' ')[1]));
+  assert.deepEqual(selected, [2], 'only the check after the save loads a slot');
+});
+
+test('restoreFromBackup also works on a pedal without the stored-preset read (loading path)', async () => {
+  const pedal = new FakePedal({ noStoredRead: true });
+  const backups: BackupFile[] = [];
+  await saveToSlot(pedal, { target: 2, name: 'My Lead', edited: edited(pedal), onBackup: (f) => backups.push(f) });
+  await restoreFromBackup(pedal, backups[0]!.slots[0]!, { onBackup: (f) => backups.push(f) });
+  assert.ok(same(decodePreset(pedal.slots[2]!), slotPreset(backups[0]!, 2)));
+  assert.equal(pedal.names[2], 'MTL-LEAD');
 });

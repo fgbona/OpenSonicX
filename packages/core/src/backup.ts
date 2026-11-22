@@ -23,6 +23,11 @@ export interface Pedal {
   sendEdits(commands: Uint8Array[]): Promise<void>;
   /** Sends 11 4A; resolves true on 14 08 00, false on 14 08 01, rejects without an acknowledge. */
   savePreset(index: number, name: string): Promise<boolean>;
+  /**
+   * A stored preset as an edit-buffer payload, read without loading it (12 4F). When present,
+   * backups never change the loaded preset; without it they load each slot and come back.
+   */
+  readStoredPreset?(index: number): Promise<Uint8Array>;
 }
 
 export interface SlotBackup {
@@ -62,6 +67,11 @@ const backupFile = (kind: BackupFile['kind'], slots: SlotBackup[], now: () => Da
 });
 
 async function readSlot(pedal: Pedal, index: number, name: string): Promise<SlotBackup> {
+  if (pedal.readStoredPreset) {
+    const payload = await pedal.readStoredPreset(index);
+    decodePreset(payload); // refuse to keep a dump the editor cannot read
+    return { index, label: presetLabel(index), name, payload: toHex(payload).replace(/ /g, '') };
+  }
   await pedal.selectPreset(index);
   const loaded = await pedal.readCurrentIndex();
   if (loaded !== index) {
@@ -122,14 +132,16 @@ export async function backupAllSlots(
   const now = options.now ?? (() => new Date());
   const original = await pedal.readCurrentIndex();
   const names = await pedal.readNames();
-  const slots = await carryEdits(pedal, original, options.edited, async () => {
+  const readAll = async () => {
     const out: SlotBackup[] = [];
     for (let index = 0; index < USER_PRESETS; index++) {
       options.onProgress?.({ step: `Backing up ${presetLabel(index)}`, done: index, total: USER_PRESETS });
       out.push(await readSlot(pedal, index, names[index] ?? ''));
     }
     return out;
-  });
+  };
+  // Read without loading when the pedal can; otherwise each slot is loaded and the edits come back after.
+  const slots = pedal.readStoredPreset ? await readAll() : await carryEdits(pedal, original, options.edited, readAll);
   const file = backupFile('session', slots, now);
   await options.onBackup?.(file);
   return file;
@@ -192,7 +204,8 @@ async function saveEdited(pedal: Pedal, options: SaveOptions, original: number, 
   if (options.backup !== false) {
     options.onProgress?.({ step: `Backing up ${presetLabel(target)}`, done: 0, total: 3 });
     const names = await pedal.readNames();
-    const slot = await carryEdits(pedal, original, edited, () => readSlot(pedal, target, names[target] ?? ''));
+    const read = () => readSlot(pedal, target, names[target] ?? '');
+    const slot = pedal.readStoredPreset ? await read() : await carryEdits(pedal, original, edited, read);
     targetBackup = backupFile('slot', [slot], now);
     await options.onBackup?.(targetBackup);
   }
@@ -232,6 +245,8 @@ export async function restoreFromBackup(
   await pedal.selectPreset(slot.index);
   const loaded = await pedal.readCurrentIndex();
   if (loaded !== slot.index) throw new Error(`asked for ${slot.label} but the pedal loaded ${presetLabel(loaded)}; nothing was restored`);
+  // The backup's sound goes into the edit buffer, which the save then writes.
+  await applyPreset(pedal, preset);
   // A restore always backs up what it overwrites: it exists to undo, so it must be undoable too.
   return saveEdited(pedal, { ...options, target: slot.index, name, backup: true }, slot.index, preset);
 }
