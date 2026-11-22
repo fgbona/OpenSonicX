@@ -42,6 +42,18 @@ export function storeBackup(list: readonly BackupFile[], file: BackupFile): { li
   }
 }
 
+/** Removes a backup and returns the new list and whether the browser kept the change. */
+export function removeBackup(list: readonly BackupFile[], file: BackupFile): { list: BackupFile[]; stored: boolean } {
+  const kept = list.filter((b) => !(b.kind === file.kind && b.createdAt === file.createdAt));
+  try {
+    localStorage.setItem(KEY, JSON.stringify(kept));
+    return { list: kept, stored: true };
+  } catch (error) {
+    console.error('could not update the stored backups', error);
+    return { list: kept, stored: false };
+  }
+}
+
 export function backupFileName(file: BackupFile): string {
   const stamp = file.createdAt.replace(/[:]/g, '-').replace(/\..*$/, '');
   const what = file.kind === 'session' ? 'all-user-presets' : `${file.slots[0]?.label ?? 'slot'}`;

@@ -50,6 +50,11 @@ export class SysexPedal {
     else if (p[1] === 0x4b) this.#copy(p[2]! | (p[3]! << 8), p[4]! | (p[5]! << 8));
     else if (p[1] === 0x4a) await this.pedal.savePreset(p[2]!, String.fromCharCode(...p.subarray(6, 16)).replace(/\0.*$/, ''));
     else if ([0x42, 0x44, 0x47, 0x48, 0x49].includes(p[1]!)) await this.pedal.sendEdits([sysex]);
+    else if (p[1] === 0x23 || p[1] === 0x27) {
+      // 11 23 / 11 27: one-chunk clear of a user IR / profile slot, then the flash-write notice.
+      (p[1] === 0x23 ? this.irNames : this.profileNames)[p[2]!] = '';
+      return [buildFrame(ACK_OK), buildFrame([GET, 0x1b, p[1] === 0x23 ? 0x04 : 0x03, 0, 0, 0])];
+    }
     return [buildFrame(ACK_OK)];
   }
 

@@ -36,6 +36,11 @@ function pedalPort(options: { commit?: boolean } = {}) {
         (profile ? profiles : names)[blob.payload[2]!] = new TextDecoder().decode(blob.payload.subarray(6, 22)).replace(/\0+$/, '');
         setTimeout(() => receiver?.(buildFrame([0x12, 0x1b, profile ? 0x03 : 0x04, 0, 0, 0])), 5);
       }
+      if (blob && blob.payload[0] === 0x11 && (blob.payload[1] === 0x23 || blob.payload[1] === 0x27)) {
+        const profile = blob.payload[1] === 0x27;
+        (profile ? profiles : names)[blob.payload[2]!] = null;
+        setTimeout(() => receiver?.(buildFrame([0x12, 0x1b, profile ? 0x03 : 0x04, 0, 0, 0])), 5);
+      }
       if (blob && blob.payload[0] === 0x11 && (blob.payload[1] === 0x21 || blob.payload[1] === 0x25)) {
         const profile = blob.payload[1] === 0x25;
         (profile ? profiles : names)[blob.payload[6]!] = new TextDecoder().decode(blob.payload.subarray(10, profile ? 25 : 20)).replace(/\0+$/, '');
@@ -97,4 +102,26 @@ test('renaming a user IR or a profile slot sends the short rename blob and check
   link.close();
   assert.equal(profiles[0]?.name, 'Randall Lead');
   assert.deepEqual(pedal.log.filter((l) => l.startsWith('chunk')), ['chunk 1/2', 'chunk 2/2', 'chunk 1/2', 'chunk 2/2']);
+});
+
+test('clearing a profile slot sends the official tool frame byte for byte (SonicMaster golden)', async () => {
+  const { chunkFrames } = await import('../src/ir-upload.ts');
+  const { profileClearBlob } = await import('../src/clo/codec.ts');
+  const { irClearBlob } = await import('../src/ir-upload.ts');
+  const { toHex } = await import('../src/hex.ts');
+  assert.deepEqual(chunkFrames(profileClearBlob(2)).map((f) => toHex(f).replace(/ /g, '')), ['F0040E00010000000601010207000200000000000FF7']);
+  assert.deepEqual(Array.from(irClearBlob(3)), [0x11, 0x23, 3, 0x00, 0x10, 0x0a]);
+  assert.throws(() => irClearBlob(5), /slot/);
+});
+
+test('clearing a user IR or a profile slot empties it and checks the pedal reports it empty', async () => {
+  const { clearUserIr, clearUserProfile } = await import('../src/pedal.ts');
+  const pedal = pedalPort();
+  const link = new PocketMasterLink(pedal.port, () => undefined);
+  const irs = await clearUserIr(link, 0);
+  assert.equal(irs[0]?.empty, true);
+  const profiles = await clearUserProfile(link, 0);
+  link.close();
+  assert.equal(profiles[0]?.empty, true);
+  assert.deepEqual(pedal.log.filter((l) => l.startsWith('chunk')), ['chunk 1/1', 'chunk 1/1']);
 });

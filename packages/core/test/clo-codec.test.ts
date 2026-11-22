@@ -50,7 +50,8 @@ test('the profile blob is 11 25, slot, name capacity 0x0F, name and the upload .
   assert.deepEqual([...profileRenameBlob(4, 'X')].slice(0, 7), [0x11, 0x26, 4, 0, 0, 0x0f, 0x58]);
   assert.throws(() => profileUploadBlob(5, 'X', arrays), /slot must be 0\.\.4/);
   assert.throws(() => profileUploadBlob(0, 'a name too long!', arrays), /1\.\.15/);
-  assert.equal(isUploadBlob(Uint8Array.of(0x11, 0x27, 0, 0, 0, 0x0f), UploadDomain.PROFILE), false, 'clearing is not offered');
+  assert.ok(isUploadBlob(Uint8Array.of(0x11, 0x27, 0, 0, 0, 0x0f), UploadDomain.PROFILE), 'clearing a profile slot is offered');
+  assert.equal(isUploadBlob(Uint8Array.of(0x11, 0x27, 0, 0, 0, 0x0f), UploadDomain.IR), false, 'but not as an IR');
 });
 
 test('the reference DI is only used when its SHA-256 matches', async () => {

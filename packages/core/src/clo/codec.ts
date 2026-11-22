@@ -107,6 +107,12 @@ export function profileUploadBlob(slot: number, name: string, arrays: CloArrays)
   return blob;
 }
 
+/** Blob that empties profile slot 0..4: the official tool's fixed 6-byte clear (SonicMaster). */
+export function profileClearBlob(slot: number): Uint8Array {
+  checkSlot(slot);
+  return Uint8Array.from([0x11, 0x27, slot, 0, 0, PROFILE_NAME_CAPACITY]);
+}
+
 /** Blob that renames profile slot 0..4 without touching the model. */
 export function profileRenameBlob(slot: number, name: string): Uint8Array {
   checkSlot(slot);

@@ -6,6 +6,15 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Delete buttons for captured profiles, user IRs and backups, each behind a confirmation.
+  Deleting a capture or IR sends the official tool's clear command (11 27 / 11 23, ported from
+  SonicMaster and checked byte for byte against its capture of the official tool), then checks
+  the pedal reports the slot empty. The dialog warns that the pedal refuses the next capture or
+  IR write until it is switched off and on, as SonicMaster found. Deleting a backup removes it
+  from this browser, with *Download file* offered first.
+
 ## [0.15.1] - 2026-11-22
 
 Backups, clearer: each backup is a card with its actions in sight, importing one says what it

@@ -66,6 +66,7 @@ const STEPS: ReadonlyArray<[RegExp, MessageKey]> = [
   [/^Preparing$/, 'progress.preparing'],
   [/^Loading$/, 'progress.loading'],
   [/^Renaming$/, 'progress.renaming'],
+  [/^Deleting$/, 'progress.deleting'],
   [/^Uploading$/, 'progress.uploading'],
   [/^Reading settings$/, 'progress.readingSettings'],
   [/^Factory reset$/, 'progress.factoryReset'],

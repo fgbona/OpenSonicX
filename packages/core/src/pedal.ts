@@ -1,8 +1,8 @@
 import { decodeGlobals, type GlobalSettings } from './globals.ts';
 import type { Pedal } from './backup.ts';
 import type { CloArrays } from './clo/generate.ts';
-import { profileRenameBlob, profileUploadBlob } from './clo/codec.ts';
-import { irRenameBlob, irSamplesFromWav, irUploadBlob, UploadDomain } from './ir-upload.ts';
+import { profileClearBlob, profileRenameBlob, profileUploadBlob } from './clo/codec.ts';
+import { irClearBlob, irRenameBlob, irSamplesFromWav, irUploadBlob, UploadDomain } from './ir-upload.ts';
 import type { PocketMasterLink } from './link.ts';
 import { diffPresets } from './edit.ts';
 import { decodeCurrentPreset, presetLabel } from './presets.ts';
@@ -117,6 +117,26 @@ async function renameSlot(link: PocketMasterLink, kind: 'ir' | 'profile', slot: 
   if (names[slot]?.name !== name) throw new Error(`renamed, but slot ${slot + 1} reports "${names[slot]?.name ?? ''}" instead of "${name}"`);
   return names;
 }
+
+async function clearSlot(link: PocketMasterLink, kind: 'ir' | 'profile', slot: number): Promise<SlotName[]> {
+  const blob = kind === 'ir' ? irClearBlob(slot) : profileClearBlob(slot); // validates first
+  const readNames = kind === 'ir' ? readUserIrNames : readProfileNames;
+  await link.enterSession();
+  await readNames(link);
+  await link.upload(blob, kind === 'ir' ? UploadDomain.IR : UploadDomain.PROFILE);
+  const names = await readNames(link);
+  if (!names[slot]?.empty) throw new Error(`cleared, but slot ${slot + 1} still reports "${names[slot]?.name ?? ''}"`);
+  return names;
+}
+
+/**
+ * Empties user IR `slot` (0..4). Per SonicMaster, the pedal then refuses further IR writes until
+ * it is switched off and on.
+ */
+export const clearUserIr = (link: PocketMasterLink, slot: number) => clearSlot(link, 'ir', slot);
+
+/** Empties profile `slot` (0..4); as with IRs, the next write needs a power cycle first. */
+export const clearUserProfile = (link: PocketMasterLink, slot: number) => clearSlot(link, 'profile', slot);
 
 /** Renames user IR `slot` (0..4) to `name` (1..10 characters); the IR itself is untouched. */
 export const renameUserIr = (link: PocketMasterLink, slot: number, name: string) => renameSlot(link, 'ir', slot, name);

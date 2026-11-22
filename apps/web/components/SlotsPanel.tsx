@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { renameUserIr, renameUserProfile } from '@pocket-master/core';
+import { clearUserIr, clearUserProfile, renameUserIr, renameUserProfile } from '@pocket-master/core';
 import { Dialog } from './Dialog';
 import { InstallDialog } from './InstallDialog';
 import { useI18n } from './I18n';
@@ -34,6 +34,14 @@ export function SlotsPanel({ connected, busy, irNames, profileNames, exclusive, 
     const ok = await exclusive('Renaming', (link) => run(link, renaming.slot, name));
     if (ok !== null) setRenaming(null); // a failure stays open with the hook's error below
   };
+  const [deleting, setDeleting] = useState<{ kind: SlotKind; slot: number; name: string } | null>(null);
+  const [deleteTried, setDeleteTried] = useState(false);
+  const remove = async () => {
+    if (!deleting) return;
+    setDeleteTried(true);
+    const ok = await exclusive('Deleting', (link) => (deleting.kind === 'ir' ? clearUserIr : clearUserProfile)(link, deleting.slot));
+    if (ok !== null) setDeleting(null);
+  };
   const disabled = !connected || busy;
 
   const pick = (input: HTMLInputElement, kind: SlotKind) => {
@@ -58,6 +66,9 @@ export function SlotsPanel({ connected, busy, irNames, profileNames, exclusive, 
               </button>
               <button type="button" className="btn btn-small slot-rename" disabled={disabled} onClick={() => { setRenameTried(false); setRenaming({ kind, slot: i, name: names[i]! }); }}>
                 {t('slots.rename')}
+              </button>
+              <button type="button" className="btn btn-small slot-rename" disabled={disabled} onClick={() => { setDeleteTried(false); setDeleting({ kind, slot: i, name: names[i]! }); }}>
+                {t('slots.delete')}
               </button>
             </span>
           )}
@@ -102,6 +113,18 @@ export function SlotsPanel({ connected, busy, irNames, profileNames, exclusive, 
             <div className="sheet-actions">
               <button className="btn" onClick={() => setRenaming(null)} disabled={busy}>{t('action.cancel')}</button>
               <button className="btn btn-primary" onClick={() => void rename()} disabled={busy || renaming.name.trim() === ''}>{t('slots.renameSubmit')}</button>
+            </div>
+          </>
+        )}
+      </Dialog>
+      <Dialog open={deleting !== null} title={deleting ? t('slots.deleteTitle', { name: deleting.name }) : ''} onClose={() => setDeleting(null)} locked={busy}>
+        {deleting && (
+          <>
+            <p>{t('slots.deleteNote')}</p>
+            {deleteTried && !busy && error && <p className="alert" role="alert">{error}</p>}
+            <div className="sheet-actions">
+              <button className="btn" onClick={() => setDeleting(null)} disabled={busy}>{t('action.cancel')}</button>
+              <button className="btn btn-danger" onClick={() => void remove()} disabled={busy}>{t('slots.deleteSubmit')}</button>
             </div>
           </>
         )}

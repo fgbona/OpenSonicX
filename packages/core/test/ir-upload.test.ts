@@ -80,5 +80,6 @@ test('a blob travels as 19-byte chunks numbered 0..n-1 of n, and only IR blobs a
   assert.ok(isUploadBlob(blob, UploadDomain.IR));
   assert.ok(isUploadBlob(irRenameBlob(0, 'X'), UploadDomain.IR));
   assert.equal(isUploadBlob(Uint8Array.of(0x11, 0x4a, 0, 0), UploadDomain.IR), false, 'a save is not an upload');
-  assert.equal(isUploadBlob(Uint8Array.of(0x11, 0x23, 0, 0, 0x10, 0x0a), UploadDomain.IR), false, 'clearing a slot is not offered');
+  assert.ok(isUploadBlob(Uint8Array.of(0x11, 0x23, 0, 0, 0x10, 0x0a), UploadDomain.IR), 'clearing an IR slot is offered');
+  assert.equal(isUploadBlob(Uint8Array.of(0x11, 0x23, 0, 0, 0x10, 0x0a), UploadDomain.PROFILE), false, 'but not as a profile');
 });
