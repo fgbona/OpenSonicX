@@ -91,7 +91,8 @@ export function Changes({ differences, label, title }: { differences: readonly D
         <ul>
           {differences.map((d, i) => (
             <li key={i}>
-              <span>{'block' in d ? <strong>{d.block} </strong> : null}{label(d)}</span>
+              {/* A parameter row is the pedal's own data (block, model, parameter name). */}
+              <span className={d.what === 'param' ? 'changes-param' : undefined}>{'block' in d ? <strong>{d.block} </strong> : null}{label(d)}</span>
               <span className="changes-values">{d.from} → {d.to}</span>
             </li>
           ))}
