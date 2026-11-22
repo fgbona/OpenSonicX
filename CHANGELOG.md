@@ -20,6 +20,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Tone assistant: **answer order**. *Keys* lists every provider with a key, free and paid,
+  with ↑↓ to choose which answers first (the next takes over when one fails or runs out), and
+  an optional **rotation**: each new conversation starts with the next provider in the list.
 - `apps/mcp/scripts/try-copy-tuner.ts`: a supervised first try, on the owner's pedal, of
   copying a stored preset (`11 4B`, from klotznick's guide) and of the tuner (CC 58): the
   destination is saved to a file first, the copy needs typing COPY, and the result is read back

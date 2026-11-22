@@ -394,3 +394,31 @@ test('Claude added as a paid provider answers through its own API, with the brow
   expect(sent[0]!.headers['anthropic-dangerous-direct-browser-access']).toBe('true');
   expect(sent[0]!.body.model).toBe('claude-test-haiku');
 });
+
+test('the answer order is the person\'s, and rotation starts each new conversation with the next provider', async ({ page, pedal }) => {
+  await page.route('https://api.openai.com/**', async (route: Route) => route.request().url().endsWith('/models')
+    ? route.fulfill({ json: { data: [{ id: 'gpt-9-mini' }] } })
+    : route.fulfill({ json: { choices: [{ message: { role: 'assistant', content: 'From OpenAI.' } }] } }));
+  await fakeGroq(page, [groqSay('From Groq.'), groqSay('From Groq again.')]);
+  await connect(page, pedal);
+  await addGroqKey(page);
+  await panel(page).getByRole('button', { name: 'Keys' }).click();
+  const paidSection = panel(page).getByRole('region', { name: 'Paid providers' });
+  await paidSection.getByLabel('Add a paid provider').selectOption('openai');
+  await paidSection.getByLabel('OpenAI API key').fill('fake-openai-key-e2e-0000');
+  await paidSection.getByRole('button', { name: 'Save key' }).click();
+  const order = panel(page).getByRole('region', { name: 'Answer order' });
+  await expect(order.getByRole('listitem').first()).toContainText('OpenAI');
+  await order.getByRole('button', { name: 'Move Groq up' }).click();
+  await expect(order.getByRole('listitem').first()).toContainText('Groq');
+  await order.getByLabel(/Rotate/).check();
+  await panel(page).getByRole('button', { name: 'Back to the chat' }).click();
+
+  await ask(page, 'hi');
+  await expect(panel(page).getByText('From Groq.')).toBeVisible();
+  await panel(page).getByRole('button', { name: 'New conversation' }).click();
+  await ask(page, 'hi again');
+  await expect(panel(page).getByText('From OpenAI.')).toBeVisible();
+  expect(await page.evaluate(() => [localStorage.getItem('pocket-master-editor.aiOrder.v1'), localStorage.getItem('pocket-master-editor.aiRotate.v1')]))
+    .toEqual(['["groq","openai"]', 'true']);
+});

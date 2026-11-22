@@ -2,16 +2,18 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { presetLabel, type Difference, type ToneHost, type ToneSnapshot } from '@pocket-master/core';
-import { loadKey, loadPaid, maskKey, removeKey, saveKey, savePaid, type PaidEntry } from '@/lib/aiKey';
+import { loadKey, loadOrder, loadPaid, loadRotate, maskKey, removeKey, saveKey, saveOrder, savePaid, saveRotate, type PaidEntry } from '@/lib/aiKey';
 import { nextReset, recordRequest, usedToday, useAiUsage } from '@/lib/aiUsage';
 import { ask, askedToSave, BusyError, KeyError, providerOf, QuotaError, RegionError, ROUTE, type AiModel, type Converse, type Cooldown, type Provider, type Turn } from '@/lib/assistant';
 import { converseGemini, GEMINI_MODELS, testGeminiKey } from '@/lib/gemini';
 import { converseGroq, GROQ_MODEL, testGroqKey } from '@/lib/groq';
 import { converseWith, paidById } from '@/lib/providers';
+import { moveInOrder, orderRoute, rotated } from '@/lib/route-order';
 import { toneChanges } from '@/lib/tone-changes';
 import type { MessageKey } from '@/lib/i18n';
 import { Changes, DIFF_KEY } from './PresetFiles';
 import { PaidProviders } from './PaidProviders';
+import { AnswerOrder } from './AnswerOrder';
 import { useI18n } from './I18n';
 
 interface Props {
@@ -121,6 +123,10 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
   const { t, lang } = useI18n();
   const [keys, setKeys] = useState<Partial<Record<Provider, string>>>({});
   const [paid, setPaid] = useState<readonly PaidEntry[]>([]);
+  const [order, setOrder] = useState<readonly string[]>([]);
+  const [rotate, setRotate] = useState(false);
+  /** Counts conversations, so rotation starts each new one a provider further. */
+  const [round, setRound] = useState(0);
   /** Keys the browser refused to store: they last for this page only. */
   const [notKept, setNotKept] = useState<readonly Provider[]>([]);
   const [managing, setManaging] = useState(false);
@@ -144,6 +150,8 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
     }
     setKeys(stored);
     setPaid(loadPaid((id) => paidById(id) !== undefined));
+    setOrder(loadOrder());
+    setRotate(loadRotate());
   }, []);
   const list = useRef<HTMLOListElement>(null);
   useEffect(() => {
@@ -159,9 +167,10 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
   const time = (d: Date) => d.toLocaleTimeString(lang === 'pt' ? 'pt-BR' : 'en', { hour: '2-digit', minute: '2-digit' });
   const label = (d: Difference) => (d.what === 'param' ? d.name : t(DIFF_KEY[d.what]));
   const hasKey = Object.keys(keys).length > 0 || paid.length > 0;
-  // Paid providers first, in the order they were added, then the free models.
-  const route: readonly AiModel[] = [...paid.map((e) => e.id), ...ROUTE];
   const allKeys: Partial<Record<Provider, string>> = { ...keys, ...Object.fromEntries(paid.map((e) => [e.id, e.key])) };
+  // The person's order; by default paid providers first, in the order they were added, then the free models.
+  const ordered = orderRoute([...paid.map((e) => e.id), ...ROUTE].filter((m) => allKeys[providerOf(m)]), order);
+  const route = rotate ? rotated(ordered, round) : ordered;
   const converse: Partial<Record<AiModel, Converse>> = {
     ...FREE_CONVERSE,
     ...Object.fromEntries(paid.map((e) => [e.id, converseWith(paidById(e.id)!, e.model)])),
@@ -247,7 +256,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
         <h2>{t('assistant.title')}</h2>
         {hasKey && (
           <div className="assistant-head-actions">
-            {!managing && messages.length > 0 && <button type="button" className="btn btn-small" onClick={() => { setMessages([]); setTurns([]); }}>{t('assistant.new')}</button>}
+            {!managing && messages.length > 0 && <button type="button" className="btn btn-small" onClick={() => { setMessages([]); setTurns([]); setRound((r) => r + 1); }}>{t('assistant.new')}</button>}
             <button type="button" className="btn btn-small" disabled={working} onClick={() => setManaging(!managing)}>{t(managing ? 'assistant.backToChat' : 'assistant.keys')}</button>
           </div>
         )}
@@ -276,6 +285,9 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
               savePaid(list);
               if (list.length === 0 && Object.keys(keys).length === 0) setManaging(false);
             }} />
+            <AnswerOrder order={ordered} name={modelName} rotate={rotate}
+              onMove={(m, delta) => { const next = moveInOrder(ordered, m, delta); setOrder(next); saveOrder(next); }}
+              onRotate={(on) => { setRotate(on); saveRotate(on); }} />
             <p className="muted small">{t('assistant.privacy')}</p>
           </>
         ) : (
@@ -310,7 +322,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
               <button type="submit" className="btn btn-primary" disabled={working || !draft.trim()}>{t('assistant.send')}</button>
             </form>
             <ul className="muted small assistant-usage">
-              {route.filter((m) => allKeys[providerOf(m)]).map((m) => <li key={m}>{usageLine(m)}</li>)}
+              {ordered.map((m) => <li key={m}>{usageLine(m)}</li>)}
             </ul>
             <p className="muted small">
               {t('assistant.realUsage')}{' '}
