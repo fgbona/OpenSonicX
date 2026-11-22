@@ -36,7 +36,7 @@ export interface ToneHost {
   /** Opens the Save dialog filled in; resolves with what the person did. */
   proposeSave(index: number, name: string): Promise<'saved' | 'cancelled'>;
   /** The person's saved tones (the editor's preset library); absent where there is none. */
-  savedTones?(): readonly { readonly name: string; readonly notes?: string }[];
+  savedTones?(): readonly { readonly name: string; readonly notes?: string; readonly gear?: string }[];
   /** Loads a saved tone into the edit buffer; false when no tone has that name. */
   loadSavedTone?(name: string): Promise<boolean>;
   /** Keeps the sound as it is now in the library, under a pedal-style name and a note naming the reference. */
@@ -102,7 +102,7 @@ export const CHAT_INSTRUCTIONS = [
   'Say what you did in the same terms as the values: "a slight cut" is a few units, not -30.',
   'Do not ask for details the person did not give: make reasonable choices, say briefly what you chose and why, and invite them to ask for adjustments by ear.',
   'The editor shows every change live, and the person can undo. Nothing is stored until save_preset, which opens the editor\'s Save dialog for the person to confirm; propose it only when the person asks to save (e.g. "no 45" means slot P45). When they do, call save_preset once the sound is ready, even when nothing had to change. Never say a tone is saved unless save_preset answered that the person saved it.',
-  'If a kept tone in the first message matches the request, load it with load_saved_tone instead of building it again. When the person says a tone sounds right, offer to keep it with keep_tone, naming the reference in notes.',
+  'A kept tone in the first message is reused with load_saved_tone only when it matches the request: the same instrument (guitar or bass), part and reference, as its notes and gear show; a name that merely mentions the band is not enough, and when in doubt, build the tone. When the person says a tone sounds right, offer to keep it with keep_tone, naming the reference in notes.',
   'Use as few calls as possible: edit_preset already returns the resulting preset. Answer in the language the person writes in, in two to four short sentences.',
 ].join(' ');
 
@@ -116,7 +116,7 @@ export function chatContext(host: ToneHost): string {
 
 const preset = (s: ToneSnapshot) => formatPreset(s.index, s.name, s.preset, s.slots, s.modified);
 
-const savedTonesText = (host: ToneHost) => (host.savedTones?.() ?? []).map((t) => `- ${t.name}${t.notes ? `: ${t.notes}` : ''}`).join('\n');
+const savedTonesText = (host: ToneHost) => (host.savedTones?.() ?? []).map((t) => `- ${t.name}${t.notes ? `: ${t.notes}` : ''}${t.gear ? ` [${t.gear}]` : ''}`).join('\n');
 const NO_LIBRARY = 'There are no saved tones here: this editor has no tone library.';
 
 /** The loaded preset as the model reads it, for messages after the first. */

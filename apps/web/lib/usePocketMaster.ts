@@ -6,11 +6,20 @@ import {
   loadIntoEditBuffer, presetFile, presetLabel, restoreFromBackup, saveToSlot,
   type BackupFile, type Edit, type Frame, type Pedal, type Preset, type PresetFile, type Progress, type SaveResult, type SlotBackup,
 } from '@pocket-master/core';
-import { LinkClosedError, linkPedal, PocketMasterLink, readProfileNames, readUserIrNames, type LogEntry } from '@pocket-master/core';
+import { LinkClosedError, linkPedal, PocketMasterLink, readProfileNames, readUserIrNames, toneGear, type LogEntry } from '@pocket-master/core';
 import { openMidi, pickPocketMaster, webMidiPort } from './midi';
 import { addToLibrary, libraryNow } from './presetLibrary';
 import { EMPTY_HISTORY, record, redo as redoStep, undo as undoStep, type History } from './history';
 import { connectBluetooth } from './ble';
+
+/** A kept tone's main gear for the assistant; nothing when the file cannot be read. */
+function gearOf(payload: string): string | undefined {
+  try {
+    return toneGear(decodePreset(fromHex(payload)));
+  } catch {
+    return undefined;
+  }
+}
 import { downloadBackup, downloadJson, loadBackups, storeBackup } from './backupStore';
 
 export const LOG_LIMIT = 2000;
@@ -300,7 +309,7 @@ export function usePocketMaster() {
       ready();
       if (!(await revertRef.current())) throw new Error('The pedal did not reload the preset.');
     },
-    savedTones: () => libraryNow().map((f) => ({ name: f.name, notes: f.notes })),
+    savedTones: () => libraryNow().map((f) => ({ name: f.name, notes: f.notes, gear: gearOf(f.payload) })),
     async loadSavedTone(name: string) {
       ready();
       const file = libraryNow().find((f) => f.name.toLowerCase() === name.toLowerCase());

@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { CHAT_INSTRUCTIONS, CHAT_TOOLS, chatContext, runChatTool, type ToneHost } from '../src/assistant/chat.ts';
+import { toneGear } from '../src/assistant/format.ts';
 import { decodePreset, type Preset } from '../src/dump.ts';
 import { applyEdit, type Edit } from '../src/edit.ts';
 import { realP08 } from './fake-pedal.ts';
@@ -201,4 +202,13 @@ test('the first message fits a free Groq minute: models are listed compactly, wi
   // apps/web/lib/groq.ts). 15,500 characters of names, numbers and JSON are about 4,500 tokens.
   const total = CHAT_INSTRUCTIONS.length + JSON.stringify(CHAT_TOOLS).length + context.length;
   assert.ok(total < 15_500, `first request is ${total} characters`);
+});
+
+test('kept tones reach the model with their main gear, and are reused only when they really match', () => {
+  const { host } = fakeHost();
+  const p08 = host.snapshot().preset;
+  const withLibrary: ToneHost = { ...host, savedTones: () => [{ name: 'Pantera B', notes: 'Cowboys from Hell', gear: toneGear(p08) }] };
+  assert.match(toneGear(p08), /^DRV Scream \(Ibanez TS-808 Tube Screamer\), AMP Brit 800 \(Marshall JCM800\), IR BritGN 4x12/);
+  assert.match(chatContext(withLibrary), /- Pantera B: Cowboys from Hell \[DRV Scream/);
+  assert.match(CHAT_INSTRUCTIONS, /only when it matches the request: the same instrument \(guitar or bass\), part and reference/);
 });
