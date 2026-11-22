@@ -8,12 +8,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Tone assistant: **paid providers** with your own key: OpenRouter, OpenAI, xAI (Grok),
-  DeepSeek, Mistral and Cerebras. *Keys → Add a paid provider* checks the key, reads its
+- Tone assistant: **paid providers** with your own key: OpenRouter, Claude (Anthropic),
+  OpenAI, xAI (Grok), DeepSeek, Mistral and Cerebras. *Keys → Add a paid provider* checks the key, reads its
   models and preselects a good inexpensive one (changeable); paid providers answer first,
   then the free ones. Keys stay on this device (`aiProviders.v1`, listed in SECURITY.md) and
   go only to their provider, called straight from the editor and the desktop app.
-  Design: `docs/superpowers/specs/2026-11-22-paid-providers-design.md`; Claude, the order list,
+  Claude uses Anthropic's own API (with the header Anthropic asks of calls from a page).
+  Design: `docs/superpowers/specs/2026-11-22-paid-providers-design.md`; the order list,
   rotation and the cost per answer come next.
 
 ### Changed

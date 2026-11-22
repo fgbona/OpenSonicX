@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { maskKey, type PaidEntry } from '@/lib/aiKey';
-import { listModels } from '@/lib/openai-compat';
-import { chatModels, PAID, paidById, pickModel, type PaidProvider } from '@/lib/providers';
+import { chatModels, listProviderModels, PAID, paidById, pickModel, type PaidProvider } from '@/lib/providers';
 import { useI18n } from './I18n';
 
 interface Props {
@@ -47,11 +46,11 @@ function PaidRow({ entry, onModel, onRemove }: { entry: PaidEntry; onModel: (mod
   const [models, setModels] = useState<readonly string[]>([entry.model]);
   useEffect(() => {
     let live = true;
-    void listModels(provider.api, entry.key).then((ids) => {
+    void listProviderModels(provider, entry.key).then((ids) => {
       if (live && typeof ids !== 'string') setModels(Array.from(new Set([entry.model, ...chatModels(ids)])).sort());
     });
     return () => { live = false; };
-  }, [provider.api, entry.key, entry.model]);
+  }, [provider, entry.key, entry.model]);
   return (
     <div className="assistant-paid" role="group" aria-label={provider.name}>
       <p className="assistant-saved">
@@ -78,7 +77,7 @@ function AddPaid({ provider, onCancel, onAdded }: { provider: PaidProvider; onCa
     const candidate = key.trim();
     if (!candidate) return;
     setStatus('testing');
-    const ids = await listModels(provider.api, candidate);
+    const ids = await listProviderModels(provider, candidate);
     if (typeof ids === 'string') return setStatus(ids);
     const model = pickModel(provider, ids);
     if (!model) return setStatus('noModels');

@@ -374,3 +374,23 @@ test('a paid provider added with its key answers first, with the model picked fr
   expect(await page.evaluate(() => localStorage.getItem('pocket-master-editor.aiProviders.v1'))).toContain('"model":"gpt-9"');
   await expect(page.locator('body')).not.toContainText('fake-openai-key-e2e-0000');
 });
+
+test('Claude added as a paid provider answers through its own API, with the browser header', async ({ page, pedal }) => {
+  const sent: { headers: Record<string, string>; body: Record<string, unknown> }[] = [];
+  await page.route('https://api.anthropic.com/**', async (route: Route) => {
+    if (route.request().url().endsWith('/models')) return route.fulfill({ json: { data: [{ id: 'claude-test-sonnet' }, { id: 'claude-test-haiku' }] } });
+    sent.push({ headers: route.request().headers(), body: route.request().postDataJSON() });
+    return route.fulfill({ json: { stop_reason: 'end_turn', content: [{ type: 'text', text: 'From Claude.' }] } });
+  });
+  await connect(page, pedal);
+  const paidSection = panel(page).getByRole('region', { name: 'Paid providers' });
+  await paidSection.getByLabel('Add a paid provider').selectOption('anthropic');
+  await paidSection.getByLabel('Claude (Anthropic) API key').fill('fake-anthropic-key-e2e-0000');
+  await paidSection.getByRole('button', { name: 'Save key' }).click();
+  await ask(page, 'black album rhythm tone');
+  await expect(panel(page).getByText('From Claude.')).toBeVisible();
+  await expect(panel(page).getByText('Answered by Claude (Anthropic) · claude-test-haiku')).toBeVisible();
+  expect(sent[0]!.headers['x-api-key']).toBe('fake-anthropic-key-e2e-0000');
+  expect(sent[0]!.headers['anthropic-dangerous-direct-browser-access']).toBe('true');
+  expect(sent[0]!.body.model).toBe('claude-test-haiku');
+});
