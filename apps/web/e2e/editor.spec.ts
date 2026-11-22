@@ -251,3 +251,14 @@ test('the tuner button turns the pedal\'s tuner on and off', async ({ page, peda
   await expect(tuner).toHaveAttribute('aria-pressed', 'false');
   expect(pedal.controls).toEqual(['B0 3A 7F', 'B0 3A 00']);
 });
+
+test('a preset file picked in Backups opens as a preset import, and a wrong file says why in the panel', async ({ page, pedal }) => {
+  await connect(page, pedal);
+  const backups = page.getByRole('region', { name: 'Backups' });
+  await backups.locator('input[type=file]').setInputFiles(new URL('../../../packages/core/test/fixtures/preset-files/v1-iron-lead.json', import.meta.url).pathname);
+  await expect(page.getByRole('dialog', { name: 'Import a preset' })).toBeVisible();
+  await expect(backups.getByText(/“IRON-LEAD” is a preset file, not a backup/)).toBeVisible();
+  await page.getByRole('dialog', { name: 'Import a preset' }).getByRole('button', { name: 'Cancel' }).click();
+  await backups.locator('input[type=file]').setInputFiles({ name: 'other.json', mimeType: 'application/json', buffer: Buffer.from('{"hello":1}') });
+  await expect(backups.getByRole('alert')).toContainText('not a Pocket Master backup');
+});
