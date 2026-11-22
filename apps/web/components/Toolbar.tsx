@@ -9,6 +9,8 @@ import { ThemeToggle } from './ThemeToggle';
 
 interface Props {
   status: Status;
+  /** How the pedal is connected, while it is. */
+  transport: 'usb' | 'ble' | null;
   inputs: readonly PortOption[];
   outputs: readonly PortOption[];
   inputId: string;
@@ -79,8 +81,15 @@ export function Toolbar(p: Props) {
         <span>Pocket Master Editor</span>
       </div>
       <div className="ports">
-        <PortSelect label={t('ports.input')} ports={p.inputs} value={p.inputId} onChange={p.onSelectInput} disabled={linked || p.status === 'idle' || p.status === 'connecting'} />
-        <PortSelect label={t('ports.output')} ports={p.outputs} value={p.outputId} onChange={p.onSelectOutput} disabled={linked || p.status === 'idle' || p.status === 'connecting'} />
+        {p.transport === 'ble' && linked ? (
+          // The USB MIDI ports have nothing to do with a Bluetooth connection: show that one instead.
+          <span className="port port-ble">{t('ports.bluetooth')}</span>
+        ) : (
+          <>
+            <PortSelect label={t('ports.input')} ports={p.inputs} value={p.inputId} onChange={p.onSelectInput} disabled={linked || p.status === 'idle' || p.status === 'connecting'} />
+            <PortSelect label={t('ports.output')} ports={p.outputs} value={p.outputId} onChange={p.onSelectOutput} disabled={linked || p.status === 'idle' || p.status === 'connecting'} />
+          </>
+        )}
       </div>
       <div className="actions">
         <ThemeToggle />

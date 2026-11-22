@@ -109,6 +109,7 @@ export default function EditorPage() {
     <>
       <Toolbar
         status={pm.status}
+        transport={pm.transport}
         inputs={pm.inputs}
         outputs={pm.outputs}
         inputId={pm.inputId}

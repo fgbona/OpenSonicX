@@ -26,6 +26,8 @@ export interface PortOption {
 
 export interface PocketMasterState {
   readonly status: Status;
+  /** How the pedal is connected, while it is: USB MIDI ports or Bluetooth LE MIDI. */
+  readonly transport: 'usb' | 'ble' | null;
   readonly error: string | null;
   readonly inputs: readonly PortOption[];
   readonly outputs: readonly PortOption[];
@@ -60,6 +62,7 @@ export interface PocketMasterState {
 }
 
 const INITIAL: PocketMasterState = {
+  transport: null,
   status: 'idle', error: null, inputs: [], outputs: [], inputId: '', outputId: '',
   preset: null, presetIndex: null, restorePoint: null, liveEdit: false, log: [],
   busy: null, names: null, backups: [], flowBackups: [], storageWarning: null, irNames: null, profileNames: null, pedalModified: null, history: EMPTY_HISTORY, firmware: null,
@@ -390,7 +393,7 @@ export function usePocketMaster() {
     try {
       await Promise.all([input.open(), output.open()]);
       link.current = new PocketMasterLink(webMidiPort(input, output), appendLog, (f) => notifyRef.current(f));
-      patch({ status: 'connected', error: null, irNames: null, profileNames: null });
+      patch({ status: 'connected', transport: 'usb', error: null, irNames: null, profileNames: null });
       await read();
       await refreshSlotNames();
       await readFirmware();
@@ -425,12 +428,12 @@ export function usePocketMaster() {
           link.current?.close();
           link.current = null;
           transportClose.current = null;
-          patch({ status: idle(), liveEdit: false, error: 'The pedal disconnected from Bluetooth.' });
+          patch({ status: idle(), transport: null, liveEdit: false, error: 'The pedal disconnected from Bluetooth.' });
         },
       );
       transportClose.current = ble.close;
       link.current = new PocketMasterLink(ble.port, appendLog, (f) => notifyRef.current(f));
-      patch({ status: 'connected', error: null, irNames: null, profileNames: null });
+      patch({ status: 'connected', transport: 'ble', error: null, irNames: null, profileNames: null });
       await read();
       await refreshSlotNames();
       await readFirmware();
@@ -534,7 +537,7 @@ export function usePocketMaster() {
     link.current = null;
     transportClose.current?.();
     transportClose.current = null;
-    patch({ status: access.current ? 'ready' : 'idle', liveEdit: false });
+    patch({ status: access.current ? 'ready' : 'idle', transport: null, liveEdit: false });
   }, [patch]);
 
   // Skip the Enable MIDI click when the visitor already granted access earlier; never prompts by itself.
