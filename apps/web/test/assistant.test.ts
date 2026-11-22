@@ -109,3 +109,12 @@ test('a model request that never answers gives up and counts as busy', async () 
   assert.ok(e instanceof BusyError);
   assert.equal(e.retryAt.getTime(), now.getTime() + BUSY_WAIT_MS);
 });
+
+test('a model that gets busy after the sound changed stops and says the request is half done', async () => {
+  const m = models({ flash: new BusyError(later(0.5)) });
+  const acting: Converse = async (o) => { o.onStep?.('edit_preset', true, 'ok'); throw new BusyError(later(0.5)); };
+  const e = await ask({ ...base, keys: { gemini: 'k' }, cooldown: {}, converse: { ...m.converse, flash: acting } }).catch((x) => x);
+  assert.ok(e instanceof BusyError);
+  assert.equal(e.partial, true);
+  assert.equal(e.model, 'flash');
+});

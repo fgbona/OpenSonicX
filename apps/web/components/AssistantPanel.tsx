@@ -174,7 +174,8 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
         { role: 'assistant', text: reply, model: result.model, changes: changed(before!, host.snapshot()) },
       ]);
     } catch (error) {
-      const text = error instanceof QuotaError && error.partial && error.model ? t('assistant.quotaPartial', { model: MODELS[error.model].name })
+      const text = error instanceof BusyError && error.partial && error.model ? t('assistant.busyPartial', { model: MODELS[error.model].name })
+        : error instanceof QuotaError && error.partial && error.model ? t('assistant.quotaPartial', { model: MODELS[error.model].name })
         : error instanceof BusyError ? t('assistant.busy', { time: time(error.retryAt) })
         : error instanceof QuotaError ? t('assistant.quotaAll', { time: time(error.retryAt) })
         : error instanceof KeyError ? t('assistant.keyRejected', { provider: PROVIDER_NAME[error.provider] })
