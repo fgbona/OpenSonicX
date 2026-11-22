@@ -6,11 +6,19 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Restoring in the editor (one preset or all) no longer backs up what it overwrites first
+  (owner's request: a restore is a deliberate choice, confirmed in its dialog). The MCP
+  server's restore, run by an assistant, still backs up first.
+- Each backup in the Backups panel is a card with *Restore all* (or *Restore to Pxx*) and
+  *Download file* in sight; *Show the 50 presets* opens its list to restore one preset. The
+  backup list was easy to miss behind a click on its title.
+
 ### Fixed
 
-- Restore all: one progress bar from the backup of the pedal as it is now to the last restored
-  preset (it used to start over between the two), with its percentage, and a note to keep the
-  pedal connected and the window open.
+- Restore all: one progress bar to the last restored preset, with its percentage, and a note
+  to keep the pedal connected and the window open.
 - Backups → *Import file*: importing a backup now says what it holds ("All user presets, 50
   slots, date") and opens it in the list, ready to restore one slot or all. Importing a file
   that was already in the list (the backup just made) used to change nothing on screen.
