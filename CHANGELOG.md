@@ -8,6 +8,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Tone assistant: a model request that gets no answer within a minute (Gemini under high
+  demand sometimes never answers) is given up; that model is skipped for half a minute and
+  the next one answers, instead of "Working on it…" forever.
 - Tone assistant: a model under high demand (Gemini's or Groq's 503) no longer stops the
   chat with "Gemini answered 503"; it is skipped for half a minute and the next model with a
   key answers. When every model is busy, the chat says so and when to try again.

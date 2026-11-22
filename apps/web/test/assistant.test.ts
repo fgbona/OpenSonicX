@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ask, BusyError, KeyError, QuotaError, ROUTE, type AiModel, type Converse } from '../lib/assistant.ts';
+import { ask, BUSY_WAIT_MS, BusyError, KeyError, post, QuotaError, ROUTE, type AiModel, type Converse } from '../lib/assistant.ts';
 import type { ToneHost } from '@pocket-master/core';
 
 const host = {} as ToneHost;
@@ -99,4 +99,13 @@ test('a busy model hands the message on; when all are busy or used up, the error
   const e = await ask({ ...base, keys: { groq: 'g', gemini: 'k' }, cooldown: {}, converse: all.converse }).catch((x) => x);
   assert.ok(e instanceof BusyError);
   assert.equal(e.retryAt.getTime(), later(0.5).getTime());
+});
+
+test('a model request that never answers gives up and counts as busy', async () => {
+  const hanging = ((_url: string, init: RequestInit) => new Promise((_, reject) => {
+    init.signal!.addEventListener('abort', () => reject(init.signal!.reason));
+  })) as unknown as typeof fetch;
+  const e = await post(hanging, 'https://example.test', { method: 'POST' }, () => now, 20).catch((x) => x);
+  assert.ok(e instanceof BusyError);
+  assert.equal(e.retryAt.getTime(), now.getTime() + BUSY_WAIT_MS);
 });

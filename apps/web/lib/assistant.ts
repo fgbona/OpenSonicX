@@ -47,6 +47,19 @@ export class BusyError extends QuotaError {
 /** How long an overloaded model is skipped. */
 export const BUSY_WAIT_MS = 30_000;
 
+/** How long one model request may take; a tone usually answers within seconds. */
+export const REQUEST_TIMEOUT_MS = 60_000;
+
+/** Sends a model request that gives up after `timeoutMs`: an overloaded provider sometimes never answers. */
+export async function post(fetchFn: typeof fetch, url: string, init: RequestInit, now: () => Date, timeoutMs = REQUEST_TIMEOUT_MS): Promise<Response> {
+  try {
+    return await fetchFn(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'TimeoutError') throw new BusyError(new Date(now().getTime() + BUSY_WAIT_MS));
+    throw error;
+  }
+}
+
 /** Tools whose success changes the pedal (or opens the Save dialog): a request that ran one is not repeated elsewhere. */
 const ACTS = new Set(['edit_preset', 'undo_edit', 'revert_preset', 'select_preset', 'save_preset', 'load_saved_tone', 'keep_tone']);
 

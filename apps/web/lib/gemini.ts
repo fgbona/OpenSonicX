@@ -4,7 +4,7 @@
  * none of the conversation between requests. Tool calls run in the editor through runChatTool.
  */
 import { CHAT_INSTRUCTIONS, CHAT_TOOLS, runChatTool, type ChatGuard } from '@pocket-master/core';
-import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, RegionError, QuotaError, requestText, toToolSchema, type ConverseOptions } from './assistant.ts';
+import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, RegionError, QuotaError, requestText, toToolSchema, type ConverseOptions } from './assistant.ts';
 import { nextReset } from './aiUsage.ts';
 
 /** Gemini models and their free daily requests (AI Studio, 2026-11). Check aistudio.google.com/rate-limit when they change. */
@@ -68,11 +68,11 @@ export async function converseGemini(options: ConverseOptions): Promise<string> 
   const guard: ChatGuard = { index: host.snapshot().index };
   for (let request = 0; request < MAX_REQUESTS; request++) {
     onRequest();
-    const r = await fetchFn(`${API}/interactions`, {
+    const r = await post(fetchFn, `${API}/interactions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify({ model: model.id, store: false, system_instruction: CHAT_INSTRUCTIONS, tools: TOOLS, input }),
-    });
+    }, now);
     const body = (await r.json().catch(() => ({}))) as ApiError & { steps?: Step[] };
     if (!r.ok) throw failure(r.status, body, now());
     const steps = body.steps;
