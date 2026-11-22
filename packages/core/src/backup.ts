@@ -267,14 +267,16 @@ export async function restoreAllFromBackup(
 ): Promise<{ restored: number }> {
   const original = await pedal.readCurrentIndex();
   file.slots.forEach((slot) => requireKnownModels(decodePreset(fromHex(slot.payload)))); // refuse before anything changes
-  await backupAllSlots(pedal, { ...options, edited: null });
-  const total = file.slots.length;
+  // One bar across both phases: the backup is the first part, the restore the rest.
+  const count = file.slots.length;
+  const total = USER_PRESETS + count;
+  await backupAllSlots(pedal, { ...options, edited: null, onProgress: (p) => options.onProgress?.({ step: p.step, done: p.done, total }) });
   for (const [i, slot] of file.slots.entries()) {
-    await restoreSlot(pedal, slot, { ...options, onProgress: () => options.onProgress?.({ step: `Restoring ${slot.label}`, done: i, total }) }, false);
+    await restoreSlot(pedal, slot, { ...options, onProgress: () => options.onProgress?.({ step: `Restoring ${slot.label}`, done: USER_PRESETS + i, total }) }, false);
   }
   options.onProgress?.({ step: 'Loading', done: total, total });
   await pedal.selectPreset(original);
-  return { restored: total };
+  return { restored: count };
 }
 
 /** Parses and checks a backup file. Throws a readable error for anything that is not one. */
