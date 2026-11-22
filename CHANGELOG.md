@@ -8,6 +8,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `apps/mcp/scripts/try-copy-tuner.ts`: a supervised first try, on the owner's pedal, of
+  copying a stored preset (`11 4B`, from klotznick's guide) and of the tuner (CC 58): the
+  destination is saved to a file first, the copy needs typing COPY, and the result is read back
+  without loading the slot. Confirmed on the unit (2026-11-22): reading a stored preset that
+  way (`12 4F`) gives exactly the edit buffer.
 - Tone assistant: **paid providers** with your own key: OpenRouter, Claude (Anthropic),
   OpenAI, xAI (Grok), DeepSeek, Mistral and Cerebras. *Keys → Add a paid provider* checks the key, reads its
   models and preselects a good inexpensive one (changeable); paid providers answer first,
