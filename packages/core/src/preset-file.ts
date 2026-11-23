@@ -54,12 +54,12 @@ export function parsePresetFile(text: string): PresetFile {
  * 0x15 FF x4, 0x19 name in 16 zero-padded ASCII bytes, 0x29 the edit-buffer dump without its leading 12 41.
  */
 const PRST_LENGTH = 515;
-const PRST_MAGIC = 'Pocket Master';
+const PRST_MAGIC = 'Pocket Master'.padEnd(20, '\0');
 const PRST_NAME = { start: 0x19, end: 0x29 } as const;
 
 /** Reads a .prst into a normal preset file. A name the pedal cannot store becomes '' (the sound is kept). */
 export function parsePrstFile(bytes: Uint8Array, now: () => Date = () => new Date()): PresetFile {
-  const magic = String.fromCharCode(...bytes.subarray(0, 20)).replace(/\0+$/, '');
+  const magic = String.fromCharCode(...bytes.subarray(0, PRST_MAGIC.length));
   if (bytes.length !== PRST_LENGTH || magic !== PRST_MAGIC) throw new Error('not a Pocket Master .prst file');
   const payload = Uint8Array.from([0x12, 0x41, ...bytes.subarray(PRST_NAME.end)]);
   try {
