@@ -4,8 +4,9 @@
  * announces the flash write with 12 1B 04 (12 1B 01 for presets, seen on the owner's unit).
  *
  * Ported to TypeScript from SonicMaster (github.com/skyggedans/SonicMaster, MIT; ir_upload_frame,
- * sysex_chunk_upload and wav_ir at 931a68f). Clearing a slot (11 23) works, but SonicMaster found
- * it leaves the pedal refusing further IR writes until it is power-cycled; the editor says so.
+ * sysex_chunk_upload and wav_ir at 931a68f). Clearing a slot (11 23): SonicMaster found it left
+ * the pedal refusing further IR writes until a power cycle, but on the owner's V1.3.3 unit the next
+ * uploads saved without one (2026-11-22). If it ever happens, upload() reports the missing flash write.
  */
 import { buildFrame } from './frame.ts';
 import { encodeName } from './slots.ts';

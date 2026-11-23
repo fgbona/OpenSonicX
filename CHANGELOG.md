@@ -11,9 +11,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - Delete buttons for captured profiles, user IRs and backups, each behind a confirmation.
   Deleting a capture or IR sends the official tool's clear command (11 27 / 11 23, ported from
   SonicMaster and checked byte for byte against its capture of the official tool), then checks
-  the pedal reports the slot empty. The dialog warns that the pedal refuses the next capture or
-  IR write until it is switched off and on, as SonicMaster found. Deleting a backup removes it
-  from this browser, with *Download file* offered first.
+  the pedal reports the slot empty. Checked on the owner's V1.3.3 unit: deleting, then loading
+  new captures and IRs without a power cycle saved them, and they survived one. (SonicMaster saw
+  the pedal refuse writes after a clear until a power cycle; the dialog says what to do if that
+  ever happens.) Deleting a backup removes it from this browser, with *Download file* offered
+  first.
 
 ## [0.15.1] - 2026-11-22
 
