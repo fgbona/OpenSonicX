@@ -6,6 +6,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-23
+
+Import presets exported by Sonicake's own app (`.prst`), and the MCP server catches up with
+the editor: copy, tuner, delete IR/profile and back up all presets.
+
 ### Added
 
 - MCP server: `copy_preset` (backs the destination up first), `set_tuner`, `delete_slot`
@@ -1120,7 +1125,8 @@ Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/OpenSonicX/compare/v0.16.1...HEAD
+[Unreleased]: https://github.com/fgbona/OpenSonicX/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/fgbona/OpenSonicX/compare/v0.16.1...v0.17.0
 [0.16.1]: https://github.com/fgbona/OpenSonicX/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/fgbona/OpenSonicX/compare/v0.15.1...v0.16.0
 [0.15.1]: https://github.com/fgbona/OpenSonicX/compare/v0.15.0...v0.15.1
