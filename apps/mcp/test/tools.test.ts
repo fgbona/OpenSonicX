@@ -79,7 +79,8 @@ test('every tool call reports how long it took on the pedal', async () => {
   await Promise.all([createServer(session, { onTiming: (t) => void timings.push(t) }).connect(a), client.connect(b)]);
   await client.callTool({ name: 'get_preset', arguments: {} });
   await client.callTool({ name: 'edit_preset', arguments: { changes: [{ kind: 'block', block: 'WAH', on: true }] } });
-  assert.deepEqual(timings.map((t) => [t.tool, t.ok]), [['get_preset', true], ['edit_preset', false]]);
+  await client.callTool({ name: 'import_preset', arguments: { file: 'missing.json' } });
+  assert.deepEqual(timings.map((t) => [t.tool, t.ok]), [['get_preset', true], ['edit_preset', false], ['import_preset', false]]);
   assert.ok(timings.every((t) => Number.isFinite(t.ms) && t.ms >= 0));
 });
 

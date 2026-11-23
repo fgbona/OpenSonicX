@@ -271,7 +271,7 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
     description: 'Loads a preset file (.json, or a .prst exported by Sonicake\'s own app) from ~/.pocket-master-editor/presets into the edit buffer with live edits (nothing is saved).',
     inputSchema: { file: z.string().describe('Preset file path') },
     annotations: LIVE,
-  }, ({ file }) => reply('export_preset', options, () => session.importPreset(file)));
+  }, ({ file }) => reply('import_preset', options, () => session.importPreset(file)));
 
   return server;
 }
