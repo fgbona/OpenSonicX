@@ -177,8 +177,12 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
 
   server.registerTool('copy_preset', {
     title: 'Copy a preset over a user slot',
-    description: 'Copies a stored preset (P01..P50 or F01..F50) over a user slot (P01..P50), after backing that slot up to a file (restore_backup undoes it). The loaded preset and its unsaved edits are untouched. Only when the user asked for that slot; pass its label as confirm.',
-    inputSchema: { source: z.string(), destination: z.string(), confirm: z.string() },
+    description: 'Copies a stored preset (P01..P50 or F01..F50) over a user slot (P01..P50), after backing that slot up to a file (restore_backup undoes it). The loaded preset and its unsaved edits are untouched. Only when the user asked for that slot.',
+    inputSchema: {
+      source: z.string().describe('Preset to copy, e.g. "P10" or "F05"'),
+      destination: z.string().describe('User slot to overwrite, P01..P50'),
+      confirm: z.string().describe('Must repeat the destination label (e.g. "P45"), confirming the user asked to overwrite it'),
+    },
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
   }, (args) => reply('copy_preset', options, () => session.copy(args)));
 
@@ -191,8 +195,12 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
 
   server.registerTool('delete_slot', {
     title: 'Delete a user IR or captured profile',
-    description: 'Empties user IR or captured-profile slot 1..5; it cannot be undone (keep the WAV or .nam to load it again). Only when the user asked; pass the name the slot holds as confirm.',
-    inputSchema: { kind: z.enum(['ir', 'profile']), slot: z.number().int().min(1).max(5), confirm: z.string() },
+    description: 'Empties user IR or captured-profile slot 1..5; it cannot be undone (keep the WAV or .nam to load it again). Only when the user asked for that slot.',
+    inputSchema: {
+      kind: z.enum(['ir', 'profile']),
+      slot: z.number().int().min(1).max(5),
+      confirm: z.string().describe('Must be "IR<slot>" for an IR or "PROFILE<slot>" for a capture, e.g. "IR3", confirming the user asked to delete that slot'),
+    },
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
   }, (args) => reply('delete_slot', options, () => session.deleteSlot(args)));
 
