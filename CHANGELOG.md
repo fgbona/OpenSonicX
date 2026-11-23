@@ -19,6 +19,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Tone assistant: a short per-minute limit is waited out for exactly the time the provider
+  states (the clock was read twice and could wait 1 ms less).
 - Saving to a slot other than the loaded one no longer jumps the Save dialog back to its form:
   it shows "Saved", and a save the tone assistant proposed finishes its answer instead of
   staying on "Working on it…".

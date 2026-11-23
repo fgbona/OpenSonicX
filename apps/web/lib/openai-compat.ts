@@ -99,8 +99,9 @@ export async function converseChat(endpoint: ChatEndpoint, options: ConverseOpti
     const body = (await r.json().catch(() => ({}))) as { error?: { message?: string; code?: string }; choices?: { message?: { content?: string | null; tool_calls?: ToolCall[] } }[]; usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number } };
     if (body.usage) onUsage?.(body.usage.prompt_tokens ?? 0, body.usage.completion_tokens ?? 0, body.usage.cost);
     if (r.status === 429) {
-      const at = retryAt(r, body.error?.message, now());
-      const ms = at.getTime() - now().getTime();
+      const t = now(); // one reading: two could straddle a millisecond and wait 6999 ms for a 7 s retry-after
+      const at = retryAt(r, body.error?.message, t);
+      const ms = at.getTime() - t.getTime();
       // Groq's free tokens-a-minute fill up on a tone's second request: wait a few seconds, same request.
       if (ms <= (endpoint.shortWaitMs ?? 0) && waited < 2) {
         waited += 1;
