@@ -6,6 +6,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-22
+
+**Delete, and keys on shared computers.** Captured profiles, user IRs and backups can be
+deleted, each after a confirmation; deleting a capture or IR was checked on the owner's pedal.
+The tone assistant can keep your AI keys for this browser session only, and forget them all at
+once.
+
 ### Added
 
 - Delete buttons for captured profiles, user IRs and backups, each behind a confirmation.
@@ -1080,7 +1087,8 @@ Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/OpenSonicX/compare/v0.15.1...HEAD
+[Unreleased]: https://github.com/fgbona/OpenSonicX/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/fgbona/OpenSonicX/compare/v0.15.1...v0.16.0
 [0.15.1]: https://github.com/fgbona/OpenSonicX/compare/v0.15.0...v0.15.1
 [0.15.0]: https://github.com/fgbona/OpenSonicX/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/fgbona/OpenSonicX/compare/v0.13.8...v0.14.0
