@@ -70,7 +70,9 @@ async function main(scan: boolean) {
         const firmware = kind === Query.GLOBALS ? decodeFirmware(payload) : null;
         say(`${name} (12 ${kind.toString(16).padStart(2, '0')}): ${payload.length} bytes${firmware ? ` - firmware ${firmware}` : ''}${hits.length ? ` - VERSION? ${hits.join('; ')}` : ''}`);
       } catch (error) {
-        say(`${name}: no reply (${(error as Error).message})`);
+        // 12 30 opens the upload session; V1.3.3 never answers it and uploads work anyway (enterSession waits 1 s).
+        const expected = kind === Query.SESSION ? ' - expected: this firmware never answers it' : '';
+        say(`${name}: no reply (${(error as Error).message})${expected}`);
       }
     }
     // Reading a slot without loading it (12 4F) must give what the edit buffer holds while the
