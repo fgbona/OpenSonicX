@@ -26,6 +26,16 @@ function setup(start = 8, options: ConstructorParameters<typeof FakePedal>[0] = 
     renameSlot: async (kind: 'ir' | 'profile', slot: number, name: string) => { (kind === 'ir' ? irNames : profileNames)[slot] = name; uploads.push({ slot, name, bytes: -2 }); },
     readGlobals: async () => GLOBALS,
     writeGlobals: async (bytes: Uint8Array[]) => void globalWrites.push(...bytes),
+    copyPreset: async (destination: number, source: number) => {
+      fake.slots[destination] = fake.slots[source]!.slice();
+      fake.names[destination] = fake.names[source]!;
+      fake.received.push(`copy ${source} ${destination}`);
+    },
+    setTuner: async (on: boolean) => void fake.received.push(`tuner ${on ? 'on' : 'off'}`),
+    clearSlot: async (kind: 'ir' | 'profile', slot: number) => {
+      (kind === 'ir' ? irNames : profileNames)[slot] = null;
+      fake.received.push(`clear ${kind} ${slot}`);
+    },
   });
   let opened = 0;
   let closed = 0;
@@ -134,6 +144,55 @@ test('restore writes a backed-up slot back, after backing up what it overwrites'
   await session.restore({ file, confirm: 'P03' });
   assert.deepEqual(fake.slots[2], old);
   assert.equal(readdirSync(join(dir, 'backups')).length, 2);
+});
+
+test('copy backs the destination up, then copies the stored preset over it; the loaded preset stays', async () => {
+  const { session, fake, dir } = setup();
+  const old = fake.slots[44]!.slice();
+  await assert.rejects(session.copy({ source: 'P02', destination: 'P45', confirm: 'P02' }), /confirm must be "P45"/);
+  assert.equal(fake.received.some((r) => r.startsWith('copy')), false);
+  const text = await session.copy({ source: 'P02', destination: 'P45', confirm: 'P45' });
+  assert.deepEqual(fake.slots[44], fake.slots[1]);
+  assert.equal(fake.names[44], fake.names[1]);
+  const backup = parseBackupFile(readFileSync(join(dir, 'backups', readdirSync(join(dir, 'backups'))[0]!), 'utf8'));
+  assert.equal(backup.slots[0]!.label, 'P45');
+  assert.equal(backup.slots[0]!.payload, Buffer.from(old).toString('hex').toUpperCase());
+  assert.match(text, /Copied P02 .* to P45/);
+  assert.match(text, /Backup of the old P45: /);
+  assert.match(text, /^P09 /m); // still the loaded preset
+});
+
+test('copy refuses a factory destination and copying a slot onto itself', async () => {
+  const { session } = setup();
+  await assert.rejects(session.copy({ source: 'P02', destination: 'F01', confirm: 'F01' }), /P01\.\.P50/);
+  await assert.rejects(session.copy({ source: 'P02', destination: 'P02', confirm: 'P02' }), /itself/);
+});
+
+test('the tuner turns on and off, and the reply says the pedal does not report it', async () => {
+  const { session, fake } = setup();
+  assert.match(await session.tuner({ on: true }), /Tuner on/);
+  await session.tuner({ on: false });
+  assert.deepEqual(fake.received.filter((r) => r.startsWith('tuner')), ['tuner on', 'tuner off']);
+});
+
+test('delete_slot empties an IR or profile slot only when confirm names what it holds', async () => {
+  const { session, fake } = setup();
+  await assert.rejects(session.deleteSlot({ kind: 'ir', slot: 1, confirm: 'IR 1' }), /confirm must be "Mesa OS"/);
+  await assert.rejects(session.deleteSlot({ kind: 'profile', slot: 2, confirm: 'x' }), /slot 2 is already empty/);
+  assert.equal(fake.received.some((r) => r.startsWith('clear')), false);
+  assert.match(await session.deleteSlot({ kind: 'ir', slot: 1, confirm: 'mesa os' }), /Deleted user IR slot 1 "Mesa OS"/);
+  assert.ok(fake.received.includes('clear ir 0'));
+});
+
+test('backup_all writes every user preset to one file, read without loading them', async () => {
+  const { session, fake, dir } = setup();
+  const text = await session.backupAll();
+  const files = readdirSync(join(dir, 'backups'));
+  assert.equal(files.length, 1);
+  const backup = parseBackupFile(readFileSync(join(dir, 'backups', files[0]!), 'utf8'));
+  assert.equal(backup.slots.length, 50);
+  assert.equal(fake.received.some((r) => r.startsWith('select')), false);
+  assert.match(text, /Backed up P01\.\.P50 to /);
 });
 
 test('export writes the edit buffer to a preset file and never overwrites one', async () => {

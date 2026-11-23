@@ -1,4 +1,7 @@
 {
+  "backup_all_presets": "{  }",
+  "copy_preset": "{ source: string, destination: string, confirm: string }",
+  "delete_slot": "{ kind: \"ir\" | \"profile\", slot: integer, confirm: string }",
   "edit_preset": "{ changes: ({ kind: \"parameter\", block: string, parameter: string, value: number | boolean | string } | { kind: \"block\", block: string, on: boolean } | { kind: \"model\", block: string, model: string } | { kind: \"move\", block: string, position: integer } | { kind: \"volume\", value: integer })[] }",
   "export_preset": "{ file?: string, notes?: string }",
   "get_global_settings": "{  }",
@@ -17,6 +20,7 @@
   "search_tone3000": "{ query: string, format?: \"nam\" | \"ir\", page?: integer }",
   "select_preset": "{ preset: string }",
   "set_global_settings": "{ masterVolume?: integer, inputLevel?: integer, fxRecLevel?: integer, monitorLevel?: integer, btRecLevel?: integer, bootProtection?: integer, backlight?: integer }",
+  "set_tuner": "{ on: boolean }",
   "tone3000_login": "{  }",
   "undo_edit": "{  }"
 }

@@ -175,6 +175,33 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   }, (args) => reply('rename_slot', options, () => session.renameSlot(args)));
 
+  server.registerTool('copy_preset', {
+    title: 'Copy a preset over a user slot',
+    description: 'Copies a stored preset (P01..P50 or F01..F50) over a user slot (P01..P50), after backing that slot up to a file (restore_backup undoes it). The loaded preset and its unsaved edits are untouched. Only when the user asked for that slot; pass its label as confirm.',
+    inputSchema: { source: z.string(), destination: z.string(), confirm: z.string() },
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+  }, (args) => reply('copy_preset', options, () => session.copy(args)));
+
+  server.registerTool('set_tuner', {
+    title: 'Tuner on or off',
+    description: 'Turns the pedal\'s tuner on or off. The pedal does not report the tuner state, so the reply only says what was sent.',
+    inputSchema: { on: z.boolean() },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, (args) => reply('set_tuner', options, () => session.tuner(args)));
+
+  server.registerTool('delete_slot', {
+    title: 'Delete a user IR or captured profile',
+    description: 'Empties user IR or captured-profile slot 1..5; it cannot be undone (keep the WAV or .nam to load it again). Only when the user asked; pass the name the slot holds as confirm.',
+    inputSchema: { kind: z.enum(['ir', 'profile']), slot: z.number().int().min(1).max(5), confirm: z.string() },
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+  }, (args) => reply('delete_slot', options, () => session.deleteSlot(args)));
+
+  server.registerTool('backup_all_presets', {
+    title: 'Back up all user presets',
+    description: 'Reads P01..P50 without loading them and writes them to one backup file (restore_backup restores a slot from it). Nothing on the pedal changes.',
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  }, () => reply('backup_all_presets', options, () => session.backupAll()));
+
   server.registerTool('get_global_settings', {
     title: 'Get global settings',
     description: 'Device-wide settings that are not part of any preset: master volume, input/FX-rec/monitor/BT-rec levels, backlight, boot anti-touch protection.',
