@@ -448,3 +448,16 @@ test('a paid Gemini key answers with the model picked from its list and the thor
   expect(String(sent[0]!.system_instruction)).toContain('actual rig');
   expect(JSON.stringify(sent[0]!.input)).toContain('Chorus with depth, rate and tone');
 });
+
+test('keys can be kept for this session only, and all forgotten at once', async ({ page, pedal }) => {
+  await fakeGemini(page, []);
+  await connect(page, pedal);
+  await panel(page).getByLabel('Remember keys on this device').uncheck();
+  await addKey(page);
+  const stored = () => page.evaluate(() => [localStorage.getItem('pocket-master-editor.geminiKey.v1'), sessionStorage.getItem('pocket-master-editor.geminiKey.v1') !== null]);
+  expect(await stored()).toEqual([null, true]);
+  await panel(page).getByRole('button', { name: 'Keys' }).click();
+  await panel(page).getByRole('button', { name: 'Forget all keys' }).click();
+  expect(await stored()).toEqual([null, false]);
+  await expect(geminiSetup(page).getByLabel('Gemini API key')).toBeVisible();
+});

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { presetLabel, type Difference, type ToneHost, type ToneSnapshot } from '@pocket-master/core';
-import { loadKey, loadOrder, loadPaid, loadRotate, maskKey, removeKey, saveKey, saveOrder, savePaid, saveRotate, type PaidEntry } from '@/lib/aiKey';
+import { forgetKeys, loadKey, loadOrder, loadPaid, loadRemember, loadRotate, maskKey, removeKey, saveKey, saveOrder, savePaid, saveRemember, saveRotate, type PaidEntry } from '@/lib/aiKey';
 import { nextReset, recordRequest, usedToday, useAiUsage } from '@/lib/aiUsage';
 import { ask, askedToSave, BusyError, KeyError, providerOf, QuotaError, RegionError, ROUTE, type AiModel, type Converse, type Cooldown, type Provider, type Turn } from '@/lib/assistant';
 import { converseGemini, GEMINI_MODELS, testGeminiKey } from '@/lib/gemini';
@@ -143,6 +143,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
   const [cooldown, setCooldown] = useState<Cooldown>({});
   const [limits, setLimits] = useState<Partial<Record<AiModel, { remaining: number; limit: number }>>>({});
   const [needLive, setNeedLive] = useState(false);
+  const [remember, setRemember] = useState(true);
   const usage = useAiUsage();
   const warnedKeys = useRef(new Set<Provider>());
   const end = useRef<HTMLDivElement>(null);
@@ -158,6 +159,7 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
     setPaid(loadPaid((id) => paidById(id) !== undefined));
     setOrder(loadOrder());
     setRotate(loadRotate());
+    setRemember(loadRemember());
   }, []);
   const list = useRef<HTMLOListElement>(null);
   useEffect(() => {
@@ -318,6 +320,21 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
             <AnswerOrder order={ordered} name={modelName} rotate={rotate}
               onMove={(m, delta) => { const next = moveInOrder(ordered, m, delta); setOrder(next); saveOrder(next); }}
               onRotate={(on) => { setRotate(on); saveRotate(on); }} />
+            <div className="assistant-keep">
+              <label className="check">
+                <input type="checkbox" checked={remember} onChange={(e) => { setRemember(e.target.checked); saveRemember(e.target.checked); }} />
+                <span>{t('assistant.remember')}<InfoTip text={t('assistant.rememberInfo')} /></span>
+              </label>
+              {hasKey && (
+                <button type="button" className="btn btn-small" onClick={() => {
+                  forgetKeys();
+                  warnedKeys.current.clear();
+                  setKeys({});
+                  setPaid([]);
+                  setManaging(false);
+                }}>{t('assistant.forgetKeys')}</button>
+              )}
+            </div>
             <p className="muted small">{t('assistant.privacy')}</p>
           </>
         ) : (
