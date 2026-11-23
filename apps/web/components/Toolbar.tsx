@@ -21,9 +21,7 @@ interface Props {
   onConnect: () => void;
   onDisconnect: () => void;
   onRead: () => void;
-  liveEdit: boolean;
   modified: boolean;
-  onLiveEdit: (on: boolean) => void;
   onRevert: () => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -109,20 +107,7 @@ export function Toolbar(p: Props) {
           </>
         ) : linked ? (
           <>
-            <label className="live-toggle">
-              <span>{t('live.label')}</span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={p.liveEdit}
-                className={`switch${p.liveEdit ? ' switch-on' : ''}`}
-                onClick={() => p.onLiveEdit(!p.liveEdit)}
-              >
-                <span className="switch-knob" />
-              </button>
-            </label>
-            {p.liveEdit && (
-              <>
+            <>
                 <button type="button" className="btn btn-icon" onClick={p.onUndo} disabled={!p.canUndo} aria-label={t('action.undo')} title={`${t('action.undo')} (${MOD}Z)`}>
                   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" /></svg>
                 </button>
@@ -130,8 +115,7 @@ export function Toolbar(p: Props) {
                   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 14 5-5-5-5" /><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" /></svg>
                 </button>
                 <button className="btn" onClick={p.onRevert} disabled={!p.modified}>{t('action.revert')}</button>
-              </>
-            )}
+            </>
             <button className="btn" onClick={p.onSave} disabled={p.busy || !p.canSave}>{t('action.save')}</button>
             <button className="btn" onClick={p.onCopy} disabled={p.busy}>{t('action.copy')}</button>
             <button type="button" className={`btn${p.tuner ? ' btn-primary' : ''}`} aria-pressed={p.tuner} onClick={() => p.onTuner(!p.tuner)} disabled={p.busy}>{t('action.tuner')}</button>

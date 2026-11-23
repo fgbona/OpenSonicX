@@ -7,11 +7,6 @@ import { openAssistantChat } from './assistant-chat.ts';
 const { defaultBrowserType: _, ...pixel } = devices['Pixel 7'];
 test.use(pixel);
 
-async function liveEdit(page: Page) {
-  await page.getByRole('switch', { name: 'Live edit' }).tap();
-  await expect(page.getByText(/Live edit is on/)).toBeVisible();
-}
-
 const sideways = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 
 test('fits the screen, with the preset list folded away until asked for', async ({ page, pedal }) => {
@@ -29,7 +24,6 @@ test('fits the screen, with the preset list folded away until asked for', async 
 
 test('the chain is reordered with the arrows, since touch has no drag and drop', async ({ page, pedal }) => {
   await connect(page, pedal);
-  await liveEdit(page);
   const later = page.getByRole('list', { name: /chain/i }).getByRole('button', { name: /^Move .+ later$/ }).first();
   await expect(later).toBeVisible();
   await later.tap();
@@ -41,8 +35,7 @@ for (const theme of ['dark', 'light'] as const) {
   test(`the model menu opens as a sheet inside the screen (${theme} theme)`, async ({ page, pedal }) => {
     await connect(page, pedal);
     if (theme === 'light') await page.getByRole('button', { name: 'Switch to light theme' }).tap();
-    await liveEdit(page);
-    await page.locator('section.block-amp .picker-button').tap();
+      await page.locator('section.block-amp .picker-button').tap();
     const list = page.locator('.picker-list');
     const box = (await list.boundingBox())!;
     const screen = page.viewportSize()!;
@@ -59,7 +52,6 @@ for (const theme of ['dark', 'light'] as const) {
 
 test('the tone assistant fits a phone: key setup, chat, what changed, and the input', async ({ page, pedal }) => {
   await connect(page, pedal);
-  await page.getByRole('switch', { name: 'Live edit' }).tap();
   const panel = page.getByRole('region', { name: 'Tone assistant' });
   expect(await sideways(page)).toBeLessThanOrEqual(0);
   await openAssistantChat(page, { panel: 'Tone assistant', keyRegion: 'Google Gemini key', keyLabel: 'Gemini API key', save: 'Save key', input: 'Message to the tone assistant', send: 'Send' },

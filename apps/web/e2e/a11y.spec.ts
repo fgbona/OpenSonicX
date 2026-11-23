@@ -45,7 +45,6 @@ for (const theme of ['dark', 'light'] as const) {
 test('every amp finish keeps its text readable (WCAG AA contrast)', async ({ page, pedal }) => {
   test.setTimeout(180_000);
   await connect(page, pedal);
-  await page.getByRole('switch', { name: 'Live edit' }).click();
   const failures: string[] = [];
   for (const model of FINISHES) {
     await page.locator('section.block-amp .picker-button').click();
@@ -64,7 +63,6 @@ for (const theme of ['dark', 'light'] as const) {
     await page.goto('/');
     if (theme === 'light') await page.getByRole('button', { name: 'Switch to light theme' }).click();
     await connect(page, pedal);
-    await page.getByRole('switch', { name: 'Live edit' }).click();
     await openAssistantChat(page, CHAT, 'Calif DualM, a Mesa Dual Rectifier.');
     expect(await violations(page)).toEqual([]);
     const { incomplete } = await new AxeBuilder({ page }).include('.assistant').withRules(['color-contrast']).analyze();

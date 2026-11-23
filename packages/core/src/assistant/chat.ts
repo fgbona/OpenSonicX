@@ -26,7 +26,7 @@ export interface ToneSnapshot {
 /** What the chat needs from the editor. Every method reads or acts on the editor's current state. */
 export interface ToneHost {
   snapshot(): ToneSnapshot;
-  /** Sends edits as one step; throws a readable Error when the editor refuses (live edit off, busy). */
+  /** Sends edits as one step; throws a readable Error when the editor refuses (busy). */
   applyEdits(edits: readonly Edit[]): Promise<void>;
   /** The editor's Undo; false when there is nothing to undo. */
   undo(): Promise<boolean>;

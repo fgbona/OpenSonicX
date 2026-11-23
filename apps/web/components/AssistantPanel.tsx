@@ -21,8 +21,6 @@ import { useI18n } from './I18n';
 
 interface Props {
   host: ToneHost;
-  liveEdit: boolean;
-  onLiveEdit: () => void;
 }
 
 interface Message {
@@ -125,7 +123,7 @@ function KeySetup({ setup, saved, kept, onSaved, onRemove }: { setup: (typeof SE
 }
 
 /** Chat that builds tones on the pedal from a description, with the person's own free AI keys. */
-export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
+export function AssistantPanel({ host }: Props) {
   const { t, lang } = useI18n();
   const [keys, setKeys] = useState<Partial<Record<Provider, string>>>({});
   const [paid, setPaid] = useState<readonly PaidEntry[]>([]);
@@ -142,7 +140,6 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
   const [working, setWorking] = useState(false);
   const [cooldown, setCooldown] = useState<Cooldown>({});
   const [limits, setLimits] = useState<Partial<Record<AiModel, { remaining: number; limit: number }>>>({});
-  const [needLive, setNeedLive] = useState(false);
   const [remember, setRemember] = useState(true);
   const usage = useAiUsage();
   const warnedKeys = useRef(new Set<Provider>());
@@ -170,7 +167,6 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
     if (ol && last) ol.scrollTop += last.getBoundingClientRect().top - ol.getBoundingClientRect().top;
     end.current?.scrollIntoView?.({ block: 'nearest' });
   }, [messages, working]);
-  useEffect(() => { if (liveEdit) setNeedLive(false); }, [liveEdit]);
 
   /** US dollars to two significant digits: US$ 0,0031. */
   const money = (usd: number) => new Intl.NumberFormat(lang === 'pt' ? 'pt-BR' : 'en-US', { style: 'currency', currency: 'USD', maximumSignificantDigits: 2 }).format(usd);
@@ -229,7 +225,6 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
         },
         onStep: (tool, ok, text) => {
           if (tool === 'save_preset') proposed = true;
-          if (!ok && text.includes('Live edit is off')) setNeedLive(true);
         },
       });
       setCooldown(result.cooldown);
@@ -359,11 +354,6 @@ export function AssistantPanel({ host, liveEdit, onLiveEdit }: Props) {
               {working && <li className="assistant-message is-assistant"><p className="muted">{t('assistant.thinking')}</p></li>}
             </ol>
             <div ref={end} />
-            {needLive && !liveEdit && (
-              <p className="notice assistant-live">
-                {t('assistant.needLive')} <button type="button" className="btn btn-small btn-primary" onClick={onLiveEdit}>{t('assistant.turnOnLive')}</button>
-              </p>
-            )}
             <form className="assistant-input" onSubmit={(e) => { e.preventDefault(); void send(); }}>
               <input ref={input} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={t('assistant.placeholder')} aria-label={t('assistant.inputAria')} disabled={working} />
               <button type="submit" className="btn btn-primary" disabled={working || !draft.trim()}>{t('assistant.send')}</button>

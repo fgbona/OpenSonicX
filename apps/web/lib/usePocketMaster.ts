@@ -46,7 +46,6 @@ export interface PocketMasterState {
   readonly presetIndex: number | null;
   /** Edit buffer as first read for this preset; Revert brings the pedal back to it. */
   readonly restorePoint: Preset | null;
-  readonly liveEdit: boolean;
   readonly log: readonly LogEntry[];
   /** A save or restore in progress; live edit and automatic re-reads pause meanwhile. */
   readonly busy: Progress | null;
@@ -75,7 +74,7 @@ export interface PocketMasterState {
 const INITIAL: PocketMasterState = {
   transport: null,
   status: 'idle', error: null, inputs: [], outputs: [], inputId: '', outputId: '',
-  preset: null, presetIndex: null, restorePoint: null, liveEdit: false, log: [],
+  preset: null, presetIndex: null, restorePoint: null, log: [],
   busy: null, names: null, backups: [], flowBackups: [], storageWarning: null, irNames: null, profileNames: null, pedalModified: null, history: EMPTY_HISTORY, firmware: null, tuner: false,
 };
 
@@ -249,16 +248,16 @@ export function usePocketMaster() {
 
   const edit = useCallback(
     (e: Edit) => {
-      if (state.liveEdit) send([e]);
+      send([e]);
     },
-    [state.liveEdit, send],
+    [send],
   );
 
   /** Sends the pedal back (or forward) to the preset of the previous (next) step. */
   const step = useCallback(
     (back: boolean) => {
       const preset = presetRef.current;
-      if (!state.liveEdit || !preset || busyRef.current) return;
+      if (!preset || busyRef.current) return;
       const moved = (back ? undoStep : redoStep)(historyRef.current, preset);
       if (!moved) return;
       const edits = diffPresets(preset, moved.target);
@@ -269,7 +268,7 @@ export function usePocketMaster() {
       historyRef.current = moved.history; // nothing to send: the pedal already matches
       patch({ history: moved.history });
     },
-    [state.liveEdit, send, patch],
+    [send, patch],
   );
   const undo = useCallback(() => step(true), [step]);
   const redo = useCallback(() => step(false), [step]);
@@ -280,7 +279,6 @@ export function usePocketMaster() {
    */
   /** Throws the reason the assistant cannot change the sound now, if there is one. */
   const ready = () => {
-    if (!stateRef.current.liveEdit) throw new Error('Live edit is off, so the sound cannot change: the person has to turn it on in the editor first.');
     if (busyRef.current) throw new Error('The editor is busy (saving or loading); try again in a moment.');
   };
   const assistantBase = useMemo(() => ({
@@ -336,7 +334,7 @@ export function usePocketMaster() {
   const revert = useCallback(async (): Promise<boolean> => {
     const current = link.current;
     const index = state.presetIndex;
-    if (!state.liveEdit || !current || index === null || busyRef.current) return false;
+    if (!current || index === null || busyRef.current) return false;
     busyRef.current = true;
     if (settleTimer.current) clearTimeout(settleTimer.current);
     patch({ busy: { step: 'Preparing', done: 0, total: 1 }, error: null });
@@ -351,7 +349,7 @@ export function usePocketMaster() {
     busyRef.current = false;
     patch({ busy: null });
     return (await read({ freshRestorePoint: true })) !== null;
-  }, [state.liveEdit, state.presetIndex, read, patch]);
+  }, [state.presetIndex, read, patch]);
   const revertRef = useRef(revert);
   revertRef.current = revert;
 
@@ -400,7 +398,7 @@ export function usePocketMaster() {
     indexRef.current = null;
     pedalModifiedRef.current = null;
     historyRef.current = EMPTY_HISTORY;
-    patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false, names: null, history: EMPTY_HISTORY, firmware: null, tuner: false });
+    patch({ status: 'connecting', error: null, restorePoint: null, names: null, history: EMPTY_HISTORY, firmware: null, tuner: false });
     try {
       await Promise.all([input.open(), output.open()]);
       link.current = new PocketMasterLink(webMidiPort(input, output), appendLog, (f) => notifyRef.current(f));
@@ -431,7 +429,7 @@ export function usePocketMaster() {
     pedalModifiedRef.current = null;
     const idle = () => (access.current ? 'ready' : 'idle') as Status;
     historyRef.current = EMPTY_HISTORY;
-    patch({ status: 'connecting', error: null, restorePoint: null, liveEdit: false, names: null, history: EMPTY_HISTORY, firmware: null, tuner: false });
+    patch({ status: 'connecting', error: null, restorePoint: null, names: null, history: EMPTY_HISTORY, firmware: null, tuner: false });
     try {
       const ble = await connectBluetooth(
         (e) => patch({ error: `Bluetooth: ${message(e)}` }),
@@ -439,7 +437,7 @@ export function usePocketMaster() {
           link.current?.close();
           link.current = null;
           transportClose.current = null;
-          patch({ status: idle(), transport: null, liveEdit: false, error: 'The pedal disconnected from Bluetooth.' });
+          patch({ status: idle(), transport: null, error: 'The pedal disconnected from Bluetooth.' });
         },
       );
       transportClose.current = ble.close;
@@ -548,7 +546,7 @@ export function usePocketMaster() {
     link.current = null;
     transportClose.current?.();
     transportClose.current = null;
-    patch({ status: access.current ? 'ready' : 'idle', transport: null, liveEdit: false, tuner: false });
+    patch({ status: access.current ? 'ready' : 'idle', transport: null, tuner: false });
   }, [patch]);
 
   // Skip the Enable MIDI click when the visitor already granted access earlier; never prompts by itself.
@@ -848,8 +846,8 @@ export function usePocketMaster() {
     revert: () => void revert(),
     undo,
     redo,
-    canUndo: state.liveEdit && state.history.past.length > 0,
-    canRedo: state.liveEdit && state.history.future.length > 0,
+    canUndo: state.history.past.length > 0,
+    canRedo: state.history.future.length > 0,
     save,
     copyPreset,
     backupAll,
@@ -869,7 +867,6 @@ export function usePocketMaster() {
     exportPreset: () => void exportPreset(),
     importPreset,
     downloadBackup,
-    setLiveEdit: (liveEdit: boolean) => patch({ liveEdit }),
     selectInput: (inputId: string) => patch({ inputId }),
     selectOutput: (outputId: string) => patch({ outputId }),
     clearLog: () => patch({ log: [] }),

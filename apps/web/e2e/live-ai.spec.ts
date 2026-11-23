@@ -16,7 +16,6 @@ for (const p of PROVIDERS) {
   test(`real ${p.name} builds a tone on the simulated pedal`, async ({ page, pedal }) => {
     test.skip(!key, `set ${p.env} to run against the real ${p.name}`);
     await connect(page, pedal);
-    await page.getByRole('switch', { name: 'Live edit' }).click();
     const panel = page.getByRole('region', { name: 'Tone assistant' });
     const setup = panel.getByRole('region', { name: p.region });
     await setup.getByLabel(p.label).fill(key!);

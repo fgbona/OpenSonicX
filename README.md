@@ -50,7 +50,7 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
 
 - Lists MIDI ports and connects to the Pocket Master.
 - Reads the edit buffer and shows the signal chain with every parameter.
-- Live edit (off by default): parameters, block on/off, model per block and
+- Live edit (always on once connected): parameters, block on/off, model per block and
   chain order, sent to the pedal's edit buffer as you move the controls.
   Nothing is saved to a slot.
 - Revert reloads the preset from its slot, like switching presets on the
