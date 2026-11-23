@@ -16,6 +16,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
   the pedal refuse writes after a clear until a power cycle; the dialog says what to do if that
   ever happens.) Deleting a backup removes it from this browser, with *Download file* offered
   first.
+- Tone assistant → Keys: *Remember keys on this device* (on by default) and *Forget all keys*.
+  Keys were, and are, kept only in this browser and sent only to their provider; nobody who opens
+  the site elsewhere sees them. On a shared computer, turning Remember off keeps them for this
+  browser session only (sessionStorage), and Forget all keys removes every key at once. The "i"
+  beside it explains this.
 
 ## [0.15.1] - 2026-11-22
 

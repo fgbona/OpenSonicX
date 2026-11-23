@@ -1,8 +1,9 @@
 'use client';
 
 /**
- * The person's AI keys, kept only on this device (localStorage) and sent only to their provider.
- * They are never logged or shown back in full. The free ones (Groq, Gemini) keep their 1.x keys;
+ * The person's AI keys, kept only in this browser and sent only to their provider. Remembered
+ * (localStorage) by default; with Remember off they live in sessionStorage and go when the browser
+ * closes, for a shared computer. They are never logged or shown back in full. The free ones (Groq, Gemini) keep their 1.x keys;
  * paid providers are one list with the model picked for each.
  */
 import type { PaidId } from './assistant.ts';
@@ -13,9 +14,52 @@ const KEYS: Readonly<Record<Provider, string>> = {
   groq: 'pocket-master-editor.groqKey.v1',
 };
 
+const PAID_KEY = 'pocket-master-editor.aiProviders.v1';
+const REMEMBER_KEY = 'pocket-master-editor.aiRemember.v1';
+/** Every storage entry that holds a key. */
+const SECRETS = [...Object.values(KEYS), PAID_KEY];
+
+/** Whether keys stay in this browser after it closes (the default). */
+export function loadRemember(): boolean {
+  try {
+    return localStorage.getItem(REMEMBER_KEY) !== 'false';
+  } catch {
+    return true;
+  }
+}
+
+const keyStore = (): Storage => (loadRemember() ? localStorage : sessionStorage);
+
+/** Moves the stored keys to where the new choice keeps them. */
+export function saveRemember(on: boolean): void {
+  try {
+    const [from, to] = on ? [sessionStorage, localStorage] : [localStorage, sessionStorage];
+    for (const k of SECRETS) {
+      const v = from.getItem(k);
+      if (v !== null) to.setItem(k, v);
+      from.removeItem(k);
+    }
+    if (on) localStorage.removeItem(REMEMBER_KEY);
+    else localStorage.setItem(REMEMBER_KEY, 'false');
+  } catch {
+    // storage blocked: the keys already last only for this page
+  }
+}
+
+/** Removes every key, remembered or not. */
+export function forgetKeys(): void {
+  for (const store of [() => localStorage, () => sessionStorage]) {
+    try {
+      SECRETS.forEach((k) => store().removeItem(k));
+    } catch {
+      // nothing stored there
+    }
+  }
+}
+
 export function loadKey(provider: Provider): string | null {
   try {
-    return localStorage.getItem(KEYS[provider]);
+    return keyStore().getItem(KEYS[provider]);
   } catch {
     return null;
   }
@@ -24,7 +68,7 @@ export function loadKey(provider: Provider): string | null {
 /** False when the browser would not keep it (storage blocked); the key then lasts for this page. */
 export function saveKey(provider: Provider, key: string): boolean {
   try {
-    localStorage.setItem(KEYS[provider], key.trim());
+    keyStore().setItem(KEYS[provider], key.trim());
     return true;
   } catch {
     return false;
@@ -33,7 +77,7 @@ export function saveKey(provider: Provider, key: string): boolean {
 
 export function removeKey(provider: Provider): void {
   try {
-    localStorage.removeItem(KEYS[provider]);
+    keyStore().removeItem(KEYS[provider]);
   } catch {
     // nothing stored
   }
@@ -51,11 +95,9 @@ export interface PaidEntry {
   readonly model: string;
 }
 
-const PAID_KEY = 'pocket-master-editor.aiProviders.v1';
-
 export function loadPaid(isPaid: (id: string) => boolean): PaidEntry[] {
   try {
-    const list: unknown = JSON.parse(localStorage.getItem(PAID_KEY) ?? '[]');
+    const list: unknown = JSON.parse(keyStore().getItem(PAID_KEY) ?? '[]');
     if (!Array.isArray(list)) return [];
     return list.filter((e): e is PaidEntry => typeof e?.id === 'string' && isPaid(e.id) && typeof e.key === 'string' && typeof e.model === 'string');
   } catch {
@@ -66,8 +108,8 @@ export function loadPaid(isPaid: (id: string) => boolean): PaidEntry[] {
 /** False when the browser would not keep them (storage blocked); they then last for this page. */
 export function savePaid(list: readonly PaidEntry[]): boolean {
   try {
-    if (list.length === 0) localStorage.removeItem(PAID_KEY);
-    else localStorage.setItem(PAID_KEY, JSON.stringify(list));
+    if (list.length === 0) keyStore().removeItem(PAID_KEY);
+    else keyStore().setItem(PAID_KEY, JSON.stringify(list));
     return true;
   } catch {
     return false;
