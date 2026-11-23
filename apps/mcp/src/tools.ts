@@ -147,7 +147,7 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
 
   server.registerTool('list_preset_files', {
     title: 'List saved tones',
-    description: 'Preset files in ~/.pocket-master-editor/presets with their notes: the user\'s library of approved tones. Check it before building a tone from a reference; import_preset loads one at once.',
+    description: 'Preset files in ~/.pocket-master-editor/presets with their notes: the user\'s library of approved tones (.json, plus .prst files exported by Sonicake\'s own app). Check it before building a tone from a reference; import_preset loads one at once.',
     annotations: READ,
   }, () => reply('list_preset_files', options, () => session.listPresetFiles()));
 
@@ -268,7 +268,7 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
 
   server.registerTool('import_preset', {
     title: 'Load a preset file',
-    description: 'Loads a preset file from ~/.pocket-master-editor/presets into the edit buffer with live edits (nothing is saved).',
+    description: 'Loads a preset file (.json, or a .prst exported by Sonicake\'s own app) from ~/.pocket-master-editor/presets into the edit buffer with live edits (nothing is saved).',
     inputSchema: { file: z.string().describe('Preset file path') },
     annotations: LIVE,
   }, ({ file }) => reply('export_preset', options, () => session.importPreset(file)));

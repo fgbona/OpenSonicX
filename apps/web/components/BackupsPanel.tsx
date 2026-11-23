@@ -6,6 +6,7 @@ import { Dialog } from './Dialog';
 import { FlowBackups } from './FlowBackups';
 import { useI18n } from './I18n';
 import { ProgressBar } from './ProgressBar';
+import { PRESET_FILE_ACCEPT, isPrstFile, readPresetFile } from './PresetFiles';
 
 interface Props {
   backups: readonly BackupFile[];
@@ -40,13 +41,27 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
   const [opened, setOpened] = useState<string | null>(null);
   const { t, te, lang } = useI18n();
 
+  const openPreset = (preset: PresetFile) => {
+    onPreset(preset);
+    setNote(t('backups.presetFile', { name: preset.name }));
+  };
+
   const importFile = async (input: HTMLInputElement) => {
     const file = input.files?.[0];
     input.value = '';
     if (!file) return;
-    const text = await file.text();
     setNote(null);
     setImportError(null);
+    // A .prst from Sonicake's app is always a single preset: open it where it belongs.
+    if (isPrstFile(file)) {
+      try {
+        openPreset(await readPresetFile(file));
+      } catch (e) {
+        setImportError(e instanceof Error ? e.message : String(e));
+      }
+      return;
+    }
+    const text = await file.text();
     try {
       const backup = parseBackupFile(text);
       onImport(backup);
@@ -61,9 +76,7 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
     } catch (e) {
       // An exported preset is the likeliest wrong file: open it where it belongs.
       try {
-        const preset = parsePresetFile(text);
-        onPreset(preset);
-        setNote(t('backups.presetFile', { name: preset.name }));
+        openPreset(parsePresetFile(text));
       } catch {
         setImportError(e instanceof Error ? e.message : String(e));
       }
@@ -78,7 +91,7 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
           <button type="button" className="btn btn-small btn-primary" disabled={!connected || busy !== null} onClick={() => void onBackupAll()}>{t('backups.backupAll')}</button>
           <label className="btn btn-small file-button">
             {t('backups.import')}
-            <input type="file" accept="application/json,.json" onChange={(e) => void importFile(e.currentTarget)} />
+            <input type="file" accept={PRESET_FILE_ACCEPT} onChange={(e) => void importFile(e.currentTarget)} />
           </label>
         </div>
       </header>

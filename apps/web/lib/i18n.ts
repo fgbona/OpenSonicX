@@ -30,6 +30,8 @@ const EXACT: ReadonlyArray<[string, MessageKey]> = [
   ['not a Pocket Master preset file', 'error.notPresetFile'],
   ['not a Pocket Master preset file (invalid JSON)', 'error.notPresetFile'],
   ['the preset file is damaged and cannot be read', 'error.damagedPresetFile'],
+  ['not a Pocket Master .prst file', 'error.notPresetFile'],
+  ['the .prst file is damaged and cannot be read', 'error.damagedPresetFile'],
 ];
 /** The editor's English messages that end in a reason from below, which stays as it is. */
 const PREFIXES: ReadonlyArray<[string, MessageKey]> = [

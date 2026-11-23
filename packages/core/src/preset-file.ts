@@ -48,6 +48,38 @@ export function parsePresetFile(text: string): PresetFile {
   return { format, version, name, createdAt, payload, ...(typeof file.notes === 'string' && file.notes ? { notes: file.notes } : {}) };
 }
 
+/*
+ * .prst: the preset file Sonicake's own app exports, 515 bytes:
+ * 0x00 "Pocket Master" zero padded to 20 bytes, 0x14 one unknown byte (varies, not checked),
+ * 0x15 FF x4, 0x19 name in 16 zero-padded ASCII bytes, 0x29 the edit-buffer dump without its leading 12 41.
+ */
+const PRST_LENGTH = 515;
+const PRST_MAGIC = 'Pocket Master';
+const PRST_NAME = { start: 0x19, end: 0x29 } as const;
+
+/** Reads a .prst into a normal preset file. A name the pedal cannot store becomes '' (the sound is kept). */
+export function parsePrstFile(bytes: Uint8Array, now: () => Date = () => new Date()): PresetFile {
+  const magic = String.fromCharCode(...bytes.subarray(0, 20)).replace(/\0+$/, '');
+  if (bytes.length !== PRST_LENGTH || magic !== PRST_MAGIC) throw new Error('not a Pocket Master .prst file');
+  const payload = Uint8Array.from([0x12, 0x41, ...bytes.subarray(PRST_NAME.end)]);
+  try {
+    decodePreset(payload);
+  } catch {
+    throw new Error('the .prst file is damaged and cannot be read');
+  }
+  return presetFile(payload, prstName(bytes.subarray(PRST_NAME.start, PRST_NAME.end)), now);
+}
+
+function prstName(field: Uint8Array): string {
+  const [name = ''] = String.fromCharCode(...field).split('\0');
+  try {
+    encodeName(name);
+    return name;
+  } catch {
+    return '';
+  }
+}
+
 /**
  * Turns the pedal's edit buffer into `preset` with live-edit commands and checks it took.
  * Nothing is selected and nothing is saved; the user can save it afterwards.
