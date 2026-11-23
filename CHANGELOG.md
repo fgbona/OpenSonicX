@@ -19,6 +19,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- MCP server: `import_preset` is timed under its own name (it was logged as `export_preset`).
 - Tone assistant: a short per-minute limit is waited out for exactly the time the provider
   states (the clock was read twice and could wait 1 ms less).
 - Saving to a slot other than the loaded one no longer jumps the Save dialog back to its form:
