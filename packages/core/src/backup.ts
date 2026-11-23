@@ -147,6 +147,13 @@ export async function backupAllSlots(
   return file;
 }
 
+/** Backs up one user slot from its stored copy (12 4F), without loading it; for flows that overwrite a slot other than the loaded one. */
+export async function backupStoredSlot(pedal: Pedal, index: number, now: () => Date = () => new Date()): Promise<BackupFile> {
+  if (!pedal.readStoredPreset) throw new Error('this connection cannot read a stored preset without loading it');
+  const names = await pedal.readNames();
+  return backupFile('slot', [await readSlot(pedal, index, names[index] ?? '')], now);
+}
+
 export interface SaveResult {
   readonly saved: Preset;
   /** Null when the save ran with `backup: false`. */

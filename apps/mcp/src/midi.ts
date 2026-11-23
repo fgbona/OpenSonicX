@@ -1,4 +1,4 @@
-import { linkPedal, readGlobals, MessageType, PocketMasterLink, Query, readProfileNames, readUserIrNames, renameUserIr, renameUserProfile, uploadUserIr, uploadUserProfile, type LogEntry, type SlotName } from '@pocket-master/core';
+import { clearUserIr, clearUserProfile, copyStoredPreset, linkPedal, readGlobals, MessageType, PocketMasterLink, Query, readProfileNames, readUserIrNames, renameUserIr, renameUserProfile, uploadUserIr, uploadUserProfile, type LogEntry, type SlotName } from '@pocket-master/core';
 import type { Connection, PedalIO } from './session.ts';
 
 const PORT_NAME = /pocket\s*master/i;
@@ -56,6 +56,11 @@ export async function connectPocketMaster(onLog: (entry: LogEntry) => void = () 
     },
     async renameSlot(kind, slot, name) {
       await (kind === 'ir' ? renameUserIr : renameUserProfile)(link, slot, name);
+    },
+    copyPreset: (destination, source) => copyStoredPreset(link, destination, source),
+    setTuner: (on) => link.setTuner(on),
+    async clearSlot(kind, slot) {
+      await (kind === 'ir' ? clearUserIr : clearUserProfile)(link, slot);
     },
     readGlobals: () => readGlobals(link),
     async writeGlobals(bytes) {

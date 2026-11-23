@@ -8,7 +8,7 @@ import {
   formatModels, formatPreset, toEdit, type Change,
   applyEdit, applyPreset, downloadModel, IR_SLOTS, irSamplesFromWav, irUploadBlob, listModels, parseNam, pollDeviceToken, profileUploadBlob, searchTones, startDeviceLogin, decodePreset, editToCommands, fromHex, loadIntoEditBuffer,
   parseBackupFile, parsePresetFile, parsePresetLabel, presetFile, presetLabel,
-  resolveBlock, restoreFromBackup, saveToSlot,
+  backupAllSlots, backupStoredSlot, resolveBlock, restoreFromBackup, saveToSlot, USER_PRESETS,
   type BackupFile, type CloArrays, type GlobalSettings, type DeviceLogin, type Edit, type Tokens, type Pedal, type Preset, type SlotNames,
 } from '@pocket-master/core';
 
@@ -25,6 +25,12 @@ export interface PedalIO extends Pedal {
   uploadProfile(slot: number, name: string, arrays: CloArrays): Promise<void>;
   /** Renames a user IR or profile slot (0..4); what the slot holds is untouched. */
   renameSlot(kind: 'ir' | 'profile', slot: number, name: string): Promise<void>;
+  /** Copies stored preset `source` (0..99) over user slot `destination` (0..49), checked by reading both back. */
+  copyPreset(destination: number, source: number): Promise<void>;
+  /** Turns the tuner on or off; the pedal neither answers nor reports it. */
+  setTuner(on: boolean): Promise<void>;
+  /** Empties a user IR or profile slot (0..4); resolves once the pedal reports it empty. */
+  clearSlot(kind: 'ir' | 'profile', slot: number): Promise<void>;
   /** Device-wide settings (12 10). */
   readGlobals(): Promise<GlobalSettings>;
   /** Sends setting writes (setGlobal / setExpFsTarget bytes) and waits until they are written. */
@@ -212,6 +218,54 @@ export class Session {
       const { paths } = await this.#keepingBackups((onBackup) => restoreFromBackup(io, slot, { onBackup, backup: true }));
       const note = paths.map((path) => `\nBackup of what it replaced: ${path}`).join('');
       return `Restored ${slot.label} "${slot.name}".${note}\n\n${await this.#describe(io)}`;
+    });
+  }
+
+  /** Copies a stored preset over a user slot, after backing that slot up; the loaded preset is untouched. */
+  async copy(options: { source: string; destination: string; confirm: string }): Promise<string> {
+    const source = parsePresetLabel(options.source);
+    const destination = parsePresetLabel(options.destination);
+    const label = presetLabel(destination);
+    if (destination >= USER_PRESETS) throw new Error('the destination must be a user slot, P01..P50');
+    if (destination === source) throw new Error(`${label} cannot be copied onto itself`);
+    requireConfirm(options.confirm, label);
+    return this.#use(async (io) => {
+      const { paths } = await this.#keepingBackups(async (onBackup) => {
+        await onBackup(await backupStoredSlot(io, destination));
+        await io.copyPreset(destination, source);
+      });
+      const names = await this.#presetNames(io);
+      const note = paths.map((path) => `\nBackup of the old ${label}: ${path}`).join('');
+      return `Copied ${presetLabel(source)} "${names[source] ?? ''}" to ${label}.${note}\n\n${await this.#describe(io)}`;
+    });
+  }
+
+  tuner(options: { on: boolean }): Promise<string> {
+    return this.#use(async (io) => {
+      await io.setTuner(options.on);
+      return `Tuner ${options.on ? 'on' : 'off'}. The pedal does not report the tuner state, so this is only what was sent.`;
+    });
+  }
+
+  /** Empties user IR or captured-profile slot 1..5; confirm must be the name it holds. */
+  async deleteSlot(options: { kind: 'ir' | 'profile'; slot: number; confirm: string }): Promise<string> {
+    const { kind, slot } = options;
+    if (!Number.isInteger(slot) || slot < 1 || slot > 5) throw new Error('slot must be 1..5');
+    const what = kind === 'ir' ? 'user IR' : 'profile';
+    return this.#use(async (io) => {
+      const name = (await this.#slots(io))[kind === 'ir' ? 'irNames' : 'profileNames']?.[slot - 1] ?? null;
+      if (name === null) throw new Error(`${kind === 'ir' ? 'User IR' : 'Profile'} slot ${slot} is already empty`);
+      if (options.confirm.trim().toUpperCase() !== name.toUpperCase()) throw new Error(`confirm must be "${name}" to delete that slot`);
+      await io.clearSlot(kind, slot - 1);
+      return `Deleted ${what} slot ${slot} "${name}". It is empty now; presets that used it keep their settings.`;
+    });
+  }
+
+  /** Backs up P01..P50 to one file, read without loading them. */
+  backupAll(): Promise<string> {
+    return this.#use(async (io) => {
+      const file = await backupAllSlots(io, { edited: null });
+      return `Backed up P01..P50 to ${await this.#writeBackup(file)}.`;
     });
   }
 

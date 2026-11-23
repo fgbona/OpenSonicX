@@ -6,6 +6,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- MCP server: `copy_preset` (backs the destination up first), `set_tuner`, `delete_slot`
+  (a user IR or captured profile, confirmed by the name it holds) and `backup_all_presets`,
+  so the assistant in Claude Desktop can do what the editor does.
+
 ### Fixed
 
 - Saving to a slot other than the loaded one no longer jumps the Save dialog back to its form:
