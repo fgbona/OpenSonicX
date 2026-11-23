@@ -28,7 +28,7 @@ Web editor (or desktop app) over USB, gear button:
 ## 3. Bluetooth (#89), 15 min
 
 Pedal's Bluetooth on, USB unplugged. In Chrome, *Connect via Bluetooth*:
-- Computer: turn a knob with Live edit on and hear it; save to a spare slot and check its name
+- Computer: turn a knob and hear it; save to a spare slot and check its name
   on the pedal.
 - Switch the pedal off while connected: the editor says it disconnected.
 - Android phone, Chrome, same site: connect, read the preset, turn a knob.

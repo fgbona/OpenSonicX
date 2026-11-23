@@ -89,7 +89,6 @@ test('describing a tone builds it live, lists what changed, and Undo takes it ba
     say('Mesa Dual Rectifier with gain 70, like the Black Album rhythm.'),
   ]);
   await connect(page, pedal);
-  await page.getByRole('switch', { name: 'Live edit' }).click();
   await addKey(page);
   await ask(page, 'black album rhythm tone');
   await expect(panel(page).getByText('Mesa Dual Rectifier with gain 70', { exact: false })).toBeVisible();
@@ -106,21 +105,9 @@ test('describing a tone builds it live, lists what changed, and Undo takes it ba
   await expect(amp(page).locator('.face-amp')).toHaveAttribute('data-skin', 'marshall');
 });
 
-test('with Live edit off the assistant asks for it instead of changing the sound', async ({ page, pedal }) => {
-  await fakeGemini(page, [call('edit_preset', { changes: [{ kind: 'volume', value: 50 }] }), say('Turn on Live edit and I will do it.')]);
-  await connect(page, pedal);
-  await addKey(page);
-  await ask(page, 'louder');
-  await expect(panel(page).getByText('Turn on Live edit so the assistant can change the sound.')).toBeVisible();
-  expect(pedal.pedal.received.filter((r) => r.startsWith('edit'))).toEqual([]);
-  await panel(page).getByRole('button', { name: 'Turn on Live edit' }).click();
-  await expect(page.getByText(/Live edit is on/)).toBeVisible();
-});
-
 test('saving is only a proposal: the Save dialog opens filled in, and Cancel saves nothing', async ({ page, pedal }) => {
   const requests = await fakeGemini(page, [call('save_preset', { slot: 'P45', name: 'BLACK ALB' }), say('Not saved, as you prefer.')]);
   await connect(page, pedal);
-  await page.getByRole('switch', { name: 'Live edit' }).click();
   await addKey(page);
   await ask(page, 'save it on 45');
   const dialog = page.getByRole('dialog', { name: 'Save to a preset slot' });
@@ -144,19 +131,18 @@ test('a used-up free quota hands the message to the next model on its own', asyn
   expect(requests.map((r) => r.model)).toEqual(['gemini-3.8-flash', 'gemini-3.5-flash-lite']);
 });
 
-test('what a tool reports matches the pedal: loading, reverting, and undo with Live edit off', async ({ page, pedal }) => {
+test('what a tool reports matches the pedal: loading, reverting, and undo with nothing to undo', async ({ page, pedal }) => {
   const requests = await fakeGemini(page, [
-    call('undo_edit', {}), say('Live edit is off.'),
+    call('undo_edit', {}), say('Nothing to undo.'),
     call('select_preset', { preset: 'P10' }), say('Loaded P10.'),
     call('edit_preset', { changes: [{ kind: 'volume', value: 50 }] }, 'c3'), call('revert_preset', {}, 'c4'), say('Back as it was.'),
   ]);
   await connect(page, pedal);
   await addKey(page);
   await ask(page, 'undo that');
-  await expect(panel(page).getByText('Live edit is off.')).toBeVisible();
-  expect(JSON.stringify(requests[1])).toMatch(/Live edit is off, so the sound cannot change/);
+  await expect(panel(page).getByText('Nothing to undo.')).toBeVisible();
+  expect(JSON.stringify(requests[1])).toMatch(/Nothing to undo: no change since the preset was loaded/);
 
-  await page.getByRole('switch', { name: 'Live edit' }).click();
   await ask(page, 'load P10');
   await expect(page.getByRole('heading', { name: /P10\s*THR-CLEAN/ })).toBeVisible();
   const loaded = JSON.stringify((requests[3]!.input as unknown[]).at(-1));
@@ -177,7 +163,6 @@ test('with a Groq key, Groq builds the tone; when its quota runs out, Gemini tak
   ]);
   const gemini = await fakeGemini(page, [say('Gemini here.')]);
   await connect(page, pedal);
-  await page.getByRole('switch', { name: 'Live edit' }).click();
   await addGroqKey(page);
   await ask(page, 'black album rhythm');
   await expect(panel(page).getByText('Rectifier on.')).toBeVisible();
@@ -210,7 +195,6 @@ test('a refused Groq key is reported once while Gemini answers; a quota cut mid-
     { status: 429, body: { error: { status: 'RESOURCE_EXHAUSTED', details: [{ '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '60s' }] } } },
   ]);
   await connect(page, pedal);
-  await page.getByRole('switch', { name: 'Live edit' }).click();
   await addGroqKey(page);
   await panel(page).getByRole('button', { name: 'Keys' }).click();
   await geminiSetup(page).getByLabel('Gemini API key').fill(KEY);
@@ -257,7 +241,6 @@ test('a tone kept by the assistant goes to the library, and a later conversation
     call('load_saved_tone', { name: 'BLACK RHY' }, 'c2'), say('Loaded your Black Album tone.'),
   ]);
   await connect(page, pedal);
-  await page.getByRole('switch', { name: 'Live edit' }).click();
   await addKey(page);
   await ask(page, 'this sounds right, keep it');
   await expect(panel(page).getByText('Kept it as BLACK RHY.')).toBeVisible();
@@ -307,7 +290,6 @@ test('a long change list scrolls with the conversation, not on its own', async (
     say('Done.'),
   ]);
   await connect(page, pedal);
-  await page.getByRole('switch', { name: 'Live edit' }).click();
   await addKey(page);
   await ask(page, 'black album rhythm tone');
   const list = panel(page).getByRole('region', { name: 'What changed' }).locator('ul');
@@ -337,7 +319,6 @@ test('an answer cut after the sound changed still opens the Save dialog that was
     { status: 429, body: { error: { status: 'RESOURCE_EXHAUSTED', details: [{ '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '600s' }] } } },
   ]);
   await connect(page, pedal);
-  await page.getByRole('switch', { name: 'Live edit' }).click();
   await addKey(page);
   await ask(page, 'ratt body talk rhythm, save it to P43');
   const save = page.getByRole('dialog', { name: 'Save to a preset slot' });

@@ -3,11 +3,6 @@ import type { Page } from '@playwright/test';
 
 const amp = (page: Page) => page.locator('section.block-amp');
 
-async function liveEdit(page: Page) {
-  await page.getByRole('switch', { name: 'Live edit' }).click();
-  await expect(page.getByText(/Live edit is on/)).toBeVisible();
-}
-
 async function pickAmp(page: Page, model: string) {
   await amp(page).locator('.picker-button').click();
   await page.getByRole('option', { name: new RegExp(`^${model}\\b`) }).click();
@@ -21,17 +16,14 @@ test('reads the loaded preset, its chain and the slot names', async ({ page, ped
   await expect(page.getByRole('region', { name: 'Pedal slots' }).getByText('Randall SA')).toBeVisible();
 });
 
-test('controls stay read-only until live edit is on', async ({ page, pedal }) => {
+test('controls are live as soon as the pedal is connected, with no switch to turn on', async ({ page, pedal }) => {
   await connect(page, pedal);
-  const gain = amp(page).getByRole('slider', { name: /gain/i });
-  await expect(gain).toHaveAttribute('aria-disabled', 'true');
-  await liveEdit(page);
-  await expect(gain).toHaveAttribute('aria-disabled', 'false');
+  await expect(amp(page).getByRole('slider', { name: /gain/i })).toHaveAttribute('aria-disabled', 'false');
+  await expect(page.getByRole('switch', { name: 'Live edit' })).toHaveCount(0);
 });
 
 test('live edit sends a knob turn and a model change to the pedal', async ({ page, pedal }) => {
   await connect(page, pedal);
-  await liveEdit(page);
   const gain = amp(page).getByRole('slider', { name: /gain/i });
   const before = Number(await gain.getAttribute('aria-valuenow'));
   await gain.focus();
@@ -46,7 +38,6 @@ test('live edit sends a knob turn and a model change to the pedal', async ({ pag
 
 test('revert reloads the preset as it was first read', async ({ page, pedal }) => {
   await connect(page, pedal);
-  await liveEdit(page);
   await pickAmp(page, 'Calif DualM');
   await expect(amp(page).getByText('Calif DualM')).toBeVisible();
   await page.getByRole('button', { name: 'Revert' }).click();
@@ -56,7 +47,6 @@ test('revert reloads the preset as it was first read', async ({ page, pedal }) =
 
 test('loading another preset asks before discarding unsaved changes', async ({ page, pedal }) => {
   await connect(page, pedal);
-  await liveEdit(page);
   await pickAmp(page, 'Calif DualM');
   await page.getByRole('button', { name: /Load P10/ }).click();
   const dialog = page.getByRole('dialog', { name: 'Discard the changes?' });
@@ -73,7 +63,6 @@ test('loading another preset asks before discarding unsaved changes', async ({ p
 
 test('saves to the loaded slot after backing it up, and checks it on the pedal', async ({ page, pedal }) => {
   await connect(page, pedal);
-  await liveEdit(page);
   await pickAmp(page, 'Calif DualM');
   await page.getByRole('button', { name: 'Save…' }).click();
   const dialog = page.getByRole('dialog', { name: 'Save to a preset slot' });
@@ -92,7 +81,6 @@ test('a comment on a captured profile shows next to it in the AMP menu', async (
   await dialog.getByRole('textbox').fill('Randall Satan, high gain');
   await dialog.getByRole('button', { name: 'Save' }).click();
   await expect(slots.getByText('Randall Satan, high gain')).toBeVisible();
-  await liveEdit(page);
   await amp(page).locator('.picker-button').click();
   await expect(page.getByRole('option', { name: /Randall SA.*Randall Satan, high gain/ })).toBeVisible();
 });
@@ -100,7 +88,6 @@ test('a comment on a captured profile shows next to it in the AMP menu', async (
 test('a save writes the slot right away, without a backup step', async ({ page, pedal }) => {
   await connect(page, pedal);
   const original = Array.from(pedal.pedal.slots[8]!);
-  await liveEdit(page);
   await pickAmp(page, 'Calif DualM');
   await page.getByRole('button', { name: 'Save…' }).click();
   const save = page.getByRole('dialog', { name: 'Save to a preset slot' });
@@ -116,7 +103,6 @@ test('a save writes the slot right away, without a backup step', async ({ page, 
 
 test('undo and redo step through live edits, a knob turn counting as one step', async ({ page, pedal }) => {
   await connect(page, pedal);
-  await liveEdit(page);
   const gain = amp(page).getByRole('slider', { name: /gain/i });
   const before = Number(await gain.getAttribute('aria-valuenow'));
   await gain.focus();
@@ -147,7 +133,6 @@ test('undo and redo step through live edits, a knob turn counting as one step', 
 
 test('importing a preset file first shows what it changes from the loaded preset', async ({ page, pedal }) => {
   await connect(page, pedal);
-  await liveEdit(page);
   await pickAmp(page, 'Calif DualM');
   await page.getByText('Import preset').locator('input[type=file]').setInputFiles(new URL('../../../packages/core/test/fixtures/preset-files/v1-iron-lead.json', import.meta.url).pathname);
   const dialog = page.getByRole('dialog', { name: 'Import a preset' });
@@ -159,7 +144,6 @@ test('importing a preset file first shows what it changes from the loaded preset
 
 test('the save dialog suggests the name of the slot it saves to, every time it opens', async ({ page, pedal }) => {
   await connect(page, pedal);
-  await liveEdit(page);
   await pickAmp(page, 'Calif DualM');
   await page.getByRole('button', { name: 'Save…' }).click();
   const save = page.getByRole('dialog', { name: 'Save to a preset slot' });
@@ -177,7 +161,6 @@ test('the save dialog suggests the name of the slot it saves to, every time it o
 
 test('after a save the preset is no longer modified: loading another one does not ask', async ({ page, pedal }) => {
   await connect(page, pedal);
-  await liveEdit(page);
   await pickAmp(page, 'Calif DualM');
   await page.getByRole('button', { name: 'Read' }).click(); // the pedal now says "modified" too
   await page.getByRole('button', { name: 'Save…' }).click();
@@ -199,7 +182,6 @@ test('an exported preset goes into the library, and loads from there with its co
   await download;
   await expect(library.getByText('IRON-LEAD')).toBeVisible();
 
-  await liveEdit(page);
   await pickAmp(page, 'Calif DualM');
   await library.getByRole('button', { name: 'Load IRON-LEAD' }).click();
   const dialog = page.getByRole('dialog', { name: 'Import a preset' });

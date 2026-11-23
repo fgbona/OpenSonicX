@@ -6,6 +6,14 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Removed
+
+- The *Live edit* switch. Editing is always live once the pedal is connected: every change goes
+  to the pedal's edit buffer at once, Undo, Redo and Revert are always there, and nothing is
+  saved to a slot until Save. With it off the editor could only look; reading, saving, copy,
+  backups and slots never needed it, and the owner had to turn it on every time. The tone
+  assistant no longer asks to turn it on.
+
 ## [0.16.0] - 2026-11-22
 
 **Delete, and keys on shared computers.** Captured profiles, user IRs and backups can be

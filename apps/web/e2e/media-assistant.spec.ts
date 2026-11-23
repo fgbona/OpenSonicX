@@ -33,7 +33,6 @@ test('assistant media', async ({ page, pedal }) => {
   await connect(page, pedal);
   // The toolbar floats over the page when scrolled; in a still frame it would cover the amp's header.
   await page.addStyleTag({ content: 'nextjs-portal { display: none !important; } .toolbar { position: static !important; }' });
-  await page.getByRole('switch', { name: 'Live edit' }).click();
   const panel = page.getByRole('region', { name: 'Tone assistant' });
   const setup = panel.getByRole('region', { name: 'Google Gemini key' });
   await setup.getByLabel('Gemini API key').fill('fake-gemini-key-media-0000');

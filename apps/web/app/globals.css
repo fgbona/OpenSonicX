@@ -219,7 +219,6 @@ button, select { font: inherit; color: inherit; }
   margin: 0; padding: 12px 16px; border-radius: var(--radius);
   background: color-mix(in srgb, var(--orange) 14%, var(--surface)); color: var(--label); font-size: 0.9375rem;
 }
-.live-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 0.875rem; font-weight: 500; }
 .switch {
   position: relative; width: 44px; height: 26px; padding: 0; border: none; border-radius: 13px;
   background: var(--fill-strong); cursor: pointer; transition: background 200ms ease-out; flex: none;
@@ -960,7 +959,6 @@ button, select { font: inherit; color: inherit; }
 .assistant-examples p { flex-basis: 100%; margin: 0; }
 .assistant-input { display: flex; gap: 8px; }
 .assistant-input input { flex: 1; min-width: 0; padding: 8px 12px; border-radius: var(--radius-small); border: 1px solid var(--separator); background: var(--surface); color: var(--label); font: inherit; }
-.assistant-live { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .assistant-provider { display: grid; gap: 8px; padding: 10px 12px; border-radius: var(--radius-small); background: var(--surface-2); }
 .assistant-provider h3 { margin: 0; font-size: 0.9375rem; font-weight: 600; }
 .assistant-saved { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }

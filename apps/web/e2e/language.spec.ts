@@ -43,7 +43,6 @@ test('the whole editor speaks Portuguese', async ({ page, pedal }) => {
   await page.getByRole('button', { name: pt['log.show'] }).click();
   await expectPortuguese(page, 'connected, with the SysEx log');
 
-  await page.getByRole('switch', { name: pt['live.label'] }).click();
   await expectPortuguese(page, 'tone assistant, key setup');
   await openAssistantChat(page, { panel: pt['assistant.title'], keyRegion: pt['assistant.providerAria'].replace('{provider}', 'Google Gemini'), keyLabel: pt['assistant.keyLabel'], save: pt['assistant.saveKey'], input: pt['assistant.inputAria'], send: pt['assistant.send'] }, 'Montei um Rectifier.');
   await expectPortuguese(page, 'tone assistant, chat');

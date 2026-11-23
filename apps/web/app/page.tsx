@@ -122,9 +122,7 @@ export default function EditorPage() {
         onConnect={pm.connect}
         onDisconnect={pm.disconnect}
         onRead={pm.read}
-        liveEdit={pm.liveEdit}
         modified={pm.modified}
-        onLiveEdit={pm.setLiveEdit}
         onRevert={pm.revert}
         onUndo={pm.undo}
         onRedo={pm.redo}
@@ -158,11 +156,6 @@ export default function EditorPage() {
         {connected && pm.firmware && pm.firmware !== TESTED_FIRMWARE && (
           <p className="notice" role="status">{t('firmware.untested', { firmware: pm.firmware, tested: TESTED_FIRMWARE })}</p>
         )}
-        {pm.liveEdit && (
-          <p className="notice" role="status">
-            {t('live.notice')}
-          </p>
-        )}
         {pm.preset && (
           <PresetFiles
             connected={connected}
@@ -178,7 +171,7 @@ export default function EditorPage() {
         )}
         {pm.preset ? (
           <ChainView preset={pm.preset} presetIndex={pm.presetIndex} presetName={pm.presetIndex !== null ? (pm.names?.[pm.presetIndex] ?? null) : null}
-            editable={pm.liveEdit && pm.busy === null} modified={pm.modified} onEdit={pm.edit} irNames={pm.irNames} profileNames={pm.profileNames} />
+            editable={pm.busy === null} modified={pm.modified} onEdit={pm.edit} irNames={pm.irNames} profileNames={pm.profileNames} />
         ) : (
           <section className="empty">
             <h1>{t('empty.title')}</h1>
@@ -190,7 +183,7 @@ export default function EditorPage() {
         )}
         {connected && (
           <>
-            {pm.preset && <AssistantPanel host={toneHost} liveEdit={pm.liveEdit} onLiveEdit={() => pm.setLiveEdit(true)} />}
+            {pm.preset && <AssistantPanel host={toneHost} />}
             <Tone3000Panel connected={connected} busy={pm.busy !== null} irNames={pm.irNames} profileNames={pm.profileNames} exclusive={pm.exclusive} error={pm.error} />
             <SlotsPanel connected={connected} busy={pm.busy !== null} irNames={pm.irNames} profileNames={pm.profileNames} exclusive={pm.exclusive} error={pm.error} />
           </>
