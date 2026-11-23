@@ -332,13 +332,13 @@ test('a backup card shows its actions at once; one preset restores from its list
   await expect(backups.locator('.backup')).toHaveCount(1);
 });
 
-test('a capture or IR slot can be deleted, after a warning about switching the pedal off and on', async ({ page, pedal }) => {
+test('a capture or IR slot can be deleted, after a confirmation', async ({ page, pedal }) => {
   await connect(page, pedal);
   const slots = page.getByRole('region', { name: 'Pedal slots' });
   const irs = slots.locator('li', { hasText: 'Brutal Pri' });
   await irs.getByRole('button', { name: 'Delete' }).click();
   const dialog = page.getByRole('dialog', { name: 'Delete “Brutal Pri”?' });
-  await expect(dialog.getByText(/switch the pedal off and on/)).toBeVisible();
+  await expect(dialog.getByText(/switch it off and on and try again/)).toBeVisible();
   await dialog.getByRole('button', { name: 'Delete' }).click();
   await expect(dialog).toBeHidden();
   await expect(slots.getByText('Brutal Pri')).toBeHidden();

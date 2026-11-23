@@ -130,12 +130,12 @@ async function clearSlot(link: PocketMasterLink, kind: 'ir' | 'profile', slot: n
 }
 
 /**
- * Empties user IR `slot` (0..4). Per SonicMaster, the pedal then refuses further IR writes until
- * it is switched off and on.
+ * Empties user IR `slot` (0..4). SonicMaster saw the pedal then refuse writes until a power cycle;
+ * the owner's V1.3.3 unit took the next uploads without one, and they survived a power cycle.
  */
 export const clearUserIr = (link: PocketMasterLink, slot: number) => clearSlot(link, 'ir', slot);
 
-/** Empties profile `slot` (0..4); as with IRs, the next write needs a power cycle first. */
+/** Empties profile `slot` (0..4); checked on the owner's unit like the IR clear. */
 export const clearUserProfile = (link: PocketMasterLink, slot: number) => clearSlot(link, 'profile', slot);
 
 /** Renames user IR `slot` (0..4) to `name` (1..10 characters); the IR itself is untouched. */
