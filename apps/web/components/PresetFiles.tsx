@@ -53,7 +53,7 @@ export function PresetFiles({ connected, current, busy, error, pending, onPick, 
       <button type="button" className="btn btn-small" onClick={onExport} disabled={disabled}>{t('presetFile.export')}</button>
       <label className={`btn btn-small file-button${disabled ? ' is-disabled' : ''}`} aria-disabled={disabled}>
         {t('presetFile.import')}
-        <input type="file" accept={PRESET_FILE_ACCEPT} disabled={disabled} onChange={(e) => void pick(e.currentTarget)} />
+        <input type="file" title="" accept={PRESET_FILE_ACCEPT} disabled={disabled} onChange={(e) => void pick(e.currentTarget)} />
       </label>
       <Dialog open={pending !== null} title={t('presetFile.title')} onClose={() => onPick(null)} locked={busy !== null}>
         {busy ? (

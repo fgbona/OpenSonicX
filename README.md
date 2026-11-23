@@ -53,15 +53,21 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
 - Live edit (always on once connected): parameters, block on/off, model per block and
   chain order, sent to the pedal's edit buffer as you move the controls.
   Nothing is saved to a slot.
-- Revert reloads the preset from its slot, like switching presets on the
-  pedal, so knob turns made on the unit are undone too.
+- Undo and redo (⌘Z / Ctrl+Z, ⇧⌘Z / Ctrl+Y) step through your edits; Revert reloads the
+  preset from its slot, like switching presets on the pedal, so knob turns made on the unit
+  are undone too.
 - Saves to a user slot (P01..P50), backing up the slot it overwrites
-  first (you can skip that per save). Backups can be downloaded and
-  restored from the Backups panel.
+  first (you can skip that per save). Copies a stored preset over another slot.
+- Backups: back up one preset or all 50 to a file, restore one or all of them, download,
+  import and delete backups, from the Backups panel. Slots are read without loading them.
+- Exports and imports presets as files: our `.json` files and the `.prst` files Sonicake's own
+  app exports. Before loading, it lists what changes against the loaded preset. Presets you
+  like can be kept in a library in the browser or app.
+- Turns the pedal's tuner on and off.
 - Lists all 100 presets with a filter and loads one, asking first when the
   current one has unsaved changes.
 - Loads a NAM capture (`.nam`) into a captured-profile slot, converting it
-  in the browser, and a WAV into a user IR slot.
+  in the browser, and a WAV into a user IR slot; renames and deletes them.
 - Searches [TONE3000](https://www.tone3000.com) and installs a capture or IR
   on the pedal in one go (sign in with a code you approve on the site). The
   site needs a TONE3000 publishable key at build time:
@@ -71,9 +77,12 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
 - A tone assistant: describe a sound ("Black Album rhythm tone", "warmer, less gain", "save
   it on P45") and it builds it on the pedal, live, listing what changed. It runs on your own
   free AI key, Groq (about 1,000 requests a day) or Google Gemini, or both with automatic
-  switching when one runs out; called straight from the editor (no server of ours). Saving
-  still goes through the Save dialog you confirm. The panel walks you through creating keys
-  that can never charge you, and counts the free requests left today.
+  switching when one runs out; or a paid key (OpenRouter, Claude, OpenAI, xAI Grok, DeepSeek,
+  Mistral, Cerebras), in the order you choose, with the cost of each answer. Called straight
+  from the editor (no server of ours); keys stay on your device, or only for the session if
+  you prefer. Saving still goes through the Save dialog you confirm. The panel walks you
+  through creating free keys that can never charge you, and counts the free requests left
+  today.
 - Comments on captured-profile and IR slots (kept in this browser or app),
   shown next to their names in the menus.
 - *Global options* (gear button): input and USB/Bluetooth levels, boot
@@ -83,8 +92,8 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
 
 ## What works where
 
-- **Pedal firmware:** tested on **V1.3.3**. Other versions may behave differently; the editor
-  cannot read the firmware version from the pedal yet.
+- **Pedal firmware:** tested on **V1.3.3**. The editor reads the version from the pedal
+  (shown in *Global options*) and warns when it is another one, which may behave differently.
 - **Browsers:** Chrome, Edge and Opera on a computer, over USB. Bluetooth in Chrome and Edge;
   tested in desktop Chrome, Android still to be confirmed on a real phone.
 - **Not supported:** Safari and every browser on iPhone and iPad (no Web MIDI there); Firefox is untested.
