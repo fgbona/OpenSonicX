@@ -6,6 +6,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- MCP server: `delete_slot` is confirmed with the slot's label (`"IR3"`, `"PROFILE2"`), like
+  `load_ir` and `load_nam`, instead of the name the slot holds; every tool that writes now asks
+  for the label of what it writes. `copy_preset` and `delete_slot` describe their `confirm`.
+
 ## [0.17.0] - 2026-11-23
 
 Import presets exported by Sonicake's own app (`.prst`), and the MCP server catches up with

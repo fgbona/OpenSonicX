@@ -247,15 +247,15 @@ export class Session {
     });
   }
 
-  /** Empties user IR or captured-profile slot 1..5; confirm must be the name it holds. */
+  /** Empties user IR or captured-profile slot 1..5; confirm repeats its label ("IR3", "PROFILE2"), as load_ir and load_nam ask. */
   async deleteSlot(options: { kind: 'ir' | 'profile'; slot: number; confirm: string }): Promise<string> {
     const { kind, slot } = options;
     if (!Number.isInteger(slot) || slot < 1 || slot > 5) throw new Error('slot must be 1..5');
     const what = kind === 'ir' ? 'user IR' : 'profile';
+    requireConfirm(options.confirm, `${kind === 'ir' ? 'IR' : 'PROFILE'}${slot}`);
     return this.#use(async (io) => {
       const name = (await this.#slots(io))[kind === 'ir' ? 'irNames' : 'profileNames']?.[slot - 1] ?? null;
       if (name === null) throw new Error(`${kind === 'ir' ? 'User IR' : 'Profile'} slot ${slot} is already empty`);
-      if (options.confirm.trim().toUpperCase() !== name.toUpperCase()) throw new Error(`confirm must be "${name}" to delete that slot`);
       await io.clearSlot(kind, slot - 1);
       return `Deleted ${what} slot ${slot} "${name}". It is empty now; presets that used it keep their settings.`;
     });

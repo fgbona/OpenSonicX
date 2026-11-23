@@ -175,12 +175,13 @@ test('the tuner turns on and off, and the reply says the pedal does not report i
   assert.deepEqual(fake.received.filter((r) => r.startsWith('tuner')), ['tuner on', 'tuner off']);
 });
 
-test('delete_slot empties an IR or profile slot only when confirm names what it holds', async () => {
+test('delete_slot empties an IR or profile slot only when confirm repeats its label, like load_ir and load_nam', async () => {
   const { session, fake } = setup();
-  await assert.rejects(session.deleteSlot({ kind: 'ir', slot: 1, confirm: 'IR 1' }), /confirm must be "Mesa OS"/);
-  await assert.rejects(session.deleteSlot({ kind: 'profile', slot: 2, confirm: 'x' }), /slot 2 is already empty/);
+  await assert.rejects(session.deleteSlot({ kind: 'ir', slot: 1, confirm: 'Mesa OS' }), /confirm must be "IR1"/);
+  await assert.rejects(session.deleteSlot({ kind: 'profile', slot: 1, confirm: 'IR1' }), /confirm must be "PROFILE1"/);
+  await assert.rejects(session.deleteSlot({ kind: 'profile', slot: 2, confirm: 'PROFILE2' }), /slot 2 is already empty/);
   assert.equal(fake.received.some((r) => r.startsWith('clear')), false);
-  assert.match(await session.deleteSlot({ kind: 'ir', slot: 1, confirm: 'mesa os' }), /Deleted user IR slot 1 "Mesa OS"/);
+  assert.match(await session.deleteSlot({ kind: 'ir', slot: 1, confirm: 'ir1' }), /Deleted user IR slot 1 "Mesa OS"/);
   assert.ok(fake.received.includes('clear ir 0'));
 });
 
