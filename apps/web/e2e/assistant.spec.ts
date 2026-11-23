@@ -275,6 +275,23 @@ test('Google refusing the free tier in the person\'s region says so, with its li
   await expect(panel(page).getByRole('link', { name: 'Where Gemini is available' })).toHaveAttribute('href', 'https://ai.google.dev/gemini-api/docs/available-regions');
 });
 
+test('a tone saved to another slot still lists what changed', async ({ page, pedal }) => {
+  await fakeGemini(page, [
+    call('edit_preset', { changes: [{ kind: 'model', block: 'AMP', model: 'Calif DualM' }] }),
+    call('save_preset', { slot: 'P45', name: 'BLACK ALB' }),
+    say('Saved on P45.'),
+  ]);
+  await connect(page, pedal);
+  await addKey(page);
+  await ask(page, 'black album rhythm, save it on 45');
+  const save = page.getByRole('dialog', { name: 'Save to a preset slot' });
+  await save.getByRole('button', { name: 'Save to P45' }).click();
+  await expect(save.getByText('Saved to P45')).toBeVisible();
+  await save.getByRole('button', { name: 'Done' }).click();
+  await expect(panel(page).getByText('Saved on P45.')).toBeVisible();
+  await expect(panel(page).getByRole('region', { name: 'What changed' }).getByRole('listitem').filter({ hasText: 'AMP Model' })).toContainText('Brit 800 → Calif DualM');
+});
+
 test('an answer that changed nothing says so, instead of an empty space where the changes go', async ({ page, pedal }) => {
   await fakeGemini(page, [say('That is already the tone on the pedal.')]);
   await connect(page, pedal);
