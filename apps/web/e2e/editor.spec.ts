@@ -1,7 +1,17 @@
 import { test, expect, connect } from './fixtures.ts';
 import type { Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 
 const amp = (page: Page) => page.locator('section.block-amp');
+
+/** A synthetic .prst (the file Sonicake's app exports) holding the IRON-LEAD fixture's sound under `name`. */
+function prst(name: string) {
+  const json = readFileSync(new URL('../../../packages/core/test/fixtures/preset-files/v1-iron-lead.json', import.meta.url), 'utf8');
+  const payload = Buffer.from(JSON.parse(json).payload, 'hex');
+  const field = (text: string, size: number) => Array.from({ length: size }, (_, i) => text.charCodeAt(i) || 0);
+  const bytes = [...field('Pocket Master', 20), 0x0b, 0xff, 0xff, 0xff, 0xff, ...field(name, 16), ...payload.subarray(2)];
+  return { name: `${name}.prst`, mimeType: 'application/octet-stream', buffer: Buffer.from(bytes) };
+}
 
 async function pickAmp(page: Page, model: string) {
   await amp(page).locator('.picker-button').click();
@@ -142,6 +152,16 @@ test('importing a preset file first shows what it changes from the loaded preset
   await expect(amp(page).getByText('Calif DualM')).toBeVisible();
 });
 
+test('a .prst from the Sonicake app imports like a preset file, compared first', async ({ page, pedal }) => {
+  await connect(page, pedal);
+  await pickAmp(page, 'Calif DualM');
+  await page.getByText('Import preset').locator('input[type=file]').setInputFiles(prst('SONIC-LEAD'));
+  const dialog = page.getByRole('dialog', { name: 'Import a preset' });
+  await expect(dialog.getByText('Load “SONIC-LEAD” into the edit buffer?')).toBeVisible();
+  await expect(dialog.getByRole('region', { name: 'What changes from the loaded preset' })).toContainText('Calif DualM → Brit 800');
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+});
+
 test('the save dialog suggests the name of the slot it saves to, every time it opens', async ({ page, pedal }) => {
   await connect(page, pedal);
   await pickAmp(page, 'Calif DualM');
@@ -243,6 +263,9 @@ test('a preset file picked in Backups opens as a preset import, and a wrong file
   await page.getByRole('dialog', { name: 'Import a preset' }).getByRole('button', { name: 'Cancel' }).click();
   await backups.locator('input[type=file]').setInputFiles({ name: 'other.json', mimeType: 'application/json', buffer: Buffer.from('{"hello":1}') });
   await expect(backups.getByRole('alert')).toContainText('not a Pocket Master backup');
+  await backups.locator('input[type=file]').setInputFiles(prst('SONIC-LEAD'));
+  await expect(page.getByRole('dialog', { name: 'Import a preset' })).toBeVisible();
+  await expect(backups.getByText(/“SONIC-LEAD” is a preset file, not a backup/)).toBeVisible();
 });
 
 test('back up all presets to a file, then restore them all', async ({ page, pedal }) => {

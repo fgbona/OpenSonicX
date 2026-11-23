@@ -11,6 +11,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - MCP server: `copy_preset` (backs the destination up first), `set_tuner`, `delete_slot`
   (a user IR or captured profile, confirmed by the name it holds) and `backup_all_presets`,
   so the assistant in Claude Desktop can do what the editor does.
+- Import `.prst` preset files, the ones Sonicake's own app exports: Import preset (and Import in
+  Backups) takes them next to our `.json` files, with the same "what changes" check before
+  loading, and the MCP server's `list_preset_files` and `import_preset` read them from the
+  presets folder. A name the pedal cannot store (longer than 10 characters, or not plain ASCII)
+  comes in empty; the sound is kept.
 
 ### Fixed
 

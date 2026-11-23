@@ -220,6 +220,25 @@ test('import refuses a file that is not a preset', async () => {
   await assert.rejects(session.importPreset('x.json'), /not a Pocket Master preset file/);
 });
 
+/** A synthetic .prst (the file Sonicake's app exports): magic, one unknown byte, FF x4, 16-byte name, dump without its 12 41. */
+function prst(name: string, payload: Uint8Array): Uint8Array {
+  const field = (text: string, size: number) => Array.from({ length: size }, (_, i) => text.charCodeAt(i) || 0);
+  return Uint8Array.from([...field('Pocket Master', 20), 0x84, 0xff, 0xff, 0xff, 0xff, ...field(name, 16), ...payload.subarray(2)]);
+}
+
+test('a .prst from the Sonicake app is listed and imported like a preset file', async () => {
+  const { session, fake, dir } = setup();
+  await session.exportPreset('seed.json'); // creates the presets folder
+  writeFileSync(join(dir, 'presets', 'sonic.prst'), prst('SONIC-LEAD', fake.slots[2]!));
+  writeFileSync(join(dir, 'presets', 'broken.prst'), 'nope');
+  const list = await session.listPresetFiles();
+  assert.match(list, /- sonic\.prst: "SONIC-LEAD" \(\d{4}-\d\d-\d\d\)/);
+  assert.match(list, /- broken\.prst: not a readable preset file/);
+  assert.match(await session.importPreset('sonic.prst'), /Loaded "SONIC-LEAD"/);
+  assert.deepEqual(decodePreset(fake.editBuffer), decodePreset(fake.slots[2]!));
+  await assert.rejects(session.importPreset('broken.prst'), /not a Pocket Master \.prst file/);
+});
+
 test('listModels shows user IRs and captured profiles by their loaded names', async () => {
   const { session } = setup();
   assert.match(await session.listModels('ir'), /Mesa OS \(User IR 1\)/);

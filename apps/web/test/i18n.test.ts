@@ -59,6 +59,8 @@ test('translateError covers the preset file errors raised by core', () => {
   assert.equal(translateError('pt', 'not a Pocket Master preset file'), 'Este arquivo não é um preset da Pocket Master.');
   assert.equal(translateError('pt', 'not a Pocket Master preset file (invalid JSON)'), 'Este arquivo não é um preset da Pocket Master.');
   assert.equal(translateError('pt', 'the preset file is damaged and cannot be read'), 'O arquivo de preset está danificado e não pode ser lido.');
+  assert.equal(translateError('pt', 'not a Pocket Master .prst file'), 'Este arquivo não é um preset da Pocket Master.');
+  assert.equal(translateError('pt', 'the .prst file is damaged and cannot be read'), 'O arquivo de preset está danificado e não pode ser lido.');
 });
 
 test('a save whose name check failed is told in Portuguese, with the slot and both names', () => {

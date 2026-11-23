@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { comparePresets, decodePreset, fromHex, parsePresetFile, type Difference, type Preset, type PresetFile, type Progress } from '@pocket-master/core';
+import { comparePresets, decodePreset, fromHex, parsePresetFile, parsePrstFile, type Difference, type Preset, type PresetFile, type Progress } from '@pocket-master/core';
 import { Dialog } from './Dialog';
 import { ProgressBar } from './ProgressBar';
 import { useI18n } from './I18n';
@@ -20,6 +20,14 @@ interface Props {
   onError: (message: string) => void;
 }
 
+/** Preset files the pickers take: ours (.json) and the .prst that Sonicake's own app exports. */
+export const PRESET_FILE_ACCEPT = 'application/json,.json,.prst';
+export const isPrstFile = (file: File) => file.name.toLowerCase().endsWith('.prst');
+
+/** Reads a picked preset file of either kind; throws the core's readable error for anything else. */
+export async function readPresetFile(file: File): Promise<PresetFile> {
+  return isPrstFile(file) ? parsePrstFile(new Uint8Array(await file.arrayBuffer())) : parsePresetFile(await file.text());
+}
 /** Export the edit buffer as a file, or load a file into it after a confirmation. */
 export function PresetFiles({ connected, current, busy, error, pending, onPick, onExport, onImport, onError }: Props) {
   const { t, te } = useI18n();
@@ -33,7 +41,7 @@ export function PresetFiles({ connected, current, busy, error, pending, onPick, 
     input.value = '';
     if (!file) return;
     try {
-      onPick(parsePresetFile(await file.text()));
+      onPick(await readPresetFile(file));
     } catch (e) {
       onError(e instanceof Error ? e.message : String(e));
     }
@@ -45,7 +53,7 @@ export function PresetFiles({ connected, current, busy, error, pending, onPick, 
       <button type="button" className="btn btn-small" onClick={onExport} disabled={disabled}>{t('presetFile.export')}</button>
       <label className={`btn btn-small file-button${disabled ? ' is-disabled' : ''}`} aria-disabled={disabled}>
         {t('presetFile.import')}
-        <input type="file" accept="application/json,.json" disabled={disabled} onChange={(e) => void pick(e.currentTarget)} />
+        <input type="file" accept={PRESET_FILE_ACCEPT} disabled={disabled} onChange={(e) => void pick(e.currentTarget)} />
       </label>
       <Dialog open={pending !== null} title={t('presetFile.title')} onClose={() => onPick(null)} locked={busy !== null}>
         {busy ? (

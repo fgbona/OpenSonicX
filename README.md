@@ -201,6 +201,7 @@ Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
   live in `~/.pocket-master-editor/presets` (set `POCKET_MASTER_HOME` to
   move both folders). The server reads and writes files only inside these
   folders.
+- `.prst` preset files exported by Sonicake's own app can be imported too, here and in the web editor's Import preset.
 
 ## Protocol
 

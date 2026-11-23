@@ -7,9 +7,9 @@ import { isAbsolute, join, relative, resolve } from 'node:path';
 import {
   formatModels, formatPreset, toEdit, type Change,
   applyEdit, applyPreset, downloadModel, IR_SLOTS, irSamplesFromWav, irUploadBlob, listModels, parseNam, pollDeviceToken, profileUploadBlob, searchTones, startDeviceLogin, decodePreset, editToCommands, fromHex, loadIntoEditBuffer,
-  parseBackupFile, parsePresetFile, parsePresetLabel, presetFile, presetLabel,
+  parseBackupFile, parsePresetFile, parsePresetLabel, parsePrstFile, presetFile, presetLabel,
   backupAllSlots, backupStoredSlot, resolveBlock, restoreFromBackup, saveToSlot, USER_PRESETS,
-  type BackupFile, type CloArrays, type GlobalSettings, type DeviceLogin, type Edit, type Tokens, type Pedal, type Preset, type SlotNames,
+  type BackupFile, type CloArrays, type GlobalSettings, type DeviceLogin, type Edit, type Tokens, type Pedal, type Preset, type PresetFile, type SlotNames,
 } from '@pocket-master/core';
 
 export type { Change } from '@pocket-master/core';
@@ -316,10 +316,10 @@ export class Session {
   /** The preset files in the presets folder, with their notes: the library of approved tones. */
   async listPresetFiles(): Promise<string> {
     const folder = this.#folders.presets;
-    const names = (await readdir(folder, { recursive: true }).catch(() => [] as string[])).filter((n) => n.endsWith('.json')).sort();
+    const names = (await readdir(folder, { recursive: true }).catch(() => [] as string[])).filter(isPresetFileName).sort();
     const lines = await Promise.all(names.map(async (file) => {
       try {
-        const preset = parsePresetFile(await readFile(join(folder, file), 'utf8'));
+        const preset = await readPresetFile(join(folder, file));
         return `- ${file}: "${preset.name}"${preset.notes ? ` — ${preset.notes}` : ''} (${preset.createdAt.slice(0, 10)})`;
       } catch {
         return `- ${file}: not a readable preset file`;
@@ -484,7 +484,7 @@ export class Session {
 
   importPreset(file: string): Promise<string> {
     return this.#use(async (io) => {
-      const preset = parsePresetFile(await readFile(inside(this.#folders.presets, file), 'utf8'));
+      const preset = await readPresetFile(inside(this.#folders.presets, file));
       await loadIntoEditBuffer(io, decodePreset(fromHex(preset.payload)));
       this.#undo = [];
       return `Loaded "${preset.name}" into the edit buffer (not saved).\n\n${await this.#describe(io)}`;
@@ -494,6 +494,13 @@ export class Session {
 
 function requireConfirm(confirm: string, label: string): void {
   if (confirm.trim().toUpperCase() !== label) throw new Error(`confirm must be "${label}" to write that slot`);
+}
+
+const isPresetFileName = (name: string) => /\.(json|prst)$/i.test(name);
+
+/** Our .json preset file, or the .prst that Sonicake's own app exports. */
+async function readPresetFile(path: string): Promise<PresetFile> {
+  return /\.prst$/i.test(path) ? parsePrstFile(await readFile(path)) : parsePresetFile(await readFile(path, 'utf8'));
 }
 
 /** `file` resolved against `folder`; refused when it would land outside it. */
