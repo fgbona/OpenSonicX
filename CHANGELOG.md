@@ -6,6 +6,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Saving to a slot other than the loaded one no longer jumps the Save dialog back to its form:
+  it shows "Saved", and a save the tone assistant proposed finishes its answer instead of
+  staying on "Working on it…".
+- Tone assistant: when it saves the tone to another slot, "What changed" still lists the changes.
+
 ## [0.16.1] - 2026-11-22
 
 Editing is always live once the pedal is connected: no switch to turn on first.

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { encodeName, presetLabel, USER_PRESETS, NAME_LENGTH, type BackupFile, type Progress } from '@pocket-master/core';
 import { FlowBackups } from './FlowBackups';
 import { useI18n } from './I18n';
@@ -45,12 +45,16 @@ export function SaveDialog({ open, presetIndex, names, busy, error: saveError, f
   const { t, te } = useI18n();
 
   // Every opening starts fresh on the loaded slot, with that slot's name (not last time's).
+  // Only an opening: a save to another slot loads that slot, and must not wipe the "Saved" step.
+  const initialRef = useRef(initial);
+  initialRef.current = initial;
   useEffect(() => {
     if (!open) return;
-    setTarget(proposal?.target ?? initial);
-    setName(proposal?.name ?? slotName(names, proposal?.target ?? initial));
+    const start = proposal?.target ?? initialRef.current;
+    setTarget(start);
+    setName(proposal?.name ?? slotName(names, start));
     setDone(false);
-  }, [open, initial, proposal]);
+  }, [open, proposal]);
 
   // Names can arrive after the dialog opens; fill the name once they do, without overwriting typing.
   useEffect(() => {

@@ -70,8 +70,12 @@ const SETUP: readonly {
   },
 ];
 
-/** What the reply changed on the loaded preset; undefined when another preset is loaded now (nothing to compare). */
-const changed = (before: ToneSnapshot, after: ToneSnapshot, off: string) => (before.index === after.index ? toneChanges(before.preset, after.preset, off) : undefined);
+/**
+ * What the reply changed on the sound; undefined when another preset is loaded now (nothing to compare).
+ * A save to another slot moves the index but keeps the sound, so it still compares.
+ */
+const changed = (before: ToneSnapshot, after: ToneSnapshot, off: string, moved: { loaded: boolean; saved: boolean }) =>
+  moved.loaded || (before.index !== after.index && !moved.saved) ? undefined : toneChanges(before.preset, after.preset, off);
 
 /** One provider's key: how to get it, or the saved one with a way to remove it. */
 function KeySetup({ setup, saved, kept, onSaved, onRemove }: { setup: (typeof SETUP)[number]; saved: string | null; kept: boolean; onSaved: (key: string, kept: boolean) => void; onRemove: () => void }) {
@@ -199,6 +203,7 @@ export function AssistantPanel({ host }: Props) {
     setWorking(true);
     let before: ToneSnapshot | null = null;
     let proposed = false;
+    let loaded = false;
     const used: Partial<Record<AiModel, Usage>> = {};
     /** What each paid provider this message reached cost; kept as today's spend. Undefined when unknown. */
     const settleCosts = async (): Promise<Partial<Record<AiModel, number>>> => {
@@ -225,6 +230,7 @@ export function AssistantPanel({ host }: Props) {
         },
         onStep: (tool, ok, text) => {
           if (tool === 'save_preset') proposed = true;
+          if (tool === 'select_preset' && ok) loaded = true;
         },
       });
       setCooldown(result.cooldown);
@@ -237,7 +243,7 @@ export function AssistantPanel({ host }: Props) {
       setMessages((m) => [
         ...m,
         ...refused.map((p): Message => ({ role: 'error', text: t('assistant.keyRejected', { provider: providerName(p, t('assistant.paidTag')) }) })),
-        { role: 'assistant', text: reply, model: result.model, cost: costs[result.model], changes: changed(before!, host.snapshot(), t('assistant.off')) },
+        { role: 'assistant', text: reply, model: result.model, cost: costs[result.model], changes: changed(before!, host.snapshot(), t('assistant.off'), { loaded, saved: proposed }) },
       ]);
       if (!proposed) offerSave(message);
     } catch (error) {
@@ -251,7 +257,7 @@ export function AssistantPanel({ host }: Props) {
       // The next answer is told this one was cut, so a model does not lose the request (the preset it gets is current).
       setTurns((h) => [...h, { role: 'user', text: message }, { role: 'assistant', text: `(This answer was interrupted: ${error instanceof Error ? error.message : String(error)})` }]);
       const link = error instanceof RegionError ? { href: REGIONS, text: t('assistant.regionLink') } : undefined;
-      setMessages((m) => [...m, { role: 'error', text, link, changes: before ? changed(before, host.snapshot(), t('assistant.off')) : undefined }]);
+      setMessages((m) => [...m, { role: 'error', text, link, changes: before ? changed(before, host.snapshot(), t('assistant.off'), { loaded, saved: proposed }) : undefined }]);
       void settleCosts(); // a cut answer was paid for too
       // Cut after the sound changed: the tone is there, so the save that was asked for is still offered.
       if (!proposed && error instanceof QuotaError && error.partial) offerSave(message);
