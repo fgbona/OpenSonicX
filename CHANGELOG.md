@@ -12,6 +12,17 @@ and the project uses [Semantic Versioning](https://semver.org/).
   `load_ir` and `load_nam`, instead of the name the slot holds; every tool that writes now asks
   for the label of what it writes. `copy_preset` and `delete_slot` describe their `confirm`.
 
+### Fixed
+
+- Chrome no longer shows a "No file chosen" tip over the dialog a file picker opens (Import
+  preset, Backups, captures and IRs).
+
+### Documentation
+
+- README: every feature in the editor is listed (undo/redo, copy, tuner, backups of all
+  presets, `.prst` import, the preset library, paid AI keys), and the firmware line says the
+  editor reads the version from the pedal (it has since 0.14).
+
 ## [0.17.0] - 2026-11-23
 
 Import presets exported by Sonicake's own app (`.prst`), and the MCP server catches up with

@@ -86,7 +86,7 @@ export function SlotsPanel({ connected, busy, irNames, profileNames, exclusive, 
             <h3>{t('slots.profiles')}</h3>
             <label className={`btn btn-small file-button${disabled ? ' is-disabled' : ''}`} aria-disabled={disabled}>
               {t('slots.loadNam')}
-              <input type="file" accept=".nam,application/json" disabled={disabled} onChange={(e) => pick(e.currentTarget, 'profile')} />
+              <input type="file" title="" accept=".nam,application/json" disabled={disabled} onChange={(e) => pick(e.currentTarget, 'profile')} />
             </label>
           </div>
           {list('profile', profileNames)}
@@ -96,7 +96,7 @@ export function SlotsPanel({ connected, busy, irNames, profileNames, exclusive, 
             <h3>{t('slots.irs')}</h3>
             <label className={`btn btn-small file-button${disabled ? ' is-disabled' : ''}`} aria-disabled={disabled}>
               {t('slots.loadWav')}
-              <input type="file" accept=".wav,audio/wav" disabled={disabled} onChange={(e) => pick(e.currentTarget, 'ir')} />
+              <input type="file" title="" accept=".wav,audio/wav" disabled={disabled} onChange={(e) => pick(e.currentTarget, 'ir')} />
             </label>
           </div>
           {list('ir', irNames)}

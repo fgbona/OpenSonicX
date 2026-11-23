@@ -371,3 +371,10 @@ test('a backup can be deleted from the list, after a confirmation', async ({ pag
   await page.reload();
   await expect(page.getByRole('region', { name: 'Backups' }).locator('.backup')).toHaveCount(0);
 });
+
+test('file pickers carry an empty title, so Chrome shows no "No file chosen" tip over the dialogs they open', async ({ page, pedal }) => {
+  await connect(page, pedal);
+  const inputs = page.locator('input[type="file"]');
+  await expect(inputs).not.toHaveCount(0);
+  for (const input of await inputs.all()) await expect(input).toHaveAttribute('title', '');
+});

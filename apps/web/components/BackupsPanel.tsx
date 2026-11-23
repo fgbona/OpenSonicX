@@ -91,7 +91,7 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
           <button type="button" className="btn btn-small btn-primary" disabled={!connected || busy !== null} onClick={() => void onBackupAll()}>{t('backups.backupAll')}</button>
           <label className="btn btn-small file-button">
             {t('backups.import')}
-            <input type="file" accept={PRESET_FILE_ACCEPT} onChange={(e) => void importFile(e.currentTarget)} />
+            <input type="file" title="" accept={PRESET_FILE_ACCEPT} onChange={(e) => void importFile(e.currentTarget)} />
           </label>
         </div>
       </header>
