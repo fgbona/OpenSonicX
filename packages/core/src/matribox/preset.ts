@@ -187,3 +187,11 @@ export function mbPresetLabel(index: number): string {
   if (!Number.isInteger(index) || index < 0 || index >= MB_PRESET_COUNT) throw new RangeError(`preset index must be 0..${MB_PRESET_COUNT - 1}, got ${index}`);
   return `${Math.floor(index / 4) + 1}${'ABCD'[index % 4]}`;
 }
+
+/** The index of a label "1A".."60D" (case-insensitive): (bank - 1) × 4 + letter. */
+export function parseMbPresetLabel(label: string): number {
+  const match = /^(\d{1,2})([A-D])$/i.exec(label.trim());
+  const bank = Number(match?.[1]);
+  if (!match || bank < 1 || bank > MB_PRESET_COUNT / 4) throw new RangeError(`not a Matribox preset label: "${label}" (1A..60D)`);
+  return (bank - 1) * 4 + 'ABCD'.indexOf((match[2] as string).toUpperCase());
+}

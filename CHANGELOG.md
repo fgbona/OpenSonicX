@@ -27,6 +27,15 @@ and the project uses [Semantic Versioning](https://semver.org/).
   `matribox_get_preset`, `matribox_list_models` (the catalog with each model's real gear),
   `matribox_list_irs` and `matribox_list_captures`. Nothing is written to the Matribox yet. The
   Pocket Master tools are unchanged; the tool contract only gains entries.
+- Matribox II Pro writes (experimental, not yet validated on the hardware): core builders for every
+  write the official editor sends (`mbSetParam`, `mbSetBlockOn`, `mbSelectPreset`, `mbSetChain`,
+  `mbSetAssignments`, `mbSavePreset`), checked byte for byte against our captures, and
+  `parseMbPresetLabel`. New MCP tools: `matribox_set_param` (by parameter name, within the
+  catalog's range), `matribox_set_module_on`, `matribox_select_preset`, `matribox_set_model`,
+  `matribox_build_tone` (a whole chain of models and parameters in one call) and
+  `matribox_save_preset` (confirm with the slot label; the slot is backed up to
+  `~/.pocket-master-editor/backups` first). Each write waits for the unit's echo, and every write
+  tool says its result is experimental. `lzo1xLiterals` now encodes runs of any length.
 
 ## [0.17.1] - 2026-11-23
 

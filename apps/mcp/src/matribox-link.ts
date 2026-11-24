@@ -1,10 +1,11 @@
 /**
- * Read requests to a Matribox II Pro over USB MIDI: send one request frame, collect the reply's pages,
- * join and decompress them. The reply is the message with the request's flag and cmd whose data
- * starts with the request's argument (the unit repeats it); anything else the unit sends meanwhile
- * (footswitch and knob notifications) is skipped. One request at a time: the session queues calls.
+ * Requests to a Matribox II Pro over USB MIDI: send one frame, collect the answer's pages, join and
+ * decompress them. A read's reply is the message with the request's flag and cmd whose data starts
+ * with the request's argument (the unit repeats it); a write is confirmed by the unit's echo, the
+ * same flag, cmd and data. Anything else the unit sends meanwhile (footswitch and knob
+ * notifications) is skipped. One request at a time: the session queues calls.
  */
-import { joinMbPages, MB_READ, MB_REPLY, parseMbFrame, unwrapMbMessage, type MbFrame } from '@pocket-master/core';
+import { joinMbPages, MB_READ, MB_REPLY, MB_WRITE, parseMbFrame, unwrapMbMessage, type MbFrame } from '@pocket-master/core';
 import { MATRIBOX, openPedalPorts } from './devices.ts';
 
 export interface MatriboxPorts {
@@ -15,6 +16,8 @@ export interface MatriboxPorts {
 export interface MatriboxConnection {
   /** Sends a read request frame (mbRead…) and resolves with the reply's decompressed data. */
   read(request: Uint8Array): Promise<Uint8Array>;
+  /** Sends a write frame (mbSet…, mbSelectPreset, mbSavePreset) and resolves once the unit echoes it. */
+  write(frame: Uint8Array): Promise<void>;
   close(): void;
 }
 
@@ -22,6 +25,7 @@ export const MATRIBOX_TIMEOUT_MS = 3000;
 
 const hex = (n: number) => `0x${n.toString(16).padStart(2, '0')}`;
 const startsWith = (data: Uint8Array, prefix: Uint8Array) => prefix.every((b, i) => data[i] === b);
+const equal = (a: Uint8Array, b: Uint8Array) => a.length === b.length && startsWith(a, b);
 
 function tryParse(bytes: Uint8Array): MbFrame | null {
   try {
@@ -31,10 +35,11 @@ function tryParse(bytes: Uint8Array): MbFrame | null {
   }
 }
 
-export function matriboxLink(ports: MatriboxPorts, timeoutMs: number = MATRIBOX_TIMEOUT_MS): Pick<MatriboxConnection, 'read'> {
-  const read = async (request: Uint8Array): Promise<Uint8Array> => {
-    const sent = parseMbFrame(request);
-    if (sent.type !== MB_READ) throw new Error('Matribox link: only read requests are sent');
+export function matriboxLink(ports: MatriboxPorts, timeoutMs: number = MATRIBOX_TIMEOUT_MS): Pick<MatriboxConnection, 'read' | 'write'> {
+  /** Sends `frame` and resolves with the data of the first message `accepts` takes. */
+  const exchange = (frame: Uint8Array, type: number, accepts: (data: Uint8Array, sent: Uint8Array) => boolean, noAnswer: string): Promise<Uint8Array> => {
+    const sent = parseMbFrame(frame);
+    if (sent.type !== type) throw new Error(`Matribox link: expected a frame of type 0x${type.toString(16)}`);
     const want = unwrapMbMessage(sent.payload);
     const what = `flag ${want.flag}, cmd ${hex(want.cmd)}`;
     return new Promise((resolve, reject) => {
@@ -45,7 +50,7 @@ export function matriboxLink(ports: MatriboxPorts, timeoutMs: number = MATRIBOX_
         if (error) reject(error);
         else resolve(data as Uint8Array);
       };
-      const timer = setTimeout(() => finish(new Error(`Matribox II PRO did not answer the read (${what}) within ${timeoutMs} ms. Is it on, and is the official editor closed?`)), timeoutMs);
+      const timer = setTimeout(() => finish(new Error(`Matribox II PRO did not ${noAnswer} (${what}) within ${timeoutMs} ms. Is it on, and is the official editor closed?`)), timeoutMs);
       const onMessage = (joined: Uint8Array) => {
         if (joined[0] !== want.flag || joined[3] !== want.cmd) return;
         let data: Uint8Array;
@@ -54,7 +59,7 @@ export function matriboxLink(ports: MatriboxPorts, timeoutMs: number = MATRIBOX_
         } catch (error) {
           return finish(new Error(`Matribox II PRO sent a damaged reply (${what}): ${(error as Error).message}`));
         }
-        if (startsWith(data, want.data)) finish(null, data);
+        if (accepts(data, want.data)) finish(null, data);
       };
       ports.listen((bytes) => {
         const frame = tryParse(bytes);
@@ -74,10 +79,13 @@ export function matriboxLink(ports: MatriboxPorts, timeoutMs: number = MATRIBOX_
           onMessage(joined);
         }
       });
-      ports.send(request);
+      ports.send(frame);
     });
   };
-  return { read };
+  return {
+    read: async (request) => exchange(request, MB_READ, startsWith, 'answer the read'),
+    write: async (frame) => void (await exchange(frame, MB_WRITE, equal, 'confirm the write')),
+  };
 }
 
 /** Opens the Matribox's USB MIDI ports. The native MIDI library loads on the first call. */

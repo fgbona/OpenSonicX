@@ -17,7 +17,7 @@ export const POCKET_MASTER: PedalDevice = { name: 'Sonicake Pocket Master', port
 export const MATRIBOX: PedalDevice = {
   name: 'Sonicake Matribox II Pro',
   port: new RegExp(MATRIBOX_PORT_NAME.replace(/\s+/g, '\\s*'), 'i'),
-  tools: 'the matribox_ tools (read-only for now)',
+  tools: 'the matribox_ tools (writes are experimental)',
 };
 export const PEDALS: readonly PedalDevice[] = [POCKET_MASTER, MATRIBOX];
 

@@ -5,35 +5,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { mbReadCloneNames, mbReadPresetNames, mbRequest, parseMbCatalog, parseMbPresetNames } from '@pocket-master/core';
+import { mbReadCloneNames, mbReadPresetNames, mbRequest, parseMbPresetNames } from '@pocket-master/core';
 import { FakeMatribox } from './fake-matribox.ts';
+import { call, connected, fakeLink, text } from './matribox-helpers.ts';
 import { describePedals, detectPedals, MATRIBOX, POCKET_MASTER } from '../src/devices.ts';
-import { matriboxLink } from '../src/matribox-link.ts';
-import { MatriboxSession } from '../src/matribox-session.ts';
 import { Session, type PedalIO } from '../src/session.ts';
 import { createServer } from '../src/tools.ts';
-
-// Synthetic catalog (invented models) with the fxids of the owner's "Drive AD"; CAB 0x0a000006 is left
-// out on purpose. The real alg_data.json is Sonicake's and never used in tests.
-const w = (name: string, ID: string, min = '0', max = '100') => ({ name, ID, defaultValue: min, min, max, step: '1' });
-const model = (fxid: number, name: string, origin: string, widget: unknown[], descriptionEN = '') => ({ fxid, index: 0, name, origin, descriptionEN, widget });
-const CATALOG = parseMbCatalog({
-  Modules: [
-    { name: 'DYN', index: 0, alg: [model(0x1b, 'Fake Gate', 'Imaginary Gate\nAlias: Gate X', [w('Threshold', '0', '-80', '0')])] },
-    { name: 'DRV', index: 3, alg: [model(0x0300002a, 'Fake Drive', 'Imaginary Overdrive 808', [w('Gain', '0'), w('Tone', '1'), w('Volume', '2')], 'A mid-boost overdrive. Second sentence.')] },
-    { name: 'AMP', index: 4, alg: [model(0x0700001a, 'Fake Plexi', 'Imaginary Plexi 50W', [w('Gain', '0'), w('Master', '5')])] },
-    { name: 'CAB', index: 5, alg: [model(0x0a000001, 'Fake 4x12', '55', [w('Volume', '1')])] },
-    { name: 'IR', index: 6, alg: [model(0x0a100000, 'User IR 1', '', [w('Volume', '1')])] },
-    { name: 'RVB', index: 10, alg: [model(0x0c00000b, 'Fake Hall', '', [w('Mix', '0'), w('Decay', '1')])] },
-    { name: 'CLONE', index: 11, alg: [model(0x0f000000, 'Clone 1', '', [w('Gain', '0')])] },
-    { name: 'VOL', index: 15, alg: [model(0x06000003, 'Volume', 'Volume', [w('Volume', '0')])] },
-  ],
-});
-
-const fakeLink = (fake = new FakeMatribox(), timeoutMs = 1000) => {
-  const ports = { send: (b: Uint8Array) => fake.send(b), listen: (r: (b: Uint8Array) => void) => fake.listen(r) };
-  return matriboxLink(ports, timeoutMs);
-};
 
 test('the link joins a paged reply, skips unrelated notifications and returns the decompressed data', async () => {
   const data = await fakeLink().read(mbReadPresetNames());
@@ -55,21 +32,6 @@ test('detects which supported pedals are connected from the MIDI port names', ()
   assert.match(describePedals(['Matribox II PRO']), /Matribox II Pro on MIDI port "Matribox II PRO": use the matribox_ tools/);
   assert.match(describePedals(['IAC Bus 1']), /No supported pedal is connected \(MIDI ports: IAC Bus 1\)/);
 });
-
-async function connected(options: { catalog?: () => Promise<typeof CATALOG>; ports?: readonly string[] } = {}) {
-  const fake = new FakeMatribox();
-  const link = fakeLink(fake);
-  const matribox = new MatriboxSession(() => ({ read: link.read, close: () => undefined }), options.catalog ?? (async () => CATALOG));
-  const dir = mkdtempSync(join(tmpdir(), 'mb-tools-'));
-  const pocketMaster = new Session(() => Promise.reject(new Error('no Pocket Master in this test')) as never, { backups: join(dir, 'b'), presets: join(dir, 'p'), irs: join(dir, 'i'), nams: join(dir, 'n') });
-  const [a, b] = InMemoryTransport.createLinkedPair();
-  const client = new Client({ name: 'test', version: '0' });
-  await Promise.all([createServer(pocketMaster, { matribox, midiPorts: async () => options.ports ?? ['Matribox II PRO'] }).connect(a), client.connect(b)]);
-  return { client, fake };
-}
-
-const text = (r: unknown) => (r as { content: { text: string }[] }).content.map((c) => c.text).join('\n');
-const call = async (client: Client, name: string, args: Record<string, unknown> = {}) => text(await client.callTool({ name, arguments: args }));
 
 test('the Matribox tools and which_pedal are read-only', async () => {
   const { client } = await connected();
@@ -119,7 +81,7 @@ test('matribox_list_models gives the palette: models with origin and parameter r
   assert.match(all, /^- Fake 4x12\n {4}params: Volume 0\.\.100$/m); // a bare number is no gear name
   const bad = await client.callTool({ name: 'matribox_list_models', arguments: { module: 'XYZ' } });
   assert.equal(bad.isError, true);
-  assert.match(text(bad), /No module "XYZ"\. Modules: DYN, DRV, AMP, CAB, IR, RVB, CLONE, VOL/);
+  assert.match(text(bad), /No module "XYZ"\. Modules: DYN, DRV, AMP, CAB, IR, DLY, RVB, CLONE, VOL/);
 });
 
 test('matribox_list_models explains how to get the catalog when the official app is missing', async () => {
