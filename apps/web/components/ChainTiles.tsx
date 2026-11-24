@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { type Block, blockModelLabel, chainUnits, type Edit, moveInChain } from '@pocket-master/core';
 import { ModuleIcon } from './ModuleIcon';
 import { useI18n } from './I18n';
@@ -21,8 +21,18 @@ interface Props {
  * click selects the block for the editor; in live edit units drag (or move with the arrows), and
  * DRV-AMP-IR-EQ move together.
  */
+/** Touch screens (no hover): a draggable tile would take the swipe and the strip could not scroll. */
+const TOUCH = '(hover: none)';
+const touchOnly = () => window.matchMedia(TOUCH).matches;
+const onTouchChange = (notify: () => void) => {
+  const query = window.matchMedia(TOUCH);
+  query.addEventListener('change', notify);
+  return () => query.removeEventListener('change', notify);
+};
+
 export function ChainTiles({ chain, editable, selected, onSelect, onEdit, irNames, profileNames, ampMode }: Props) {
   const { t } = useI18n();
+  const touch = useSyncExternalStore(onTouchChange, touchOnly, () => false);
   const [dragging, setDragging] = useState<number | null>(null);
   const [over, setOver] = useState<number | null>(null);
   const order = chain.map((b) => b.module);
@@ -42,7 +52,7 @@ export function ChainTiles({ chain, editable, selected, onSelect, onEdit, irName
           <li
             key={lead}
             className={`tile-unit${unit.length > 1 ? ' tile-group' : ''}${dragging === lead ? ' tile-dragging' : ''}${over === index && dragging !== null ? ' tile-over' : ''}`}
-            draggable={editable}
+            draggable={editable && !touch}
             onDragStart={(e) => {
               setDragging(lead);
               e.dataTransfer.effectAllowed = 'move';

@@ -443,9 +443,11 @@ button, select { font: inherit; color: inherit; }
 .tile-move button { width: 22px; height: 22px; border: none; border-radius: 6px; padding: 0; background: var(--surface); color: var(--label); cursor: pointer; box-shadow: var(--shadow); }
 .tile-move button:disabled { opacity: 0.3; cursor: default; }
 
-/* Touch screens have no hover and no HTML drag and drop: keep the move arrows visible. */
+/* Touch screens have no hover and no HTML drag and drop: keep the move arrows visible, and let a
+   swipe scroll the chain (tiles are not draggable there, see ChainTiles). */
 @media (hover: none) {
-  .tiles-editable .tile-unit { padding-bottom: 26px; }
+  .tiles { touch-action: pan-x; }
+  .tiles-editable .tile-unit { padding-bottom: 26px; cursor: default; }
   .tile-move { opacity: 1; bottom: 0; }
   .tile-move button { width: 30px; height: 26px; }
 }

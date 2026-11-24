@@ -54,6 +54,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
   model id. Core gains `matriboxLink` (the request/answer rules over any MIDI port) and
   `pedalOfPort`; tests run against a simulated unit with an invented catalog.
 
+### Fixed
+
+- Android tablets and phones: a swipe over the signal chain scrolls it to the blocks off screen
+  (FX, delay, reverb). On touch the blocks were draggable, so the swipe started a drag instead;
+  there they now move with the arrows only (#92).
+
 ## [0.17.1] - 2026-11-23
 
 Polish before 1.0: the README states every feature, no stray "No file chosen" tip, and the MCP
