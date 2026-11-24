@@ -22,6 +22,8 @@ interface Props {
   agent: ToneAgent;
   /** The examples' lead-in; each pedal names its own slots ("save it on P45"). */
   hint?: MessageKey;
+  /** What goes to the provider. */
+  privacy?: MessageKey;
 }
 
 interface Message {
@@ -121,7 +123,7 @@ function KeySetup({ setup, saved, kept, onSaved, onRemove }: { setup: (typeof SE
 }
 
 /** Chat that builds tones on the pedal from a description, with the person's own free AI keys. */
-export function AssistantPanel({ agent, hint = 'assistant.hint' }: Props) {
+export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assistant.privacy' }: Props) {
   const { t, lang } = useI18n();
   const [keys, setKeys] = useState<Partial<Record<Provider, string>>>({});
   const [paid, setPaid] = useState<readonly PaidEntry[]>([]);
@@ -328,7 +330,7 @@ export function AssistantPanel({ agent, hint = 'assistant.hint' }: Props) {
                 }}>{t('assistant.forgetKeys')}</button>
               )}
             </div>
-            <p className="muted small">{t('assistant.privacy')}</p>
+            <p className="muted small">{t(privacy)}</p>
           </>
         ) : (
           <>
@@ -365,7 +367,7 @@ export function AssistantPanel({ agent, hint = 'assistant.hint' }: Props) {
                 <span key={s.provider}>{i > 0 && ' · '}<a href={s.usage} target="_blank" rel="noreferrer">{providerName(s.provider)}</a></span>
               ))}
             </p>
-            <p className="muted small">{t('assistant.privacy')}</p>
+            <p className="muted small">{t(privacy)}</p>
           </>
         )}
       </div>

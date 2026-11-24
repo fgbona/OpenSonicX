@@ -78,6 +78,21 @@ for 1.x.
 - Matribox II Pro docs: an "Unknown sections" part in docs/matribox.md (the knob, expression pedal
   and footswitch assignment tables, patch volume, the unit's own messages, each with evidence and
   confidence) and docs/matribox-captures.md, the list of short captures that would settle the rest.
+- Matribox II Pro editor: the tone assistant, with the same panel and keys as the Pocket Master's
+  (your own free Groq or Gemini key, or a paid provider, called straight from the browser). The
+  model gets the loaded preset and your catalog (each module's models with the real gear they are
+  based on; parameter ranges in full for paid providers, through `list_models` on free plans),
+  and answers with a whole chain (`build_tone`) or small edits (`edit_preset`); both are checked
+  against the catalog, sent through the editor's validated writes and shown under "What changed".
+  Saving only opens the editor's Save dialog, filled in, for you to confirm. Without the catalog
+  the assistant says why it is off. The assistant code now runs over a pedal-neutral `ToneAgent`
+  (web `lib/assistant.ts`); the Pocket Master's is unchanged.
+- Matribox II Pro editor: Undo and Redo (buttons, ⌘Z / Ctrl+Z, ⇧⌘Z / Ctrl+Y) for live edits:
+  parameters (a knob drag is one step), on/off, model changes, add, move, remove, and each
+  assistant answer as one step. A step is sent as the writes that turn the unit's chain into the
+  one kept (values and switches alone, one chain edit, or a rebuild from the first differing
+  block), with the same validated builders. Values of a model the catalog does not know are not
+  restored.
 
 ### Changed
 

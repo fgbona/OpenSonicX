@@ -1,10 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { MB_SLOTS, mbPresetLabel, resolveMbPreset, type MidiPort } from '@pocket-master/core';
 import { downloadJson } from '@/lib/backupStore';
 import { mbBackupFileName } from '@/lib/matriboxBackups';
 import { useMatribox } from '@/lib/useMatribox';
+import { useMatriboxHistory } from '@/lib/useMatriboxHistory';
+import { useUndoKeys } from '@/lib/useUndoKeys';
+import { MatriboxAssistant } from './MatriboxAssistant';
 import { MatriboxBlock, MatriboxModelSelect } from './MatriboxBlock';
 import { MatriboxCatalog } from './MatriboxCatalog';
 import { MatriboxPresets } from './MatriboxPresets';
@@ -15,7 +18,28 @@ import { useI18n } from './I18n';
 export function MatriboxEditor({ port, desktop }: { port: MidiPort; desktop: boolean }) {
   const mb = useMatribox(port, desktop);
   const { t, te } = useI18n();
+  const history = useMatriboxHistory(mb);
+  useUndoKeys(history.undo, history.redo);
   const [saveOpen, setSaveOpen] = useState(false);
+  // The assistant's save: the same dialog, filled in; it tells the assistant whether the person saved.
+  const [proposal, setProposal] = useState<{ index: number; name: string; resolve: (r: 'saved' | 'cancelled') => void } | null>(null);
+  const savedRef = useRef(false);
+  const proposeSave = (index: number, name: string) => new Promise<'saved' | 'cancelled'>((resolve) => {
+    savedRef.current = false;
+    mb.clearError();
+    setProposal({ index, name, resolve });
+    setSaveOpen(true);
+  });
+  const closeSave = () => {
+    setSaveOpen(false);
+    proposal?.resolve(savedRef.current ? 'saved' : 'cancelled');
+    setProposal(null);
+  };
+  const save = async (index: number, name: string) => {
+    const ok = await mb.save(index, name);
+    savedRef.current ||= ok;
+    return ok;
+  };
   const unit = mb.unit;
   // Without a catalog the chain still shows, by module number and raw fxid.
   const chain = useMemo(() => (unit ? resolveMbPreset(unit.preset, mb.catalog ?? { modules: [] }).chain : []), [unit, mb.catalog]);
@@ -35,6 +59,8 @@ export function MatriboxEditor({ port, desktop }: { port: MidiPort; desktop: boo
             <div className="mb-head">
               <h1>{mbPresetLabel(unit.current)} {unit.preset.name}{mb.edited ? ` ${t('mb.edited')}` : ''}</h1>
               <div className="mb-head-actions">
+                <button type="button" className="btn" disabled={disabled || !history.canUndo} onClick={() => void history.undo()}>{t('action.undo')}</button>
+                <button type="button" className="btn" disabled={disabled || !history.canRedo} onClick={() => void history.redo()}>{t('action.redo')}</button>
                 <button type="button" className="btn" disabled={disabled} onClick={() => void mb.refresh()}>{t('action.read')}</button>
                 <button type="button" className="btn btn-primary" disabled={disabled} onClick={() => { mb.clearError(); setSaveOpen(true); }}>{t('action.save')}</button>
               </div>
@@ -43,17 +69,18 @@ export function MatriboxEditor({ port, desktop }: { port: MidiPort; desktop: boo
             <ol className="mb-chain">
               {chain.map((block) => (
                 <MatriboxBlock key={`${block.position}-${block.slot}`} block={block} chainLength={chain.length} catalog={mb.catalog} userSlot={userSlot(block.module, block.fxid)}
-                  disabled={disabled} onParam={mb.setParam} onOn={(s, on) => void mb.setOn(s, on)} onModel={(s, m, f) => void mb.changeModel(s, m, f)}
-                  onMove={(a, b) => void mb.moveBlock(a, b)} onRemove={(p) => void mb.removeBlock(p)} />
+                  disabled={disabled} onParam={history.setParam} onOn={(s, on) => void history.setOn(s, on)} onModel={(s, m, f) => void history.changeModel(s, m, f)}
+                  onMove={(a, b) => void history.moveBlock(a, b)} onRemove={(p) => void history.removeBlock(p)} />
               ))}
             </ol>
             {mb.catalog && chain.length < MB_SLOTS && (
               <p className="mb-add">
-                <MatriboxModelSelect catalog={mb.catalog} label={t('mb.addBlock')} value="" disabled={disabled} onChange={(m, fxid) => void mb.addBlock(chain.length, m, fxid)} />
+                <MatriboxModelSelect catalog={mb.catalog} label={t('mb.addBlock')} value="" disabled={disabled} onChange={(m, fxid) => void history.addBlock(chain.length, m, fxid)} />
               </p>
             )}
-            <MatriboxSaveDialog open={saveOpen} current={unit.current} names={unit.names} loadedName={unit.preset.name} busy={mb.busy === 'Saving'} error={mb.error}
-              lastBackup={mb.backups[0] ?? null} storageWarning={mb.storageWarning} onSave={mb.save} onClose={() => setSaveOpen(false)} />
+            <MatriboxSaveDialog open={saveOpen} current={proposal?.index ?? unit.current} names={unit.names} loadedName={proposal?.name ?? unit.preset.name} busy={mb.busy === 'Saving'} error={mb.error}
+              lastBackup={mb.backups[0] ?? null} storageWarning={mb.storageWarning} onSave={save} onClose={closeSave} />
+            <MatriboxAssistant mb={mb} history={history} proposeSave={proposeSave} />
           </>
         )}
         {mb.backups.length > 0 && (
