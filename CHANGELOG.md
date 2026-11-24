@@ -14,6 +14,14 @@ and the project uses [Semantic Versioning](https://semver.org/).
   `npm run typecheck` and `npm run build` skip workspaces whose inputs did not change, locally
   and in CI (the cache is kept between CI runs with `actions/cache`). Releases always rebuild
   everything. See CONTRIBUTING.md.
+- NAM capture -> captured-profile conversion is about 2.5x faster and uses half the memory
+  (a real 23-layer capture: 57 s -> 22 s end to end on an M-series Mac, peak RAM 3.7 GB ->
+  1.9 GB). The WaveNet pass now runs in cache-sized time blocks with 4-wide channel sums
+  instead of streaming 12.8 MB rows per multiply-add, and the FFT hoists its twiddles. Every
+  sum keeps the reference order, so the output is bit-identical to before (parity with
+  SonicMaster unchanged). WebAssembly was measured out: on top of this it would gain about
+  1.5x end to end, short of the 2x that would justify a second toolchain.
+  `node packages/core/scripts/bench-clo.ts [capture.nam]` times each stage.
 
 ### Fixed
 

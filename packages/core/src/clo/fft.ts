@@ -12,6 +12,7 @@ export class Fft {
   readonly #rev: Int32Array;
   readonly #cos: Float64Array;
   readonly #sin: Float64Array;
+  readonly #negSin: Float64Array;
   constructor(n: number) {
     if (n < 2 || (n & (n - 1)) !== 0) throw new Error('FFT size must be a power of two');
     this.n = n;
@@ -23,6 +24,7 @@ export class Fft {
     });
     this.#cos = Float64Array.from({ length: n / 2 }, (_, i) => Math.cos((2 * Math.PI * i) / n));
     this.#sin = Float64Array.from({ length: n / 2 }, (_, i) => Math.sin((2 * Math.PI * i) / n));
+    this.#negSin = this.#sin.map((v) => -v);
   }
   /** In place. Forward uses e^{-i}, inverse e^{+i}; neither divides by n. */
   transform(re: Float64Array, im: Float64Array, inverse: boolean): void {
@@ -34,22 +36,25 @@ export class Fft {
         const ti = im[i]!; im[i] = im[j]!; im[j] = ti;
       }
     }
+    const cos = this.#cos;
+    const sin = inverse ? this.#sin : this.#negSin;
+    // Butterflies within a stage are independent, so twiddle-outer order gives identical results.
     for (let len = 2; len <= n; len <<= 1) {
       const half = len >> 1;
       const step = n / len;
-      for (let i = 0; i < n; i += len) {
-        for (let j = 0; j < half; j++) {
-          const m = j * step;
-          const wr = this.#cos[m]!;
-          const wi = inverse ? this.#sin[m]! : -this.#sin[m]!;
-          const a = i + j;
+      for (let j = 0; j < half; j++) {
+        const wr = cos[j * step]!;
+        const wi = sin[j * step]!;
+        for (let a = j; a < n; a += len) {
           const b = a + half;
-          const tr = wr * re[b]! - wi * im[b]!;
-          const ti = wr * im[b]! + wi * re[b]!;
-          re[b] = re[a]! - tr;
-          im[b] = im[a]! - ti;
-          re[a]! += tr;
-          im[a]! += ti;
+          const rb = re[b]!, ib = im[b]!;
+          const tr = wr * rb - wi * ib;
+          const ti = wr * ib + wi * rb;
+          const ra = re[a]!, ia = im[a]!;
+          re[b] = ra - tr;
+          im[b] = ia - ti;
+          re[a] = ra + tr;
+          im[a] = ia + ti;
         }
       }
     }
