@@ -2,16 +2,17 @@
 // export (NEXT_OUTPUT=export: GitHub Pages and the desktop app). The container's standalone
 // server has no out/ and gets no service worker.
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 import { precacheManifest } from './precache-manifest.ts';
 
 if (process.env.NEXT_OUTPUT === 'export') {
-  const out = new URL('../out/', import.meta.url).pathname;
+  const out = fileURLToPath(new URL('../out/', import.meta.url));
   const basePath = process.env.NEXT_BASE_PATH ?? '';
   const { version } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string };
   const { cacheName, urls } = precacheManifest(out, basePath, version);
   await build({
-    entryPoints: [new URL('../lib/sw.ts', import.meta.url).pathname],
+    entryPoints: [fileURLToPath(new URL('../lib/sw.ts', import.meta.url))],
     bundle: true,
     minify: true,
     format: 'iife',
