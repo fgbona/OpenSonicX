@@ -30,8 +30,12 @@ test('the server lists every tool, marking reads read-only and slot writes destr
   const { tools } = await client.listTools();
   const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
   assert.deepEqual(Object.keys(byName).sort(), [
-    'backup_all_presets', 'copy_preset', 'delete_slot', 'edit_preset', 'export_preset', 'get_global_settings', 'get_preset', 'import_preset', 'install_tone', 'list_models', 'list_preset_files', 'list_presets',
-    'load_ir', 'load_nam', 'matribox_add_block', 'matribox_build_tone', 'matribox_export_preset', 'matribox_get_preset', 'matribox_import_preset', 'matribox_list_captures', 'matribox_list_irs', 'matribox_list_models', 'matribox_list_presets', 'matribox_move_block', 'matribox_remove_block', 'matribox_restore_backup', 'matribox_save_preset', 'matribox_select_preset', 'matribox_set_model', 'matribox_set_module_on', 'matribox_set_param', 'rename_slot', 'restore_backup', 'revert_preset', 'save_preset', 'search_tone3000', 'select_preset', 'set_global_settings', 'set_tuner', 'tone3000_login', 'undo_edit', 'which_pedal',
+    'backup_all_presets', 'copy_preset', 'delete_slot', 'edit_preset', 'export_preset', 'get_global_settings', 'get_preset', 'import_preset', 'install_tone', 'list_models', 'list_preset_files',
+    'list_presets', 'load_ir', 'load_nam', 'matribox_add_block', 'matribox_assign_expression', 'matribox_assign_footswitch', 'matribox_build_tone', 'matribox_ctrl', 'matribox_drum',
+    'matribox_export_preset', 'matribox_get_assignments', 'matribox_get_preset', 'matribox_import_preset', 'matribox_list_captures', 'matribox_list_irs', 'matribox_list_models',
+    'matribox_list_presets', 'matribox_looper', 'matribox_move_block', 'matribox_quick_knob', 'matribox_remove_block', 'matribox_restore_backup', 'matribox_save_preset', 'matribox_select_preset',
+    'matribox_set_bpm', 'matribox_set_expression_range', 'matribox_set_model', 'matribox_set_module_on', 'matribox_set_param', 'matribox_set_volume', 'matribox_tap_tempo', 'matribox_tuner',
+    'rename_slot', 'restore_backup', 'revert_preset', 'save_preset', 'search_tone3000', 'select_preset', 'set_global_settings', 'set_tuner', 'tone3000_login', 'undo_edit', 'which_pedal',
   ]);
   for (const name of ['get_preset', 'list_presets', 'list_models', 'backup_all_presets']) assert.equal(byName[name]!.annotations?.readOnlyHint, true, name);
   for (const name of ['save_preset', 'restore_backup', 'load_ir', 'load_nam', 'install_tone', 'copy_preset', 'delete_slot']) assert.equal(byName[name]!.annotations?.destructiveHint, true, name);

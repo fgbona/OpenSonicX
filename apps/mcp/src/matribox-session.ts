@@ -13,6 +13,7 @@ import {
   parseMbCloneNames, parseMbCurrentPresetNumber, parseMbIrNames, parseMbPreset, parseMbPresetNames, resolveMbPreset,
   type MbCatalog, type MbModel, type MbModule, type MbPreset, type MbResolvedBlock, type MbResolvedPreset,
 } from '@pocket-master/core';
+import { assignExpression, assignFootswitch, CC_NOTE, describeAssignments, setExpressionRange, setVolume } from './matribox-live.ts';
 import { MATRIBOX_DEVICE, readMatriboxBackup, readMatriboxPrst, writeMatriboxPrstFile } from './matribox-files.ts';
 import type { MatriboxConnection } from './matribox-link.ts';
 import {
@@ -272,6 +273,39 @@ export class MatriboxSession {
         }
         return experimental([...plan.lines, 'Nothing is stored until matribox_save_preset.']);
       });
+    });
+  }
+
+  /** Patch volume, footswitch and expression assignments, and assignments read (matribox-live.ts). */
+  getAssignments(): Promise<string> {
+    return this.#use(async (unit) => {
+      const { raw, preset } = await this.#loaded(unit);
+      return describeAssignments(raw.number ?? 0, preset, raw);
+    });
+  }
+
+  setVolume(options: { volume: number }): Promise<string> {
+    return this.#use((unit) => setVolume(unit, options.volume));
+  }
+
+  assignFootswitch(options: { footswitch: string; block: string; assign: boolean }): Promise<string> {
+    return this.#use(async (unit) => assignFootswitch(unit, (await this.#loaded(unit)).preset, options));
+  }
+
+  assignExpression(options: { entry: number; block: string; parameter: string; min?: number; max?: number }): Promise<string> {
+    return this.#use(async (unit) => assignExpression(unit, (await this.#loaded(unit)).preset, options));
+  }
+
+  setExpressionRange(options: { entry: number; min?: number; max?: number }): Promise<string> {
+    return this.#use((unit) => setExpressionRange(unit, options));
+  }
+
+  /** MIDI Control Changes (built and checked by the caller before the unit is opened); no answer comes. */
+  control(messages: readonly Uint8Array[], what: string): Promise<string> {
+    return this.#use(async (unit) => {
+      messages.forEach((m) => unit.control(m));
+      const sent = messages.map((m) => `CC ${m[1]} = ${m[2]}`).join(', ');
+      return `${what} (${sent}, MIDI channel ${((messages[0]?.[0] ?? 0xb0) & 0x0f) + 1}).\n${CC_NOTE}`;
     });
   }
 

@@ -31,10 +31,16 @@ export function knownModel(block: MbResolvedBlock): MbModel {
   return block.model;
 }
 
-/** A parameter of `model` by name, with `value` checked against its range. */
-export function checkParam(model: MbModel, name: string, value: number): MbParam {
+/** A parameter of `model` by name. */
+export function findParam(model: MbModel, name: string): MbParam {
   const param = model.params.find((p) => same(p.name, name));
   if (!param) throw new Error(`${model.name} has no parameter "${name}". Parameters: ${model.params.map((p) => p.name).join(', ') || 'none'}`);
+  return param;
+}
+
+/** A parameter of `model` by name, with `value` checked against its range. */
+export function checkParam(model: MbModel, name: string, value: number): MbParam {
+  const param = findParam(model, name);
   if (!Number.isFinite(value) || value < param.min || value > param.max) throw new Error(`${param.name} must be ${round(param.min)}..${round(param.max)}, got ${value}`);
   return param;
 }
