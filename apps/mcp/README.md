@@ -39,6 +39,15 @@ and macOS and Linux have one.
   `restore_backup` undoes a save.
 - Keeps approved tones as preset files with notes in
   `~/.pocket-master-editor/presets` and reuses them.
+- Sonicake Matribox II Pro (the `matribox_` tools, writes experimental): reads
+  and edits the loaded preset, builds a whole tone, saves with a confirmation
+  after a backup. `matribox_export_preset` and `matribox_import_preset` move
+  presets as `.prst` files (the format of Sonicake's own app) in
+  `~/.pocket-master-editor/presets/matribox`; `matribox_restore_backup` puts a
+  backup back into its slot. Both send the whole preset in one write, as
+  Sonicake's own app does (chain, parameters, knob, expression-pedal and
+  footswitch assignments, volume and tempo); that write is not yet checked
+  on a real unit.
 
 Tested on firmware V1.3.3. Source, protocol notes and the web editor:
 <https://github.com/fgbona/OpenSonicX>.

@@ -16,6 +16,20 @@ and the project uses [Semantic Versioning](https://semver.org/).
   only when you click *Reload* on the "new version" prompt, or on the next launch, never in the
   middle of an edit. Requests to other sites (AI providers, TONE3000) and your own data are never
   cached. The desktop app and `next dev` register no service worker.
+- Matribox II Pro whole presets (experimental, not yet checked on the owner's unit): the official
+  editor's whole-preset write, decoded from a new capture of it importing a `.prst` (mb-20): one
+  flag-2, cmd `10` message holding the u32 index and the 1207-byte body with the `.prst` section
+  tags, paged at 183 bytes, answered with cmd `17`. Core gains `mbWritePreset`, `mbPresetBody`,
+  host paging (`buildMbFrames`, `MB_HOST_PAGE_SIZE`) and `writeMatriboxPrst` (the inverse of
+  `parseMatriboxPrst`: literal-only LZO1X, JSON byte array, base64). New MCP tools:
+  `matribox_export_preset` (the loaded preset or a slot to a `.prst` in
+  `~/.pocket-master-editor/presets/matribox`), `matribox_import_preset` (a `.prst` loaded into the
+  loaded preset, optionally saved with confirm) and `matribox_restore_backup` (a
+  `matribox_save_preset` backup loaded and saved back to its slot, with confirm). The write carries
+  everything: chain, parameters, knob, expression-pedal and footswitch assignments, volume and
+  tempo. Whether it also stores the slot is not known yet, so the loaded preset is backed up first
+  and only a save stores. Paths stay inside their folders. The Pocket Master's
+  `list_preset_files` skips the Matribox folder. The tool contract only gains entries.
 
 ### Changed
 
@@ -38,6 +52,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 - A refused MIDI permission is no longer logged as an error in the browser console: it is the
   person's choice and the page already explains it (it also showed up in the e2e logs).
+- Matribox II Pro host checksum: it covers the data nibbles only, not the length and offset bytes
+  (the same on every single-page frame captured so far; a paged write shows the difference).
 
 ## [1.0.0] - 2026-11-24
 

@@ -3,7 +3,8 @@
  * decompress them. A read's reply is the message with the request's flag and cmd whose data starts
  * with the request's argument (the unit repeats it); a write is confirmed by the unit's echo, the
  * same flag, cmd and data, except a chain edit (01/02 00 04 01: add, move, remove, change model), which
- * the unit answers with its chain notice (00 00 04 01 + the new chain) instead. Anything else the unit sends meanwhile (footswitch and knob
+ * the unit answers with its chain notice (00 00 04 01 + the new chain) instead. The whole-preset
+ * write (flag 2, paged) is answered with flag 0, cmd 0x17, `02 00 00 10` (capture mb-20). Anything else the unit sends meanwhile (footswitch and knob
  * notifications) is skipped. One request at a time: the session queues calls.
  */
 import { joinMbPages, MB_READ, MB_REPLY, MB_WRITE, parseMbFrame, unwrapMbMessage, type MbFrame } from '@pocket-master/core';
@@ -19,6 +20,8 @@ export interface MatriboxConnection {
   read(request: Uint8Array): Promise<Uint8Array>;
   /** Sends a write frame (mbSet…, mbSelectPreset, chain edits) and resolves once the unit echoes it. */
   write(frame: Uint8Array): Promise<void>;
+  /** Sends the pages of a whole-preset write (mbWritePreset) and resolves once the unit acknowledges it. */
+  writePreset(frames: readonly Uint8Array[]): Promise<void>;
   /** Sends a write frame the unit does not answer (mbSavePreset): check its effect with a read. */
   post(frame: Uint8Array): void;
   close(): void;
@@ -33,6 +36,8 @@ const CHAIN_NOTICE = Uint8Array.of(0x00, 0x00, 0x04, 0x01);
 const isChainEdit = (data: Uint8Array) => (data[0] === 0x01 || data[0] === 0x02) && startsWith(data.subarray(1), CHAIN_NOTICE.subarray(1));
 /** The unit's answer to a write: its echo, or its chain notice for a chain edit. */
 const confirms = (data: Uint8Array, sent: Uint8Array) => equal(data, sent) || (isChainEdit(sent) && startsWith(data, CHAIN_NOTICE));
+/** The unit's answer to a whole-preset write: flag 0, cmd 0x17, `02 00 00 10`. */
+const PRESET_ACK = { flag: 0, cmd: 0x17, data: Uint8Array.of(0x02, 0x00, 0x00, 0x10) };
 
 function tryParse(bytes: Uint8Array): MbFrame | null {
   try {
@@ -42,13 +47,24 @@ function tryParse(bytes: Uint8Array): MbFrame | null {
   }
 }
 
-export function matriboxLink(ports: MatriboxPorts, timeoutMs: number = MATRIBOX_TIMEOUT_MS): Pick<MatriboxConnection, 'read' | 'write' | 'post'> {
-  /** Sends `frame` and resolves with the data of the first message `accepts` takes. */
-  const exchange = (frame: Uint8Array, type: number, accepts: (data: Uint8Array, sent: Uint8Array) => boolean, noAnswer: string): Promise<Uint8Array> => {
-    const sent = parseMbFrame(frame);
-    if (sent.type !== type) throw new Error(`Matribox link: expected a frame of type 0x${type.toString(16)}`);
-    const want = unwrapMbMessage(sent.payload);
-    const what = `flag ${want.flag}, cmd ${hex(want.cmd)}`;
+interface Answer {
+  readonly flag: number;
+  readonly cmd: number;
+  readonly accepts: (data: Uint8Array) => boolean;
+}
+
+/** The message the host frames carry (one or more pages of type `type`). */
+function sentMessage(frames: readonly Uint8Array[], type: number) {
+  const pages = frames.map(parseMbFrame);
+  if (pages.length === 0 || pages.some((p) => p.type !== type)) throw new Error(`Matribox link: expected frames of type 0x${type.toString(16)}`);
+  const joined = joinMbPages(pages);
+  if (!joined) throw new Error('Matribox link: the frames do not hold a whole message');
+  return unwrapMbMessage(joined);
+}
+
+export function matriboxLink(ports: MatriboxPorts, timeoutMs: number = MATRIBOX_TIMEOUT_MS): Pick<MatriboxConnection, 'read' | 'write' | 'writePreset' | 'post'> {
+  /** Sends `frames` and resolves with the data of the first message `answer` takes. */
+  const exchange = (frames: readonly Uint8Array[], answer: Answer, what: string, noAnswer: string): Promise<Uint8Array> => {
     return new Promise((resolve, reject) => {
       let pages: MbFrame[] = [];
       const finish = (error: Error | null, data?: Uint8Array) => {
@@ -59,14 +75,14 @@ export function matriboxLink(ports: MatriboxPorts, timeoutMs: number = MATRIBOX_
       };
       const timer = setTimeout(() => finish(new Error(`Matribox II PRO did not ${noAnswer} (${what}) within ${timeoutMs} ms. Is it on, and is the official editor closed?`)), timeoutMs);
       const onMessage = (joined: Uint8Array) => {
-        if (joined[0] !== want.flag || joined[3] !== want.cmd) return;
+        if (joined[0] !== answer.flag || joined[3] !== answer.cmd) return;
         let data: Uint8Array;
         try {
           data = unwrapMbMessage(joined).data;
         } catch (error) {
           return finish(new Error(`Matribox II PRO sent a damaged reply (${what}): ${(error as Error).message}`));
         }
-        if (accepts(data, want.data)) finish(null, data);
+        if (answer.accepts(data)) finish(null, data);
       };
       ports.listen((bytes) => {
         const frame = tryParse(bytes);
@@ -86,12 +102,22 @@ export function matriboxLink(ports: MatriboxPorts, timeoutMs: number = MATRIBOX_
           onMessage(joined);
         }
       });
-      ports.send(frame);
+      frames.forEach((frame) => ports.send(frame));
     });
   };
+  /** The request's own flag and cmd, its data checked by `accepts`. */
+  const own = (frames: readonly Uint8Array[], type: number, accepts: (data: Uint8Array, sent: Uint8Array) => boolean, noAnswer: string) => {
+    const want = sentMessage(frames, type);
+    return exchange(frames, { flag: want.flag, cmd: want.cmd, accepts: (data) => accepts(data, want.data) }, `flag ${want.flag}, cmd ${hex(want.cmd)}`, noAnswer);
+  };
   return {
-    read: async (request) => exchange(request, MB_READ, startsWith, 'answer the read'),
-    write: async (frame) => void (await exchange(frame, MB_WRITE, confirms, 'confirm the write')),
+    read: async (request) => own([request], MB_READ, startsWith, 'answer the read'),
+    write: async (frame) => void (await own([frame], MB_WRITE, confirms, 'confirm the write')),
+    writePreset: async (frames) => {
+      const sent = sentMessage(frames, MB_WRITE);
+      const ack = { ...PRESET_ACK, accepts: (data: Uint8Array) => equal(data, PRESET_ACK.data) };
+      await exchange(frames, ack, `flag ${sent.flag}, cmd ${hex(sent.cmd)}`, 'acknowledge the preset write');
+    },
     post: (frame) => {
       if (parseMbFrame(frame).type !== MB_WRITE) throw new Error('Matribox link: post sends write frames only');
       ports.send(frame);

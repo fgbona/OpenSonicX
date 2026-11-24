@@ -316,7 +316,7 @@ export class Session {
   /** The preset files in the presets folder, with their notes: the library of approved tones. */
   async listPresetFiles(): Promise<string> {
     const folder = this.#folders.presets;
-    const names = (await readdir(folder, { recursive: true }).catch(() => [] as string[])).filter(isPresetFileName).sort();
+    const names = (await readdir(folder, { recursive: true }).catch(() => [] as string[])).filter((f) => isPresetFileName(f) && !MATRIBOX_FOLDER.test(f)).sort();
     const lines = await Promise.all(names.map(async (file) => {
       try {
         const preset = await readPresetFile(join(folder, file));
@@ -497,6 +497,8 @@ function requireConfirm(confirm: string, label: string): void {
 }
 
 const isPresetFileName = (name: string) => /\.(json|prst)$/i.test(name);
+/** The Matribox II Pro keeps its own .prst files in presets/matribox: not Pocket Master presets. */
+const MATRIBOX_FOLDER = /^matribox[\\/]/i;
 
 /** Our .json preset file, or the .prst that Sonicake's own app exports. */
 async function readPresetFile(path: string): Promise<PresetFile> {
@@ -504,7 +506,7 @@ async function readPresetFile(path: string): Promise<PresetFile> {
 }
 
 /** `file` resolved against `folder`; refused when it would land outside it. */
-function inside(folder: string, file: string): string {
+export function inside(folder: string, file: string): string {
   const path = resolve(folder, file);
   const rel = relative(folder, path);
   if (rel === '' || rel.startsWith('..') || isAbsolute(rel)) throw new Error(`the file must be inside ${folder}`);

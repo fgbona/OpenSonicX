@@ -3,6 +3,7 @@
  * unit (packages/core/test/fixtures), paged as the unit pages them, and applies the write frames to
  * an in-memory edit buffer the way docs/matribox.md describes, echoing each write as the unit does
  * (a chain edit is answered with the chain notice instead, and a save with nothing, like the unit).
+ * A whole-preset write (flag 2, paged) replaces the edit buffer and is answered with cmd 0x17.
  * Never a real device.
  */
 import { readFileSync } from 'node:fs';
@@ -76,6 +77,9 @@ export class FakeMatribox {
   echoes = true;
   /** When true the unit drops saves (to test that a save is checked by reading it back). */
   dropsSaves = false;
+  /** Every whole-preset write received, decompressed (u32 index + 1207-byte body). */
+  readonly presetWrites: Uint8Array[] = [];
+  #pages: ReturnType<typeof parseMbFrame>[] = [];
   #names = dataOf(this.#replies.get(key(mbReadPresetNames()))!);
   #current = 0x42;
   /** Stored presets by number (1211 bytes, number first). */
@@ -102,6 +106,12 @@ export class FakeMatribox {
     const request = key(bytes);
     this.received.push(request);
     const frame = parseMbFrame(bytes);
+    if (frame.offset > 0 || frame.payload.length < frame.total) {
+      this.#pages = frame.offset === 0 ? [frame] : [...this.#pages, frame];
+      const joined = joinMbPages(this.#pages);
+      if (joined) this.#wholePreset(unwrapMbMessage(joined));
+      return;
+    }
     const message = unwrapMbMessage(frame.payload);
     if (frame.type === MB_WRITE && message.cmd === 0x05) {
       if (!this.dropsSaves) this.#apply(message.cmd, message.data);
@@ -114,6 +124,21 @@ export class FakeMatribox {
     }
     const reply = frame.type === MB_READ ? this.#read(message.flag, message.cmd, message.data) ?? this.#replies.get(request) : undefined;
     if (reply) this.#reply(reply); // the unit stays silent on what it does not know
+  }
+
+  /** flag 2, cmd 0x10: u32 index + body; the unit keeps it with its own section tags and acknowledges. */
+  #wholePreset(message: { flag: number; cmd: number; data: Uint8Array }): void {
+    this.#pages = [];
+    if (message.flag !== 2 || message.cmd !== 0x10 || message.data.length !== 1211) throw new Error('fake Matribox: unknown paged write');
+    this.presetWrites.push(message.data);
+    const preset = Uint8Array.from(message.data);
+    for (let at = 4, i = 0; i < 9; i++) {
+      preset.set([0x00, 0x00, 0x00, 0x10], at);
+      at += 8 + u32(preset, at + 4);
+    }
+    // ponytail: the write lands in the edit buffer only here; whether the unit also stores the slot is not known yet.
+    this.#edit = preset;
+    if (this.echoes) this.#reply(replyFrames(wrapMbMessage(0, 0x17, [0x02, 0x00, 0x00, 0x10])));
   }
 
   listen(receiver: (bytes: Uint8Array) => void): void {

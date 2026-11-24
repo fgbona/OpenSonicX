@@ -10,7 +10,9 @@ import {
   parseMatriboxPrst,
   parseMbPreset,
   resolveMbPreset,
+  writeMatriboxPrst,
 } from '../src/matribox/preset.ts';
+import { lzo1xDecompress } from '../src/matribox/lzo1x.ts';
 import { fromHex } from '../src/hex.ts';
 
 // The owner's own unit: preset 66 "Drive AD", read with argument 0x43 (decompressed device reply).
@@ -199,4 +201,32 @@ test('parseMbPresetLabel reads 1A..60D (case-insensitive) and refuses the rest',
   assert.equal(parseMbPresetLabel(' 60D '), 239);
   for (let i = 0; i < 240; i += 37) assert.equal(parseMbPresetLabel(mbPresetLabel(i)), i);
   for (const bad of ['0A', '61A', '1E', 'P01', '', '1']) assert.throws(() => parseMbPresetLabel(bad), /preset label/, bad);
+});
+
+/** The 1207-byte body a .prst written by us holds. */
+const prstBody = (text: string) => lzo1xDecompress(Uint8Array.from(JSON.parse(atob(text)) as number[]));
+
+test('writeMatriboxPrst round-trips the real device preset: same sections, .prst tags, no number', () => {
+  const device = parseMbPreset(DRIVE_AD);
+  const text = writeMatriboxPrst(device);
+  assert.match(text, /^[A-Za-z0-9+/]+={0,2}$/);
+  const back = parseMatriboxPrst(text);
+  assert.equal(back.number, null);
+  assert.deepEqual([back.name, back.style, back.chain], [device.name, device.style, device.chain]);
+  assert.deepEqual(back.sections.map((s) => [s.id, s.tag, [...s.body]]), device.sections.map((s) => [s.id, 0x10000002, [...s.body]]));
+  // The body is the device reply without its u32 number, with the .prst section tag.
+  const expected = Uint8Array.from(DRIVE_AD.subarray(4));
+  let at = 0;
+  for (const [, size] of LAYOUT) {
+    new DataView(expected.buffer).setUint32(at, 0x10000002, true);
+    at += 8 + size;
+  }
+  assert.deepEqual(prstBody(text), expected);
+});
+
+test('writeMatriboxPrst is the inverse of parseMatriboxPrst on a .prst body, byte for byte', () => {
+  const original = body({ name: 'From File', values: { 0: { 0: 7.5, 14: -3 } } });
+  const parsed = parseMatriboxPrst(prstText(original));
+  assert.deepEqual(prstBody(writeMatriboxPrst(parsed)), original);
+  assert.deepEqual(parseMatriboxPrst(writeMatriboxPrst(parsed)), parsed);
 });

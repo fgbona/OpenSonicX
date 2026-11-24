@@ -6,9 +6,11 @@
  *
  * type 0x11 = read request and 0x12 = write (host), 0x00 = reply or notification (unit).
  * len = total decoded length of the message, off = where this page starts (both 7-bit lo, hi).
- * Each data byte travels as two nibbles, high first. A long reply comes as pages of 185 bytes.
- * Host frames: ck = sum of every byte after the type up to F7, & 0x7F. Replies use another rule
- * not decoded yet, so their checksum is kept but not checked.
+ * Each data byte travels as two nibbles, high first. A long reply comes as pages of 185 bytes, a
+ * long host message (the official editor's whole-preset write) as pages of 183.
+ * Host frames: ck = sum of the data nibbles (after off hi, up to F7) & 0x7F; a paged host write
+ * (capture mb-20) shows that length and offset bytes are not summed. Replies use another rule not
+ * decoded yet, so their checksum is kept but not checked.
  */
 import { collapse, expand, SYSEX_END, SYSEX_START } from '../frame.ts';
 
@@ -19,6 +21,8 @@ export const MB_REPLY = 0x00;
 export type MbType = typeof MB_READ | typeof MB_WRITE | typeof MB_REPLY;
 /** Decoded bytes in one full page. */
 export const MB_PAGE_SIZE = 185;
+/** Decoded bytes in one full host page: the official editor's paged write (capture mb-20). */
+export const MB_HOST_PAGE_SIZE = 183;
 /** "~GP-2" probe the official editor sends first; the unit does not answer it. */
 export const MB_PROBE: Uint8Array = Uint8Array.from([0xf0, 0x21, 0x25, 0x7e, 0x47, 0x50, 0x2d, 0x32, 0x11, 0x12, 0x00, 0x00, 0x00, 0xf7]);
 
@@ -39,7 +43,7 @@ export interface MbFrame {
   readonly checksumOk: boolean | null;
 }
 
-/** Checksum of a host frame over `tail` = every byte after the type byte, excluding F7. */
+/** Checksum of a host frame over its data nibbles (every byte after off hi, excluding F7). */
 export function mbChecksum(tail: ArrayLike<number>): number {
   return Array.from(tail).reduce((sum, b) => sum + b, 0) & 0x7f;
 }
@@ -49,13 +53,33 @@ const isType = (t: number): t is MbType => t === MB_READ || t === MB_WRITE || t 
 
 /** Complete single-page SysEx message for a host read or write. */
 export function buildMbFrame(type: MbType, payload: ArrayLike<number>): Uint8Array {
+  const bytes = hostBytes(type, payload);
+  if (bytes.length > MB_PAGE_SIZE) throw new Error(`payload too long for one page (${bytes.length} > ${MB_PAGE_SIZE}): use buildMbFrames`);
+  return page(type, bytes, bytes.length, 0);
+}
+
+function hostBytes(type: MbType, payload: ArrayLike<number>): number[] {
   if (type !== MB_READ && type !== MB_WRITE) throw new Error(`host frame type must be 0x11 or 0x12, got 0x${Number(type).toString(16)}`);
   const bytes = Array.from(payload);
   if (bytes.some((b) => !Number.isInteger(b) || b < 0 || b > 0xff)) throw new Error('payload must be byte values 0..255');
-  // ponytail: host paging was never captured (largest host payload seen: 33 bytes); add it with a capture.
-  if (bytes.length > MB_PAGE_SIZE) throw new Error(`payload too long for one page (${bytes.length} > ${MB_PAGE_SIZE})`);
-  const tail = [bytes.length >> 7, 0, 0, ...expand(bytes)]; // len hi, off lo, off hi, data
-  return Uint8Array.from([...HEADER, mbChecksum(tail), type, bytes.length & 0x7f, ...tail, SYSEX_END]);
+  return bytes;
+}
+
+function page(type: MbType, bytes: readonly number[], total: number, offset: number): Uint8Array {
+  const data = expand(bytes);
+  return Uint8Array.from([...HEADER, mbChecksum(data), type, total & 0x7f, total >> 7, offset & 0x7f, offset >> 7, ...data, SYSEX_END]);
+}
+
+/** A host message of any length as frames of MB_HOST_PAGE_SIZE bytes, each with the total and its offset. */
+export function buildMbFrames(type: MbType, payload: ArrayLike<number>): Uint8Array[] {
+  const bytes = hostBytes(type, payload);
+  if (bytes.length === 0) throw new Error('an empty message has no frame');
+  if (bytes.length <= MB_HOST_PAGE_SIZE) return [buildMbFrame(type, bytes)];
+  if (bytes.length >= 1 << 14) throw new Error(`message too long (${bytes.length} bytes; the length field holds 14 bits)`);
+  return Array.from({ length: Math.ceil(bytes.length / MB_HOST_PAGE_SIZE) }, (_, i) => {
+    const offset = i * MB_HOST_PAGE_SIZE;
+    return page(type, bytes.slice(offset, offset + MB_HOST_PAGE_SIZE), bytes.length, offset);
+  });
 }
 
 /** Parses one complete Matribox SysEx message (F0 … F7). Throws on anything malformed. */
@@ -73,7 +97,7 @@ export function parseMbFrame(sysex: Uint8Array): MbFrame {
   const payload = collapse(nibbles);
   if (offset + payload.length > total) throw new Error(`page overruns the message length (${offset}+${payload.length} > ${total})`);
   const checksum = sysex[CK_AT] as number;
-  const checksumOk = type === MB_REPLY ? null : mbChecksum(sysex.subarray(TYPE_AT + 2, -1)) === checksum;
+  const checksumOk = type === MB_REPLY ? null : mbChecksum(nibbles) === checksum;
   return { type, total, offset, payload, checksum, checksumOk };
 }
 

@@ -7,6 +7,8 @@ import {
   MB_REPLY,
   MB_WRITE,
   buildMbFrame,
+  buildMbFrames,
+  MB_HOST_PAGE_SIZE,
   float32LE,
   joinMbPages,
   mbChecksum,
@@ -26,7 +28,7 @@ test('the probe is the "~GP-2" message the official editor sends first', () => {
 
 test('mbChecksum matches every captured host frame', () => {
   assert.equal(HOST.length, 6);
-  for (const f of HOST) assert.equal(mbChecksum(f.subarray(10, -1)), f[7], toHex(f.subarray(0, 10)));
+  for (const f of HOST) assert.equal(mbChecksum(f.subarray(13, -1)), f[7], toHex(f.subarray(0, 10)));
 });
 
 test('captured host frames parse and rebuild byte for byte', () => {
@@ -117,4 +119,33 @@ test('float32 little-endian helpers round-trip a knob value', () => {
   assert.equal(toHex(float32LE(64)), '00 00 80 42');
   assert.equal(readFloat32LE(Uint8Array.from([0, 0, 0, 0, 0, 0, 0xc8, 0x42]), 4), 100);
   assert.throws(() => readFloat32LE(new Uint8Array(3), 0), /range/);
+});
+
+// Capture mb-20 (the official editor importing a .prst): its host write came as 3 pages. Only the
+// frame heads are kept here (the data is a preset we may not publish): length 481 = 0x61 + 3 × 128,
+// offsets 0, 183, 366, SysEx sizes 380, 380, 244.
+const IMPORT_HEADS = ['F0 21 25 4D 50 00 00 6D 12 61 03 00 00', 'F0 21 25 4D 50 00 00 0C 12 61 03 37 01', 'F0 21 25 4D 50 00 00 0E 12 61 03 6E 02'];
+
+test('buildMbFrames pages a long host message like the official editor: 183 bytes per page', () => {
+  const payload = Array.from({ length: 481 }, (_, i) => (i * 7) & 0xff);
+  const pages = buildMbFrames(MB_WRITE, payload);
+  assert.equal(MB_HOST_PAGE_SIZE, 183);
+  assert.deepEqual(pages.map((p) => p.length), [380, 380, 244]);
+  assert.deepEqual(pages.map((p) => toHex(p.subarray(8, 13))), IMPORT_HEADS.map((h) => h.slice(-14)));
+  const parsed = pages.map(parseMbFrame);
+  assert.ok(parsed.every((p) => p.checksumOk === true));
+  assert.deepEqual(parsed.map((p) => p.offset), [0, 183, 366]);
+  assert.deepEqual(joinMbPages(parsed), Uint8Array.from(payload));
+});
+
+test('the host checksum covers the data nibbles only: a page at offset 183 checks out', () => {
+  const page = buildMbFrames(MB_WRITE, new Array(300).fill(0x11))[1] as Uint8Array;
+  assert.equal(page[7], mbChecksum(page.subarray(13, -1)));
+  assert.notEqual(page[7], mbChecksum(page.subarray(10, -1))); // the old reading (from byte 10) fails here
+  assert.equal(parseMbFrame(page).checksumOk, true);
+});
+
+test('buildMbFrames gives one frame, the same as buildMbFrame, for a short message', () => {
+  assert.deepEqual(buildMbFrames(MB_READ, [0xab, 0x01]).map(toHex), [toHex(buildMbFrame(MB_READ, [0xab, 0x01]))]);
+  assert.throws(() => buildMbFrames(MB_WRITE, []), /empty/);
 });

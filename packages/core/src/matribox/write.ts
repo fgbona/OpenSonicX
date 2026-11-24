@@ -8,9 +8,9 @@
  * Every builder is byte-exact with a captured host frame. Hardware-validated on the owner's unit
  * (2026-11-24): every builder here.
  */
-import { buildMbFrame, float32LE, MB_WRITE } from './frame.ts';
+import { buildMbFrame, buildMbFrames, float32LE, MB_WRITE } from './frame.ts';
 import { wrapMbMessage } from './message.ts';
-import { MB_PRESET_COUNT } from './preset.ts';
+import { MB_PRESET_COUNT, mbPresetBody, type MbPreset } from './preset.ts';
 
 export const MB_SLOTS = 12;
 /** Values per slot in sec5: parameter ids are 0..14. */
@@ -20,6 +20,8 @@ const NO_SLOT = 0xff;
 const NAME_FIELD = 17;
 const SET_CMD = 0x10;
 const SAVE_CMD = 0x05;
+/** The official editor's whole-preset write is the only flag-2 message seen. */
+const WHOLE_PRESET_FLAG = 2;
 
 const fail = (msg: string): never => {
   throw new RangeError(`Matribox write: ${msg}`);
@@ -107,4 +109,16 @@ export function checkMbPresetName(name: string): string {
 export function mbSavePreset(index: number, name: string): Uint8Array {
   const chars = Array.from(checkMbPresetName(name), (c) => c.charCodeAt(0));
   return write(SAVE_CMD, [...u32(checkPreset(index)), ...chars, ...Array<number>(NAME_FIELD - chars.length).fill(0)]);
+}
+
+/**
+ * The whole preset in one message, as the official editor sends a .prst it imports (capture mb-20,
+ * not yet sent by us to the unit): flag 2, cmd 0x10, u32 `index` + the 1207-byte body with the
+ * .prst section tags, paged (183 bytes per frame). The unit answers flag 0, cmd 0x17, `02 00 00 10`.
+ * The editor selected `index` first and then re-read it, which showed the new preset: whether the
+ * write also stores the slot is not known, so store it with mbSavePreset.
+ */
+export function mbWritePreset(index: number, preset: MbPreset): Uint8Array[] {
+  const data = [...u32(checkPreset(index)), ...mbPresetBody(preset)];
+  return buildMbFrames(MB_WRITE, wrapMbMessage(WHOLE_PRESET_FLAG, SET_CMD, data));
 }
