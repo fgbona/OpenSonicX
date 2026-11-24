@@ -12,6 +12,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
   core builds and parses its SysEx frames (checksum, nibbles, paged replies), and the model
   catalog is read from the user's own install of Sonicake's official editor, never shipped here
   (`MATRIBOX_CATALOG` points to it elsewhere). See [docs/matribox.md](docs/matribox.md).
+- Matribox II Pro: our own LZO1X decompressor (bounds-checked, output capped, verified against
+  liblzo2), message unwrapping (every message is an 8-byte header plus an LZO1X stream), the read
+  requests the official editor sends, and parsers for the preset names (240, with style tags), the
+  20 user IR names and the 10 capture names.
 
 ## [0.17.1] - 2026-11-23
 

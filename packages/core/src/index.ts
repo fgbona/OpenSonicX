@@ -34,3 +34,5 @@ export * from './tone3000.ts';
 export * from './globals.ts';
 export * from './matribox/frame.ts';
 export * from './matribox/catalog.ts';
+export * from './matribox/lzo1x.ts';
+export * from './matribox/message.ts';
