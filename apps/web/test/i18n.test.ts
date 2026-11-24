@@ -28,8 +28,11 @@ test('detectLang picks Portuguese for any pt locale and English otherwise', () =
   assert.equal(detectLang([]), 'en');
 });
 
-test('translateError maps the editor\'s own messages and keeps protocol errors as they are', () => {
-  assert.equal(translateError('pt', 'MIDI access was blocked. Allow "MIDI devices" for this site in the browser settings, then try again.'), 'O acesso MIDI foi bloqueado. Permita "Dispositivos MIDI" para este site nas configurações do navegador e tente de novo.');
+test("translateError maps the editor's own messages and keeps protocol errors as they are", () => {
+  assert.equal(
+    translateError('pt', 'MIDI access was blocked. Allow "MIDI devices" for this site in the browser settings, then try again.'),
+    'O acesso MIDI foi bloqueado. Permita "Dispositivos MIDI" para este site nas configurações do navegador e tente de novo.',
+  );
   assert.equal(translateError('pt', 'Could not open the ports: busy'), 'Não foi possível abrir as portas: busy');
   assert.equal(translateError('pt', 'record 0x3003 is too short'), 'record 0x3003 is too short');
   assert.equal(translateError('en', 'Could not open the ports: busy'), 'Could not open the ports: busy');
@@ -64,5 +67,8 @@ test('translateError covers the preset file errors raised by core', () => {
 });
 
 test('a save whose name check failed is told in Portuguese, with the slot and both names', () => {
-  assert.equal(translateError('pt', 'saved, but P38 is named "Noise Wall" instead of "QClean"'), 'Gravado, mas a pedaleira informa que o P38 se chama “Noise Wall” em vez de “QClean”. Confira na pedaleira; se o nome estiver certo lá, está tudo bem.');
+  assert.equal(
+    translateError('pt', 'saved, but P38 is named "Noise Wall" instead of "QClean"'),
+    'Gravado, mas a pedaleira informa que o P38 se chama “Noise Wall” em vez de “QClean”. Confira na pedaleira; se o nome estiver certo lá, está tudo bem.',
+  );
 });

@@ -57,7 +57,13 @@ test('backup all reads every slot by loading it, then loads the original preset 
   assert.equal(file.device, 'Sonicake Matribox II Pro');
   assert.equal(file.createdAt, '2026-11-24T12:00:00.000Z');
   assert.equal(file.presets.length, MB_PRESET_COUNT);
-  assert.deepEqual(file.presets.slice(0, 2).map((p) => [p.index, p.label]), [[0, '1A'], [1, '1B']]);
+  assert.deepEqual(
+    file.presets.slice(0, 2).map((p) => [p.index, p.label]),
+    [
+      [0, '1A'],
+      [1, '1B'],
+    ],
+  );
   assert.equal(file.presets[LOADED]?.name, 'Drive AD');
   assert.equal(file.presets[0]?.name, '', 'slot 1A as stored, not the edit buffer');
   assert.equal(fromHex(file.presets[0]!.preset).length, 1211);
@@ -70,11 +76,19 @@ test('restore all writes each preset whole to its index, checks it, and loads th
   const fake = quiet();
   const unit = link(fake);
   const drive = toHex(fake.editBuffer).replaceAll(' ', '');
-  const file: MbBackupAll = { format: MB_BACKUP_ALL_FORMAT, version: 1, device: 'Sonicake Matribox II Pro', createdAt: '2026-11-24T12:00:00.000Z',
-    presets: [3, 4].map((index) => ({ index, label: mbPresetLabel(index), name: 'Drive AD', preset: drive })) };
+  const file: MbBackupAll = {
+    format: MB_BACKUP_ALL_FORMAT,
+    version: 1,
+    device: 'Sonicake Matribox II Pro',
+    createdAt: '2026-11-24T12:00:00.000Z',
+    presets: [3, 4].map((index) => ({ index, label: mbPresetLabel(index), name: 'Drive AD', preset: drive })),
+  };
   const { written } = await mbRestoreAllPresets(unit, parseMbBackupAll(JSON.stringify(file)));
   assert.deepEqual(written, ['1D', '2A']);
-  assert.deepEqual(fake.presetWrites.map((w) => w[0]), [3, 4]);
+  assert.deepEqual(
+    fake.presetWrites.map((w) => w[0]),
+    [3, 4],
+  );
   assert.equal(parseMbPreset(fake.stored(4)!).name, 'Drive AD');
   assert.equal(fake.current, LOADED);
 });
@@ -86,8 +100,19 @@ test('restore all stops at the first preset the unit did not store, says what wa
   const hex = toHex(fake.editBuffer).replaceAll(' ', '');
   const changed = toHex(Uint8Array.from(fake.editBuffer, (b, i) => (i === 269 + 724 ? b ^ 1 : b))).replaceAll(' ', ''); // slot 0 on/off flipped
   assert.notEqual(parseMbPreset(fromHex(changed)).chain.find((b) => b.slot === 0)?.on, drive.chain.find((b) => b.slot === 0)?.on);
-  const file = parseMbBackupAll(JSON.stringify({ format: MB_BACKUP_ALL_FORMAT, version: 1, device: 'Sonicake Matribox II Pro', createdAt: '2026-11-24T12:00:00.000Z',
-    presets: [{ index: 0, label: '1A', name: 'Drive AD', preset: hex }, { index: 1, label: '1B', name: 'x', preset: changed }, { index: 2, label: '1C', name: 'Drive AD', preset: hex }] }));
+  const file = parseMbBackupAll(
+    JSON.stringify({
+      format: MB_BACKUP_ALL_FORMAT,
+      version: 1,
+      device: 'Sonicake Matribox II Pro',
+      createdAt: '2026-11-24T12:00:00.000Z',
+      presets: [
+        { index: 0, label: '1A', name: 'Drive AD', preset: hex },
+        { index: 1, label: '1B', name: 'x', preset: changed },
+        { index: 2, label: '1C', name: 'Drive AD', preset: hex },
+      ],
+    }),
+  );
   fake.dropsPresetWriteTo = 1;
   await assert.rejects(mbRestoreAllPresets(unit, file), /Restore stopped at 1B: .*section 5.*Written before it \(1 of 3\): 1A\./s);
   assert.equal(fake.presetWrites.length, 2, 'nothing after the failed one');
@@ -116,7 +141,13 @@ test('parseMbBackupAll refuses anything that is not a whole, consistent backup',
 test('a backup sends no write but selects', async () => {
   const fake = quiet();
   await mbBackupAllPresets(link(fake), {});
-  const writes = fake.received.map((h) => parseMbFrame(fromHex(h))).filter((f) => f.type === MB_WRITE).map((f) => toHex(unwrapMbMessage(f.payload).data.subarray(0, 4)));
+  const writes = fake.received
+    .map((h) => parseMbFrame(fromHex(h)))
+    .filter((f) => f.type === MB_WRITE)
+    .map((f) => toHex(unwrapMbMessage(f.payload).data.subarray(0, 4)));
   assert.equal(writes.length, MB_PRESET_COUNT + 1);
-  assert.ok(writes.every((w) => w === '01 00 0A 01'), 'only selects');
+  assert.ok(
+    writes.every((w) => w === '01 00 0A 01'),
+    'only selects',
+  );
 });

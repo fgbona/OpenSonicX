@@ -7,7 +7,12 @@ import { PocketMasterLink, LinkClosedError, type LogEntry, type MidiPort } from 
 /** A port that records what is sent and lets a test deliver incoming bytes. */
 function fakePort(send: (b: Uint8Array) => void = () => undefined) {
   const state = { receiver: null as ((bytes: Uint8Array) => void) | null };
-  const port: MidiPort = { send, listen: (r) => void (state.receiver = r) };
+  const port: MidiPort = {
+    send,
+    listen: (r) => {
+      state.receiver = r;
+    },
+  };
   return { port, state, receive: (bytes: Uint8Array) => state.receiver?.(bytes) };
 }
 function fakes() {
@@ -77,7 +82,6 @@ test('a notification between replies is logged but does not answer the query', a
   f.link.close();
   await assert.rejects(pending, LinkClosedError);
 });
-
 
 // --- live edit path -------------------------------------------------------
 import { setParam, setBlockOn, setAmpMode, selectModel, editKey } from '../src/index.ts';
@@ -156,7 +160,11 @@ test('a quick second amp model choice cannot drop the queued amp mode switch', (
 test('frames nobody waits for are reported as notifications', () => {
   const seen: string[] = [];
   const { port, receive } = fakePort();
-  const link = new PocketMasterLink(port, () => undefined, (fr) => seen.push(toHex(fr.payload)));
+  const link = new PocketMasterLink(
+    port,
+    () => undefined,
+    (fr) => seen.push(toHex(fr.payload)),
+  );
   receive(buildFrame([0x12, 0x43, 9, 0]));
   assert.deepEqual(seen, ['12 43 09 00']);
   link.close();
@@ -165,7 +173,11 @@ test('frames nobody waits for are reported as notifications', () => {
 test('a reply that answers a request is not reported as a notification', async () => {
   const seen: string[] = [];
   const { port, receive } = fakePort();
-  const link = new PocketMasterLink(port, () => undefined, (fr) => seen.push(toHex(fr.payload)));
+  const link = new PocketMasterLink(
+    port,
+    () => undefined,
+    (fr) => seen.push(toHex(fr.payload)),
+  );
   const pending = link.request(0x43);
   receive(buildFrame([0x12, 0x43, 7, 0]));
   await pending;
@@ -186,7 +198,10 @@ test('presetOperation refuses anything but a selection or a user-slot save', asy
 test('a selection waits for its own acknowledge, so it cannot be mistaken for the save one', async () => {
   const f = fakes();
   let done = false;
-  const select = f.link.presetOperation(selectPreset(2)).then((ok) => ((done = true), ok));
+  const select = f.link.presetOperation(selectPreset(2)).then((ok) => {
+    done = true;
+    return ok;
+  });
   await flush();
   assert.equal(done, false, 'still waiting for 14 08 00');
   f.receive(buildFrame([0x14, 0x08, 0x00])); // the real pedal acknowledges every selection
@@ -248,7 +263,10 @@ test('a preset operation waits until queued edits are written', async () => {
 
 test('a port that fails to send rejects the request with a readable error and leaves nothing pending', async () => {
   let sends = 0;
-  const { port } = fakePort(() => { sends++; throw new Error('port disconnected'); });
+  const { port } = fakePort(() => {
+    sends++;
+    throw new Error('port disconnected');
+  });
   const link = new PocketMasterLink(port, () => undefined);
   await assert.rejects(link.request(0x43), /Could not send to the pedal: port disconnected/);
   mock.timers.tick(10_000);
@@ -293,7 +311,9 @@ test('an upload sends each chunk after the previous one is acknowledged, and end
   const f = fakes();
   const blob = irRenameBlob(0, 'Holy'); // 22 bytes: two chunks
   let done = false;
-  const upload = f.link.upload(blob, UploadDomain.IR).then(() => { done = true; });
+  const upload = f.link.upload(blob, UploadDomain.IR).then(() => {
+    done = true;
+  });
   await flush();
   assert.equal(f.sent.length, 1);
   f.receive(uploadAck());

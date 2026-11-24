@@ -9,5 +9,9 @@ const never = () => () => undefined;
 
 /** Whether the editor runs inside the desktop app; false while prerendering, so hydration matches. */
 export function useIsDesktop(): boolean {
-  return useSyncExternalStore(never, () => isDesktopAgent(navigator.userAgent), () => false);
+  return useSyncExternalStore(
+    never,
+    () => isDesktopAgent(navigator.userAgent),
+    () => false,
+  );
 }

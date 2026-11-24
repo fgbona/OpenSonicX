@@ -11,7 +11,12 @@ const Tag = { VOLUME: 0x2001, BPM: 0x2002, STATES: 0x3001, CHAIN: 0x3002, EFFECT
 const REQUIRED = [Tag.STATES, Tag.CHAIN, Tag.EFFECTS, Tag.PARAMS];
 /** Smallest record sizes the decoder reads: mask, 9 chain bytes, 10 codes, 10 x 8 floats. */
 const MIN_SIZE: ReadonlyMap<number, number> = new Map([
-  [Tag.STATES, 4], [Tag.CHAIN, 9], [Tag.EFFECTS, 40], [Tag.PARAMS, 320], [Tag.VOLUME, 4], [Tag.BPM, 4],
+  [Tag.STATES, 4],
+  [Tag.CHAIN, 9],
+  [Tag.EFFECTS, 40],
+  [Tag.PARAMS, 320],
+  [Tag.VOLUME, 4],
+  [Tag.BPM, 4],
 ]);
 const MODULE_COUNT = 9;
 const PARAM_STRIDE = 32; // 8 x float32 per module
@@ -55,10 +60,10 @@ export function decodePreset(payload: Uint8Array): Preset {
   if (payload[0] !== MessageType.GET || payload[1] !== Query.EDIT_BUFFER || payload.length < 6) {
     throw new Error('not an edit-buffer dump (expected payload 12 41 …)');
   }
-  const { tags, groups } = readDump(payload);
+  const { tags } = readDump(payload);
   const missing = REQUIRED.filter((t) => !tags.has(t));
   if (missing.length > 0) {
-    throw new Error(`edit-buffer dump is missing records ${missing.map((t) => '0x' + t.toString(16)).join(', ')}`);
+    throw new Error(`edit-buffer dump is missing records ${missing.map((t) => `0x${t.toString(16)}`).join(', ')}`);
   }
   // Only records that are present are size-checked; whether one is mandatory is REQUIRED's job (volume is optional).
   for (const [tag, size] of MIN_SIZE) {
@@ -96,9 +101,7 @@ export function decodePreset(payload: Uint8Array): Preset {
 
 function decodeParams(model: ModelSpec | undefined, view: DataView, module: number): Param[] {
   if (!model) return [];
-  return model.params
-    .filter((p) => view.byteLength >= PARAM_STRIDE * module + 4 * p.alg + 4)
-    .map((p) => toParam(p, view.getFloat32(PARAM_STRIDE * module + 4 * p.alg, true)));
+  return model.params.filter((p) => view.byteLength >= PARAM_STRIDE * module + 4 * p.alg + 4).map((p) => toParam(p, view.getFloat32(PARAM_STRIDE * module + 4 * p.alg, true)));
 }
 
 /** A decoded parameter for a catalog spec and a raw value. */

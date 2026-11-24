@@ -63,38 +63,39 @@ export async function listGeminiModels(key: string, fetchFn: typeof fetch = fetc
     const r = await fetchFn(`${API}/models?pageSize=1000`, { headers: { 'x-goog-api-key': key } });
     const body = (await r.json().catch(() => ({}))) as ApiError & { models?: { name?: string; supportedGenerationMethods?: string[] }[] };
     if (!r.ok) return failure(r.status, body, new Date()) instanceof KeyError ? 'invalid' : 'unavailable';
-    return (body.models ?? [])
-      .filter((m) => m.supportedGenerationMethods?.includes('generateContent') && m.name?.startsWith('models/gemini'))
-      .map((m) => m.name!.slice('models/'.length));
+    return (body.models ?? []).filter((m) => m.supportedGenerationMethods?.includes('generateContent') && m.name?.startsWith('models/gemini')).map((m) => m.name!.slice('models/'.length));
   } catch {
     return 'unavailable';
   }
 }
 
 /** Sends one message to Gemini's free models (Flash, or Flash-Lite), runs the tools it asks for, and returns its answer. */
-export const converseGemini = (options: ConverseOptions): Promise<string> =>
-  converseGeminiModel((options.model === 'lite' ? GEMINI_MODELS.lite : GEMINI_MODELS.flash).id, options);
+export const converseGemini = (options: ConverseOptions): Promise<string> => converseGeminiModel((options.model === 'lite' ? GEMINI_MODELS.lite : GEMINI_MODELS.flash).id, options);
 
 /** Sends one message to a Gemini model by id (a paid key's choice included), runs the tools, and returns the answer. */
 export async function converseGeminiModel(modelId: string, options: ConverseOptions): Promise<string> {
   const { key, agent, onRequest, onStep, onUsage, fetchFn = fetch, now = () => new Date() } = options;
   const model = { id: modelId };
-  const input: Step[] = [
-    ...options.turns.map((t): Step => (t.role === 'user'
-      ? { type: 'user_input', content: t.text }
-      : { type: 'model_output', content: [{ type: 'text', text: t.text }] })),
-  ];
+  const input: Step[] = [...options.turns.map((t): Step => (t.role === 'user' ? { type: 'user_input', content: t.text } : { type: 'model_output', content: [{ type: 'text', text: t.text }] }))];
   const text = requestTexts(agent, options.turns, options.message, options.language, options.thorough);
   const asked = input.push({ type: 'user_input', content: text.first }) - 1;
   const run = agent.runner();
   for (let request = 0; request < MAX_REQUESTS; request++) {
     onRequest();
-    const r = await post(fetchFn, `${API}/interactions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify({ model: model.id, store: false, system_instruction: agent.instructions(options.thorough ?? false), tools: tools(agent), input }),
-    }, now);
-    const body = (await r.json().catch(() => ({}))) as ApiError & { steps?: Step[]; usage?: { total_input_tokens?: number; total_output_tokens?: number; input_tokens?: number; output_tokens?: number } };
+    const r = await post(
+      fetchFn,
+      `${API}/interactions`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify({ model: model.id, store: false, system_instruction: agent.instructions(options.thorough ?? false), tools: tools(agent), input }),
+      },
+      now,
+    );
+    const body = (await r.json().catch(() => ({}))) as ApiError & {
+      steps?: Step[];
+      usage?: { total_input_tokens?: number; total_output_tokens?: number; input_tokens?: number; output_tokens?: number };
+    };
     if (body.usage) onUsage?.(body.usage.total_input_tokens ?? body.usage.input_tokens ?? 0, body.usage.total_output_tokens ?? body.usage.output_tokens ?? 0);
     if (!r.ok) throw failure(r.status, body, now());
     const steps = body.steps;
@@ -103,9 +104,12 @@ export async function converseGeminiModel(modelId: string, options: ConverseOpti
     input.push(...steps); // model steps go back exactly as received (thoughts included)
     const calls = steps.filter((s) => s.type === 'function_call');
     if (calls.length === 0) {
-      return steps.filter((s) => s.type === 'model_output')
+      return steps
+        .filter((s) => s.type === 'model_output')
         .flatMap((s) => (s.content as { type: string; text?: string }[] | undefined) ?? [])
-        .map((c) => c.text ?? '').join('').trim();
+        .map((c) => c.text ?? '')
+        .join('')
+        .trim();
     }
     for (const c of calls) {
       const result = await run(String(c.name), c.arguments);

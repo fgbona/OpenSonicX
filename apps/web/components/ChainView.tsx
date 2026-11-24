@@ -29,7 +29,10 @@ export const ChainView = memo(function ChainView({ preset, presetIndex, presetNa
     <section className="preset" aria-label={t('preset.aria')}>
       <div className="preset-head">
         <div>
-          <p className="eyebrow">{t('preset.editBuffer')}{modified ? ` · ${t('preset.modified')}` : ''} · {preset.ampMode === 'clone' ? t('preset.ampCaptured') : t('preset.ampModel')}</p>
+          <p className="eyebrow">
+            {t('preset.editBuffer')}
+            {modified ? ` · ${t('preset.modified')}` : ''} · {preset.ampMode === 'clone' ? t('preset.ampCaptured') : t('preset.ampModel')}
+          </p>
           <h1 className="preset-name">
             {presetIndex === null ? t('preset.fallbackName') : presetLabel(presetIndex)}
             {presetName && <span className="preset-title"> {presetName}</span>}

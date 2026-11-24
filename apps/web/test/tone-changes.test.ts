@@ -6,7 +6,7 @@ import { toneChanges } from '../lib/tone-changes.ts';
 
 const p08 = decodePreset(realP08());
 
-test('a parameter row names the block\'s model, and says when the block is off', () => {
+test("a parameter row names the block's model, and says when the block is off", () => {
   const rvb = p08.chain.find((b) => b.key === 'rvb')!;
   const mix = rvb.params[0]!;
   const after = applyEdit(p08, { kind: 'param', module: rvb.module, alg: mix.alg, value: mix.value - 5 });

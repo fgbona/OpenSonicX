@@ -12,7 +12,18 @@ import { shape, type Schema } from '../../../packages/core/test/schema-shape.ts'
 
 async function connected() {
   const fake = new FakePedal({}, 8);
-  const io: PedalIO = Object.assign(fake, { readSlotNames: async () => ({ irNames: null, profileNames: null }), readModified: async () => null, uploadIr: async () => undefined, uploadProfile: async () => undefined, renameSlot: async () => undefined, readGlobals: async () => GLOBALS, writeGlobals: async () => undefined, copyPreset: async () => undefined, setTuner: async () => undefined, clearSlot: async () => undefined });
+  const io: PedalIO = Object.assign(fake, {
+    readSlotNames: async () => ({ irNames: null, profileNames: null }),
+    readModified: async () => null,
+    uploadIr: async () => undefined,
+    uploadProfile: async () => undefined,
+    renameSlot: async () => undefined,
+    readGlobals: async () => GLOBALS,
+    writeGlobals: async () => undefined,
+    copyPreset: async () => undefined,
+    setTuner: async () => undefined,
+    clearSlot: async () => undefined,
+  });
   const dir = mkdtempSync(join(tmpdir(), 'pm-tools-'));
   const session = new Session(() => ({ io, close: () => undefined }), { backups: join(dir, 'b'), presets: join(dir, 'p'), irs: join(dir, 'i'), nams: join(dir, 'n') });
   const [a, b] = InMemoryTransport.createLinkedPair();
@@ -30,16 +41,68 @@ test('the server lists every tool, marking reads read-only and slot writes destr
   const { tools } = await client.listTools();
   const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
   assert.deepEqual(Object.keys(byName).sort(), [
-    'backup_all_presets', 'copy_preset', 'delete_slot', 'edit_preset', 'export_preset', 'get_global_settings', 'get_preset', 'import_preset', 'install_tone', 'list_models', 'list_preset_files',
-    'list_presets', 'load_ir', 'load_nam', 'matribox_add_block', 'matribox_assign_expression', 'matribox_assign_footswitch', 'matribox_backup_all_presets', 'matribox_build_tone', 'matribox_ctrl', 'matribox_drum',
-    'matribox_export_preset', 'matribox_get_assignments', 'matribox_get_preset', 'matribox_import_preset', 'matribox_list_captures', 'matribox_list_irs', 'matribox_list_models',
-    'matribox_list_presets', 'matribox_load_ir', 'matribox_looper', 'matribox_move_block', 'matribox_quick_knob', 'matribox_remove_block', 'matribox_restore_all_presets', 'matribox_restore_backup', 'matribox_save_preset', 'matribox_select_preset',
-    'matribox_set_bpm', 'matribox_set_expression_range', 'matribox_set_model', 'matribox_set_module_on', 'matribox_set_param', 'matribox_set_volume', 'matribox_tap_tempo', 'matribox_tuner',
-    'rename_slot', 'restore_backup', 'revert_preset', 'save_preset', 'search_tone3000', 'select_preset', 'set_global_settings', 'set_tuner', 'tone3000_login', 'undo_edit', 'which_pedal',
+    'backup_all_presets',
+    'copy_preset',
+    'delete_slot',
+    'edit_preset',
+    'export_preset',
+    'get_global_settings',
+    'get_preset',
+    'import_preset',
+    'install_tone',
+    'list_models',
+    'list_preset_files',
+    'list_presets',
+    'load_ir',
+    'load_nam',
+    'matribox_add_block',
+    'matribox_assign_expression',
+    'matribox_assign_footswitch',
+    'matribox_backup_all_presets',
+    'matribox_build_tone',
+    'matribox_ctrl',
+    'matribox_drum',
+    'matribox_export_preset',
+    'matribox_get_assignments',
+    'matribox_get_preset',
+    'matribox_import_preset',
+    'matribox_list_captures',
+    'matribox_list_irs',
+    'matribox_list_models',
+    'matribox_list_presets',
+    'matribox_load_ir',
+    'matribox_looper',
+    'matribox_move_block',
+    'matribox_quick_knob',
+    'matribox_remove_block',
+    'matribox_restore_all_presets',
+    'matribox_restore_backup',
+    'matribox_save_preset',
+    'matribox_select_preset',
+    'matribox_set_bpm',
+    'matribox_set_expression_range',
+    'matribox_set_model',
+    'matribox_set_module_on',
+    'matribox_set_param',
+    'matribox_set_volume',
+    'matribox_tap_tempo',
+    'matribox_tuner',
+    'rename_slot',
+    'restore_backup',
+    'revert_preset',
+    'save_preset',
+    'search_tone3000',
+    'select_preset',
+    'set_global_settings',
+    'set_tuner',
+    'tone3000_login',
+    'undo_edit',
+    'which_pedal',
   ]);
   for (const name of ['get_preset', 'list_presets', 'list_models', 'backup_all_presets']) assert.equal(byName[name]!.annotations?.readOnlyHint, true, name);
-  for (const name of ['save_preset', 'restore_backup', 'load_ir', 'matribox_load_ir', 'load_nam', 'install_tone', 'copy_preset', 'delete_slot']) assert.equal(byName[name]!.annotations?.destructiveHint, true, name);
-  assert.equal(byName['edit_preset']!.annotations?.destructiveHint, false);
+  for (const name of ['save_preset', 'restore_backup', 'load_ir', 'matribox_load_ir', 'load_nam', 'install_tone', 'copy_preset', 'delete_slot'])
+    assert.equal(byName[name]!.annotations?.destructiveHint, true, name);
+  assert.equal(byName.edit_preset!.annotations?.destructiveHint, false);
 });
 
 test('get_preset returns the preset as text', async () => {
@@ -63,7 +126,10 @@ test('save_preset cannot be called without confirm', async () => {
   const { client, fake } = await connected();
   const result = await client.callTool({ name: 'save_preset', arguments: { slot: 'P03', name: 'X' } });
   assert.equal(result.isError, true);
-  assert.equal(fake.received.some((r) => r.startsWith('save')), false);
+  assert.equal(
+    fake.received.some((r) => r.startsWith('save')),
+    false,
+  );
 });
 
 test('list_models works without a block', async () => {
@@ -74,7 +140,18 @@ test('list_models works without a block', async () => {
 
 test('every tool call reports how long it took on the pedal', async () => {
   const fake = new FakePedal({}, 8);
-  const io: PedalIO = Object.assign(fake, { readSlotNames: async () => ({ irNames: null, profileNames: null }), readModified: async () => null, uploadIr: async () => undefined, uploadProfile: async () => undefined, renameSlot: async () => undefined, readGlobals: async () => GLOBALS, writeGlobals: async () => undefined, copyPreset: async () => undefined, setTuner: async () => undefined, clearSlot: async () => undefined });
+  const io: PedalIO = Object.assign(fake, {
+    readSlotNames: async () => ({ irNames: null, profileNames: null }),
+    readModified: async () => null,
+    uploadIr: async () => undefined,
+    uploadProfile: async () => undefined,
+    renameSlot: async () => undefined,
+    readGlobals: async () => GLOBALS,
+    writeGlobals: async () => undefined,
+    copyPreset: async () => undefined,
+    setTuner: async () => undefined,
+    clearSlot: async () => undefined,
+  });
   const dir = mkdtempSync(join(tmpdir(), 'pm-timing-'));
   const session = new Session(() => ({ io, close: () => undefined }), { backups: join(dir, 'b'), presets: join(dir, 'p'), irs: join(dir, 'i'), nams: join(dir, 'n') });
   const timings: { tool: string; ms: number; ok: boolean }[] = [];
@@ -84,7 +161,14 @@ test('every tool call reports how long it took on the pedal', async () => {
   await client.callTool({ name: 'get_preset', arguments: {} });
   await client.callTool({ name: 'edit_preset', arguments: { changes: [{ kind: 'block', block: 'WAH', on: true }] } });
   await client.callTool({ name: 'import_preset', arguments: { file: 'missing.json' } });
-  assert.deepEqual(timings.map((t) => [t.tool, t.ok]), [['get_preset', true], ['edit_preset', false], ['import_preset', false]]);
+  assert.deepEqual(
+    timings.map((t) => [t.tool, t.ok]),
+    [
+      ['get_preset', true],
+      ['edit_preset', false],
+      ['import_preset', false],
+    ],
+  );
   assert.ok(timings.every((t) => Number.isFinite(t.ms) && t.ms >= 0));
 });
 

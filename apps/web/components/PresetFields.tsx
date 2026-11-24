@@ -13,8 +13,16 @@ export function PresetFields({ preset, editable, onEdit }: { preset: Preset; edi
   return (
     <section className="fields" aria-label={t('fields.aria')}>
       {preset.volume !== null && (
-        <Knob label={t('preset.volume')} value={preset.volume} min={0} max={100} display={String(preset.volume)} defaultValue={75}
-          disabled={!editable} onChange={(value) => onEdit({ kind: 'volume', value })} />
+        <Knob
+          label={t('preset.volume')}
+          value={preset.volume}
+          min={0}
+          max={100}
+          display={String(preset.volume)}
+          defaultValue={75}
+          disabled={!editable}
+          onChange={(value) => onEdit({ kind: 'volume', value })}
+        />
       )}
     </section>
   );

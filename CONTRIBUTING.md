@@ -22,6 +22,8 @@ Requires Node 22.18 or newer.
 npm install
 npm test           # protocol tests (node:test, no extra framework)
 npm run typecheck
+npm run lint       # Biome: lint + format check (what CI runs)
+npm run format     # Biome: rewrite files in the project's format
 npm run dev        # http://localhost:3000
 npm run e2e        # the editor in Chrome against a simulated pedal (Playwright)
 ```
@@ -44,6 +46,16 @@ before and do not use the cache. Environment variables that change a build outpu
 (`NEXT_PUBLIC_*`, `NEXT_OUTPUT`, `NEXT_BASE_PATH`, `SITE_URL`, `TONE3000_CLIENT_ID`) are part of
 the cache key; when you add a new one, list it in `turbo.json`, or Turborepo will not pass it to
 the task.
+
+[Biome](https://biomejs.dev) lints and formats the TypeScript, JavaScript and JSON (and lints the
+CSS); `biome.jsonc` holds the style (single quotes, semicolons, 2 spaces, trailing commas, lines
+up to 200 columns) and, next to each rule that is turned off, the reason. `npm run lint` must pass
+before a pull request: run `npm run format` for the formatting and fix the lint findings by hand
+(`npx biome check --write` applies the safe fixes). When a rule is wrong for one line, suppress it
+there with `// biome-ignore lint/<group>/<rule>: <why>` rather than turning it off for everyone.
+Biome runs once from the root in well under a second, so it does not go through Turborepo.
+`.git-blame-ignore-revs` lists the commit that formatted the whole code base; GitHub's blame skips
+it, and so does `git blame` after `git config blame.ignoreRevsFile .git-blame-ignore-revs`.
 
 The end-to-end tests (`apps/web/e2e`) run the real connect, read, live edit,
 revert, save and comment flows. The page's Web MIDI is replaced by a fake
@@ -120,4 +132,4 @@ Chrome and ffmpeg needed).
 
 - Conventional commit messages: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`.
 - One topic per pull request, with a short test plan.
-- CI must be green.
+- CI must be green (it runs `npm run lint` too).

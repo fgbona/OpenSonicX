@@ -5,7 +5,17 @@ import { join } from 'node:path';
 import { fromHex, MB_WRITE, parseMbFrame, parseMbPreset, unwrapMbMessage } from '@pocket-master/core';
 import { call, connected, text } from './matribox-helpers.ts';
 
-const WRITE_TOOLS = ['matribox_set_param', 'matribox_set_module_on', 'matribox_select_preset', 'matribox_set_model', 'matribox_add_block', 'matribox_remove_block', 'matribox_move_block', 'matribox_build_tone', 'matribox_save_preset'];
+const WRITE_TOOLS = [
+  'matribox_set_param',
+  'matribox_set_module_on',
+  'matribox_select_preset',
+  'matribox_set_model',
+  'matribox_add_block',
+  'matribox_remove_block',
+  'matribox_move_block',
+  'matribox_build_tone',
+  'matribox_save_preset',
+];
 const EXPERIMENTAL = /Experimental: .*validated on one unit only/;
 /** How many write frames the simulated unit received. */
 const writes = (fake: { received: string[] }) => fake.received.filter((hex) => parseMbFrame(fromHex(hex)).type === MB_WRITE).length;
@@ -103,19 +113,34 @@ test('matribox_build_tone builds a whole chain in one call, with defaults for pa
 });
 
 /** The chain edits the simulated unit received, as [op, from, to] (op 1 = add/move/remove, 2 = change model). */
-const chainEdits = (fake: { received: string[] }) => fake.received
-  .map((hex) => parseMbFrame(fromHex(hex)))
-  .filter((f) => f.type === MB_WRITE)
-  .map((f) => unwrapMbMessage(f.payload).data)
-  .filter((d) => d[1] === 0x00 && d[2] === 0x04 && d[3] === 0x01 && (d[0] === 1 || d[0] === 2))
-  .map((d) => (d[0] === 2 ? [2, d[4]] : [1, d[4], d[5]]));
+const chainEdits = (fake: { received: string[] }) =>
+  fake.received
+    .map((hex) => parseMbFrame(fromHex(hex)))
+    .filter((f) => f.type === MB_WRITE)
+    .map((f) => unwrapMbMessage(f.payload).data)
+    .filter((d) => d[1] === 0x00 && d[2] === 0x04 && d[3] === 0x01 && (d[0] === 1 || d[0] === 2))
+    .map((d) => (d[0] === 2 ? [2, d[4]] : [1, d[4], d[5]]));
 
-test('the chain tools send the official editor\'s chain edits: change model by slot, remove from the end, add in order', async () => {
+test("the chain tools send the official editor's chain edits: change model by slot, remove from the end, add in order", async () => {
   const { client, fake } = await connected();
   await call(client, 'matribox_set_model', { block: 'DRV', model: 'Fake Fuzz' });
   assert.deepEqual(chainEdits(fake), [[2, 0]]);
-  await call(client, 'matribox_build_tone', { blocks: [{ module: 'DRV', model: 'Fake Drive' }, { module: 'AMP', model: 'Fake Plexi' }] });
-  assert.deepEqual(chainEdits(fake).slice(1), [[1, 5, 0xff], [1, 4, 0xff], [1, 3, 0xff], [1, 2, 0xff], [1, 1, 0xff], [1, 0, 0xff], [1, 0xff, 0], [1, 0xff, 1]]);
+  await call(client, 'matribox_build_tone', {
+    blocks: [
+      { module: 'DRV', model: 'Fake Drive' },
+      { module: 'AMP', model: 'Fake Plexi' },
+    ],
+  });
+  assert.deepEqual(chainEdits(fake).slice(1), [
+    [1, 5, 0xff],
+    [1, 4, 0xff],
+    [1, 3, 0xff],
+    [1, 2, 0xff],
+    [1, 1, 0xff],
+    [1, 0, 0xff],
+    [1, 0xff, 0],
+    [1, 0xff, 1],
+  ]);
 });
 
 test('matribox_build_tone validates everything before sending anything', async () => {
@@ -195,7 +220,10 @@ test('matribox_remove_block and matribox_move_block edit the chain by position',
   assert.match(await call(client, 'matribox_get_preset'), /^Chain: DRV → DYN → AMP → CAB → RVB → VOL$/m);
   assert.match(await call(client, 'matribox_remove_block', { block: 'RVB' }), /^Removed RVB Fake Hall from 5\.$/m);
   assert.match(await call(client, 'matribox_get_preset'), /^Chain: DRV → DYN → AMP → CAB → VOL$/m);
-  assert.deepEqual(chainEdits(fake), [[1, 1, 0], [1, 4, 0xff]]);
+  assert.deepEqual(chainEdits(fake), [
+    [1, 1, 0],
+    [1, 4, 0xff],
+  ]);
 });
 
 test('the block tools refuse what the chain cannot take, sending nothing', async () => {
@@ -214,7 +242,7 @@ test('the block tools refuse what the chain cannot take, sending nothing', async
   assert.equal(writes(fake), 0);
 });
 
-test('matribox_set_model names the block\'s storage slot, not its chain position', async () => {
+test("matribox_set_model names the block's storage slot, not its chain position", async () => {
   const { client, fake } = await connected();
   const out = await call(client, 'matribox_set_model', { block: 'DRV', model: 'Fake Fuzz' }); // DRV: position 2, slot 0
   assert.deepEqual(chainEdits(fake), [[2, 0]]);

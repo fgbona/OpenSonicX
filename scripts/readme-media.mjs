@@ -73,9 +73,20 @@ try {
   const webm = readdirSync(tmp).find((f) => f.endsWith('.webm'));
   const [x, y, w, h] = [face.x, face.y, face.width, face.height].map(Math.round);
   // Keep the last ~4 s (switch off, back on, warm-up, breathing).
-  execFileSync('ffmpeg', ['-v', 'error', '-y', '-sseof', '-4.3', '-i', join(tmp, webm),
-    '-vf', `crop=${w}:${h}:${x}:${y},fps=20,scale=720:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128[p];[b][p]paletteuse=dither=bayer:bayer_scale=4`,
-    '-loop', '0', join(out, 'tube.gif')]);
+  execFileSync('ffmpeg', [
+    '-v',
+    'error',
+    '-y',
+    '-sseof',
+    '-4.3',
+    '-i',
+    join(tmp, webm),
+    '-vf',
+    `crop=${w}:${h}:${x}:${y},fps=20,scale=720:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128[p];[b][p]paletteuse=dither=bayer:bayer_scale=4`,
+    '-loop',
+    '0',
+    join(out, 'tube.gif'),
+  ]);
 } finally {
   await browser.close();
   rmSync(tmp, { recursive: true, force: true });

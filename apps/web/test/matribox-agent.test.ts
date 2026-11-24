@@ -26,9 +26,19 @@ function host() {
       if (last) preset = last;
       return last !== undefined;
     },
-    proposeSave: async (index, name) => { saves.push([index, name]); return 'saved'; },
+    proposeSave: async (index, name) => {
+      saves.push([index, name]);
+      return 'saved';
+    },
   };
-  return { h, saves, load: (n: number) => { current = n; }, preset: () => preset };
+  return {
+    h,
+    saves,
+    load: (n: number) => {
+      current = n;
+    },
+    preset: () => preset,
+  };
 }
 
 test('the first message carries the catalog and the loaded preset; later ones the preset only', () => {
@@ -49,7 +59,12 @@ test('build_tone replaces the chain in one step and answers with the preset as i
   const agent = matriboxAgent(s.h);
   const run = agent.runner();
   const watch = agent.watch('off');
-  const r = await run('build_tone', { blocks: [{ module: 'DRV', model: 'Fake Fuzz', params: [{ name: 'Fuzz', value: 80 }] }, { module: 'AMP', model: 'Fake Plexi' }] });
+  const r = await run('build_tone', {
+    blocks: [
+      { module: 'DRV', model: 'Fake Fuzz', params: [{ name: 'Fuzz', value: 80 }] },
+      { module: 'AMP', model: 'Fake Plexi' },
+    ],
+  });
   assert.equal(r.ok, true);
   assert.match(r.text, /^Name: Drive AD\nChain: DRV → AMP\n1\. DRV on Fake Fuzz \(based on Imaginary Fuzz Face\): Fuzz 80/);
   assert.equal(agent.acts.has('build_tone'), true);

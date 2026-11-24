@@ -8,21 +8,47 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
-  checkMbPresetName, mbPresetLabel, mbReadCloneNames, mbReadCurrentPresetNumber, mbReadIrNames, mbReadPreset, mbReadPresetNames,
-  MB_SLOTS, mbAddBlock, mbBackupAllPresets, mbChangeModel, mbMoveBlock, mbReadLoadedIndex, mbReadSlot, mbRemoveBlock, mbRestoreAllPresets, mbSavePreset, mbSelectPreset,
-  mbSetBlockOn, mbSetParam, mbStoreSlot, parseMbPresetLabel, toHex,
-  parseMbCloneNames, parseMbCurrentPresetNumber, parseMbIrNames, parseMbPreset, parseMbPresetNames, resolveMbPreset,
-  type MbCatalog, type MbModel, type MbModule, type MbPreset, type MbResolvedBlock, type MbResolvedPreset,
+  checkMbPresetName,
+  mbPresetLabel,
+  mbReadCloneNames,
+  mbReadCurrentPresetNumber,
+  mbReadIrNames,
+  mbReadPreset,
+  mbReadPresetNames,
+  MB_SLOTS,
+  mbAddBlock,
+  mbBackupAllPresets,
+  mbChangeModel,
+  mbMoveBlock,
+  mbReadLoadedIndex,
+  mbReadSlot,
+  mbRemoveBlock,
+  mbRestoreAllPresets,
+  mbSavePreset,
+  mbSelectPreset,
+  mbSetBlockOn,
+  mbSetParam,
+  mbStoreSlot,
+  parseMbPresetLabel,
+  toHex,
+  parseMbCloneNames,
+  parseMbCurrentPresetNumber,
+  parseMbIrNames,
+  parseMbPreset,
+  parseMbPresetNames,
+  resolveMbPreset,
+  type MbCatalog,
+  type MbModel,
+  type MbModule,
+  type MbPreset,
+  type MbResolvedBlock,
+  type MbResolvedPreset,
 } from '@pocket-master/core';
 import { assignExpression, assignFootswitch, CC_NOTE, describeAssignments, setExpressionRange, setVolume } from './matribox-live.ts';
-import {
-  MATRIBOX_DEVICE, readMatriboxBackup, readMatriboxBackupAll, readMatriboxPrst, writeMatriboxBackupAll, writeMatriboxPrstFile,
-} from './matribox-files.ts';
+import { MATRIBOX_DEVICE, readMatriboxBackup, readMatriboxBackupAll, readMatriboxPrst, writeMatriboxBackupAll, writeMatriboxPrstFile } from './matribox-files.ts';
 import { prepareMatriboxIr, uploadMatriboxIr, type MatriboxIrOptions } from './matribox-ir.ts';
 import type { MatriboxConnection } from './matribox-link.ts';
-import {
-  checkParam, describeValues, EXPERIMENTAL, findBlock, findModel, findModule, gear, knownModel, modelTitle, modelValues, planTone, type ParamWrite, type ToneBlock,
-} from './matribox-edit.ts';
+import { checkParam, describeValues, EXPERIMENTAL, findBlock, findModel, findModule, gear, knownModel, modelTitle, modelValues, planTone, type ParamWrite, type ToneBlock } from './matribox-edit.ts';
 
 /** Reads of the slot after a save before giving up, and the pause between them. */
 const SAVE_CHECKS = 3;
@@ -30,7 +56,8 @@ const SAVE_CHECK_MS = 300;
 const round = (n: number) => String(Number(n.toFixed(2)));
 const experimental = (lines: readonly string[]) => [...lines, EXPERIMENTAL].join('\n');
 /** The whole-preset write (import, restore) is decoded from a capture but not yet sent to a unit by us. */
-export const UNCHECKED = 'Experimental: the whole-preset write is decoded from the official editor\'s traffic and not yet checked on the owner\'s unit. Check the result with matribox_get_preset and by ear.';
+export const UNCHECKED =
+  "Experimental: the whole-preset write is decoded from the official editor's traffic and not yet checked on the owner's unit. Check the result with matribox_get_preset and by ear.";
 const sectionHex = (preset: MbPreset, id: number) => toHex(preset.sections.find((s) => s.id === id)?.body ?? new Uint8Array());
 const reason = (error: unknown) => (error instanceof Error ? error.message : String(error));
 type Target = { index: number; label: string; name: string };
@@ -129,11 +156,7 @@ export class MatriboxSession {
       const irNames = parseMbIrNames(await unit.read(mbReadIrNames()));
       const cloneNames = parseMbCloneNames(await unit.read(mbReadCloneNames()));
       const head = `${mbPresetLabel(current)} "${preset.name}"${preset.style ? ` · style ${preset.style}` : ''}`;
-      return [
-        head,
-        `Chain: ${preset.chain.map((b) => b.module).join(' → ')}`,
-        ...preset.chain.map((b) => formatBlock(b, irNames, cloneNames)),
-      ].join('\n');
+      return [head, `Chain: ${preset.chain.map((b) => b.module).join(' → ')}`, ...preset.chain.map((b) => formatBlock(b, irNames, cloneNames))].join('\n');
     });
   }
 
@@ -147,7 +170,11 @@ export class MatriboxSession {
   }
 
   listIrs(): Promise<string> {
-    return this.#use(async (unit) => parseMbIrNames(await unit.read(mbReadIrNames())).map((name, i) => `User IR ${i + 1}: ${name.trim()}`).join('\n'));
+    return this.#use(async (unit) =>
+      parseMbIrNames(await unit.read(mbReadIrNames()))
+        .map((name, i) => `User IR ${i + 1}: ${name.trim()}`)
+        .join('\n'),
+    );
   }
 
   /** Loads a WAV from the irs folder into user IR `slot` (1..20); see matribox-ir.ts. */
@@ -157,7 +184,11 @@ export class MatriboxSession {
   }
 
   listCaptures(): Promise<string> {
-    return this.#use(async (unit) => parseMbCloneNames(await unit.read(mbReadCloneNames())).map((name, i) => `Capture ${i + 1}: ${name.trim()}`).join('\n'));
+    return this.#use(async (unit) =>
+      parseMbCloneNames(await unit.read(mbReadCloneNames()))
+        .map((name, i) => `Capture ${i + 1}: ${name.trim()}`)
+        .join('\n'),
+    );
   }
 
   /** The loaded preset, raw and named from the catalog. */
@@ -342,7 +373,10 @@ export class MatriboxSession {
     await MatriboxSession.#saveLoaded(unit, index, name, parseMbPreset(loaded)).catch((error: unknown) => {
       throw new Error(`${reason(error)} (backup kept: ${backup})`, { cause: error });
     });
-    return [`Saved the loaded preset to ${label} "${name}".`, `Backup of ${label} as loaded before the save (the unit only shows what a slot stores once loaded, which would drop the edits): ${backup}`];
+    return [
+      `Saved the loaded preset to ${label} "${name}".`,
+      `Backup of ${label} as loaded before the save (the unit only shows what a slot stores once loaded, which would drop the edits): ${backup}`,
+    ];
   }
 
   async #saveElsewhere(unit: MatriboxConnection, target: Target, current: number, loaded: Uint8Array): Promise<string[]> {

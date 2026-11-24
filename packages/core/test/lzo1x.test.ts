@@ -98,9 +98,7 @@ test('random garbage and mutated streams throw or decode, never hang', () => {
   };
   const sources = Object.values(VECTORS).map(fromHex);
   for (let i = 0; i < 3000; i++) {
-    const input = i % 2 === 0
-      ? Uint8Array.from({ length: next() % 64 }, () => next() & 0xff)
-      : Uint8Array.from(sources[i % sources.length] as Uint8Array);
+    const input = i % 2 === 0 ? Uint8Array.from({ length: next() % 64 }, () => next() & 0xff) : Uint8Array.from(sources[i % sources.length] as Uint8Array);
     if (i % 2 === 1) for (let k = 0; k < 3; k++) input[next() % Math.max(1, input.length)] = next() & 0xff;
     try {
       const out = lzo1xDecompress(input, 65536);

@@ -2,10 +2,7 @@
  * The tone assistant on the Pocket Master: core's chat tools, instructions and preset text over the
  * editor's ToneHost.
  */
-import {
-  CHAT_INSTRUCTIONS, CHAT_INSTRUCTIONS_THOROUGH, CHAT_TOOLS, chatContext, currentPresetText, presetLabel, runChatTool,
-  type ChatGuard, type ToneHost,
-} from '@pocket-master/core';
+import { CHAT_INSTRUCTIONS, CHAT_INSTRUCTIONS_THOROUGH, CHAT_TOOLS, chatContext, currentPresetText, presetLabel, runChatTool, type ChatGuard, type ToneHost } from '@pocket-master/core';
 import { askedToSave, type ToneAgent } from './assistant.ts';
 import { toneChanges } from './tone-changes.ts';
 

@@ -39,9 +39,7 @@ const PREFIXES: ReadonlyArray<[string, MessageKey]> = [
 ];
 
 /** Core messages with values inside, by pattern; the named groups fill the placeholders. */
-const PATTERNS: ReadonlyArray<[RegExp, MessageKey]> = [
-  [/^saved, but (?<slot>P\d\d) is named "(?<got>.*)" instead of "(?<want>.*)"$/, 'error.savedOtherName'],
-];
+const PATTERNS: ReadonlyArray<[RegExp, MessageKey]> = [[/^saved, but (?<slot>P\d\d) is named "(?<got>.*)" instead of "(?<want>.*)"$/, 'error.savedOtherName']];
 
 /** Translates errors raised by the web layer; protocol and decoder errors stay as they are. */
 export function translateError(lang: Lang, text: string): string {

@@ -6,10 +6,7 @@
  * comes from NEXT_PUBLIC_TONE3000_CLIENT_ID at build time; tokens stay in this browser.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  downloadModel, listModels, pollDeviceToken, refreshTokens, searchTones, startDeviceLogin,
-  type DeviceLogin, type TonePage, type ToneModel, type Tokens,
-} from '@pocket-master/core';
+import { downloadModel, listModels, pollDeviceToken, refreshTokens, searchTones, startDeviceLogin, type DeviceLogin, type TonePage, type ToneModel, type Tokens } from '@pocket-master/core';
 
 const STORE = 'pocket-master-editor.tone3000';
 export const TONE3000_CLIENT_ID = process.env.NEXT_PUBLIC_TONE3000_CLIENT_ID ?? '';
@@ -109,20 +106,36 @@ export function useTone3000() {
     setResults(null);
   }, [save]);
 
-  const search = useCallback(async (query: string, format: 'nam' | 'ir', page = 1) => {
-    setSearching(true);
-    setError(null);
-    try {
-      setResults(await searchTones(await token(), { query, format, page }));
-    } catch (e) {
-      setError(message(e));
-    } finally {
-      setSearching(false);
-    }
-  }, [token]);
+  const search = useCallback(
+    async (query: string, format: 'nam' | 'ir', page = 1) => {
+      setSearching(true);
+      setError(null);
+      try {
+        setResults(await searchTones(await token(), { query, format, page }));
+      } catch (e) {
+        setError(message(e));
+      } finally {
+        setSearching(false);
+      }
+    },
+    [token],
+  );
 
   const models = useCallback(async (toneId: number): Promise<ToneModel[]> => listModels(await token(), toneId), [token]);
   const download = useCallback(async (url: string): Promise<Uint8Array> => downloadModel(await token(), url), [token]);
 
-  return { configured: TONE3000_CLIENT_ID !== '', signedIn: tokens !== null, login, results, searching, error, signIn: () => void signIn(), signOut, search, models, download, clearError: () => setError(null) };
+  return {
+    configured: TONE3000_CLIENT_ID !== '',
+    signedIn: tokens !== null,
+    login,
+    results,
+    searching,
+    error,
+    signIn: () => void signIn(),
+    signOut,
+    search,
+    models,
+    download,
+    clearError: () => setError(null),
+  };
 }

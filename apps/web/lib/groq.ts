@@ -13,7 +13,10 @@ import { converseChat, listModels, parseDuration, type ChatEndpoint } from './op
 export const GROQ_MODEL = { id: 'openai/gpt-oss-120b', freeDailyLimit: 1000, maxCompletionTokens: 2500 } as const;
 
 const ENDPOINT: ChatEndpoint = {
-  provider: 'groq', name: 'Groq', api: 'https://api.groq.com/openai/v1', model: GROQ_MODEL.id,
+  provider: 'groq',
+  name: 'Groq',
+  api: 'https://api.groq.com/openai/v1',
+  model: GROQ_MODEL.id,
   cap: { field: 'max_completion_tokens', tokens: GROQ_MODEL.maxCompletionTokens },
   // A per-minute limit shorter than this is waited out inside the message instead of handed on.
   shortWaitMs: 90_000,

@@ -13,10 +13,19 @@ function wav(opts: { rate?: number; bits: number; channels?: number; format?: nu
   const buf = new Uint8Array(44 + dataLen);
   const v = new DataView(buf.buffer);
   const tag = (at: number, s: string) => [...s].forEach((c, i) => v.setUint8(at + i, c.charCodeAt(0)));
-  tag(0, 'RIFF'); v.setUint32(4, 36 + dataLen, true); tag(8, 'WAVE');
-  tag(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, format, true); v.setUint16(22, channels, true);
-  v.setUint32(24, rate, true); v.setUint32(28, rate * channels * bytesPer, true); v.setUint16(32, channels * bytesPer, true); v.setUint16(34, bits, true);
-  tag(36, 'data'); v.setUint32(40, dataLen, true);
+  tag(0, 'RIFF');
+  v.setUint32(4, 36 + dataLen, true);
+  tag(8, 'WAVE');
+  tag(12, 'fmt ');
+  v.setUint32(16, 16, true);
+  v.setUint16(20, format, true);
+  v.setUint16(22, channels, true);
+  v.setUint32(24, rate, true);
+  v.setUint32(28, rate * channels * bytesPer, true);
+  v.setUint16(32, channels * bytesPer, true);
+  v.setUint16(34, bits, true);
+  tag(36, 'data');
+  v.setUint32(40, dataLen, true);
   for (let f = 0; f < frames; f++) for (let c = 0; c < channels; c++) opts.write(v, 44 + (f * channels + c) * bytesPer, f, c);
   return buf;
 }
@@ -28,10 +37,19 @@ test('a 16-bit mono 44.1 kHz WAV becomes 512 int24 taps, padded with silence', (
 });
 
 test('stereo is averaged to mono; 24-bit and float32 are read; longer IRs are cut at 512 taps', () => {
-  const stereo = irSamplesFromWav(wav({ bits: 24, channels: 2, frames: 600, write: (v, at, _f, c) => {
-    const x = c === 0 ? 0x400000 : 0; // +0.5 on the left, 0 on the right
-    v.setUint8(at, x & 0xff); v.setUint8(at + 1, (x >> 8) & 0xff); v.setUint8(at + 2, (x >> 16) & 0xff);
-  } }));
+  const stereo = irSamplesFromWav(
+    wav({
+      bits: 24,
+      channels: 2,
+      frames: 600,
+      write: (v, at, _f, c) => {
+        const x = c === 0 ? 0x400000 : 0; // +0.5 on the left, 0 on the right
+        v.setUint8(at, x & 0xff);
+        v.setUint8(at + 1, (x >> 8) & 0xff);
+        v.setUint8(at + 2, (x >> 16) & 0xff);
+      },
+    }),
+  );
   assert.equal(stereo.length, IR_TAPS);
   assert.equal(stereo[0], Math.round(0.25 * INT24_MAX));
   const float = irSamplesFromWav(wav({ bits: 32, format: 3, frames: 2, write: (v, at, f) => v.setFloat32(at, f === 0 ? 1.5 : -0.25, true) }));
@@ -42,7 +60,10 @@ test('stereo is averaged to mono; 24-bit and float32 are read; longer IRs are cu
 test('other sample rates are resampled to 44.1 kHz', () => {
   const s = irSamplesFromWav(wav({ rate: 22050, bits: 16, frames: 4, write: (v, at, f) => v.setInt16(at, f === 1 ? 16384 : 0, true) }));
   // 22.05 kHz -> 44.1 kHz doubles the length; the impulse at frame 1 lands at tap 2, with a linear ramp
-  assert.deepEqual([...s.slice(0, 5)].map((x) => Math.round((x / INT24_MAX) * 100) / 100), [0, 0.25, 0.5, 0.25, 0]);
+  assert.deepEqual(
+    [...s.slice(0, 5)].map((x) => Math.round((x / INT24_MAX) * 100) / 100),
+    [0, 0.25, 0.5, 0.25, 0],
+  );
 });
 
 test('files that are not usable WAVs are refused with a reason', () => {

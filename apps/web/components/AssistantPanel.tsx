@@ -62,19 +62,43 @@ const SETUP: readonly {
   readonly usage: string;
 }[] = [
   {
-    provider: 'groq', note: 'assistant.groqNote', link: 'https://console.groq.com/keys', linkText: 'assistant.openGroq',
-    steps: ['assistant.groqStep1', 'assistant.groqStep2', 'assistant.groqStep3'], label: 'assistant.groqKeyLabel', placeholder: 'gsk_…',
-    test: (k) => testGroqKey(k), usage: 'https://console.groq.com/settings/limits',
+    provider: 'groq',
+    note: 'assistant.groqNote',
+    link: 'https://console.groq.com/keys',
+    linkText: 'assistant.openGroq',
+    steps: ['assistant.groqStep1', 'assistant.groqStep2', 'assistant.groqStep3'],
+    label: 'assistant.groqKeyLabel',
+    placeholder: 'gsk_…',
+    test: (k) => testGroqKey(k),
+    usage: 'https://console.groq.com/settings/limits',
   },
   {
-    provider: 'gemini', note: 'assistant.geminiNote', link: 'https://aistudio.google.com/apikey', linkText: 'assistant.openStudio',
-    steps: ['assistant.step1', 'assistant.step2', 'assistant.step3'], label: 'assistant.keyLabel', placeholder: 'AIza…',
-    test: (k) => testGeminiKey(k), usage: 'https://aistudio.google.com/rate-limit',
+    provider: 'gemini',
+    note: 'assistant.geminiNote',
+    link: 'https://aistudio.google.com/apikey',
+    linkText: 'assistant.openStudio',
+    steps: ['assistant.step1', 'assistant.step2', 'assistant.step3'],
+    label: 'assistant.keyLabel',
+    placeholder: 'AIza…',
+    test: (k) => testGeminiKey(k),
+    usage: 'https://aistudio.google.com/rate-limit',
   },
 ];
 
 /** One provider's key: how to get it, or the saved one with a way to remove it. */
-function KeySetup({ setup, saved, kept, onSaved, onRemove }: { setup: (typeof SETUP)[number]; saved: string | null; kept: boolean; onSaved: (key: string, kept: boolean) => void; onRemove: () => void }) {
+function KeySetup({
+  setup,
+  saved,
+  kept,
+  onSaved,
+  onRemove,
+}: {
+  setup: (typeof SETUP)[number];
+  saved: string | null;
+  kept: boolean;
+  onSaved: (key: string, kept: boolean) => void;
+  onRemove: () => void;
+}) {
   const { t } = useI18n();
   const [input, setInput] = useState('');
   const [status, setStatus] = useState<'idle' | 'testing' | 'invalid' | 'unavailable'>('idle');
@@ -92,20 +116,40 @@ function KeySetup({ setup, saved, kept, onSaved, onRemove }: { setup: (typeof SE
   };
   return (
     <section className="assistant-provider" aria-label={t('assistant.providerAria', { provider: name })}>
-      <h3>{name} <span className="muted small">{t(setup.note)}</span></h3>
+      <h3>
+        {name} <span className="muted small">{t(setup.note)}</span>
+      </h3>
       {saved ? (
         <p className="assistant-saved">
           <span>{t(kept ? 'assistant.keySaved' : 'assistant.keyNotKept', { key: maskKey(saved) })}</span>
-          <button type="button" className="btn btn-small" onClick={onRemove}>{t('assistant.removeKey')}</button>
+          <button type="button" className="btn btn-small" onClick={onRemove}>
+            {t('assistant.removeKey')}
+          </button>
         </p>
       ) : (
         <>
           <ol className="steps assistant-steps">
             {setup.steps.map((s, i) => (
-              <li key={s}>{t(s)}{i === 0 && <> <a href={setup.link} target="_blank" rel="noreferrer">{t(setup.linkText)}</a></>}</li>
+              <li key={s}>
+                {t(s)}
+                {i === 0 && (
+                  <>
+                    {' '}
+                    <a href={setup.link} target="_blank" rel="noreferrer">
+                      {t(setup.linkText)}
+                    </a>
+                  </>
+                )}
+              </li>
             ))}
           </ol>
-          <form className="assistant-key" onSubmit={(e) => { e.preventDefault(); void add(); }}>
+          <form
+            className="assistant-key"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void add();
+            }}
+          >
             <label className="field">
               <span>{t(setup.label)}</span>
               <input type="password" value={input} onChange={(e) => setInput(e.target.value)} autoComplete="off" spellCheck={false} placeholder={setup.placeholder} />
@@ -114,8 +158,16 @@ function KeySetup({ setup, saved, kept, onSaved, onRemove }: { setup: (typeof SE
               {status === 'testing' ? t('assistant.testing') : t('assistant.saveKey')}
             </button>
           </form>
-          {status === 'invalid' && <p className="alert" role="alert">{t('assistant.keyInvalid', { provider: name })}</p>}
-          {status === 'unavailable' && <p className="alert" role="alert">{t('assistant.keyUnavailable', { provider: name })}</p>}
+          {status === 'invalid' && (
+            <p className="alert" role="alert">
+              {t('assistant.keyInvalid', { provider: name })}
+            </p>
+          )}
+          {status === 'unavailable' && (
+            <p className="alert" role="alert">
+              {t('assistant.keyUnavailable', { provider: name })}
+            </p>
+          )}
         </>
       )}
     </section>
@@ -159,6 +211,7 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
     setRemember(loadRemember());
   }, []);
   const list = useRef<HTMLOListElement>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: messages and working are the triggers (scroll when the conversation changes)
   useEffect(() => {
     // Scroll the conversation to the start of the last question, so a long answer is read from the top.
     const ol = list.current;
@@ -175,7 +228,10 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
   const hasKey = Object.keys(keys).length > 0 || paid.length > 0;
   const allKeys: Partial<Record<Provider, string>> = { ...keys, ...Object.fromEntries(paid.map((e) => [e.id, e.key])) };
   // The person's order; by default paid providers first, in the order they were added, then the free models.
-  const ordered = orderRoute([...paid.map((e) => e.id), ...ROUTE].filter((m) => allKeys[providerOf(m)]), order);
+  const ordered = orderRoute(
+    [...paid.map((e) => e.id), ...ROUTE].filter((m) => allKeys[providerOf(m)]),
+    order,
+  );
   const route = rotate ? rotated(ordered, round) : ordered;
   const converse: Partial<Record<AiModel, Converse>> = {
     ...FREE_CONVERSE,
@@ -207,14 +263,24 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
       const prices = await loadPrices();
       for (const e of reached) {
         const cost = answerCost(used[e.id]!, priceOf(prices, e.model));
-        if (cost !== null) { costs[e.id] = cost; recordSpend(e.id, cost); }
+        if (cost !== null) {
+          costs[e.id] = cost;
+          recordSpend(e.id, cost);
+        }
       }
       return costs;
     };
     try {
       changed = agent.watch(t('assistant.off'));
       const result = await ask({
-        keys: allKeys, cooldown, converse, route, turns, message, agent, language: lang === 'pt' ? 'Brazilian Portuguese' : 'English',
+        keys: allKeys,
+        cooldown,
+        converse,
+        route,
+        turns,
+        message,
+        agent,
+        language: lang === 'pt' ? 'Brazilian Portuguese' : 'English',
         onRequest: (model) => recordRequest(model),
         onCooldown: setCooldown,
         onLimits: (model, remaining, limit) => setLimits((l) => ({ ...l, [model]: { remaining, limit } })),
@@ -222,7 +288,7 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
           const u = used[model] ?? { input: 0, output: 0 };
           used[model] = { input: u.input + input, output: u.output + output, ...(cost !== undefined || u.cost !== undefined ? { cost: (u.cost ?? 0) + (cost ?? 0) } : {}) };
         },
-        onStep: (tool, ok, text) => {
+        onStep: (tool, ok) => {
           if (tool === 'save_preset') proposed = true;
           if (tool === 'select_preset' && ok) loaded = true;
         },
@@ -241,13 +307,20 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
       ]);
       if (!proposed) offerSave(message);
     } catch (error) {
-      const text = error instanceof BusyError && error.partial && error.model ? t('assistant.busyPartial', { model: modelName(error.model) })
-        : error instanceof QuotaError && error.partial && error.model ? t('assistant.quotaPartial', { model: modelName(error.model), time: time(error.retryAt) })
-        : error instanceof BusyError ? t('assistant.busy', { time: time(error.retryAt) })
-        : error instanceof QuotaError ? t('assistant.quotaAll', { time: time(error.retryAt) })
-        : error instanceof KeyError ? t('assistant.keyRejected', { provider: providerName(error.provider, t('assistant.paidTag')) })
-        : error instanceof RegionError ? t('assistant.region')
-          : t('assistant.error', { reason: error instanceof Error ? error.message : String(error) });
+      const text =
+        error instanceof BusyError && error.partial && error.model
+          ? t('assistant.busyPartial', { model: modelName(error.model) })
+          : error instanceof QuotaError && error.partial && error.model
+            ? t('assistant.quotaPartial', { model: modelName(error.model), time: time(error.retryAt) })
+            : error instanceof BusyError
+              ? t('assistant.busy', { time: time(error.retryAt) })
+              : error instanceof QuotaError
+                ? t('assistant.quotaAll', { time: time(error.retryAt) })
+                : error instanceof KeyError
+                  ? t('assistant.keyRejected', { provider: providerName(error.provider, t('assistant.paidTag')) })
+                  : error instanceof RegionError
+                    ? t('assistant.region')
+                    : t('assistant.error', { reason: error instanceof Error ? error.message : String(error) });
       // The next answer is told this one was cut, so a model does not lose the request (the preset it gets is current).
       setTurns((h) => [...h, { role: 'user', text: message }, { role: 'assistant', text: `(This answer was interrupted: ${error instanceof Error ? error.message : String(error)})` }]);
       const link = error instanceof RegionError ? { href: REGIONS, text: t('assistant.regionLink') } : undefined;
@@ -272,9 +345,7 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
     const known = limits[model];
     if (known) return t('assistant.left', { model: info.name, remaining: known.remaining, limit: known.limit });
     const used = usedToday(usage, model, now);
-    return info.pacificReset
-      ? t('assistant.usedReset', { model: info.name, used, limit: info.limit, time: time(nextReset(now)) })
-      : t('assistant.used', { model: info.name, used, limit: info.limit });
+    return info.pacificReset ? t('assistant.usedReset', { model: info.name, used, limit: info.limit, time: time(nextReset(now)) }) : t('assistant.used', { model: info.name, used, limit: info.limit });
   };
 
   return (
@@ -283,8 +354,22 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
         <h2>{t('assistant.title')}</h2>
         {hasKey && (
           <div className="assistant-head-actions">
-            {!managing && messages.length > 0 && <button type="button" className="btn btn-small" onClick={() => { setMessages([]); setTurns([]); setRound((r) => r + 1); }}>{t('assistant.new')}</button>}
-            <button type="button" className="btn btn-small" disabled={working} onClick={() => setManaging(!managing)}>{t(managing ? 'assistant.backToChat' : 'assistant.keys')}</button>
+            {!managing && messages.length > 0 && (
+              <button
+                type="button"
+                className="btn btn-small"
+                onClick={() => {
+                  setMessages([]);
+                  setTurns([]);
+                  setRound((r) => r + 1);
+                }}
+              >
+                {t('assistant.new')}
+              </button>
+            )}
+            <button type="button" className="btn btn-small" disabled={working} onClick={() => setManaging(!managing)}>
+              {t(managing ? 'assistant.backToChat' : 'assistant.keys')}
+            </button>
           </div>
         )}
       </header>
@@ -292,9 +377,16 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
         {!hasKey || managing ? (
           <>
             {!hasKey && <p>{t('assistant.intro')}</p>}
-            <p className="muted small">{t('assistant.setupHint')}<InfoTip text={t('assistant.freeInfo')} /></p>
+            <p className="muted small">
+              {t('assistant.setupHint')}
+              <InfoTip text={t('assistant.freeInfo')} />
+            </p>
             {SETUP.map((s) => (
-              <KeySetup key={s.provider} setup={s} saved={keys[s.provider] ?? null} kept={!notKept.includes(s.provider)}
+              <KeySetup
+                key={s.provider}
+                setup={s}
+                saved={keys[s.provider] ?? null}
+                kept={!notKept.includes(s.provider)}
                 onSaved={(k, kept) => {
                   setKeys((all) => ({ ...all, [s.provider]: k }));
                   setNotKept((list) => (kept ? list.filter((p) => p !== s.provider) : [...list, s.provider]));
@@ -305,29 +397,60 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
                   const { [s.provider]: _gone, ...rest } = keys;
                   setKeys(rest);
                   if (Object.keys(rest).length === 0) setManaging(false); // the next key added goes straight to the chat
-                }} />
+                }}
+              />
             ))}
-            <PaidProviders entries={paid} onChange={(list) => {
-              setPaid(list);
-              savePaid(list);
-              if (list.length === 0 && Object.keys(keys).length === 0) setManaging(false);
-            }} />
-            <AnswerOrder order={ordered} name={modelName} rotate={rotate}
-              onMove={(m, delta) => { const next = moveInOrder(ordered, m, delta); setOrder(next); saveOrder(next); }}
-              onRotate={(on) => { setRotate(on); saveRotate(on); }} />
+            <PaidProviders
+              entries={paid}
+              onChange={(list) => {
+                setPaid(list);
+                savePaid(list);
+                if (list.length === 0 && Object.keys(keys).length === 0) setManaging(false);
+              }}
+            />
+            <AnswerOrder
+              order={ordered}
+              name={modelName}
+              rotate={rotate}
+              onMove={(m, delta) => {
+                const next = moveInOrder(ordered, m, delta);
+                setOrder(next);
+                saveOrder(next);
+              }}
+              onRotate={(on) => {
+                setRotate(on);
+                saveRotate(on);
+              }}
+            />
             <div className="assistant-keep">
               <label className="check">
-                <input type="checkbox" checked={remember} onChange={(e) => { setRemember(e.target.checked); saveRemember(e.target.checked); }} />
-                <span>{t('assistant.remember')}<InfoTip text={t('assistant.rememberInfo')} /></span>
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => {
+                    setRemember(e.target.checked);
+                    saveRemember(e.target.checked);
+                  }}
+                />
+                <span>
+                  {t('assistant.remember')}
+                  <InfoTip text={t('assistant.rememberInfo')} />
+                </span>
               </label>
               {hasKey && (
-                <button type="button" className="btn btn-small" onClick={() => {
-                  forgetKeys();
-                  warnedKeys.current.clear();
-                  setKeys({});
-                  setPaid([]);
-                  setManaging(false);
-                }}>{t('assistant.forgetKeys')}</button>
+                <button
+                  type="button"
+                  className="btn btn-small"
+                  onClick={() => {
+                    forgetKeys();
+                    warnedKeys.current.clear();
+                    setKeys({});
+                    setPaid([]);
+                    setManaging(false);
+                  }}
+                >
+                  {t('assistant.forgetKeys')}
+                </button>
               )}
             </div>
             <p className="muted small">{t(privacy)}</p>
@@ -338,33 +461,76 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
               <div className="assistant-examples">
                 <p className="muted">{t(hint)}</p>
                 {EXAMPLES.map((k) => (
-                  <button key={k} type="button" className="btn btn-small" onClick={() => { setDraft(t(k)); input.current?.focus(); }}>{t(k)}</button>
+                  <button
+                    key={k}
+                    type="button"
+                    className="btn btn-small"
+                    onClick={() => {
+                      setDraft(t(k));
+                      input.current?.focus();
+                    }}
+                  >
+                    {t(k)}
+                  </button>
                 ))}
               </div>
             )}
             <ol ref={list} className="assistant-messages" aria-live="polite">
               {messages.map((m, i) => (
                 <li key={i} className={`assistant-message is-${m.role}`}>
-                  <p>{m.text}{m.link && <> <a href={m.link.href} target="_blank" rel="noreferrer">{m.link.text}</a></>}</p>
+                  <p>
+                    {m.text}
+                    {m.link && (
+                      <>
+                        {' '}
+                        <a href={m.link.href} target="_blank" rel="noreferrer">
+                          {m.link.text}
+                        </a>
+                      </>
+                    )}
+                  </p>
                   {m.changes && m.changes.length > 0 && <Changes differences={m.changes} label={label} title={t('assistant.changes')} />}
                   {m.role === 'assistant' && m.changes?.length === 0 && <p className="muted small">{t('assistant.noChanges')}</p>}
-                  {m.model && <p className="muted small assistant-via">{m.cost !== undefined ? t('assistant.viaCost', { model: modelName(m.model), cost: money(m.cost) }) : t('assistant.via', { model: modelName(m.model) })}</p>}
+                  {m.model && (
+                    <p className="muted small assistant-via">
+                      {m.cost !== undefined ? t('assistant.viaCost', { model: modelName(m.model), cost: money(m.cost) }) : t('assistant.via', { model: modelName(m.model) })}
+                    </p>
+                  )}
                 </li>
               ))}
-              {working && <li className="assistant-message is-assistant"><p className="muted">{t('assistant.thinking')}</p></li>}
+              {working && (
+                <li className="assistant-message is-assistant">
+                  <p className="muted">{t('assistant.thinking')}</p>
+                </li>
+              )}
             </ol>
             <div ref={end} />
-            <form className="assistant-input" onSubmit={(e) => { e.preventDefault(); void send(); }}>
+            <form
+              className="assistant-input"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void send();
+              }}
+            >
               <input ref={input} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={t('assistant.placeholder')} aria-label={t('assistant.inputAria')} disabled={working} />
-              <button type="submit" className="btn btn-primary" disabled={working || !draft.trim()}>{t('assistant.send')}</button>
+              <button type="submit" className="btn btn-primary" disabled={working || !draft.trim()}>
+                {t('assistant.send')}
+              </button>
             </form>
             <ul className="muted small assistant-usage">
-              {ordered.map((m) => <li key={m}>{usageLine(m)}</li>)}
+              {ordered.map((m) => (
+                <li key={m}>{usageLine(m)}</li>
+              ))}
             </ul>
             <p className="muted small">
               {t('assistant.realUsage')}{' '}
               {SETUP.filter((s) => keys[s.provider]).map((s, i) => (
-                <span key={s.provider}>{i > 0 && ' · '}<a href={s.usage} target="_blank" rel="noreferrer">{providerName(s.provider)}</a></span>
+                <span key={s.provider}>
+                  {i > 0 && ' · '}
+                  <a href={s.usage} target="_blank" rel="noreferrer">
+                    {providerName(s.provider)}
+                  </a>
+                </span>
               ))}
             </p>
             <p className="muted small">{t(privacy)}</p>

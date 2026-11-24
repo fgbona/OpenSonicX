@@ -84,7 +84,8 @@ export function deconv(y: Float64Array, b: Float64Array, reg: number): Float64Ar
     }
     fft().transform(yr, yi, false);
     for (let i = 0; i < BINS; i++) {
-      const ar = yr[i]!, ai = yi[i]!;
+      const ar = yr[i]!,
+        ai = yi[i]!;
       yr[i] = ar * invRe[i]! - ai * invIm[i]!;
       yi[i] = ar * invIm[i]! + ai * invRe[i]!;
     }

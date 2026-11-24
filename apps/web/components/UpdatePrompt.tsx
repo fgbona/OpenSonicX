@@ -21,20 +21,27 @@ export function UpdatePrompt() {
   useEffect(() => {
     if (!shouldRegister({ production: process.env.NODE_ENV === 'production', supported: 'serviceWorker' in navigator, userAgent: navigator.userAgent, protocol: location.protocol })) return;
     const container = navigator.serviceWorker;
-    const onControllerChange = () => { if (asked.current) location.reload(); };
+    const onControllerChange = () => {
+      if (asked.current) location.reload();
+    };
     container.addEventListener('controllerchange', onControllerChange);
     let registration: ServiceWorkerRegistration | undefined;
-    const check = () => { if (document.visibilityState === 'visible') registration?.update().catch(() => undefined); };
-    container.register(`${BASE}/sw.js`, { scope: `${BASE}/` }).then((reg) => {
-      registration = reg;
-      if (reg.waiting && container.controller) setWaiting(reg.waiting);
-      reg.addEventListener('updatefound', () => {
-        const next = reg.installing;
-        next?.addEventListener('statechange', () => {
-          if (next.state === 'installed' && container.controller) setWaiting(next);
+    const check = () => {
+      if (document.visibilityState === 'visible') registration?.update().catch(() => undefined);
+    };
+    container
+      .register(`${BASE}/sw.js`, { scope: `${BASE}/` })
+      .then((reg) => {
+        registration = reg;
+        if (reg.waiting && container.controller) setWaiting(reg.waiting);
+        reg.addEventListener('updatefound', () => {
+          const next = reg.installing;
+          next?.addEventListener('statechange', () => {
+            if (next.state === 'installed' && container.controller) setWaiting(next);
+          });
         });
-      });
-    }).catch((error: unknown) => console.warn('Offline mode unavailable:', error));
+      })
+      .catch((error: unknown) => console.warn('Offline mode unavailable:', error));
     // An editor left open for days (a tablet on the pedalboard) still hears of new releases.
     document.addEventListener('visibilitychange', check);
     return () => {
@@ -51,7 +58,9 @@ export function UpdatePrompt() {
   return (
     <div className="update-prompt" role="status">
       <span>{t('update.available')}</span>
-      <button type="button" className="btn btn-primary btn-small" onClick={reload}>{t('update.reload')}</button>
+      <button type="button" className="btn btn-primary btn-small" onClick={reload}>
+        {t('update.reload')}
+      </button>
     </div>
   );
 }

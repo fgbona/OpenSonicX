@@ -21,9 +21,18 @@ function setup(start = 8, options: ConstructorParameters<typeof FakePedal>[0] = 
   const io: PedalIO = Object.assign(fake, {
     readSlotNames: async () => ({ irNames: [...irNames], profileNames: [...profileNames] }),
     readModified: async () => false,
-    uploadIr: async (slot: number, name: string, wav: Uint8Array) => { uploads.push({ slot, name, bytes: wav.length }); irNames[slot] = name; },
-    uploadProfile: async (slot: number, name: string) => { uploads.push({ slot, name, bytes: -1 }); profileNames[slot] = name; },
-    renameSlot: async (kind: 'ir' | 'profile', slot: number, name: string) => { (kind === 'ir' ? irNames : profileNames)[slot] = name; uploads.push({ slot, name, bytes: -2 }); },
+    uploadIr: async (slot: number, name: string, wav: Uint8Array) => {
+      uploads.push({ slot, name, bytes: wav.length });
+      irNames[slot] = name;
+    },
+    uploadProfile: async (slot: number, name: string) => {
+      uploads.push({ slot, name, bytes: -1 });
+      profileNames[slot] = name;
+    },
+    renameSlot: async (kind: 'ir' | 'profile', slot: number, name: string) => {
+      (kind === 'ir' ? irNames : profileNames)[slot] = name;
+      uploads.push({ slot, name, bytes: -2 });
+    },
     readGlobals: async () => GLOBALS,
     writeGlobals: async (bytes: Uint8Array[]) => void globalWrites.push(...bytes),
     copyPreset: async (destination: number, source: number) => {
@@ -72,7 +81,10 @@ test('edit checks every change before sending any of them', async () => {
   const { session, fake } = setup();
   const before = fake.received.length;
   await assert.rejects(
-    session.edit([{ kind: 'parameter', block: 'amp', parameter: 'gain', value: 70 }, { kind: 'parameter', block: 'amp', parameter: 'gain', value: 500 }]),
+    session.edit([
+      { kind: 'parameter', block: 'amp', parameter: 'gain', value: 70 },
+      { kind: 'parameter', block: 'amp', parameter: 'gain', value: 500 },
+    ]),
     /Gain must be 0\.\.100/,
   );
   assert.equal(fake.received.length, before, 'nothing was sent');
@@ -80,7 +92,10 @@ test('edit checks every change before sending any of them', async () => {
 
 test('edit applies changes in order, so a parameter can follow the model it belongs to', async () => {
   const { session, block } = setup();
-  await session.edit([{ kind: 'model', block: 'drv', model: 'Grey Fuzz' }, { kind: 'block', block: 'drv', on: true }]);
+  await session.edit([
+    { kind: 'model', block: 'drv', model: 'Grey Fuzz' },
+    { kind: 'block', block: 'drv', on: true },
+  ]);
   assert.equal(block('drv').model, 'Grey Fuzz');
   assert.equal(block('drv').on, true);
 });
@@ -112,7 +127,10 @@ test('select loads a preset by label; revert reloads the saved slot', async () =
 test('save refuses without a confirmation that names the slot, and sends nothing', async () => {
   const { session, fake } = setup();
   await assert.rejects(session.save({ slot: 'P03', name: 'CRUNCH', confirm: 'yes' }), /confirm must be "P03"/);
-  assert.equal(fake.received.some((r) => r.startsWith('save')), false);
+  assert.equal(
+    fake.received.some((r) => r.startsWith('save')),
+    false,
+  );
 });
 
 test('save backs the target slot up to a file first, then saves and checks it', async () => {
@@ -150,7 +168,10 @@ test('copy backs the destination up, then copies the stored preset over it; the 
   const { session, fake, dir } = setup();
   const old = fake.slots[44]!.slice();
   await assert.rejects(session.copy({ source: 'P02', destination: 'P45', confirm: 'P02' }), /confirm must be "P45"/);
-  assert.equal(fake.received.some((r) => r.startsWith('copy')), false);
+  assert.equal(
+    fake.received.some((r) => r.startsWith('copy')),
+    false,
+  );
   const text = await session.copy({ source: 'P02', destination: 'P45', confirm: 'P45' });
   assert.deepEqual(fake.slots[44], fake.slots[1]);
   assert.equal(fake.names[44], fake.names[1]);
@@ -172,7 +193,10 @@ test('the tuner turns on and off, and the reply says the pedal does not report i
   const { session, fake } = setup();
   assert.match(await session.tuner({ on: true }), /Tuner on/);
   await session.tuner({ on: false });
-  assert.deepEqual(fake.received.filter((r) => r.startsWith('tuner')), ['tuner on', 'tuner off']);
+  assert.deepEqual(
+    fake.received.filter((r) => r.startsWith('tuner')),
+    ['tuner on', 'tuner off'],
+  );
 });
 
 test('delete_slot empties an IR or profile slot only when confirm repeats its label, like load_ir and load_nam', async () => {
@@ -180,7 +204,10 @@ test('delete_slot empties an IR or profile slot only when confirm repeats its la
   await assert.rejects(session.deleteSlot({ kind: 'ir', slot: 1, confirm: 'Mesa OS' }), /confirm must be "IR1"/);
   await assert.rejects(session.deleteSlot({ kind: 'profile', slot: 1, confirm: 'IR1' }), /confirm must be "PROFILE1"/);
   await assert.rejects(session.deleteSlot({ kind: 'profile', slot: 2, confirm: 'PROFILE2' }), /slot 2 is already empty/);
-  assert.equal(fake.received.some((r) => r.startsWith('clear')), false);
+  assert.equal(
+    fake.received.some((r) => r.startsWith('clear')),
+    false,
+  );
   assert.match(await session.deleteSlot({ kind: 'ir', slot: 1, confirm: 'ir1' }), /Deleted user IR slot 1 "Mesa OS"/);
   assert.ok(fake.received.includes('clear ir 0'));
 });
@@ -192,7 +219,10 @@ test('backup_all writes every user preset to one file, read without loading them
   assert.equal(files.length, 1);
   const backup = parseBackupFile(readFileSync(join(dir, 'backups', files[0]!), 'utf8'));
   assert.equal(backup.slots.length, 50);
-  assert.equal(fake.received.some((r) => r.startsWith('select')), false);
+  assert.equal(
+    fake.received.some((r) => r.startsWith('select')),
+    false,
+  );
   assert.match(text, /Backed up P01\.\.P50 to /);
 });
 
@@ -204,13 +234,16 @@ test('export writes the edit buffer to a preset file and never overwrites one', 
 });
 
 test('import loads a preset file into the edit buffer without saving it', async () => {
-  const { session, fake, dir } = setup();
+  const { session, fake } = setup();
   const file = 'p08.json';
   await session.exportPreset(file);
   await session.select('P03');
   await session.importPreset(file);
   assert.equal(fake.current, 2, 'still on P03, nothing selected');
-  assert.equal(fake.received.some((r) => r.startsWith('save')), false);
+  assert.equal(
+    fake.received.some((r) => r.startsWith('save')),
+    false,
+  );
   assert.deepEqual(decodePreset(fake.editBuffer), decodePreset(fake.slots[8]!));
 });
 
@@ -272,7 +305,10 @@ test('a backup that cannot be written stops the save before the slot is touched'
   writeFileSync(join(dir, 'backups'), 'not a folder');
   const old = fake.slots[2]!.slice();
   await assert.rejects(session.save({ slot: 'P03', name: 'CRUNCH', confirm: 'P03' }));
-  assert.equal(fake.received.some((r) => r.startsWith('save')), false);
+  assert.equal(
+    fake.received.some((r) => r.startsWith('save')),
+    false,
+  );
   assert.deepEqual(fake.slots[2], old);
 });
 
@@ -325,9 +361,20 @@ function tinyWav(): Uint8Array {
   const buf = new Uint8Array(48);
   const v = new DataView(buf.buffer);
   const tag = (at: number, s: string) => [...s].forEach((c, i) => v.setUint8(at + i, c.charCodeAt(0)));
-  tag(0, 'RIFF'); v.setUint32(4, 40, true); tag(8, 'WAVE'); tag(12, 'fmt '); v.setUint32(16, 16, true);
-  v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 44100, true); v.setUint32(28, 88200, true);
-  v.setUint16(32, 2, true); v.setUint16(34, 16, true); tag(36, 'data'); v.setUint32(40, 4, true); v.setInt16(44, 20000, true);
+  tag(0, 'RIFF');
+  v.setUint32(4, 40, true);
+  tag(8, 'WAVE');
+  tag(12, 'fmt ');
+  v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true);
+  v.setUint16(22, 1, true);
+  v.setUint32(24, 44100, true);
+  v.setUint32(28, 88200, true);
+  v.setUint16(32, 2, true);
+  v.setUint16(34, 16, true);
+  tag(36, 'data');
+  v.setUint32(40, 4, true);
+  v.setInt16(44, 20000, true);
   return buf;
 }
 function putIr(dir: string, name: string, bytes = tinyWav()) {
@@ -339,7 +386,10 @@ test('load_ir puts a WAV from the irs folder into an empty user IR slot, named a
   const { session, dir, uploads } = setup();
   putIr(dir, 'V30 Cab.wav');
   const text = await session.loadIr({ file: 'V30 Cab.wav', slot: 2, confirm: 'IR2' });
-  assert.deepEqual(uploads.map(({ slot, name }) => [slot, name]), [[1, 'V30 Cab']]);
+  assert.deepEqual(
+    uploads.map(({ slot, name }) => [slot, name]),
+    [[1, 'V30 Cab']],
+  );
   assert.match(text, /Loaded "V30 Cab" into User IR 2/);
 });
 
@@ -350,7 +400,10 @@ test('load_ir needs the slot confirmed and refuses to overwrite a loaded IR unle
   await assert.rejects(session.loadIr({ file: 'new.wav', slot: 1, confirm: 'IR1' }), /User IR 1 holds "Mesa OS".*cannot be backed up.*replace/);
   assert.equal(uploads.length, 0);
   await session.loadIr({ file: 'new.wav', slot: 1, confirm: 'IR1', replace: true, name: 'Fresh' });
-  assert.deepEqual(uploads.map(({ slot, name }) => [slot, name]), [[0, 'Fresh']]);
+  assert.deepEqual(
+    uploads.map(({ slot, name }) => [slot, name]),
+    [[0, 'Fresh']],
+  );
 });
 
 test('load_ir checks the WAV and the folder before anything is sent', async () => {
@@ -372,18 +425,64 @@ function toneSetup(models: { id: number; name: string; bytes: Uint8Array }[]) {
   const dir = base.dir;
   const saved: string[] = [];
   let token: string | null = null;
-  const store: Tone3000Store = { clientId: async () => 'pk', accessToken: async () => token, save: async (t) => { token = t.accessToken; saved.push(t.accessToken); } };
+  const store: Tone3000Store = {
+    clientId: async () => 'pk',
+    accessToken: async () => token,
+    save: async (t) => {
+      token = t.accessToken;
+      saved.push(t.accessToken);
+    },
+  };
   const calls: string[] = [];
   const api: Tone3000Api = {
-    startDeviceLogin: async () => ({ deviceCode: 'D', userCode: 'ABCD-EFGH', verificationUri: 'https://www.tone3000.com/activate', verificationUriComplete: 'https://www.tone3000.com/activate?code=ABCD-EFGH', expiresIn: 600, interval: 5 }),
+    startDeviceLogin: async () => ({
+      deviceCode: 'D',
+      userCode: 'ABCD-EFGH',
+      verificationUri: 'https://www.tone3000.com/activate',
+      verificationUriComplete: 'https://www.tone3000.com/activate?code=ABCD-EFGH',
+      expiresIn: 600,
+      interval: 5,
+    }),
     pollDeviceToken: async () => ({ accessToken: 'AT', refreshToken: 'RT', expiresAt: Date.now() + 3600_000 }),
-    searchTones: async (_t, o) => { calls.push(`search ${o.query} ${o.format}`); return { page: 1, totalPages: 1, total: 1, tones: [{ id: 42, title: 'GK 250ML', gear: 'amp', format: o.format ?? 'nam', makes: ['Gallien-Krueger'], creator: 'tonehead', modelsCount: models.length, downloads: 5, url: 'https://www.tone3000.com/tones/42', image: null, description: 'Somewhere in Time rhythm' }] }; },
+    searchTones: async (_t, o) => {
+      calls.push(`search ${o.query} ${o.format}`);
+      return {
+        page: 1,
+        totalPages: 1,
+        total: 1,
+        tones: [
+          {
+            id: 42,
+            title: 'GK 250ML',
+            gear: 'amp',
+            format: o.format ?? 'nam',
+            makes: ['Gallien-Krueger'],
+            creator: 'tonehead',
+            modelsCount: models.length,
+            downloads: 5,
+            url: 'https://www.tone3000.com/tones/42',
+            image: null,
+            description: 'Somewhere in Time rhythm',
+          },
+        ],
+      };
+    },
     listModels: async () => models.map(({ id, name }) => ({ id, name, size: 'standard', url: `https://cdn.example/${id}`, architecture: '1' })),
-    downloadModel: async (_t, url) => { calls.push(`download ${url}`); return models.find((m) => url.endsWith(`/${m.id}`))!.bytes; },
+    downloadModel: async (_t, url) => {
+      calls.push(`download ${url}`);
+      return models.find((m) => url.endsWith(`/${m.id}`))!.bytes;
+    },
   };
   const converted: string[] = [];
-  const convert = async (namJson: string) => { converted.push(namJson.slice(0, 20)); return { arrayA: new Float32Array(128), arrayB: new Float32Array(2048), gains: [1, 1, 1, 1] as const }; };
-  const session = new Session(() => ({ io: (base as unknown as { fake: PedalIO }).fake, close: () => undefined }), { backups: join(dir, 'b'), presets: join(dir, 'p'), irs: join(dir, 'irs'), nams: join(dir, 'nams') }, { tone3000: { store, api }, convert });
+  const convert = async (namJson: string) => {
+    converted.push(namJson.slice(0, 20));
+    return { arrayA: new Float32Array(128), arrayB: new Float32Array(2048), gains: [1, 1, 1, 1] as const };
+  };
+  const session = new Session(
+    () => ({ io: (base as unknown as { fake: PedalIO }).fake, close: () => undefined }),
+    { backups: join(dir, 'b'), presets: join(dir, 'p'), irs: join(dir, 'irs'), nams: join(dir, 'nams') },
+    { tone3000: { store, api }, convert },
+  );
   return { ...base, session, saved, calls, converted };
 }
 
@@ -416,19 +515,28 @@ test('installing a NAM tone converts it and writes the profile slot, after check
   assert.equal(t.converted.length, 0, 'no conversion for a refused slot');
   const text = await t.session.installTone({ toneId: 42, slot: 2, confirm: 'PROFILE2' });
   assert.equal(t.converted.length, 1);
-  assert.deepEqual(t.uploads.map(({ slot, name, bytes }) => [slot, name, bytes]), [[1, 'GK 250ML Lead C', -1]]);
+  assert.deepEqual(
+    t.uploads.map(({ slot, name, bytes }) => [slot, name, bytes]),
+    [[1, 'GK 250ML Lead C', -1]],
+  );
   assert.match(text, /loaded "GK 250ML Lead C" into profile slot 2/);
   await assert.rejects(t.session.installTone({ toneId: 42, slot: 3, confirm: 'IR3' }), /confirm must be "PROFILE3"/);
 });
 
 test('installing an IR tone writes a user IR slot, and a tone with several models asks which', async () => {
   const wavFile = tinyWav();
-  const t = toneSetup([{ id: 8, name: 'V30 4x12', bytes: wavFile }, { id: 9, name: 'Greenback', bytes: wavFile }]);
+  const t = toneSetup([
+    { id: 8, name: 'V30 4x12', bytes: wavFile },
+    { id: 9, name: 'Greenback', bytes: wavFile },
+  ]);
   await t.session.tone3000Login();
   await new Promise((r) => setImmediate(r));
   await assert.rejects(t.session.installTone({ toneId: 42, slot: 2, confirm: 'IR2' }), /several models; pass modelId:\n- model 8: V30 4x12/);
   await t.session.installTone({ toneId: 42, modelId: 9, slot: 2, confirm: 'IR2' });
-  assert.deepEqual(t.uploads.map(({ slot, name }) => [slot, name]), [[1, 'Greenback']]);
+  assert.deepEqual(
+    t.uploads.map(({ slot, name }) => [slot, name]),
+    [[1, 'Greenback']],
+  );
 });
 
 test('load_nam converts a capture from the nams folder', async () => {
@@ -436,14 +544,20 @@ test('load_nam converts a capture from the nams folder', async () => {
   mkdirSync(join(t.dir, 'nams'), { recursive: true });
   writeFileSync(join(t.dir, 'nams', 'My AC30.nam'), namBytes());
   await t.session.loadNam({ file: 'My AC30.nam', slot: 3, confirm: 'PROFILE3' });
-  assert.deepEqual(t.uploads.map(({ slot, name }) => [slot, name]), [[2, 'My AC30']]);
+  assert.deepEqual(
+    t.uploads.map(({ slot, name }) => [slot, name]),
+    [[2, 'My AC30']],
+  );
   await assert.rejects(t.session.loadNam({ file: '../escape.nam', slot: 3, confirm: 'PROFILE3' }), /inside .*nams/);
 });
 
 test('rename_slot renames a loaded slot and refuses an empty one', async () => {
   const { session, uploads } = setup();
   assert.match(await session.renameSlot({ kind: 'ir', slot: 1, name: 'Mesa 4x12' }), /from "Mesa OS" to "Mesa 4x12"/);
-  assert.deepEqual(uploads.map(({ slot, name }) => [slot, name]), [[0, 'Mesa 4x12']]);
+  assert.deepEqual(
+    uploads.map(({ slot, name }) => [slot, name]),
+    [[0, 'Mesa 4x12']],
+  );
   await assert.rejects(session.renameSlot({ kind: 'profile', slot: 2, name: 'X' }), /slot 2 is empty/);
   await assert.rejects(session.renameSlot({ kind: 'ir', slot: 1, name: 'eleven chars' }), /1\.\.10 characters/);
 });
@@ -474,7 +588,10 @@ test('undo puts the edit buffer back as it was before each edit, last first', as
   const original = fake.editBuffer.slice();
   await session.edit([{ kind: 'parameter', block: 'amp', parameter: 'gain', value: 70 }]);
   const afterFirst = fake.editBuffer.slice();
-  await session.edit([{ kind: 'model', block: 'amp', model: 'Calif DualM' }, { kind: 'block', block: 'dly', on: true }]);
+  await session.edit([
+    { kind: 'model', block: 'amp', model: 'Calif DualM' },
+    { kind: 'block', block: 'dly', on: true },
+  ]);
   assert.match(await session.undo(), /^Undid the last edit/);
   assert.deepEqual(fake.editBuffer, afterFirst);
   await session.undo();

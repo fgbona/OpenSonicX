@@ -6,8 +6,21 @@
  * capture each.
  */
 import {
-  MB_EXP_ENTRIES, MB_FOOTSWITCHES, mbExpressionWrites, mbAssignFootswitch, mbAssignments, mbPresetLabel, mbSetExpressionMax, mbSetExpressionMin,
-  mbSetPatchVolume, parseMbCurrentPresetNumber, parseMbPreset, mbReadCurrentPresetNumber, mbReadPreset, type MbPreset, type MbResolvedPreset,
+  MB_EXP_ENTRIES,
+  MB_FOOTSWITCHES,
+  mbExpressionWrites,
+  mbAssignFootswitch,
+  mbAssignments,
+  mbPresetLabel,
+  mbSetExpressionMax,
+  mbSetExpressionMin,
+  mbSetPatchVolume,
+  parseMbCurrentPresetNumber,
+  parseMbPreset,
+  mbReadCurrentPresetNumber,
+  mbReadPreset,
+  type MbPreset,
+  type MbResolvedPreset,
 } from '@pocket-master/core';
 import type { MatriboxConnection } from './matribox-link.ts';
 import { EXPERIMENTAL, findBlock, findParam, knownModel } from './matribox-edit.ts';
@@ -15,7 +28,8 @@ import { EXPERIMENTAL, findBlock, findParam, knownModel } from './matribox-edit.
 const SWITCHES = 'ABCD';
 const round = (n: number) => String(Number(n.toFixed(2)));
 const experimental = (lines: readonly string[]) => [...lines, 'The change is live in the loaded preset; nothing is stored until matribox_save_preset.', EXPERIMENTAL].join('\n');
-export const CC_NOTE = 'Sent as MIDI Control Change; the unit sends no answer, so check it on the unit. It needs the unit\'s MIDI channel (global settings; Omni takes any) and "MIDI In Source" including USB. Experimental: not yet tried on the owner\'s unit.';
+export const CC_NOTE =
+  'Sent as MIDI Control Change; the unit sends no answer, so check it on the unit. It needs the unit\'s MIDI channel (global settings; Omni takes any) and "MIDI In Source" including USB. Experimental: not yet tried on the owner\'s unit.';
 
 async function readLoaded(unit: MatriboxConnection): Promise<MbPreset> {
   const current = parseMbCurrentPresetNumber(await unit.read(mbReadCurrentPresetNumber()));
@@ -48,7 +62,8 @@ export async function assignFootswitch(unit: MatriboxConnection, preset: MbResol
   const block = findBlock(preset, options.block);
   await unit.write(mbAssignFootswitch(index, block.slot, options.assign));
   const slots = mbAssignments(await readLoaded(unit)).footswitches[index] ?? [];
-  if (slots.includes(block.slot) !== options.assign) throw new Error(`the unit echoed the footswitch write, but footswitch ${SWITCHES[index]} ${options.assign ? 'does not toggle' : 'still toggles'} slot ${block.slot + 1} when read back`);
+  if (slots.includes(block.slot) !== options.assign)
+    throw new Error(`the unit echoed the footswitch write, but footswitch ${SWITCHES[index]} ${options.assign ? 'does not toggle' : 'still toggles'} slot ${block.slot + 1} when read back`);
   const names = slots.map((s) => preset.chain.find((b) => b.slot === s)?.module ?? `slot ${s + 1}`);
   return experimental([`Footswitch ${SWITCHES[index]} ${options.assign ? 'now toggles' : 'no longer toggles'} ${block.position} ${block.module}. It toggles: ${names.join(', ') || 'nothing'}.`]);
 }
@@ -63,7 +78,9 @@ export async function assignExpression(unit: MatriboxConnection, preset: MbResol
   for (const frame of mbExpressionWrites({ entry, slot: block.slot, paramId: param.id, min, max })) await unit.write(frame);
   const read = mbAssignments(await readLoaded(unit)).expression[entry];
   if (read?.slot !== block.slot || read.paramId !== param.id) {
-    throw new Error(`the unit echoed the expression write, but entry ${options.entry} reads back as slot ${read?.slot ?? 'none'}, parameter ${read?.paramId}: the field order of this write may be wrong (docs/matribox.md)`);
+    throw new Error(
+      `the unit echoed the expression write, but entry ${options.entry} reads back as slot ${read?.slot ?? 'none'}, parameter ${read?.paramId}: the field order of this write may be wrong (docs/matribox.md)`,
+    );
   }
   return experimental([`Expression entry ${options.entry} → ${block.position} ${block.module} ${model.name} ${param.name}, ${round(min)}..${round(max)} %`]);
 }
@@ -72,10 +89,7 @@ export async function assignExpression(unit: MatriboxConnection, preset: MbResol
 export async function setExpressionRange(unit: MatriboxConnection, options: { entry: number; min?: number; max?: number }): Promise<string> {
   const entry = expressionEntry(options.entry);
   if (options.min === undefined && options.max === undefined) throw new Error('give min, max or both');
-  const frames = [
-    ...(options.min === undefined ? [] : [mbSetExpressionMin(entry, options.min)]),
-    ...(options.max === undefined ? [] : [mbSetExpressionMax(entry, options.max)]),
-  ];
+  const frames = [...(options.min === undefined ? [] : [mbSetExpressionMin(entry, options.min)]), ...(options.max === undefined ? [] : [mbSetExpressionMax(entry, options.max)])];
   for (const frame of frames) await unit.write(frame);
   const read = mbAssignments(await readLoaded(unit)).expression[entry];
   return experimental([`Expression entry ${options.entry}: ${round(read?.min ?? Number.NaN)}..${round(read?.max ?? Number.NaN)} %`]);
@@ -90,7 +104,9 @@ export function describeAssignments(label: number, preset: MbResolvedPreset, raw
   };
   const paramName = (slot: number, id: number) => preset.chain.find((c) => c.slot === slot)?.model?.params.find((p) => p.id === id)?.name ?? `param ${id}`;
   const switches = a.footswitches.map((slots, i) => `Footswitch ${SWITCHES[i]}: ${slots.map(blockName).join(', ') || 'nothing'}`);
-  const entries = a.expression.filter((e) => e.slot !== null).map((e) => `Expression entry ${e.entry + 1}: ${blockName(e.slot as number)} ${paramName(e.slot as number, e.paramId)}, ${round(e.min)}..${round(e.max)} %`);
+  const entries = a.expression
+    .filter((e) => e.slot !== null)
+    .map((e) => `Expression entry ${e.entry + 1}: ${blockName(e.slot as number)} ${paramName(e.slot as number, e.paramId)}, ${round(e.min)}..${round(e.max)} %`);
   return [
     `${mbPresetLabel(label)} "${preset.name}": patch volume ${a.volume}, tempo ${a.tempo} BPM, EXP 1 mode ${a.expressionMode === 1 ? 'B' : 'A'}`,
     ...switches,

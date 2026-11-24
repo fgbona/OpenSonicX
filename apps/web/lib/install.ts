@@ -16,7 +16,6 @@ export interface InstallSource {
   readonly load: () => Promise<Uint8Array>;
 }
 
-
 export type Exclusive = <T>(step: string, run: (link: PocketMasterLink) => Promise<T>) => Promise<T | null>;
 
 /**

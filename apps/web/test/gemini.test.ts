@@ -14,8 +14,14 @@ function host() {
   const edits: Edit[][] = [];
   const h: ToneHost = {
     snapshot: () => ({ index: 7, name: 'IRON-RHY', preset, slots: SLOTS, modified: edits.length > 0, names: [] }),
-    applyEdits: async (e) => { edits.push([...e]); preset = e.reduce(applyEdit, preset); },
-    undo: async () => false, revert: async () => undefined, selectPreset: async () => true, proposeSave: async () => 'saved',
+    applyEdits: async (e) => {
+      edits.push([...e]);
+      preset = e.reduce(applyEdit, preset);
+    },
+    undo: async () => false,
+    revert: async () => undefined,
+    selectPreset: async () => true,
+    proposeSave: async () => 'saved',
   };
   return { h, edits };
 }
@@ -38,12 +44,26 @@ const say = (text: string) => ({ body: { status: 'completed', steps: [{ type: 'm
 test('a tone in two requests: the model edits, then answers; the key only travels in a header', async () => {
   const { h, edits } = host();
   const { fetchFn, requests } = scripted(
-    call('edit_preset', { changes: [{ kind: 'model', block: 'amp', model: 'Calif DualM' }, { kind: 'parameter', block: 'amp', parameter: 'gain', value: 70 }] }),
+    call('edit_preset', {
+      changes: [
+        { kind: 'model', block: 'amp', model: 'Calif DualM' },
+        { kind: 'parameter', block: 'amp', parameter: 'gain', value: 70 },
+      ],
+    }),
     say('Mesa Dual Rectifier, gain 70.'),
   );
   let counted = 0;
   const steps: string[] = [];
-  const reply = await converse({ key: KEY, model: 'flash', turns: [], message: 'black album rhythm on 45', agent: pocketMasterAgent(h), fetchFn, onRequest: () => void counted++, onStep: (name, ok) => steps.push(`${name} ${ok}`) });
+  const reply = await converse({
+    key: KEY,
+    model: 'flash',
+    turns: [],
+    message: 'black album rhythm on 45',
+    agent: pocketMasterAgent(h),
+    fetchFn,
+    onRequest: () => void counted++,
+    onStep: (name, ok) => steps.push(`${name} ${ok}`),
+  });
   assert.equal(reply, 'Mesa Dual Rectifier, gain 70.');
   assert.equal(counted, 2);
   assert.deepEqual(steps, ['edit_preset true']);
@@ -58,16 +78,33 @@ test('a tone in two requests: the model edits, then answers; the key only travel
   const first = requests[0]!.body.input as { type: string; content: string }[];
   assert.match(first[0]!.content, /^Loaded preset:\nP08 "IRON-RHY"[\s\S]*\n\nRequest: black album rhythm on 45$/);
   const second = requests[1]!.body.input as { type: string; call_id?: string; is_error?: boolean }[];
-  assert.deepEqual(second.map((s) => s.type), ['user_input', 'function_call', 'function_result']);
+  assert.deepEqual(
+    second.map((s) => s.type),
+    ['user_input', 'function_call', 'function_result'],
+  );
   assert.equal(second[2]!.call_id, 'c1');
 });
 
 test('the next message carries the earlier texts and the preset as it is now, not the model list', async () => {
   const { h } = host();
   const { fetchFn, requests } = scripted(say('Done'));
-  await converse({ key: KEY, model: 'lite', turns: [{ role: 'user', text: 'hi' }, { role: 'assistant', text: 'Hello' }], message: 'more gain', agent: pocketMasterAgent(h), fetchFn, onRequest: () => {} });
+  await converse({
+    key: KEY,
+    model: 'lite',
+    turns: [
+      { role: 'user', text: 'hi' },
+      { role: 'assistant', text: 'Hello' },
+    ],
+    message: 'more gain',
+    agent: pocketMasterAgent(h),
+    fetchFn,
+    onRequest: () => {},
+  });
   const input = requests[0]!.body.input as { type: string; content: unknown }[];
-  assert.deepEqual(input.map((s) => s.type), ['user_input', 'model_output', 'user_input']);
+  assert.deepEqual(
+    input.map((s) => s.type),
+    ['user_input', 'model_output', 'user_input'],
+  );
   assert.equal(input[0]!.content, 'hi');
   assert.deepEqual(input[1]!.content, [{ type: 'text', text: 'Hello' }]);
   assert.match(String(input[2]!.content), /^Loaded preset now:\nP08 "IRON-RHY"[\s\S]*\n\nRequest: more gain$/);
@@ -85,14 +122,28 @@ test('a model that never stops calling tools is cut off after six requests', asy
 test('quota and key errors are told apart, with when the quota comes back', async () => {
   const { h } = host();
   const now = new Date('2026-11-21T20:00:00Z');
-  const quota = { status: 429, body: { error: { code: 429, status: 'RESOURCE_EXHAUSTED', message: 'quota', details: [{ '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '3600s' }] } } };
+  const quota = {
+    status: 429,
+    body: { error: { code: 429, status: 'RESOURCE_EXHAUSTED', message: 'quota', details: [{ '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '3600s' }] } },
+  };
   const e = await converse({ key: KEY, model: 'flash', turns: [], message: 'x', agent: pocketMasterAgent(h), fetchFn: scripted(quota).fetchFn, onRequest: () => {}, now: () => now }).catch((x) => x);
   assert.ok(e instanceof QuotaError);
   assert.equal((e as QuotaError).retryAt.toISOString(), '2026-11-21T21:00:00.000Z');
-  const noDelay = await converse({ key: KEY, model: 'flash', turns: [], message: 'x', agent: pocketMasterAgent(h), fetchFn: scripted({ status: 429, body: { error: { status: 'RESOURCE_EXHAUSTED' } } }).fetchFn, onRequest: () => {}, now: () => now }).catch((x) => x);
+  const noDelay = await converse({
+    key: KEY,
+    model: 'flash',
+    turns: [],
+    message: 'x',
+    agent: pocketMasterAgent(h),
+    fetchFn: scripted({ status: 429, body: { error: { status: 'RESOURCE_EXHAUSTED' } } }).fetchFn,
+    onRequest: () => {},
+    now: () => now,
+  }).catch((x) => x);
   assert.equal((noDelay as QuotaError).retryAt.toISOString(), '2026-11-22T08:00:00.000Z', 'falls back to Pacific midnight');
   const bad = { status: 400, body: { error: { status: 'INVALID_ARGUMENT', message: 'API key not valid. Please pass a valid API key.', details: [{ reason: 'API_KEY_INVALID' }] } } };
-  assert.ok((await converse({ key: KEY, model: 'flash', turns: [], message: 'x', agent: pocketMasterAgent(h), fetchFn: scripted(bad).fetchFn, onRequest: () => {} }).catch((x) => x)) instanceof KeyError);
+  assert.ok(
+    (await converse({ key: KEY, model: 'flash', turns: [], message: 'x', agent: pocketMasterAgent(h), fetchFn: scripted(bad).fetchFn, onRequest: () => {} }).catch((x) => x)) instanceof KeyError,
+  );
 });
 
 test('testKey asks for the model list, which uses no generation quota', async () => {
@@ -106,7 +157,11 @@ test('testKey asks for the model list, which uses no generation quota', async ()
 test('schemas go to Gemini in the subset it documents: anyOf, enum, one type each', () => {
   assert.deepEqual(toGeminiSchema({ oneOf: [{ type: 'string', const: 'a' }] }), { anyOf: [{ type: 'string', enum: ['a'] }] });
   assert.deepEqual(toGeminiSchema({ type: ['number', 'boolean'], description: 'v' }), { anyOf: [{ type: 'number' }, { type: 'boolean' }], description: 'v' });
-  assert.deepEqual(toGeminiSchema({ type: 'object', properties: { a: { type: 'integer', minimum: 0 } }, required: ['a'] }), { type: 'object', properties: { a: { type: 'integer', minimum: 0 } }, required: ['a'] });
+  assert.deepEqual(toGeminiSchema({ type: 'object', properties: { a: { type: 'integer', minimum: 0 } }, required: ['a'] }), {
+    type: 'object',
+    properties: { a: { type: 'integer', minimum: 0 } },
+    required: ['a'],
+  });
 });
 
 test('a preset the person loads during a reply stops the assistant from editing it blind', async () => {
@@ -116,7 +171,10 @@ test('a preset the person loads during a reply stops the assistant from editing 
   h.snapshot = () => ({ ...snap(), index });
   const { fetchFn, requests } = scripted(call('edit_preset', { changes: [{ kind: 'volume', value: 50 }] }), say('The preset changed; tell me again.'));
   const original = fetchFn;
-  const loadingMeanwhile = (async (url: string, init: RequestInit) => { index = 9; return original(url, init); }) as unknown as typeof fetch;
+  const loadingMeanwhile = (async (url: string, init: RequestInit) => {
+    index = 9;
+    return original(url, init);
+  }) as unknown as typeof fetch;
   await converse({ key: KEY, model: 'flash', turns: [], message: 'louder', agent: pocketMasterAgent(h), fetchFn: loadingMeanwhile, onRequest: () => {} });
   assert.equal(edits.length, 0);
   assert.match(JSON.stringify(requests[1]!.body.input), /the preset changed to P10/);
@@ -124,14 +182,31 @@ test('a preset the person loads during a reply stops the assistant from editing 
 
 test('an answer with nothing recognisable in it is an error, not a silent empty reply', async () => {
   const { h } = host();
-  await assert.rejects(converse({ key: KEY, model: 'flash', turns: [], message: 'x', agent: pocketMasterAgent(h), fetchFn: scripted({ body: { outputs: [] } }).fetchFn, onRequest: () => {} }), /no answer this editor understands/);
+  await assert.rejects(
+    converse({ key: KEY, model: 'flash', turns: [], message: 'x', agent: pocketMasterAgent(h), fetchFn: scripted({ body: { outputs: [] } }).fetchFn, onRequest: () => {} }),
+    /no answer this editor understands/,
+  );
 });
 
 test('a per-minute 429 without a retry delay pauses a minute; a daily one until Pacific midnight', async () => {
   const { h } = host();
   const now = new Date('2026-11-21T20:00:00Z');
-  const run = (quotaId: string) => converse({ key: KEY, model: 'flash', turns: [], message: 'x', agent: pocketMasterAgent(h), onRequest: () => {}, now: () => now,
-    fetchFn: scripted({ status: 429, body: { error: { status: 'RESOURCE_EXHAUSTED', details: [{ '@type': 'type.googleapis.com/google.rpc.QuotaFailure', violations: [{ quotaId }] }] } } }).fetchFn }).then(() => { throw new Error('expected a quota error'); }, (x) => x as QuotaError);
+  const run = (quotaId: string) =>
+    converse({
+      key: KEY,
+      model: 'flash',
+      turns: [],
+      message: 'x',
+      agent: pocketMasterAgent(h),
+      onRequest: () => {},
+      now: () => now,
+      fetchFn: scripted({ status: 429, body: { error: { status: 'RESOURCE_EXHAUSTED', details: [{ '@type': 'type.googleapis.com/google.rpc.QuotaFailure', violations: [{ quotaId }] }] } } }).fetchFn,
+    }).then(
+      () => {
+        throw new Error('expected a quota error');
+      },
+      (x) => x as QuotaError,
+    );
   assert.equal((await run('GenerateRequestsPerMinutePerProjectPerModel-FreeTier')).retryAt.toISOString(), '2026-11-21T20:01:00.000Z');
   assert.equal((await run('GenerateRequestsPerDayPerProjectPerModel-FreeTier')).retryAt.toISOString(), '2026-11-22T08:00:00.000Z');
 });
@@ -165,10 +240,14 @@ test('only the first Gemini request of a message carries the model list', async 
 });
 
 test('the Gemini model list of a key gives model ids that generate content', async () => {
-  const list = scripted({ body: { models: [
-    { name: 'models/gemini-9-pro', supportedGenerationMethods: ['generateContent'] },
-    { name: 'models/text-embedding-9', supportedGenerationMethods: ['embedContent'] },
-  ] } });
+  const list = scripted({
+    body: {
+      models: [
+        { name: 'models/gemini-9-pro', supportedGenerationMethods: ['generateContent'] },
+        { name: 'models/text-embedding-9', supportedGenerationMethods: ['embedContent'] },
+      ],
+    },
+  });
   assert.deepEqual(await listGeminiModels(KEY, list.fetchFn), ['gemini-9-pro']);
   assert.equal(list.requests[0]!.headers['x-goog-api-key'], KEY);
   assert.equal(await listGeminiModels(KEY, scripted({ status: 400, body: { error: { details: [{ reason: 'API_KEY_INVALID' }] } } }).fetchFn), 'invalid');

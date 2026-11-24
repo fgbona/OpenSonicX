@@ -161,10 +161,14 @@ type Structural = Exclude<MbOp, { kind: 'param' | 'on' }>;
 
 function simulate(chain: readonly Simulated[], op: Structural): readonly Simulated[] {
   switch (op.kind) {
-    case 'model': return replaced(chain, op.position, { key: key(op), from: null });
-    case 'add': return [...chain.slice(0, op.position), { key: key(op), from: null }, ...chain.slice(op.position)];
-    case 'remove': return chain.filter((_, i) => i !== op.position);
-    case 'move': return moved(chain, op.from, op.to);
+    case 'model':
+      return replaced(chain, op.position, { key: key(op), from: null });
+    case 'add':
+      return [...chain.slice(0, op.position), { key: key(op), from: null }, ...chain.slice(op.position)];
+    case 'remove':
+      return chain.filter((_, i) => i !== op.position);
+    case 'move':
+      return moved(chain, op.from, op.to);
   }
 }
 

@@ -88,6 +88,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
   `npm run typecheck` and `npm run build` skip workspaces whose inputs did not change, locally
   and in CI (the cache is kept between CI runs with `actions/cache`). Releases always rebuild
   everything. See CONTRIBUTING.md.
+- The code is linted and formatted by [Biome](https://biomejs.dev) (pinned, configured in
+  `biome.jsonc`): `npm run lint` checks lint rules and formatting and runs in CI, `npm run format`
+  rewrites files. The format matches how the code was already written (single quotes, semicolons,
+  2 spaces, lines up to 200 columns); the one-time format pass is listed in
+  `.git-blame-ignore-revs`. Lint fixes are unused imports and variables and equivalent rewrites
+  (`type="button"` on buttons outside forms, `Math.PI`, template literals); no behaviour changes.
+  See CONTRIBUTING.md.
 - NAM capture -> captured-profile conversion is about 2.5x faster and uses half the memory
   (a real 23-layer capture: 57 s -> 22 s end to end on an M-series Mac, peak RAM 3.7 GB ->
   1.9 GB). The WaveNet pass now runs in cache-sized time blocks with 4-wide channel sums

@@ -24,7 +24,17 @@ const NO_SLOT = 0xff;
 /** Section tags: 0x10000000 on the device, 0x10000002 in .prst files. */
 const TAGS = [0x10000000, 0x10000002];
 const PRST_TAG = 0x10000002;
-const LAYOUT: readonly (readonly [id: number, size: number])[] = [[0, 11], [1, 105], [2, 10], [3, 15], [4, 76], [5, 742], [7, 95], [8, 69], [9, 12]];
+const LAYOUT: readonly (readonly [id: number, size: number])[] = [
+  [0, 11],
+  [1, 105],
+  [2, 10],
+  [3, 15],
+  [4, 76],
+  [5, 742],
+  [7, 95],
+  [8, 69],
+  [9, 12],
+];
 
 export interface MbSection {
   readonly tag: number;

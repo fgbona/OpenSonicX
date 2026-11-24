@@ -1,8 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  authorizeUrl, downloadModel, exchangeCode, listModels, pkcePair, pollDeviceToken, refreshTokens, searchTones, startDeviceLogin, TONE3000_API,
-} from '../src/tone3000.ts';
+import { authorizeUrl, downloadModel, exchangeCode, listModels, pkcePair, pollDeviceToken, refreshTokens, searchTones, startDeviceLogin, TONE3000_API } from '../src/tone3000.ts';
 
 type Call = { url: string; method: string; headers: Record<string, string>; body: string | null };
 
@@ -27,12 +25,21 @@ test('PKCE: the challenge is the base64url SHA-256 of the verifier, and the auth
   const url = new URL(authorizeUrl({ clientId: 'pk', redirectUri: 'http://localhost:3000/tone3000', challenge, state: 's1', prompt: 'select_tone' }));
   assert.equal(url.origin + url.pathname, `${TONE3000_API}/oauth/authorize`);
   assert.deepEqual(Object.fromEntries(url.searchParams), {
-    client_id: 'pk', redirect_uri: 'http://localhost:3000/tone3000', response_type: 'code', code_challenge: challenge, code_challenge_method: 'S256', state: 's1', prompt: 'select_tone',
+    client_id: 'pk',
+    redirect_uri: 'http://localhost:3000/tone3000',
+    response_type: 'code',
+    code_challenge: challenge,
+    code_challenge_method: 'S256',
+    state: 's1',
+    prompt: 'select_tone',
   });
 });
 
 test('the code and refresh exchanges post the documented form fields and return expiring tokens', async () => {
-  const f = fakeFetch([[200, tokenJson], [200, { ...tokenJson, access_token: 'AT2' }]]);
+  const f = fakeFetch([
+    [200, tokenJson],
+    [200, { ...tokenJson, access_token: 'AT2' }],
+  ]);
   const now = () => 1_000_000;
   const t = await exchangeCode({ clientId: 'pk', code: 'C', verifier: 'V', redirectUri: 'http://x/cb' }, f.fetch, now);
   assert.deepEqual(t, { accessToken: 'AT', refreshToken: 'RT', expiresAt: 1_000_000 + 3600_000 });
@@ -45,7 +52,17 @@ test('the code and refresh exchanges post the documented form fields and return 
 
 test('device login shows a code, then polling waits through pending and slow_down until approved', async () => {
   const f = fakeFetch([
-    [200, { device_code: 'D', user_code: 'ABCD-EFGH', verification_uri: 'https://www.tone3000.com/activate', verification_uri_complete: 'https://www.tone3000.com/activate?code=ABCD-EFGH', expires_in: 600, interval: 5 }],
+    [
+      200,
+      {
+        device_code: 'D',
+        user_code: 'ABCD-EFGH',
+        verification_uri: 'https://www.tone3000.com/activate',
+        verification_uri_complete: 'https://www.tone3000.com/activate?code=ABCD-EFGH',
+        expires_in: 600,
+        interval: 5,
+      },
+    ],
     [400, { error: 'authorization_pending' }],
     [400, { error: 'slow_down' }],
     [200, tokenJson],
@@ -71,36 +88,78 @@ test('an aborted device login stops polling without another request', async () =
   const start = { deviceCode: 'D', userCode: 'X', verificationUri: 'u', verificationUriComplete: 'u', expiresIn: 600, interval: 5 };
   const f = fakeFetch([[400, { error: 'authorization_pending' }]]);
   const ctrl = new AbortController();
-  const sleep = async () => { ctrl.abort(); };
+  const sleep = async () => {
+    ctrl.abort();
+  };
   await assert.rejects(pollDeviceToken({ clientId: 'pk', start, signal: ctrl.signal }, f.fetch, { sleep, now: () => 0 }), { name: 'AbortError' });
   assert.equal(f.calls.length, 0);
 });
 
 test('search sends the bearer token and documented filters and maps the tones', async () => {
-  const f = fakeFetch([[200, {
-    page: 1, page_size: 10, total: 1, total_pages: 1,
-    data: [{ id: 42, title: 'GK 250ML Lead', gear: 'amp', format: 'nam', makes: ['Gallien-Krueger'], user: { username: 'tonehead' }, models_count: 3, downloads_count: 99, url: 'https://www.tone3000.com/tones/gk-250ml-42', images: ['https://img/1.png'], description: 'Somewhere in Time' }],
-  }]]);
+  const f = fakeFetch([
+    [
+      200,
+      {
+        page: 1,
+        page_size: 10,
+        total: 1,
+        total_pages: 1,
+        data: [
+          {
+            id: 42,
+            title: 'GK 250ML Lead',
+            gear: 'amp',
+            format: 'nam',
+            makes: ['Gallien-Krueger'],
+            user: { username: 'tonehead' },
+            models_count: 3,
+            downloads_count: 99,
+            url: 'https://www.tone3000.com/tones/gk-250ml-42',
+            images: ['https://img/1.png'],
+            description: 'Somewhere in Time',
+          },
+        ],
+      },
+    ],
+  ]);
   const page = await searchTones('AT', { query: 'gallien krueger 250ml', format: 'nam', gears: ['amp', 'full-rig'] }, f.fetch);
   const url = new URL(f.calls[0]!.url);
   assert.equal(url.pathname, '/api/v1/tones/search');
   assert.deepEqual(Object.fromEntries(url.searchParams), { query: 'gallien krueger 250ml', format: 'nam', gears: 'amp_full-rig', page: '1', page_size: '10' });
   assert.equal(f.calls[0]!.headers.authorization, 'Bearer AT');
-  assert.deepEqual(page.tones[0], { id: 42, title: 'GK 250ML Lead', gear: 'amp', format: 'nam', makes: ['Gallien-Krueger'], creator: 'tonehead', modelsCount: 3, downloads: 99, url: 'https://www.tone3000.com/tones/gk-250ml-42', image: 'https://img/1.png', description: 'Somewhere in Time' });
+  assert.deepEqual(page.tones[0], {
+    id: 42,
+    title: 'GK 250ML Lead',
+    gear: 'amp',
+    format: 'nam',
+    makes: ['Gallien-Krueger'],
+    creator: 'tonehead',
+    modelsCount: 3,
+    downloads: 99,
+    url: 'https://www.tone3000.com/tones/gk-250ml-42',
+    image: 'https://img/1.png',
+    description: 'Somewhere in Time',
+  });
   assert.equal(page.total, 1);
 });
 
 test('models are listed per tone and a model downloads with the bearer token', async () => {
-  const f = fakeFetch([[200, { page: 1, page_size: 300, total: 1, total_pages: 1, data: [{ id: 7, name: 'Lead 5', size: 'standard', model_url: 'https://cdn.example/7.nam', architecture_version: '1' }] }], [200, new Uint8Array([1, 2, 3])]]);
+  const f = fakeFetch([
+    [200, { page: 1, page_size: 300, total: 1, total_pages: 1, data: [{ id: 7, name: 'Lead 5', size: 'standard', model_url: 'https://cdn.example/7.nam', architecture_version: '1' }] }],
+    [200, new Uint8Array([1, 2, 3])],
+  ]);
   const models = await listModels('AT', 42, f.fetch);
   assert.deepEqual(models, [{ id: 7, name: 'Lead 5', size: 'standard', url: 'https://cdn.example/7.nam', architecture: '1' }]);
   assert.match(f.calls[0]!.url, /\/models\?tone_id=42&page_size=300$/);
-  assert.deepEqual([...await downloadModel('AT', models[0]!.url, f.fetch)], [1, 2, 3]);
+  assert.deepEqual([...(await downloadModel('AT', models[0]!.url, f.fetch))], [1, 2, 3]);
   assert.equal(f.calls[1]!.headers.authorization, 'Bearer AT');
 });
 
 test('API errors become readable errors, and a lapsed token says to sign in again', async () => {
-  const f = fakeFetch([[401, { error: 'unauthorized' }], [429, { error: 'rate_limited' }]]);
+  const f = fakeFetch([
+    [401, { error: 'unauthorized' }],
+    [429, { error: 'rate_limited' }],
+  ]);
   await assert.rejects(searchTones('old', { query: 'x' }, f.fetch), /sign in to TONE3000 again/);
   await assert.rejects(searchTones('AT', { query: 'x' }, f.fetch), /TONE3000 is limiting requests/);
 });

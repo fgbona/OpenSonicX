@@ -10,9 +10,11 @@ export function syntheticDi(length = SYNTHETIC_DI_LENGTH): Float32Array {
   let x = 0x2545f491;
   const period = 88200; // two seconds
   for (let i = 0; i < length; i++) {
-    x ^= x << 13; x >>>= 0;
+    x ^= x << 13;
+    x >>>= 0;
     x ^= x >>> 17;
-    x ^= x << 5; x >>>= 0;
+    x ^= x << 5;
+    x >>>= 0;
     const noise = (x / 4294967296) * 2 - 1;
     const phase = i % period;
     const tri = phase < period / 2 ? phase / (period / 2) : 2 - phase / (period / 2);

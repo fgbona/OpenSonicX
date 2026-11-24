@@ -11,8 +11,17 @@ const loaded = (): readonly MbChainBlock[] => parseMbPreset(new FakeMatribox().e
 const values = (set: Record<number, number>) => Array.from({ length: 15 }, (_, i) => set[i] ?? 0);
 
 test('planTone checks a whole tone against the catalog and fills the defaults', () => {
-  const chain = planTone(catalog, [{ module: 'drv', model: 'fake fuzz', params: [{ name: 'Fuzz', value: 70 }] }, { module: 'DLY', model: 'Fake Echo', on: false }]);
-  assert.deepEqual(chain.map((b) => [b.moduleIndex, b.fxid, b.on]), [[3, 0x03000010, true], [9, 0x0b000001, false]]);
+  const chain = planTone(catalog, [
+    { module: 'drv', model: 'fake fuzz', params: [{ name: 'Fuzz', value: 70 }] },
+    { module: 'DLY', model: 'Fake Echo', on: false },
+  ]);
+  assert.deepEqual(
+    chain.map((b) => [b.moduleIndex, b.fxid, b.on]),
+    [
+      [3, 0x03000010, true],
+      [9, 0x0b000001, false],
+    ],
+  );
   assert.equal(chain[0]!.values[0], 70);
   assert.equal(chain[1]!.values[1], 20); // Time's default (its minimum)
   assert.throws(() => planTone(catalog, [{ module: 'DRV', model: 'Fake Plexi' }]), /No DRV model "Fake Plexi". Models: Fake Drive, Fake Fuzz/);
@@ -30,7 +39,10 @@ test('editChain applies small edits in order, naming blocks by position or modul
     { kind: 'add', module: 'DLY', model: 'Fake Echo', params: [{ name: 'Mix', value: 30 }] },
     { kind: 'model', block: 'AMP', model: 'Fake Plexi' },
   ]);
-  assert.deepEqual(chain.map((b) => b.moduleIndex), [10, 0, 3, 4, 5, 9]);
+  assert.deepEqual(
+    chain.map((b) => b.moduleIndex),
+    [10, 0, 3, 4, 5, 9],
+  );
   assert.deepEqual([chain[2]!.values[0], chain[2]!.on], [60, true]);
   assert.equal(chain[5]!.values[0], 30);
   assert.throws(() => editChain(catalog, loaded(), [{ kind: 'parameter', block: 'CAB', parameter: 'Volume', value: 1 }]), /unknown model/);
@@ -40,7 +52,10 @@ test('editChain applies small edits in order, naming blocks by position or modul
 test('transition: a knob or switch is one write, by chain position', () => {
   const now = loaded();
   const target = now.map((b, i) => (i === 1 ? { ...b, on: true, values: b.values.map((v, id) => (id === 0 ? 33 : v)) } : b));
-  assert.deepEqual(transition(catalog, now, target), [{ kind: 'param', position: 1, id: 0, value: 33 }, { kind: 'on', position: 1, on: true }]);
+  assert.deepEqual(transition(catalog, now, target), [
+    { kind: 'param', position: 1, id: 0, value: 33 },
+    { kind: 'on', position: 1, on: true },
+  ]);
   assert.deepEqual(transition(catalog, now, now), []);
 });
 
@@ -50,7 +65,9 @@ test('transition: one chain edit undoes another, and new blocks get every value'
   const added = [...now.slice(0, 2), echo, ...now.slice(2)];
   assert.deepEqual(transition(catalog, now, added), [
     { kind: 'add', position: 2, moduleIndex: 9, fxid: 0x0b000001 },
-    { kind: 'param', position: 2, id: 0, value: 30 }, { kind: 'param', position: 2, id: 1, value: 500 }, { kind: 'on', position: 2, on: true },
+    { kind: 'param', position: 2, id: 0, value: 30 },
+    { kind: 'param', position: 2, id: 1, value: 500 },
+    { kind: 'on', position: 2, on: true },
   ]);
   assert.deepEqual(transition(catalog, added, now), [{ kind: 'remove', position: 2 }]);
   const moved = [now[4]!, ...now.slice(0, 4), now[5]!];
@@ -58,17 +75,33 @@ test('transition: one chain edit undoes another, and new blocks get every value'
   const fuzz = now.map((b, i) => (i === 1 ? { moduleIndex: 3, fxid: 0x03000010, on: false, values: values({ 0: 80, 1: 40 }) } : b));
   assert.deepEqual(transition(catalog, now, fuzz), [
     { kind: 'model', position: 1, moduleIndex: 3, fxid: 0x03000010 },
-    { kind: 'param', position: 1, id: 0, value: 80 }, { kind: 'param', position: 1, id: 1, value: 40 }, { kind: 'on', position: 1, on: false },
+    { kind: 'param', position: 1, id: 0, value: 80 },
+    { kind: 'param', position: 1, id: 1, value: 40 },
+    { kind: 'on', position: 1, on: false },
   ]);
 });
 
 test('transition: anything else rebuilds the chain from the first block that differs', () => {
   const now = loaded();
-  const target = [now[0]!, ...planTone(catalog, [{ module: 'DLY', model: 'Fake Echo' }, { module: 'AMP', model: 'Fake Plexi' }])];
+  const target = [
+    now[0]!,
+    ...planTone(catalog, [
+      { module: 'DLY', model: 'Fake Echo' },
+      { module: 'AMP', model: 'Fake Plexi' },
+    ]),
+  ];
   const ops = transition(catalog, now, target);
-  assert.deepEqual(ops.filter((o) => o.kind === 'remove' || o.kind === 'add'), [
-    { kind: 'remove', position: 5 }, { kind: 'remove', position: 4 }, { kind: 'remove', position: 3 }, { kind: 'remove', position: 2 }, { kind: 'remove', position: 1 },
-    { kind: 'add', position: 1, moduleIndex: 9, fxid: 0x0b000001 }, { kind: 'add', position: 2, moduleIndex: 4, fxid: 0x0700001a },
-  ]);
+  assert.deepEqual(
+    ops.filter((o) => o.kind === 'remove' || o.kind === 'add'),
+    [
+      { kind: 'remove', position: 5 },
+      { kind: 'remove', position: 4 },
+      { kind: 'remove', position: 3 },
+      { kind: 'remove', position: 2 },
+      { kind: 'remove', position: 1 },
+      { kind: 'add', position: 1, moduleIndex: 9, fxid: 0x0b000001 },
+      { kind: 'add', position: 2, moduleIndex: 4, fxid: 0x0700001a },
+    ],
+  );
   assert.ok(!ops.some((o) => 'position' in o && o.position === 0)); // the gate stays as it is
 });

@@ -9,11 +9,17 @@ import { fromHex, toHex } from '../src/hex.ts';
 
 // Real host frames from capture 1 (cap3): set param, on/off, cmd 05, select.
 const HOST = readFileSync(new URL('./fixtures/matribox-capture.txt', import.meta.url), 'utf8')
-  .split('\n').filter((l) => l.startsWith('>>')).map((l) => fromHex(l.slice(3)));
+  .split('\n')
+  .filter((l) => l.startsWith('>>'))
+  .map((l) => fromHex(l.slice(3)));
 // Capture 2: the unit's echoes of the official editor's writes, decompressed, by name.
-const ECHOES = new Map(readFileSync(new URL('./fixtures/matribox-writes.txt', import.meta.url), 'utf8')
-  .split('\n').filter((l) => l && !l.startsWith('#'))
-  .map((l) => l.split(' ')).map(([name, flag, cmd, data]) => [name as string, { flag: Number(flag), cmd: parseInt(cmd as string, 16), data: data as string }]));
+const ECHOES = new Map(
+  readFileSync(new URL('./fixtures/matribox-writes.txt', import.meta.url), 'utf8')
+    .split('\n')
+    .filter((l) => l && !l.startsWith('#'))
+    .map((l) => l.split(' '))
+    .map(([name, flag, cmd, data]) => [name as string, { flag: Number(flag), cmd: parseInt(cmd as string, 16), data: data as string }]),
+);
 
 const echo = (name: string) => {
   const found = ECHOES.get(name);
@@ -29,7 +35,7 @@ function carried(frame: Uint8Array) {
   return { flag: message.flag, cmd: message.cmd, data: Buffer.from(message.data).toString('hex') };
 }
 
-test('set param, block on/off and select rebuild the official editor\'s frames byte for byte', () => {
+test("set param, block on/off and select rebuild the official editor's frames byte for byte", () => {
   assert.equal(toHex(mbSetParam(2, 0, 31)), toHex(HOST[2] as Uint8Array));
   assert.equal(toHex(mbSetBlockOn(1, false)), toHex(HOST[3] as Uint8Array));
   assert.equal(toHex(mbSelectPreset(0x42)), toHex(HOST[5] as Uint8Array));
@@ -49,15 +55,19 @@ test('set param, on/off and select match capture 2', () => {
 });
 
 // Captures 3 and 4: the official editor's own host frames for chain edits, by name.
-const CHAIN = new Map(readFileSync(new URL('./fixtures/matribox-chain-edits.txt', import.meta.url), 'utf8')
-  .split('\n').filter((l) => l && !l.startsWith('#')).map((l) => l.split(' ') as [string, string]));
+const CHAIN = new Map(
+  readFileSync(new URL('./fixtures/matribox-chain-edits.txt', import.meta.url), 'utf8')
+    .split('\n')
+    .filter((l) => l && !l.startsWith('#'))
+    .map((l) => l.split(' ') as [string, string]),
+);
 const chainFrame = (name: string) => {
   const hex = CHAIN.get(name);
   assert.ok(hex, `fixture has ${name}`);
   return toHex(fromHex(hex));
 };
 
-test('chain edits rebuild the official editor\'s host frames byte for byte', () => {
+test("chain edits rebuild the official editor's host frames byte for byte", () => {
   assert.equal(toHex(mbChangeModel(0, 3, 0x03000000)), chainFrame('model-drv-skreamer'));
   assert.equal(toHex(mbChangeModel(0, 3, 0x0300000a)), chainFrame('model-drv-full-od'));
   assert.equal(toHex(mbAddBlock(1, 9, 0x0b000001)), chainFrame('add-dly-at-1'));
@@ -82,7 +92,12 @@ test('the builders refuse what the unit cannot hold', () => {
 });
 
 // The owner's unit: preset 66 "Drive AD" (decompressed device reply, 1211 bytes).
-const DRIVE_AD = fromHex(readFileSync(new URL('./fixtures/matribox-preset-drive-ad.txt', import.meta.url), 'utf8').split('\n').filter((l) => l && !l.startsWith('#')).join(''));
+const DRIVE_AD = fromHex(
+  readFileSync(new URL('./fixtures/matribox-preset-drive-ad.txt', import.meta.url), 'utf8')
+    .split('\n')
+    .filter((l) => l && !l.startsWith('#'))
+    .join(''),
+);
 const PRST_TAG = [0x02, 0x00, 0x00, 0x10];
 
 test('mbWritePreset: flag 2, cmd 10, u32 index + the 1207-byte body with the .prst section tags, paged', () => {

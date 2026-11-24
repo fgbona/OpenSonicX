@@ -18,7 +18,9 @@ export function PresetLibrary({ disabled, onLoad }: Props) {
   return (
     <section className="panel" aria-label={t('library.title')}>
       <header className="panel-head">
-        <h2>{t('library.title')} <span className="muted">{library.length}</span></h2>
+        <h2>
+          {t('library.title')} <span className="muted">{library.length}</span>
+        </h2>
       </header>
       {library.length === 0 ? (
         <p className="muted small panel-empty">{t('library.empty')}</p>
@@ -28,10 +30,17 @@ export function PresetLibrary({ disabled, onLoad }: Props) {
             const name = f.name || t('presetFile.unnamed');
             return (
               <li key={`${f.createdAt}-${f.name}`}>
-                <span className="library-name">{name}{f.notes ? <span className="muted small"> · {f.notes}</span> : null}</span>
+                <span className="library-name">
+                  {name}
+                  {f.notes ? <span className="muted small"> · {f.notes}</span> : null}
+                </span>
                 <span className="muted small">{when(f.createdAt, lang)}</span>
-                <button type="button" className="btn btn-small" disabled={disabled} onClick={() => onLoad(f)} aria-label={t('library.loadAria', { name })}>{t('library.load')}</button>
-                <button type="button" className="btn btn-small" onClick={() => removeFromLibrary(f)} aria-label={t('library.removeAria', { name })}>{t('library.remove')}</button>
+                <button type="button" className="btn btn-small" disabled={disabled} onClick={() => onLoad(f)} aria-label={t('library.loadAria', { name })}>
+                  {t('library.load')}
+                </button>
+                <button type="button" className="btn btn-small" onClick={() => removeFromLibrary(f)} aria-label={t('library.removeAria', { name })}>
+                  {t('library.remove')}
+                </button>
               </li>
             );
           })}

@@ -11,13 +11,30 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { decodeCurrentPreset, decodeFirmware, decodePreset, diffPresets, isReadOnly, presetLabel, readStoredPreset, parseFrame, PocketMasterLink, Query, queryFrame, toHex, type QueryKind } from '@pocket-master/core';
+import {
+  decodeCurrentPreset,
+  decodeFirmware,
+  decodePreset,
+  diffPresets,
+  isReadOnly,
+  presetLabel,
+  readStoredPreset,
+  parseFrame,
+  PocketMasterLink,
+  Query,
+  queryFrame,
+  toHex,
+  type QueryKind,
+} from '@pocket-master/core';
 
 const PORT_NAME = /pocket\s*master|smart\s*box/i;
 const QUIET_MS = 3000;
 const SCAN_WAIT_MS = 600;
 /** The tested firmware's bytes in either order (the globals reply stores 03 03 01). */
-const TESTED = [[1, 3, 3], [3, 3, 1]];
+const TESTED = [
+  [1, 3, 3],
+  [3, 3, 1],
+];
 
 /** Places in a reply that could hold a firmware version: "x.y.z" text or the tested version's bytes. */
 export function versionCandidates(payload: Uint8Array): string[] {
@@ -42,7 +59,10 @@ async function main(scan: boolean) {
     return i;
   };
   const lines: string[] = [];
-  const say = (line: string) => { console.log(line); lines.push(line); };
+  const say = (line: string) => {
+    console.log(line);
+    lines.push(line);
+  };
   let receiver: ((bytes: Uint8Array) => void) | null = null;
   input.ignoreTypes(false, true, true);
   input.on('messageBuffer', (_t: number, m: Buffer) => receiver?.(new Uint8Array(m)));
@@ -61,7 +81,15 @@ async function main(scan: boolean) {
     say(`Quiet port check: ${stray} unsolicited message(s) in ${QUIET_MS / 1000} s${stray ? ' - close other editors (SonicMaster, browser tabs) and run again' : ''}`);
     if (stray) return;
 
-    const link = new PocketMasterLink({ send, listen: (r) => void (receiver = r) }, (e) => lines.push(`${e.dir} ${e.hex}${e.note ? `  (${e.note})` : ''}`));
+    const link = new PocketMasterLink(
+      {
+        send,
+        listen: (r) => {
+          receiver = r;
+        },
+      },
+      (e) => lines.push(`${e.dir} ${e.hex}${e.note ? `  (${e.note})` : ''}`),
+    );
     for (const [name, kind] of Object.entries(Query)) {
       if (kind === Query.STORED_PRESET) continue; // needs an index: checked below
       try {
@@ -83,7 +111,9 @@ async function main(scan: boolean) {
       const modified = (await link.request(Query.MODIFIED)).payload[2] === 1;
       const stored = await readStoredPreset(link, index);
       const same = diffPresets(stored.preset, buffer).length === 0;
-      say(`STORED_PRESET ${presetLabel(index)} "${stored.name}": ${stored.payload.length} bytes, ${same ? 'same as the edit buffer' : 'DIFFERS from the edit buffer'}${modified ? ' (the preset has unsaved edits, so a difference is expected)' : ''}`);
+      say(
+        `STORED_PRESET ${presetLabel(index)} "${stored.name}": ${stored.payload.length} bytes, ${same ? 'same as the edit buffer' : 'DIFFERS from the edit buffer'}${modified ? ' (the preset has unsaved edits, so a difference is expected)' : ''}`,
+      );
     } catch (error) {
       say(`STORED_PRESET: failed (${(error as Error).message})`);
     }
@@ -102,7 +132,11 @@ async function main(scan: boolean) {
         for (const bytes of replies) {
           lines.push(`RX ${toHex(bytes)}`);
           let payload = bytes;
-          try { payload = parseFrame(bytes).payload; } catch { /* keep the raw bytes */ }
+          try {
+            payload = parseFrame(bytes).payload;
+          } catch {
+            /* keep the raw bytes */
+          }
           const hits = versionCandidates(payload);
           say(`scan 12 ${kind.toString(16).padStart(2, '0')}: reply of ${payload.length} bytes${hits.length ? ` - VERSION? ${hits.join('; ')}` : ''}`);
         }

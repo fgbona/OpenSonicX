@@ -29,7 +29,13 @@ test('backupAllSlots reads the 50 user slots and puts the edits back on the load
   const file = await backupAllSlots(pedal, { edited: mine });
   assert.equal(file.kind, 'session');
   assert.equal(file.slots.length, 50);
-  assert.deepEqual(file.slots.slice(0, 2).map((s) => [s.label, s.name]), [['P01', 'MTL-CLEAN'], ['P02', 'MTL-RHY']]);
+  assert.deepEqual(
+    file.slots.slice(0, 2).map((s) => [s.label, s.name]),
+    [
+      ['P01', 'MTL-CLEAN'],
+      ['P02', 'MTL-RHY'],
+    ],
+  );
   file.slots.forEach((s) => assert.equal(slotPreset(file, s.index).volume, s.index, `slot ${s.label}`));
   assert.equal(pedal.current, 8, 'back on the original preset');
   assert.ok(same(decodePreset(pedal.editBuffer), mine), 'edits restored in the edit buffer');
@@ -46,7 +52,11 @@ test('saveToSlot backs up the target slot first, saves, and verifies', async () 
   const before = pedal.slots[2]!.slice();
   const backups: BackupFile[] = [];
   const result = await saveToSlot(pedal, { target: 2, name: 'My Lead', edited: mine, onBackup: (f) => backups.push(f) });
-  assert.deepEqual(backups.map((b) => b.kind), ['slot'], 'only the target slot is backed up');
+  assert.deepEqual(
+    backups.map((b) => b.kind),
+    ['slot'],
+    'only the target slot is backed up',
+  );
   assert.deepEqual(fromHex(backups[0]!.slots[0]!.payload), before, 'target backup is the old slot content');
   assert.equal(backups[0]!.slots[0]!.name, 'MTL-LEAD');
   assert.ok(same(decodePreset(pedal.slots[2]!), mine), 'slot holds the edited preset');
@@ -75,7 +85,11 @@ test('a missing acknowledge fails the save', async () => {
 });
 
 test('a factory target or a bad name is refused before anything is sent', async () => {
-  for (const [target, name] of [[50, 'x'], [2, 'Way too long'], [2, '']] as const) {
+  for (const [target, name] of [
+    [50, 'x'],
+    [2, 'Way too long'],
+    [2, ''],
+  ] as const) {
     const pedal = new FakePedal();
     await assert.rejects(saveToSlot(pedal, { target, name, edited: null }));
     assert.deepEqual(pedal.received, [], `nothing sent for ${target} "${name}"`);
@@ -168,14 +182,33 @@ test('saveToSlot waits for the backup to be stored and does not save when storin
   const pedal = new FakePedal();
   const old = pedal.slots[2]!.slice();
   let stored = false;
-  await saveToSlot(pedal, { target: 2, name: 'OK', edited: null, onBackup: async () => { await new Promise((r) => setImmediate(r)); stored = true; } });
+  await saveToSlot(pedal, {
+    target: 2,
+    name: 'OK',
+    edited: null,
+    onBackup: async () => {
+      await new Promise((r) => setImmediate(r));
+      stored = true;
+    },
+  });
   assert.equal(stored, true);
   const failing = new FakePedal();
   await assert.rejects(
-    saveToSlot(failing, { target: 2, name: 'NOPE', edited: null, onBackup: async () => { throw new Error('disk full'); } }),
+    saveToSlot(failing, {
+      target: 2,
+      name: 'NOPE',
+      edited: null,
+      onBackup: async () => {
+        throw new Error('disk full');
+      },
+    }),
     /disk full/,
   );
-  assert.equal(failing.received.some((r) => r.startsWith('save')), false, 'nothing saved without a stored backup');
+  assert.equal(
+    failing.received.some((r) => r.startsWith('save')),
+    false,
+    'nothing saved without a stored backup',
+  );
   assert.deepEqual(failing.slots[2], old);
 });
 
@@ -218,7 +251,10 @@ test('restoreAllFromBackup puts every slot back, with no backup first, and retur
   const stored = () => pedal.received.filter((r) => r.startsWith('stored')).length;
   const readsBefore = stored();
   const result = await restoreAllFromBackup(pedal, before, { onBackup: (f) => kept.push(f), pause: async () => {}, onProgress: (p) => progress.push(p.done / p.total) });
-  assert.ok(progress.every((v, i) => i === 0 || v >= progress[i - 1]!), 'one bar that never goes back');
+  assert.ok(
+    progress.every((v, i) => i === 0 || v >= progress[i - 1]!),
+    'one bar that never goes back',
+  );
   assert.equal(progress.at(-1), 1);
   assert.equal(result.restored, 50);
   pedal.slots.slice(0, 50).forEach((s, i) => assert.ok(same(decodePreset(s), decodePreset(Uint8Array.from(originals[i]!))), `P${i + 1}`));

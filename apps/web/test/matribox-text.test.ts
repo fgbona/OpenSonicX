@@ -36,12 +36,15 @@ test('the loaded preset: chain in signal order, each block with its gear, on/off
 
 test('what changed: order, models with their new values, switches and values, by block', () => {
   const before = preset();
-  const after = { ...before, chain: editChain(catalog, before.chain, [
-    { kind: 'parameter', block: 'AMP', parameter: 'Gain', value: 70 },
-    { kind: 'model', block: 'DRV', model: 'Fake Fuzz' },
-    { kind: 'block', block: 'RVB', on: false },
-    { kind: 'remove', block: 'VOL' },
-  ]).map((b, i) => ({ ...b, slot: i })) };
+  const after = {
+    ...before,
+    chain: editChain(catalog, before.chain, [
+      { kind: 'parameter', block: 'AMP', parameter: 'Gain', value: 70 },
+      { kind: 'model', block: 'DRV', model: 'Fake Fuzz' },
+      { kind: 'block', block: 'RVB', on: false },
+      { kind: 'remove', block: 'VOL' },
+    ]).map((b, i) => ({ ...b, slot: i })),
+  };
   assert.deepEqual(mbChanges(before, after, catalog, 'off'), [
     { what: 'order', from: 'DYN DRV AMP CAB RVB VOL', to: 'DYN DRV AMP CAB RVB' },
     { block: 'DRV', what: 'model', from: 'Fake Drive', to: 'Fake Fuzz' },

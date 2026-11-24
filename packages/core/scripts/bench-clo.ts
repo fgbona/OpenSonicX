@@ -29,20 +29,25 @@ function standardNam(): string {
   count += 1; // head scale
   let s = 0x12345678;
   const weights = Array.from({ length: count }, () => {
-    s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0;
+    s ^= s << 13;
+    s >>>= 0;
+    s ^= s >>> 17;
+    s ^= s << 5;
+    s >>>= 0;
     return ((s / 4294967296) * 2 - 1) * 0.3;
   });
   return JSON.stringify({ version: '0.5.4', architecture: 'WaveNet', config: { layers: arrays, head: null, head_scale: 0.02 }, weights });
 }
 
 const fixture = (name: string) => new URL(`../test/fixtures/clo/${name}`, import.meta.url);
-const cases: [string, string][] = process.argv.length > 2
-  ? process.argv.slice(2).map((p) => [basename(p), readFileSync(p, 'utf8')])
-  : [
-      ['ref_input.nam (fixture)', readFileSync(fixture('ref_input.nam'), 'utf8')],
-      ['synthetic_v070.nam (fixture)', readFileSync(fixture('synthetic_v070.nam'), 'utf8')],
-      ['standard WaveNet (synthetic weights)', standardNam()],
-    ];
+const cases: [string, string][] =
+  process.argv.length > 2
+    ? process.argv.slice(2).map((p) => [basename(p), readFileSync(p, 'utf8')])
+    : [
+        ['ref_input.nam (fixture)', readFileSync(fixture('ref_input.nam'), 'utf8')],
+        ['synthetic_v070.nam (fixture)', readFileSync(fixture('synthetic_v070.nam'), 'utf8')],
+        ['standard WaveNet (synthetic weights)', standardNam()],
+      ];
 
 const time = <T>(f: () => T): [T, number] => {
   const t0 = performance.now();

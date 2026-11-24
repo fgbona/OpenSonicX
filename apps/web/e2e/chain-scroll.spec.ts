@@ -8,7 +8,9 @@ test.describe('a narrow screen with a mouse', () => {
     const strip = page.locator('.tiles');
     await page.getByRole('button', { name: 'Show later blocks' }).click();
     await expect.poll(() => strip.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
-    await strip.evaluate((el) => { el.scrollLeft = 0; });
+    await strip.evaluate((el) => {
+      el.scrollLeft = 0;
+    });
     await strip.hover();
     await page.mouse.wheel(0, 300);
     await expect.poll(() => strip.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);

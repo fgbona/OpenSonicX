@@ -42,7 +42,7 @@ export function useStripScroll<T extends HTMLElement>(deps: readonly unknown[]):
       el.removeEventListener('wheel', wheel);
       resize.disconnect();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // biome-ignore lint/correctness/useExhaustiveDependencies: the caller passes the list of values that change the strip's content
   }, deps);
 
   const page = (direction: -1 | 1) => {

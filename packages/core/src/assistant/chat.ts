@@ -69,30 +69,79 @@ const kind = (k: string): JsonSchema => ({ type: 'string', const: k });
 
 const CHANGE: JsonSchema = {
   oneOf: [
-    object({
-      kind: kind('parameter'), block: BLOCK,
-      parameter: { type: 'string', description: 'Parameter name of the block\'s current model, as get_preset shows it (e.g. "Gain")' },
-      value: { type: ['number', 'boolean', 'string'], description: 'A number in the parameter\'s range, true/false for a switch, or an option name' },
-    }, ['kind', 'block', 'parameter', 'value']),
+    object(
+      {
+        kind: kind('parameter'),
+        block: BLOCK,
+        parameter: { type: 'string', description: 'Parameter name of the block\'s current model, as get_preset shows it (e.g. "Gain")' },
+        value: { type: ['number', 'boolean', 'string'], description: "A number in the parameter's range, true/false for a switch, or an option name" },
+      },
+      ['kind', 'block', 'parameter', 'value'],
+    ),
     object({ kind: kind('block'), block: BLOCK, on: { type: 'boolean' } }, ['kind', 'block', 'on']),
-    object({ kind: kind('model'), block: BLOCK, model: { type: 'string', description: 'Model name from list_models; for AMP, a captured profile name selects clone mode' } }, ['kind', 'block', 'model']),
+    object({ kind: kind('model'), block: BLOCK, model: { type: 'string', description: 'Model name from list_models; for AMP, a captured profile name selects clone mode' } }, [
+      'kind',
+      'block',
+      'model',
+    ]),
     object({ kind: kind('move'), block: BLOCK, position: { type: 'integer', description: '1-based position in the chain; DRV, AMP, IR and EQ move together' } }, ['kind', 'block', 'position']),
     object({ kind: kind('volume'), value: { type: 'integer', minimum: 0, maximum: 100, description: 'Preset volume 0..100' } }, ['kind', 'value']),
   ],
 };
 
 export const CHAT_TOOLS: readonly ChatTool[] = [
-  { name: 'get_preset', description: 'The preset loaded on the pedal: name, volume, amp mode, unsaved-changes flag, chain order and every block with its model, on/off state and parameter values.', parameters: NONE },
+  {
+    name: 'get_preset',
+    description: 'The preset loaded on the pedal: name, volume, amp mode, unsaved-changes flag, chain order and every block with its model, on/off state and parameter values.',
+    parameters: NONE,
+  },
   { name: 'list_presets', description: 'Names of all 100 presets (P01..P50 user, F01..F50 factory).', parameters: NONE },
-  { name: 'list_models', description: 'Every model a block can use (or, without block, of every block), with the real gear it is based on, a short description and its parameters with ranges. The first message already lists them all; call it only if you need them again.', parameters: object({ block: BLOCK }, []) },
-  { name: 'edit_preset', description: 'Changes the sound right away, in the edit buffer only (nothing is saved). Changes apply in order and are all checked before any is sent, so a model change can be followed by that model\'s parameters. Names are matched ignoring case; an unknown or ambiguous name fails with the valid choices. Returns the preset as it now is.', parameters: object({ changes: { type: 'array', items: CHANGE } }, ['changes']) },
-  { name: 'undo_edit', description: 'Undoes the last change to the sound (the editor\'s Undo, also the person\'s own knob turns). Call it again to go further back. Nothing is saved.', parameters: NONE },
+  {
+    name: 'list_models',
+    description:
+      'Every model a block can use (or, without block, of every block), with the real gear it is based on, a short description and its parameters with ranges. The first message already lists them all; call it only if you need them again.',
+    parameters: object({ block: BLOCK }, []),
+  },
+  {
+    name: 'edit_preset',
+    description:
+      "Changes the sound right away, in the edit buffer only (nothing is saved). Changes apply in order and are all checked before any is sent, so a model change can be followed by that model's parameters. Names are matched ignoring case; an unknown or ambiguous name fails with the valid choices. Returns the preset as it now is.",
+    parameters: object({ changes: { type: 'array', items: CHANGE } }, ['changes']),
+  },
+  {
+    name: 'undo_edit',
+    description: "Undoes the last change to the sound (the editor's Undo, also the person's own knob turns). Call it again to go further back. Nothing is saved.",
+    parameters: NONE,
+  },
   { name: 'revert_preset', description: 'Reloads the loaded preset from its slot, discarding every unsaved change.', parameters: NONE },
-  { name: 'select_preset', description: 'Loads a preset, like turning the preset knob. If the current one has unsaved changes the editor asks the person first.', parameters: object({ preset: SLOT }, ['preset']) },
-  { name: 'list_saved_tones', description: 'Tones the person kept in the editor\'s library, with the reference each one matches. The first message already lists them.', parameters: NONE },
-  { name: 'load_saved_tone', description: 'Loads a kept tone into the edit buffer, by its name. Prefer it to rebuilding when a kept tone matches the request: it is exact and costs no extra requests.', parameters: object({ name: { type: 'string', description: 'Name of a kept tone, as list_saved_tones shows it' } }, ['name']) },
-  { name: 'keep_tone', description: 'Keeps the sound as it is now in the editor\'s library, so it loads at once next time. Offer it when the person says a tone sounds right; nothing is written to the pedal.', parameters: object({ name: { type: 'string', description: 'Short name, 1..10 printable ASCII characters (like a preset name)' }, notes: { type: 'string', description: 'The reference it matches, e.g. "Metallica, Black Album, rhythm"' } }, ['name', 'notes']) },
-  { name: 'save_preset', description: 'Proposes saving the sound to a user slot (P01..P50) under a name: the editor opens its Save dialog filled in, backs the slot up and saves only if the person confirms. Only when the person asked to save.', parameters: object({ slot: SLOT, name: { type: 'string', description: 'Preset name, 1..10 printable ASCII characters' } }, ['slot', 'name']) },
+  {
+    name: 'select_preset',
+    description: 'Loads a preset, like turning the preset knob. If the current one has unsaved changes the editor asks the person first.',
+    parameters: object({ preset: SLOT }, ['preset']),
+  },
+  { name: 'list_saved_tones', description: "Tones the person kept in the editor's library, with the reference each one matches. The first message already lists them.", parameters: NONE },
+  {
+    name: 'load_saved_tone',
+    description: 'Loads a kept tone into the edit buffer, by its name. Prefer it to rebuilding when a kept tone matches the request: it is exact and costs no extra requests.',
+    parameters: object({ name: { type: 'string', description: 'Name of a kept tone, as list_saved_tones shows it' } }, ['name']),
+  },
+  {
+    name: 'keep_tone',
+    description: "Keeps the sound as it is now in the editor's library, so it loads at once next time. Offer it when the person says a tone sounds right; nothing is written to the pedal.",
+    parameters: object(
+      {
+        name: { type: 'string', description: 'Short name, 1..10 printable ASCII characters (like a preset name)' },
+        notes: { type: 'string', description: 'The reference it matches, e.g. "Metallica, Black Album, rhythm"' },
+      },
+      ['name', 'notes'],
+    ),
+  },
+  {
+    name: 'save_preset',
+    description:
+      'Proposes saving the sound to a user slot (P01..P50) under a name: the editor opens its Save dialog filled in, backs the slot up and saves only if the person confirms. Only when the person asked to save.',
+    parameters: object({ slot: SLOT, name: { type: 'string', description: 'Preset name, 1..10 printable ASCII characters' } }, ['slot', 'name']),
+  },
 ];
 
 export const CHAT_INSTRUCTIONS = [
@@ -111,7 +160,7 @@ export const CHAT_INSTRUCTIONS = [
  * more thought about the reference, and a fuller explanation.
  */
 export const CHAT_INSTRUCTIONS_THOROUGH = [
-  'You have room to be thorough. Before choosing, recall the reference recording\'s actual rig: guitar and pickups, amp and channel, cabinet and speakers, pedals and their order, tuning, and how it was recorded; then match each block to it, including the effects (on or off) and their settings.',
+  "You have room to be thorough. Before choosing, recall the reference recording's actual rig: guitar and pickups, amp and channel, cabinet and speakers, pedals and their order, tuning, and how it was recorded; then match each block to it, including the effects (on or off) and their settings.",
   'Explain your choices in four to six sentences, naming the real gear each model stands for, and say what to try first if it does not sound right.',
 ].join(' ');
 
@@ -187,7 +236,10 @@ async function run(host: ToneHost, name: string, args: Record<string, unknown>, 
   if (guard && CHANGES_SOUND.has(name)) {
     const s = host.snapshot();
     if (s.index !== guard.index) {
-      return { ok: false, text: `Error: the preset changed to ${presetLabel(s.index)} "${s.name}" while you were working (the person loaded it). Call get_preset and check the request still applies before changing anything.` };
+      return {
+        ok: false,
+        text: `Error: the preset changed to ${presetLabel(s.index)} "${s.name}" while you were working (the person loaded it). Call get_preset and check the request still applies before changing anything.`,
+      };
     }
   }
   switch (name) {
@@ -197,7 +249,12 @@ async function run(host: ToneHost, name: string, args: Record<string, unknown>, 
       return done(preset(s));
     }
     case 'list_presets':
-      return done(host.snapshot().names.map((n, i) => `${presetLabel(i)} ${n}`).join('\n'));
+      return done(
+        host
+          .snapshot()
+          .names.map((n, i) => `${presetLabel(i)} ${n}`)
+          .join('\n'),
+      );
     case 'list_models': {
       const s = host.snapshot();
       const label = str(args, 'block', true);
@@ -209,7 +266,10 @@ async function run(host: ToneHost, name: string, args: Record<string, unknown>, 
       const s = host.snapshot();
       // Every change is checked against the preset as the earlier ones leave it, before any is sent.
       const { edits } = args.changes.map(asChange).reduce(
-        (acc, change) => { const edit = toEdit(acc.preset, change, s.slots); return { preset: applyEdit(acc.preset, edit), edits: [...acc.edits, edit] }; },
+        (acc, change) => {
+          const edit = toEdit(acc.preset, change, s.slots);
+          return { preset: applyEdit(acc.preset, edit), edits: [...acc.edits, edit] };
+        },
         { preset: s.preset, edits: [] as Edit[] },
       );
       await host.applyEdits(edits);
@@ -238,9 +298,11 @@ async function run(host: ToneHost, name: string, args: Record<string, unknown>, 
       const presetName = (str(args, 'name') as string).trim();
       encodeName(presetName); // throws on a name the pedal cannot store
       const outcome = await host.proposeSave(index, presetName);
-      return done(outcome === 'saved'
-        ? `Saved to ${presetLabel(index)} as "${presetName}", confirmed by the person in the Save dialog (the slot was backed up first).`
-        : `The person closed the Save dialog: ${presetLabel(index)} was left as it was, so they did not save.`);
+      return done(
+        outcome === 'saved'
+          ? `Saved to ${presetLabel(index)} as "${presetName}", confirmed by the person in the Save dialog (the slot was backed up first).`
+          : `The person closed the Save dialog: ${presetLabel(index)} was left as it was, so they did not save.`,
+      );
     }
     case 'list_saved_tones':
       return done(host.savedTones ? savedTonesText(host) || 'No tones kept yet.' : NO_LIBRARY);

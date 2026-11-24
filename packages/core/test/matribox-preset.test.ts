@@ -2,27 +2,30 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parseMbCatalog } from '../src/matribox/catalog.ts';
-import {
-  MB_PRESET_BODY_SIZE,
-  MB_PRESET_SIZE,
-  mbPresetLabel,
-  parseMbPresetLabel,
-  parseMatriboxPrst,
-  parseMbPreset,
-  resolveMbPreset,
-  writeMatriboxPrst,
-} from '../src/matribox/preset.ts';
+import { MB_PRESET_BODY_SIZE, MB_PRESET_SIZE, mbPresetLabel, parseMbPresetLabel, parseMatriboxPrst, parseMbPreset, resolveMbPreset, writeMatriboxPrst } from '../src/matribox/preset.ts';
 import { lzo1xDecompress } from '../src/matribox/lzo1x.ts';
 import { fromHex } from '../src/hex.ts';
 
 // The owner's own unit: preset 66 "Drive AD", read with argument 0x43 (decompressed device reply).
 const DRIVE_AD = fromHex(
   readFileSync(new URL('./fixtures/matribox-preset-drive-ad.txt', import.meta.url), 'utf8')
-    .split('\n').filter((l) => l && !l.startsWith('#')).join(''),
+    .split('\n')
+    .filter((l) => l && !l.startsWith('#'))
+    .join(''),
 );
 
 // Section layout (id, body size) as every sample has it.
-const LAYOUT = [[0, 11], [1, 105], [2, 10], [3, 15], [4, 76], [5, 742], [7, 95], [8, 69], [9, 12]] as const;
+const LAYOUT = [
+  [0, 11],
+  [1, 105],
+  [2, 10],
+  [3, 15],
+  [4, 76],
+  [5, 742],
+  [7, 95],
+  [8, 69],
+  [9, 12],
+] as const;
 
 interface Synth {
   name?: string;
@@ -46,8 +49,14 @@ function body({ name = 'Synth', style = 'Pop', chain = [1, 0], types = [3, 4], f
     const b = at + 8;
     out.set([0, 0, id, 1], b);
     if (id === 1) {
-      out.set(Array.from(name, (c) => c.charCodeAt(0)), b + 8);
-      out.set(Array.from(style, (c) => c.charCodeAt(0)), b + 95);
+      out.set(
+        Array.from(name, (c) => c.charCodeAt(0)),
+        b + 8,
+      );
+      out.set(
+        Array.from(style, (c) => c.charCodeAt(0)),
+        b + 95,
+      );
     }
     if (id === 4) {
       out.fill(0xff, b + 4, b + 28);
@@ -91,27 +100,36 @@ test('parses the real device preset: number, name, style and chain in signal ord
   assert.equal(p.number, 0x43);
   assert.equal(p.name, 'Drive AD'); // stale "II PRO" after the NUL is ignored
   assert.equal(p.style, 'Rock');
-  assert.deepEqual(p.chain.map((b) => [b.slot, b.moduleIndex, b.fxid, b.on]), [
-    [1, 0, 0x0000001b, true],
-    [0, 3, 0x0300002a, false],
-    [2, 4, 0x0700001a, true],
-    [3, 5, 0x0a000006, true],
-    [4, 10, 0x0c00000b, true],
-    [5, 15, 0x06000003, true],
-  ]);
+  assert.deepEqual(
+    p.chain.map((b) => [b.slot, b.moduleIndex, b.fxid, b.on]),
+    [
+      [1, 0, 0x0000001b, true],
+      [0, 3, 0x0300002a, false],
+      [2, 4, 0x0700001a, true],
+      [3, 5, 0x0a000006, true],
+      [4, 10, 0x0c00000b, true],
+      [5, 15, 0x06000003, true],
+    ],
+  );
   assert.deepEqual(p.chain[1]?.values.slice(0, 3), [15, 50, 14]);
   assert.equal(p.chain[0]?.values.length, 15);
 });
 
 test('keeps every section raw, so a later writer can serialize the preset back byte for byte', () => {
   const p = parseMbPreset(DRIVE_AD);
-  assert.deepEqual(p.sections.map((s) => [s.id, s.body.length]), LAYOUT.map(([id, size]) => [id, size]));
-  const rebuilt = Uint8Array.from([...DRIVE_AD.subarray(0, 4), ...p.sections.flatMap((s) => {
-    const head = new Uint8Array(8);
-    new DataView(head.buffer).setUint32(0, s.tag, true);
-    new DataView(head.buffer).setUint32(4, s.body.length, true);
-    return [...head, ...s.body];
-  })]);
+  assert.deepEqual(
+    p.sections.map((s) => [s.id, s.body.length]),
+    LAYOUT.map(([id, size]) => [id, size]),
+  );
+  const rebuilt = Uint8Array.from([
+    ...DRIVE_AD.subarray(0, 4),
+    ...p.sections.flatMap((s) => {
+      const head = new Uint8Array(8);
+      new DataView(head.buffer).setUint32(0, s.tag, true);
+      new DataView(head.buffer).setUint32(4, s.body.length, true);
+      return [...head, ...s.body];
+    }),
+  ]);
   assert.deepEqual(rebuilt, DRIVE_AD);
 });
 
@@ -133,7 +151,10 @@ test('parseMatriboxPrst reads base64 of a JSON byte array holding a raw LZO1X st
   const p = parseMatriboxPrst(prstText(body({ name: 'From File', values: { 0: { 0: 7.5 } } })));
   assert.equal(p.name, 'From File');
   assert.equal(p.number, null);
-  assert.deepEqual(p.chain.map((b) => b.slot), [1, 0]);
+  assert.deepEqual(
+    p.chain.map((b) => b.slot),
+    [1, 0],
+  );
   assert.equal(p.chain[1]?.values[0], 7.5);
 });
 
@@ -163,18 +184,33 @@ test('rejects a chain that names a slot twice, a slot out of range or an unused 
   assert.throws(() => parseMbPreset(body({ chain: [0, 1], types: [3, 0xff] })), /no module/);
 });
 
-test('resolves names against the catalog, reading only the selected model\'s parameters', () => {
+test("resolves names against the catalog, reading only the selected model's parameters", () => {
   const p = parseMbPreset(body({ values: { 0: { 0: 41, 1: 999, 2: 60 }, 1: { 0: 7, 3: 8, 5: 20001 } } }));
   const r = resolveMbPreset(p, CATALOG);
   assert.equal(r.name, 'Synth');
-  assert.deepEqual(r.chain.map((b) => [b.position, b.slot, b.module, b.model?.name, b.on]), [
-    [1, 1, 'AMP', 'Fake Amp', false],
-    [2, 0, 'DRV', 'Fake Drive', true],
-  ]);
+  assert.deepEqual(
+    r.chain.map((b) => [b.position, b.slot, b.module, b.model?.name, b.on]),
+    [
+      [1, 1, 'AMP', 'Fake Amp', false],
+      [2, 0, 'DRV', 'Fake Drive', true],
+    ],
+  );
   assert.equal(r.chain[0]?.model?.origin, 'Imaginary Amp');
   // Stale values at positions the model does not use (999, 20001) are never shown.
-  assert.deepEqual(r.chain[0]?.params.map((x) => [x.name, x.value, x.min, x.max]), [['Gain', 7, 0, 100], ['Master', 8, 0, 100]]);
-  assert.deepEqual(r.chain[1]?.params.map((x) => [x.name, x.value]), [['Gain', 41], ['Level', 60]]);
+  assert.deepEqual(
+    r.chain[0]?.params.map((x) => [x.name, x.value, x.min, x.max]),
+    [
+      ['Gain', 7, 0, 100],
+      ['Master', 8, 0, 100],
+    ],
+  );
+  assert.deepEqual(
+    r.chain[1]?.params.map((x) => [x.name, x.value]),
+    [
+      ['Gain', 41],
+      ['Level', 60],
+    ],
+  );
   assert.ok(Object.isFrozen(r) && Object.isFrozen(r.chain[0]?.params));
 });
 
@@ -213,7 +249,10 @@ test('writeMatriboxPrst round-trips the real device preset: same sections, .prst
   const back = parseMatriboxPrst(text);
   assert.equal(back.number, null);
   assert.deepEqual([back.name, back.style, back.chain], [device.name, device.style, device.chain]);
-  assert.deepEqual(back.sections.map((s) => [s.id, s.tag, [...s.body]]), device.sections.map((s) => [s.id, 0x10000002, [...s.body]]));
+  assert.deepEqual(
+    back.sections.map((s) => [s.id, s.tag, [...s.body]]),
+    device.sections.map((s) => [s.id, 0x10000002, [...s.body]]),
+  );
   // The body is the device reply without its u32 number, with the .prst section tag.
   const expected = Uint8Array.from(DRIVE_AD.subarray(4));
   let at = 0;

@@ -56,7 +56,9 @@ export function SlotsPanel({ connected, busy, irNames, profileNames, exclusive, 
       {Array.from({ length: 5 }, (_, i) => (
         <li key={i} className={names?.[i] ? 'slot' : 'slot muted'}>
           <span className="slot-text">
-            <span><span className="slot-n">{i + 1}</span> {names?.[i] ?? t('slots.empty')}</span>
+            <span>
+              <span className="slot-n">{i + 1}</span> {names?.[i] ?? t('slots.empty')}
+            </span>
             {noteFor(notes, kind, i, names?.[i]) && <span className="slot-note">{noteFor(notes, kind, i, names?.[i])}</span>}
           </span>
           {names?.[i] && (
@@ -64,10 +66,26 @@ export function SlotsPanel({ connected, busy, irNames, profileNames, exclusive, 
               <button type="button" className="btn btn-small slot-rename" onClick={() => setNoting({ kind, slot: i, name: names[i]!, text: noteFor(notes, kind, i, names[i]) ?? '' })}>
                 {t('slots.note')}
               </button>
-              <button type="button" className="btn btn-small slot-rename" disabled={disabled} onClick={() => { setRenameTried(false); setRenaming({ kind, slot: i, name: names[i]! }); }}>
+              <button
+                type="button"
+                className="btn btn-small slot-rename"
+                disabled={disabled}
+                onClick={() => {
+                  setRenameTried(false);
+                  setRenaming({ kind, slot: i, name: names[i]! });
+                }}
+              >
                 {t('slots.rename')}
               </button>
-              <button type="button" className="btn btn-small slot-rename" disabled={disabled} onClick={() => { setDeleteTried(false); setDeleting({ kind, slot: i, name: names[i]! }); }}>
+              <button
+                type="button"
+                className="btn btn-small slot-rename"
+                disabled={disabled}
+                onClick={() => {
+                  setDeleteTried(false);
+                  setDeleting({ kind, slot: i, name: names[i]! });
+                }}
+              >
                 {t('slots.delete')}
               </button>
             </span>
@@ -79,7 +97,9 @@ export function SlotsPanel({ connected, busy, irNames, profileNames, exclusive, 
 
   return (
     <section className="panel" aria-label={t('slots.title')}>
-      <header className="panel-head"><h2>{t('slots.title')}</h2></header>
+      <header className="panel-head">
+        <h2>{t('slots.title')}</h2>
+      </header>
       <div className="slots-grid">
         <div>
           <div className="slots-head">
@@ -109,10 +129,18 @@ export function SlotsPanel({ connected, busy, irNames, profileNames, exclusive, 
               {t('install.name')}
               <input value={renaming.name} maxLength={NAME_MAX[renaming.kind]} onChange={(e) => setRenaming({ ...renaming, name: e.target.value.replace(/[^\x20-\x7e]/g, '') })} />
             </label>
-            {renameTried && !busy && error && <p className="alert" role="alert">{error}</p>}
+            {renameTried && !busy && error && (
+              <p className="alert" role="alert">
+                {error}
+              </p>
+            )}
             <div className="sheet-actions">
-              <button className="btn" onClick={() => setRenaming(null)} disabled={busy}>{t('action.cancel')}</button>
-              <button className="btn btn-primary" onClick={() => void rename()} disabled={busy || renaming.name.trim() === ''}>{t('slots.renameSubmit')}</button>
+              <button type="button" className="btn" onClick={() => setRenaming(null)} disabled={busy}>
+                {t('action.cancel')}
+              </button>
+              <button type="button" className="btn btn-primary" onClick={() => void rename()} disabled={busy || renaming.name.trim() === ''}>
+                {t('slots.renameSubmit')}
+              </button>
             </div>
           </>
         )}
@@ -121,25 +149,44 @@ export function SlotsPanel({ connected, busy, irNames, profileNames, exclusive, 
         {deleting && (
           <>
             <p>{t('slots.deleteNote')}</p>
-            {deleteTried && !busy && error && <p className="alert" role="alert">{error}</p>}
+            {deleteTried && !busy && error && (
+              <p className="alert" role="alert">
+                {error}
+              </p>
+            )}
             <div className="sheet-actions">
-              <button className="btn" onClick={() => setDeleting(null)} disabled={busy}>{t('action.cancel')}</button>
-              <button className="btn btn-danger" onClick={() => void remove()} disabled={busy}>{t('slots.deleteSubmit')}</button>
+              <button type="button" className="btn" onClick={() => setDeleting(null)} disabled={busy}>
+                {t('action.cancel')}
+              </button>
+              <button type="button" className="btn btn-danger" onClick={() => void remove()} disabled={busy}>
+                {t('slots.deleteSubmit')}
+              </button>
             </div>
           </>
         )}
       </Dialog>
       <Dialog open={noting !== null} title={noting ? t('slots.noteTitle', { name: noting.name }) : ''} onClose={() => setNoting(null)}>
         {noting && (
-          <form className="sheet-form" onSubmit={(e) => { e.preventDefault(); setSlotNote(noting.kind, noting.slot, noting.name, noting.text); setNoting(null); }}>
+          <form
+            className="sheet-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setSlotNote(noting.kind, noting.slot, noting.name, noting.text);
+              setNoting(null);
+            }}
+          >
             <label className="field">
               {t('slots.note')}
               <input value={noting.text} maxLength={NOTE_MAX} placeholder={t('slots.notePlaceholder')} autoFocus onChange={(e) => setNoting({ ...noting, text: e.target.value })} />
             </label>
             <p className="muted small">{t('slots.noteHint')}</p>
             <div className="sheet-actions">
-              <button type="button" className="btn" onClick={() => setNoting(null)}>{t('action.cancel')}</button>
-              <button type="submit" className="btn btn-primary">{t('slots.noteSave')}</button>
+              <button type="button" className="btn" onClick={() => setNoting(null)}>
+                {t('action.cancel')}
+              </button>
+              <button type="submit" className="btn btn-primary">
+                {t('slots.noteSave')}
+              </button>
             </div>
           </form>
         )}

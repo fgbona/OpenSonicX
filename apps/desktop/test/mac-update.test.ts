@@ -26,7 +26,10 @@ test('the app replaces itself only from a writable folder, never from a disk ima
   assert.equal(canReplace('/Applications/Pocket Master Editor.app', yes), true);
   assert.equal(canReplace('/Volumes/Pocket Master Editor/Pocket Master Editor.app', yes), false);
   assert.equal(canReplace('/private/var/folders/x/AppTranslocation/1/d/Pocket Master Editor.app', yes), false);
-  assert.equal(canReplace('/Applications/Pocket Master Editor.app', () => false), false);
+  assert.equal(
+    canReplace('/Applications/Pocket Master Editor.app', () => false),
+    false,
+  );
   assert.equal(canReplace('/usr/local/bin/node', yes), false);
 });
 

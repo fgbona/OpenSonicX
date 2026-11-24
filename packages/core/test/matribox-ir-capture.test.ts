@@ -16,7 +16,7 @@ import { fromHex, toHex } from '../src/hex.ts';
 const DIR = join(homedir(), '.pocket-master-editor', 'matribox');
 const CAPTURE = join(DIR, 'captures', 'mb-17-ir-upload.txt');
 const WAV = join(DIR, 'sources', 'MT2 MBoogie  Badlander 57.wav');
-const skip = existsSync(CAPTURE) && existsSync(WAV) ? false : 'needs the owner\'s IR upload capture (local only)';
+const skip = existsSync(CAPTURE) && existsSync(WAV) ? false : "needs the owner's IR upload capture (local only)";
 
 /** The 23 host frames of the upload: the write frames with a non-zero total length past one page. */
 function uploadFrames(): Uint8Array[] {

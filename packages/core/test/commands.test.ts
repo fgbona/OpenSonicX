@@ -1,9 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import {
-  setBlockOn, setAmpMode, selectModel, setParam, setChain, validateChain, isAllowedEdit, encodeValue,
-} from '../src/commands.ts';
+import { setBlockOn, setAmpMode, selectModel, setParam, setChain, validateChain, isAllowedEdit, encodeValue } from '../src/commands.ts';
 import { buildFrame } from '../src/frame.ts';
 import { queryFrame, Query } from '../src/queries.ts';
 import { catalog, CLONE_MODULE, type ParamSpec } from '../src/catalog.ts';
@@ -19,7 +17,11 @@ type Lib = {
 };
 const lib = JSON.parse(readFileSync(new URL('./fixtures/pocketedit-commands.json', import.meta.url), 'utf8')) as Lib;
 /** Capture notation is BLE-MIDI: drop the 80 80 timestamp, keep F0 … F7. */
-const capture = (h: string) => h.toUpperCase().replace(/^8080/, '').replace(/(..)(?!$)/g, '$1 ');
+const capture = (h: string) =>
+  h
+    .toUpperCase()
+    .replace(/^8080/, '')
+    .replace(/(..)(?!$)/g, '$1 ');
 const MODULE = Object.fromEntries(catalog.blocks.map((b) => [b.label, b.module]));
 
 test('setBlockOn matches every captured module on/off command', () => {

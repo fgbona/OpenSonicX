@@ -59,9 +59,7 @@ class Cursor {
   /** Conv1d weights: PyTorch flatten [out][in][k], then bias[out]. */
   conv1d(cin: number, cout: number, ks: number, bias: boolean): [Float64Array[][], Float64Array] {
     const raw = this.take(cout * cin * ks);
-    const kernels = Array.from({ length: ks }, (_, k) =>
-      Array.from({ length: cout }, (_, o) => Float64Array.from({ length: cin }, (_, i) => raw[(o * cin + i) * ks + k]!)),
-    );
+    const kernels = Array.from({ length: ks }, (_, k) => Array.from({ length: cout }, (_, o) => Float64Array.from({ length: cin }, (_, i) => raw[(o * cin + i) * ks + k]!)));
     return [kernels, bias ? this.take(cout) : new Float64Array(cout)];
   }
   /** Conv1x1: row-major (out, in), then bias[out]. */
@@ -78,8 +76,15 @@ class Cursor {
 const featureActive = (v: unknown): boolean => (v !== null && typeof v === 'object' && !Array.isArray(v) ? (v as Json).active === true : v !== undefined && v !== null);
 
 const FILM_KEYS = [
-  'conv_pre_film', 'conv_post_film', 'input_mixin_pre_film', 'input_mixin_post_film', 'activation_pre_film',
-  'activation_post_film', 'layer1x1_post_film', 'head1x1_post_film', 'film_params',
+  'conv_pre_film',
+  'conv_post_film',
+  'input_mixin_pre_film',
+  'input_mixin_post_film',
+  'activation_pre_film',
+  'activation_post_film',
+  'layer1x1_post_film',
+  'head1x1_post_film',
+  'film_params',
 ];
 
 function assertSupported(la: Json): void {
@@ -153,13 +158,12 @@ export function parseNam(text: string): Wavenet {
     const conditionSize = num(la, 'condition_size');
     const channels = num(la, 'channels');
     const dilations = (la.dilations as unknown[]).map((d) => Math.trunc(Number(d)));
-    const kernels = Array.isArray(la.kernel_sizes)
-      ? (la.kernel_sizes as unknown[]).map((k) => Math.trunc(Number(k)))
-      : dilations.map(() => num(la, 'kernel_size'));
+    const kernels = Array.isArray(la.kernel_sizes) ? (la.kernel_sizes as unknown[]).map((k) => Math.trunc(Number(k))) : dilations.map(() => num(la, 'kernel_size'));
     const head = la.head;
-    const [headOut, headKs, headBias] = head && typeof head === 'object'
-      ? [num(head as Json, 'out_channels'), num(head as Json, 'kernel_size'), ((head as Json).bias as boolean | undefined) ?? true]
-      : [num(la, 'head_size'), 1, (la.head_bias as boolean | undefined) ?? false];
+    const [headOut, headKs, headBias] =
+      head && typeof head === 'object'
+        ? [num(head as Json, 'out_channels'), num(head as Json, 'kernel_size'), ((head as Json).bias as boolean | undefined) ?? true]
+        : [num(la, 'head_size'), 1, (la.head_bias as boolean | undefined) ?? false];
     const acts = layerActs(la, dilations.length);
     const [rechannelW] = cur.conv1x1(inputSize, channels, false);
     const layers = dilations.map((dilation, li): WavenetLayer => {

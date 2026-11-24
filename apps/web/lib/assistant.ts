@@ -175,19 +175,21 @@ export type Cooldown = Readonly<Partial<Record<AiModel, Date>>>;
  * Sends the message to the first model with a key that is not cooling down; a used-up quota moves
  * on to the next model, a refused key to the next provider. Any other error stops: the person sees it.
  */
-export async function ask(options: Omit<ConverseOptions, 'key' | 'model' | 'onRequest' | 'onLimits'> & {
-  readonly keys: Readonly<Partial<Record<Provider, string>>>;
-  readonly cooldown: Cooldown;
-  readonly converse: Readonly<Partial<Record<AiModel, Converse>>>;
-  /** The models to try, in order; the free ones when not given. */
-  readonly route?: readonly AiModel[];
-  readonly onRequest: (model: AiModel) => void;
-  readonly onLimits?: (model: AiModel, remaining: number, limit: number) => void;
-  /** Each request's token usage, by the model that made it (and its cost, when the provider says). */
-  readonly onModelUsage?: (model: AiModel, input: number, output: number, cost?: number) => void;
-  /** Called with the pauses as soon as one changes, so they survive any error. */
-  readonly onCooldown?: (cooldown: Cooldown) => void;
-}): Promise<{ reply: string; model: AiModel; cooldown: Cooldown; badKeys: Provider[] }> {
+export async function ask(
+  options: Omit<ConverseOptions, 'key' | 'model' | 'onRequest' | 'onLimits'> & {
+    readonly keys: Readonly<Partial<Record<Provider, string>>>;
+    readonly cooldown: Cooldown;
+    readonly converse: Readonly<Partial<Record<AiModel, Converse>>>;
+    /** The models to try, in order; the free ones when not given. */
+    readonly route?: readonly AiModel[];
+    readonly onRequest: (model: AiModel) => void;
+    readonly onLimits?: (model: AiModel, remaining: number, limit: number) => void;
+    /** Each request's token usage, by the model that made it (and its cost, when the provider says). */
+    readonly onModelUsage?: (model: AiModel, input: number, output: number, cost?: number) => void;
+    /** Called with the pauses as soon as one changes, so they survive any error. */
+    readonly onCooldown?: (cooldown: Cooldown) => void;
+  },
+): Promise<{ reply: string; model: AiModel; cooldown: Cooldown; badKeys: Provider[] }> {
   const now = (options.now ?? (() => new Date()))();
   let cooldown: Cooldown = options.cooldown;
   const badKeys: Provider[] = [];
@@ -201,7 +203,9 @@ export async function ask(options: Omit<ConverseOptions, 'key' | 'model' | 'onRe
     let acted = false;
     try {
       const reply = await options.converse[model]!({
-        ...options, key, model,
+        ...options,
+        key,
+        model,
         onRequest: () => options.onRequest(model),
         onLimits: (remaining, limit) => options.onLimits?.(model, remaining, limit),
         onUsage: (input, output, cost) => options.onModelUsage?.(model, input, output, cost),

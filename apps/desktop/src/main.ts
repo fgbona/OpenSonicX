@@ -18,9 +18,7 @@ const ORIGIN = 'app://editor';
 const RELEASES = 'https://github.com/fgbona/OpenSonicX/releases';
 const BLUETOOTH_TIMEOUT_MS = 15_000;
 
-protocol.registerSchemesAsPrivileged([
-  { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
-]);
+protocol.registerSchemesAsPrivileged([{ scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }]);
 
 // Renamed from "Pocket Master Editor" in 1.0.0. Electron names the data folder (backups, keys,
 // settings, the Matribox catalog) after the product, so keep the old folder: nothing is lost.
@@ -37,7 +35,10 @@ const text = {
 
 function createWindow(): void {
   const win = new BrowserWindow({
-    width: 1400, height: 900, minWidth: 360, minHeight: 600,
+    width: 1400,
+    height: 900,
+    minWidth: 360,
+    minHeight: 600,
     title: 'OpenSonicX', // the page then names the connected pedal
     webPreferences: { contextIsolation: true, sandbox: true },
   });
@@ -56,8 +57,17 @@ function createWindow(): void {
   win.webContents.on('select-bluetooth-device', (event, devices, callback) => {
     event.preventDefault();
     if (!pick) {
-      const timer = setTimeout(() => { pick?.done(''); }, BLUETOOTH_TIMEOUT_MS);
-      pick = { timer, done: (id) => { clearTimeout(timer); pick = null; callback(id); } };
+      const timer = setTimeout(() => {
+        pick?.done('');
+      }, BLUETOOTH_TIMEOUT_MS);
+      pick = {
+        timer,
+        done: (id) => {
+          clearTimeout(timer);
+          pick = null;
+          callback(id);
+        },
+      };
     }
     const pedal = devices.find((d) => /pocket/i.test(d.deviceName));
     if (pedal) pick.done(pedal.deviceId);
@@ -100,7 +110,9 @@ function checkForUpdates(): void {
   });
   autoUpdater.on('update-downloaded', (info) => {
     // Later: electron-updater installs it when the app quits (autoInstallOnAppQuit).
-    void offerRestart(info.version, (relaunch) => { if (relaunch) autoUpdater.quitAndInstall(); });
+    void offerRestart(info.version, (relaunch) => {
+      if (relaunch) autoUpdater.quitAndInstall();
+    });
   });
   autoUpdater.on('error', (error) => console.warn('update check failed:', error.message)); // offline is normal
   void autoUpdater.checkForUpdates().catch((error: Error) => console.warn('update check failed:', error.message));

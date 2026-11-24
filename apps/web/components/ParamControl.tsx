@@ -32,7 +32,9 @@ export function ParamControl({ module, param, spec, editable, onChange }: Props)
     const on = param.value >= 0.5;
     return (
       <li className="param param-inline">
-        <span className="param-name" id={id}>{param.name}</span>
+        <span className="param-name" id={id}>
+          {param.name}
+        </span>
         <button type="button" role="switch" aria-checked={on} aria-labelledby={id} className={`switch${on ? ' switch-on' : ''}`} onClick={() => send(!on)}>
           <span className="switch-knob" />
         </button>
@@ -42,9 +44,15 @@ export function ParamControl({ module, param, spec, editable, onChange }: Props)
   if (live && param.kind === 'select') {
     return (
       <li className="param param-inline">
-        <label className="param-name" htmlFor={id}>{param.name}</label>
+        <label className="param-name" htmlFor={id}>
+          {param.name}
+        </label>
         <select id={id} className="param-select" value={Math.round(param.value)} onChange={(e) => send(Number(e.target.value))}>
-          {spec.options?.map((o, i) => <option key={o} value={i}>{o}</option>)}
+          {spec.options?.map((o, i) => (
+            <option key={o} value={i}>
+              {o}
+            </option>
+          ))}
         </select>
       </li>
     );
@@ -52,7 +60,9 @@ export function ParamControl({ module, param, spec, editable, onChange }: Props)
   if (live && param.kind === 'number') {
     return (
       <li className="param">
-        <label className="param-name" htmlFor={id}>{param.name}</label>
+        <label className="param-name" htmlFor={id}>
+          {param.name}
+        </label>
         <span className="param-value">{param.display}</span>
         <input
           id={id}

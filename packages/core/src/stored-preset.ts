@@ -33,7 +33,9 @@ export function decodeStoredPreset(payload: Uint8Array): { name: string; preset:
   if (payload[0] !== MessageType.GET || payload[1] !== Query.STORED_PRESET || payload.length <= BODY_AT) {
     throw new Error('not a stored-preset reply (expected payload 12 4F …)');
   }
-  const name = String.fromCharCode(...payload.subarray(NAME_AT, BODY_AT)).replace(/\0.*$/s, '').trim();
+  const name = String.fromCharCode(...payload.subarray(NAME_AT, BODY_AT))
+    .replace(/\0.*$/s, '')
+    .trim();
   return { name, preset: decodePreset(Uint8Array.from([MessageType.GET, Query.EDIT_BUFFER, ...payload.subarray(BODY_AT)])) };
 }
 

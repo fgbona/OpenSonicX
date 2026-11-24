@@ -1,0 +1,89 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "includes": [
+      "**",
+      // Build output and generated files (most are also in .gitignore; listed so a stray copy is never linted).
+      "!!**/.next",
+      "!!**/out",
+      "!!**/dist",
+      "!!**/release",
+      "!!**/.turbo",
+      "!!**/.claude",
+      "!!apps/desktop/web",
+      "!!apps/web/public/convert-worker.js",
+      "!!**/test-results",
+      "!!**/playwright-report",
+      // Captures and golden files: bytes that tests compare against, never reformatted.
+      "!**/test/fixtures",
+      // Vendored device map, kept byte-identical to its upstream (see NOTICE).
+      "!packages/core/src/catalog.json",
+      // App icons: image files, not the markup of a page.
+      "!**/*.svg",
+      // Prose and workflow files keep their hand-made wrapping, quotes and aligned comments.
+      "!**/*.md",
+      "!**/*.yml",
+      "!**/*.yaml",
+      "!package-lock.json",
+      "!docs/media"
+    ]
+  },
+  // The style the code was already written in. lineWidth 200 is where the first format pass stopped
+  // shrinking: narrower rewraps far more lines, wider only joins lines the code had split.
+  "formatter": {
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 200
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "jsxQuoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "all",
+      "arrowParentheses": "always",
+      "bracketSpacing": true
+    }
+  },
+  // globals.css is laid out by hand (several declarations per line, aligned comments): linted, not reformatted.
+  "css": { "formatter": { "enabled": false } },
+  // Imports are grouped by hand (core, then local); sorting them would touch 186 files for no gain.
+  "assist": { "actions": { "source": { "organizeImports": "off" } } },
+  "linter": {
+    "rules": {
+      "preset": "recommended",
+      "style": {
+        // tsconfig has noUncheckedIndexedAccess, so `bytes[i]!` after a bounds check is the project's idiom.
+        "noNonNullAssertion": "off",
+        // globals.css is ordered by component, not by specificity; reordering it could change the cascade.
+        "noDescendingSpecificity": "off"
+      },
+      "complexity": {
+        // Protocol tables are keyed by the command byte as the captures show it (0x41, not 65).
+        "useSimpleNumberKeys": "off"
+      },
+      "suspicious": {
+        // `items.forEach((x) => send(x))` with a concise body is used throughout; forEach ignores the value.
+        "useIterableCallbackReturn": "off",
+        // Preset slots, table rows and chat messages are identified by their position.
+        "noArrayIndexKey": "off"
+      },
+      "a11y": {
+        // Segmented controls and groups are styled spans/divs with ARIA roles (role="group", "radiogroup").
+        "useSemanticElements": "off"
+      },
+      "performance": {
+        // The site is also a static export (desktop app, GitHub Pages): there is no image optimizer for next/image.
+        "noImgElement": "off"
+      }
+    }
+  },
+  "overrides": [
+    {
+      // The end-to-end tests read the text a person sees (innerText follows CSS; textContent does not).
+      "includes": ["apps/web/e2e/**"],
+      "linter": { "rules": { "performance": { "useDomNodeTextContent": "off" } } }
+    }
+  ]
+}

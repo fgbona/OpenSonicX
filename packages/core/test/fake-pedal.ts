@@ -10,12 +10,19 @@ const TAG = { VOLUME: 0x2001, BPM: 0x2002, STATES: 0x3001, CHAIN: 0x3002, EFFECT
 /** Real P08 edit-buffer payload and the owner's 100 real preset names. */
 export function realP08(): Uint8Array {
   const r = new Reassembler();
-  const rx = readCapture('p08-capture.txt').filter((m) => m.dir === 'RX').slice(1);
-  return rx.map((m) => r.feed(parseFrame(m.bytes), 0)).at(-1)!.payload.slice();
+  const rx = readCapture('p08-capture.txt')
+    .filter((m) => m.dir === 'RX')
+    .slice(1);
+  return rx
+    .map((m) => r.feed(parseFrame(m.bytes), 0))
+    .at(-1)!
+    .payload.slice();
 }
 export function realNames(): string[] {
   const r = new Reassembler();
-  const rx = readCapture('names-capture.txt').filter((m) => m.dir === 'RX').slice(2);
+  const rx = readCapture('names-capture.txt')
+    .filter((m) => m.dir === 'RX')
+    .slice(2);
   return decodePresetNames(rx.map((m) => r.feed(parseFrame(m.bytes), 0)).at(-1)!.payload);
 }
 
@@ -75,8 +82,12 @@ export class FakePedal implements Pedal {
     this.editBuffer = this.slots[start]!.slice();
   }
 
-  async readCurrentIndex() { return this.current; }
-  async readEditBuffer() { return this.editBuffer.slice(); }
+  async readCurrentIndex() {
+    return this.current;
+  }
+  async readEditBuffer() {
+    return this.editBuffer.slice();
+  }
   private staleNames: string[] | null = null;
   private staleReads = 0;
 

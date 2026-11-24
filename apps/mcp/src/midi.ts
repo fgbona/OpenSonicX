@@ -1,4 +1,21 @@
-import { clearUserIr, clearUserProfile, copyStoredPreset, linkPedal, readGlobals, MessageType, PocketMasterLink, Query, readProfileNames, readUserIrNames, renameUserIr, renameUserProfile, uploadUserIr, uploadUserProfile, type LogEntry, type SlotName } from '@pocket-master/core';
+import {
+  clearUserIr,
+  clearUserProfile,
+  copyStoredPreset,
+  linkPedal,
+  readGlobals,
+  MessageType,
+  PocketMasterLink,
+  Query,
+  readProfileNames,
+  readUserIrNames,
+  renameUserIr,
+  renameUserProfile,
+  uploadUserIr,
+  uploadUserProfile,
+  type LogEntry,
+  type SlotName,
+} from '@pocket-master/core';
 import { openPedalPorts, POCKET_MASTER } from './devices.ts';
 import type { Connection, PedalIO } from './session.ts';
 
@@ -40,5 +57,11 @@ export async function connectPocketMaster(onLog: (entry: LogEntry) => void = () 
       return payload[0] === MessageType.GET && payload.length >= 3 ? payload[2] !== 0 : null;
     },
   };
-  return { io, close: () => { link.close(); ports.close(); } };
+  return {
+    io,
+    close: () => {
+      link.close();
+      ports.close();
+    },
+  };
 }

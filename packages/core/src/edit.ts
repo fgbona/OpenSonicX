@@ -3,7 +3,6 @@ import { setAmpMode, selectModel, setBlockOn, setChain, setParam, validateChain 
 import { modelOf, toParam, type Block, type Preset } from './dump.ts';
 import { setPresetVolume } from './slots.ts';
 
-
 const AMP_MODULE = 3;
 const IR_MODULE = 4;
 const NR_MODULE = 0;
@@ -15,7 +14,7 @@ export type Edit =
   /** `clone` selects a captured amp profile; only used to restore a preset that had one. */
   | { readonly kind: 'model'; readonly module: number; readonly code: number; readonly clone?: boolean }
   | { readonly kind: 'chain'; readonly order: readonly number[] }
-  | { readonly kind: 'volume'; readonly value: number }
+  | { readonly kind: 'volume'; readonly value: number };
 
 /** The preset after an edit, as the pedal will hold it. Returns a new object; the input is not changed. */
 export function applyEdit(preset: Preset, edit: Edit): Preset {

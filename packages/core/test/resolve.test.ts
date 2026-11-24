@@ -55,7 +55,10 @@ test('empty profile slots are not offered', () => {
 test('without slot names, user IRs keep their catalog names and no profile is offered', () => {
   const none = { irNames: null, profileNames: null };
   assert.equal(resolveModel('ir', 'User IR 2', none).code, 0x0a100001);
-  assert.equal(modelChoices('amp', none).some((c) => c.clone), false);
+  assert.equal(
+    modelChoices('amp', none).some((c) => c.clone),
+    false,
+  );
 });
 
 test('preset labels parse to indexes', () => {

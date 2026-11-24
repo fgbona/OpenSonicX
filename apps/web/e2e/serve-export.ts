@@ -10,8 +10,15 @@ const ROOT = new URL('../out/', import.meta.url).pathname;
 const BASE = '/OpenSonicX';
 const PORT = Number(process.argv[2] ?? 3200);
 const TYPES: Readonly<Record<string, string>> = {
-  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.txt': 'text/plain',
-  '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json',
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript',
+  '.css': 'text/css',
+  '.txt': 'text/plain',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.svg': 'image/svg+xml',
+  '.woff2': 'font/woff2',
+  '.webmanifest': 'application/manifest+json',
 };
 let release = 0;
 

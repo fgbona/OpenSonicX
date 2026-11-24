@@ -4,10 +4,7 @@
  * them against the catalog and sends them through its validated writes as one Undo step. Saving
  * only opens the editor's Save dialog.
  */
-import {
-  CHAT_INSTRUCTIONS_THOROUGH, checkMbPresetName, mbPresetLabel, parseMbPresetLabel,
-  type ChatTool, type JsonSchema, type MbCatalog, type MbPreset,
-} from '@pocket-master/core';
+import { CHAT_INSTRUCTIONS_THOROUGH, checkMbPresetName, mbPresetLabel, parseMbPresetLabel, type ChatTool, type JsonSchema, type MbCatalog, type MbPreset } from '@pocket-master/core';
 import { SAVE_VERB, type ToneAgent } from './assistant.ts';
 import { editChain, planTone, type ChainChange, type MbChainBlock, type ToneBlock } from './matriboxPlan.ts';
 import { mbCatalogText, mbChanges, mbModelsText, mbPresetText } from './matriboxText.ts';
@@ -29,16 +26,26 @@ const BLOCK: JsonSchema = { type: 'string', description: 'Block of the loaded pr
 const MODULE: JsonSchema = { type: 'string', description: 'Module name: DYN, FREQ, WAH, DRV, AMP, CAB, IR, EQ, MOD, DLY, RVB, CLONE, FXLOOP, FXSND, FXRTN or VOL' };
 const MODEL: JsonSchema = { type: 'string', description: 'Model name of that module, as the catalog lists it' };
 const PARAMS: JsonSchema = {
-  type: 'array', description: 'Values within the ranges list_models gives; parameters not given take the model\'s default',
+  type: 'array',
+  description: "Values within the ranges list_models gives; parameters not given take the model's default",
   items: object({ name: { type: 'string', description: 'Parameter name, e.g. "Gain"' }, value: { type: 'number' } }, ['name', 'value']),
 };
 const TONE_BLOCK = object({ module: MODULE, model: MODEL, on: { type: 'boolean', description: 'Default true' }, params: PARAMS }, ['module', 'model']);
 const CHANGE: JsonSchema = {
   oneOf: [
-    object({ kind: kind('parameter'), block: BLOCK, parameter: { type: 'string', description: 'Parameter name of the block\'s model' }, value: { type: 'number' } }, ['kind', 'block', 'parameter', 'value']),
+    object({ kind: kind('parameter'), block: BLOCK, parameter: { type: 'string', description: "Parameter name of the block's model" }, value: { type: 'number' } }, [
+      'kind',
+      'block',
+      'parameter',
+      'value',
+    ]),
     object({ kind: kind('block'), block: BLOCK, on: { type: 'boolean' } }, ['kind', 'block', 'on']),
     object({ kind: kind('model'), block: BLOCK, model: MODEL }, ['kind', 'block', 'model']),
-    object({ kind: kind('add'), module: MODULE, model: MODEL, position: { type: 'integer', description: '1-based chain position; default: the end' }, on: { type: 'boolean' }, params: PARAMS }, ['kind', 'module', 'model']),
+    object({ kind: kind('add'), module: MODULE, model: MODEL, position: { type: 'integer', description: '1-based chain position; default: the end' }, on: { type: 'boolean' }, params: PARAMS }, [
+      'kind',
+      'module',
+      'model',
+    ]),
     object({ kind: kind('remove'), block: BLOCK }, ['kind', 'block']),
     object({ kind: kind('move'), block: BLOCK, position: { type: 'integer', description: 'New 1-based chain position' } }, ['kind', 'block', 'position']),
   ],
@@ -46,12 +53,38 @@ const CHANGE: JsonSchema = {
 const NONE: JsonSchema = { type: 'object', properties: {} };
 
 const TOOLS: readonly ChatTool[] = [
-  { name: 'get_preset', description: 'The preset loaded on the Matribox: name, chain in signal order, each block\'s model, the gear it is based on, on/off and parameter values with ranges.', parameters: NONE },
-  { name: 'list_models', description: 'The models of the modules asked for (all when none), with the gear each is based on and every parameter\'s range and default.', parameters: object({ modules: { type: 'array', items: MODULE } }, []) },
-  { name: 'build_tone', description: 'Replaces the loaded preset\'s chain with these blocks, in signal order (input to output, 1 to 12), each with its model, on/off and values. Live only: nothing is saved. Everything is checked before anything is sent. Returns the preset as it now is.', parameters: object({ blocks: { type: 'array', items: TONE_BLOCK } }, ['blocks']) },
-  { name: 'edit_preset', description: 'Small changes to the loaded preset, applied in order (each names blocks as the chain is after the changes before it); a new model starts at its defaults. Live only: nothing is saved. Returns the preset as it now is.', parameters: object({ changes: { type: 'array', items: CHANGE } }, ['changes']) },
-  { name: 'undo_edit', description: 'Undoes the last change to the sound (the editor\'s Undo, also the person\'s own edits). Nothing is saved.', parameters: NONE },
-  { name: 'save_preset', description: 'Proposes saving the sound to a preset slot under a name: the editor opens its Save dialog filled in, backs the slot up and saves only if the person confirms. Only when the person asked to save.', parameters: object({ slot: { type: 'string', description: 'Preset label, 1A..60D (four per bank)' }, name: { type: 'string', description: 'Preset name, 1..16 printable ASCII characters' } }, ['slot', 'name']) },
+  {
+    name: 'get_preset',
+    description: "The preset loaded on the Matribox: name, chain in signal order, each block's model, the gear it is based on, on/off and parameter values with ranges.",
+    parameters: NONE,
+  },
+  {
+    name: 'list_models',
+    description: "The models of the modules asked for (all when none), with the gear each is based on and every parameter's range and default.",
+    parameters: object({ modules: { type: 'array', items: MODULE } }, []),
+  },
+  {
+    name: 'build_tone',
+    description:
+      "Replaces the loaded preset's chain with these blocks, in signal order (input to output, 1 to 12), each with its model, on/off and values. Live only: nothing is saved. Everything is checked before anything is sent. Returns the preset as it now is.",
+    parameters: object({ blocks: { type: 'array', items: TONE_BLOCK } }, ['blocks']),
+  },
+  {
+    name: 'edit_preset',
+    description:
+      'Small changes to the loaded preset, applied in order (each names blocks as the chain is after the changes before it); a new model starts at its defaults. Live only: nothing is saved. Returns the preset as it now is.',
+    parameters: object({ changes: { type: 'array', items: CHANGE } }, ['changes']),
+  },
+  { name: 'undo_edit', description: "Undoes the last change to the sound (the editor's Undo, also the person's own edits). Nothing is saved.", parameters: NONE },
+  {
+    name: 'save_preset',
+    description:
+      'Proposes saving the sound to a preset slot under a name: the editor opens its Save dialog filled in, backs the slot up and saves only if the person confirms. Only when the person asked to save.',
+    parameters: object({ slot: { type: 'string', description: 'Preset label, 1A..60D (four per bank)' }, name: { type: 'string', description: 'Preset name, 1..16 printable ASCII characters' } }, [
+      'slot',
+      'name',
+    ]),
+  },
 ];
 
 /** The tools that change the sound (or open the Save dialog). */
@@ -129,7 +162,10 @@ export function matriboxAgent(host: MbAgentHost): ToneAgent {
         const s = host.snapshot();
         if (name === 'get_preset') working = s.current;
         if (ACTS.has(name) && s.current !== working) {
-          return { ok: false, text: `Error: the preset changed to ${mbPresetLabel(s.current)} "${s.preset.name}" while you were working (the person loaded it). Call get_preset and check the request still applies before changing anything.` };
+          return {
+            ok: false,
+            text: `Error: the preset changed to ${mbPresetLabel(s.current)} "${s.preset.name}" while you were working (the person loaded it). Call get_preset and check the request still applies before changing anything.`,
+          };
         }
         try {
           return { ok: true, text: await run(host, name, args) };

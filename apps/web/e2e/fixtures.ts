@@ -37,9 +37,21 @@ export function installFakeMidi({ plugged, denials }: FakeMidiOptions) {
     serial += 1;
     let listener: Listener = null;
     const common = { manufacturer: 'Sonicake', state: 'connected', connection: 'open', name, open: async () => undefined, close: async () => undefined };
-    const input = { ...common, id: `in-${name}-${serial}`, type: 'input', set onmidimessage(f: Listener) { listener = f; }, get onmidimessage() { return listener; } };
+    const input = {
+      ...common,
+      id: `in-${name}-${serial}`,
+      type: 'input',
+      set onmidimessage(f: Listener) {
+        listener = f;
+      },
+      get onmidimessage() {
+        return listener;
+      },
+    };
     const output = {
-      ...common, id: `out-${name}-${serial}`, type: 'output',
+      ...common,
+      id: `out-${name}-${serial}`,
+      type: 'output',
       send(bytes: ArrayLike<number>) {
         if (output.state !== 'connected') throw new DOMException('The port is disconnected.', 'InvalidStateError');
         void window.__pedalSend(name, Array.from(bytes)).then((replies) => deliver(replies, () => (input.state === 'connected' ? listener : null)));
@@ -79,13 +91,25 @@ export function installFakeMidi({ plugged, denials }: FakeMidiOptions) {
   characteristic.startNotifications = async () => undefined;
   characteristic.writeValueWithoutResponse = async (wire: Uint8Array) => {
     const replies = await window.__pedalSend('Pocket Master', Array.from(wire.subarray(2)));
-    replies.forEach((r, i) => setTimeout(() => {
-      const event = Object.assign(new Event('characteristicvaluechanged'), {});
-      Object.defineProperty(event, 'target', { value: { value: new DataView(Uint8Array.from([0x80, 0x80, ...r]).buffer) } });
-      characteristic.dispatchEvent(event);
-    }, 5 + 5 * i));
+    replies.forEach((r, i) =>
+      setTimeout(
+        () => {
+          const event = Object.assign(new Event('characteristicvaluechanged'), {});
+          Object.defineProperty(event, 'target', { value: { value: new DataView(Uint8Array.from([0x80, 0x80, ...r]).buffer) } });
+          characteristic.dispatchEvent(event);
+        },
+        5 + 5 * i,
+      ),
+    );
   };
-  const server = { connected: true, connect: async () => server, disconnect: () => { server.connected = false; }, getPrimaryService: async () => ({ getCharacteristic: async () => characteristic }) };
+  const server = {
+    connected: true,
+    connect: async () => server,
+    disconnect: () => {
+      server.connected = false;
+    },
+    getPrimaryService: async () => ({ getCharacteristic: async () => characteristic }),
+  };
   const device = Object.assign(new EventTarget(), { name: 'Pocket Master', gatt: server });
   Object.defineProperty(navigator, 'bluetooth', { value: { requestDevice: async () => device } });
   // The dev server's indicator sits over the preset list; the published site has none.
@@ -104,13 +128,16 @@ export async function wireMidi(page: Page, devices: Readonly<Record<string, Devi
 export const test = base.extend<{ plugged: readonly string[]; denials: number; pedal: SysexPedal }>({
   plugged: [['Pocket Master'], { option: true }],
   denials: [0, { option: true }],
-  pedal: [async ({ page, plugged, denials }, use) => {
-    const pedal = new SysexPedal();
-    await wireMidi(page, { 'Pocket Master': (bytes) => pedal.receive(bytes) }, { plugged, denials });
-    // The price catalog the assistant reads for paid answers: a small fixed one, never the network.
-    await page.route('https://openrouter.ai/api/v1/models', (route) => route.fulfill({ json: { data: [{ id: 'openai/gpt-9', pricing: { prompt: '0.000001', completion: '0.000004' } }] } }));
-    await use(pedal);
-  }, { auto: true }], // always: a page here must never reach the real Web MIDI
+  pedal: [
+    async ({ page, plugged, denials }, use) => {
+      const pedal = new SysexPedal();
+      await wireMidi(page, { 'Pocket Master': (bytes) => pedal.receive(bytes) }, { plugged, denials });
+      // The price catalog the assistant reads for paid answers: a small fixed one, never the network.
+      await page.route('https://openrouter.ai/api/v1/models', (route) => route.fulfill({ json: { data: [{ id: 'openai/gpt-9', pricing: { prompt: '0.000001', completion: '0.000004' } }] } }));
+      await use(pedal);
+    },
+    { auto: true },
+  ], // always: a page here must never reach the real Web MIDI
 });
 export { expect };
 

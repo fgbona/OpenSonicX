@@ -1,9 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import {
-  type GlobalSetting, type GlobalSettings, readGlobals, setGlobal, type PocketMasterLink,
-} from '@pocket-master/core';
+import { type GlobalSetting, type GlobalSettings, readGlobals, setGlobal, type PocketMasterLink } from '@pocket-master/core';
 import { Dialog } from './Dialog';
 import { Knob } from './Knob';
 import { useI18n } from './I18n';
@@ -46,7 +44,9 @@ function Segmented({ label, value, options, disabled, onChange }: { label: strin
       <span className="settings-label">{label}</span>
       <span className="segmented" role="radiogroup" aria-label={label}>
         {options.map((o, i) => (
-          <button key={o} type="button" role="radio" aria-checked={value === i} className={value === i ? 'is-on' : ''} disabled={disabled} onClick={() => onChange(i)}>{o}</button>
+          <button key={o} type="button" role="radio" aria-checked={value === i} className={value === i ? 'is-on' : ''} disabled={disabled} onClick={() => onChange(i)}>
+            {o}
+          </button>
         ))}
       </span>
     </div>
@@ -92,10 +92,27 @@ export function SettingsDialog({ open, firmware, onClose, exclusive, writeGlobal
           <section className="settings-group" aria-label={t('settings.levels')}>
             <h3>{t('settings.levels')}</h3>
             <div className="settings-knobs">
-              <Knob label={t('settings.master')} value={values.masterVolume ?? 0} min={0} max={100} display={String(values.masterVolume ?? 0)} disabled={off} onChange={(v) => set('masterVolume', v)} />
+              <Knob
+                label={t('settings.master')}
+                value={values.masterVolume ?? 0}
+                min={0}
+                max={100}
+                display={String(values.masterVolume ?? 0)}
+                disabled={off}
+                onChange={(v) => set('masterVolume', v)}
+              />
               {LEVELS.map(({ key, label }) => (
-                <Knob key={key} label={t(label)} value={values[key] ?? 0} min={-20} max={20} defaultValue={0}
-                  display={`${(values[key] ?? 0) > 0 ? '+' : ''}${values[key] ?? 0} dB`} disabled={off} onChange={(v) => set(key, v)} />
+                <Knob
+                  key={key}
+                  label={t(label)}
+                  value={values[key] ?? 0}
+                  min={-20}
+                  max={20}
+                  defaultValue={0}
+                  display={`${(values[key] ?? 0) > 0 ? '+' : ''}${values[key] ?? 0} dB`}
+                  disabled={off}
+                  onChange={(v) => set(key, v)}
+                />
               ))}
             </div>
           </section>
@@ -103,8 +120,16 @@ export function SettingsDialog({ open, firmware, onClose, exclusive, writeGlobal
             <h3>{t('settings.device')}</h3>
             <label className="settings-row">
               <span className="settings-label">{t('settings.backlight')}</span>
-              <input type="range" className="param-slider" min={0} max={100} value={values.backlight ?? 0} disabled={off}
-                onChange={(e) => set('backlight', Number(e.target.value))} style={{ '--fill': `${values.backlight ?? 0}%` } as React.CSSProperties} />
+              <input
+                type="range"
+                className="param-slider"
+                min={0}
+                max={100}
+                value={values.backlight ?? 0}
+                disabled={off}
+                onChange={(e) => set('backlight', Number(e.target.value))}
+                style={{ '--fill': `${values.backlight ?? 0}%` } as React.CSSProperties}
+              />
               <span className="param-value">{values.backlight ?? '—'}</span>
             </label>
             {firmware && (
@@ -118,23 +143,42 @@ export function SettingsDialog({ open, firmware, onClose, exclusive, writeGlobal
           <section className="settings-group settings-danger">
             <h3>{t('settings.reset')}</h3>
             {!confirming ? (
-              <button type="button" className="btn btn-danger" disabled={busy} onClick={() => setConfirming(true)}>{t('settings.reset')}</button>
+              <button type="button" className="btn btn-danger" disabled={busy} onClick={() => setConfirming(true)}>
+                {t('settings.reset')}
+              </button>
             ) : (
               <>
                 <p className="small">{t('settings.resetWarning', { word: RESET_WORD })}</p>
                 <div className="sheet-actions">
                   <input value={typed} aria-label={t('settings.resetType', { word: RESET_WORD })} placeholder={RESET_WORD} onChange={(e) => setTyped(e.target.value)} />
-                  <button type="button" className="btn" onClick={() => { setConfirming(false); setTyped(''); }}>{t('action.cancel')}</button>
-                  <button type="button" className="btn btn-danger" disabled={busy || typed !== RESET_WORD} onClick={() => void reset()}>{t('settings.resetConfirm')}</button>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => {
+                      setConfirming(false);
+                      setTyped('');
+                    }}
+                  >
+                    {t('action.cancel')}
+                  </button>
+                  <button type="button" className="btn btn-danger" disabled={busy || typed !== RESET_WORD} onClick={() => void reset()}>
+                    {t('settings.resetConfirm')}
+                  </button>
                 </div>
               </>
             )}
           </section>
         </div>
       )}
-      {error && !busy && <p className="alert" role="alert">{error}</p>}
+      {error && !busy && (
+        <p className="alert" role="alert">
+          {error}
+        </p>
+      )}
       <div className="sheet-actions">
-        <button type="button" className="btn btn-primary" onClick={onClose} disabled={busy}>{t('action.done')}</button>
+        <button type="button" className="btn btn-primary" onClick={onClose} disabled={busy}>
+          {t('action.done')}
+        </button>
       </div>
     </Dialog>
   );

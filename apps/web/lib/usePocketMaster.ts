@@ -2,9 +2,32 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  applyEdit, decodeCurrentPreset, decodeFirmware, fromHex, decodeNotification, decodePreset, diffPresets, editToCommands, MessageType, Query,
-  backupAllSlots, loadIntoEditBuffer, presetFile, presetLabel, restoreAllFromBackup, restoreFromBackup, saveToSlot,
-  type BackupFile, type Edit, type Frame, type Pedal, type Preset, type PresetFile, type Progress, type SaveResult, type SlotBackup,
+  applyEdit,
+  decodeCurrentPreset,
+  decodeFirmware,
+  fromHex,
+  decodeNotification,
+  decodePreset,
+  diffPresets,
+  editToCommands,
+  MessageType,
+  Query,
+  backupAllSlots,
+  loadIntoEditBuffer,
+  presetFile,
+  presetLabel,
+  restoreAllFromBackup,
+  restoreFromBackup,
+  saveToSlot,
+  type BackupFile,
+  type Edit,
+  type Frame,
+  type Pedal,
+  type Preset,
+  type PresetFile,
+  type Progress,
+  type SaveResult,
+  type SlotBackup,
 } from '@pocket-master/core';
 import type { MidiPort, PedalKind } from '@pocket-master/core';
 import { copyStoredPreset, LinkClosedError, linkPedal, PocketMasterLink, readProfileNames, readUserIrNames, toneGear, type LogEntry } from '@pocket-master/core';
@@ -75,10 +98,26 @@ export interface PocketMasterState {
 
 const INITIAL: PocketMasterState = {
   transport: null,
-  status: 'requesting', error: null, midiRefused: false, // the page asks for MIDI as it loads
-  preset: null, presetIndex: null, restorePoint: null, log: [],
-  busy: null, names: null, backups: [], flowBackups: [], storageWarning: null, irNames: null, profileNames: null, pedalModified: null, history: EMPTY_HISTORY, firmware: null, tuner: false,
-  pedal: null, matribox: null,
+  status: 'requesting',
+  error: null,
+  midiRefused: false, // the page asks for MIDI as it loads
+  preset: null,
+  presetIndex: null,
+  restorePoint: null,
+  log: [],
+  busy: null,
+  names: null,
+  backups: [],
+  flowBackups: [],
+  storageWarning: null,
+  irNames: null,
+  profileNames: null,
+  pedalModified: null,
+  history: EMPTY_HISTORY,
+  firmware: null,
+  tuner: false,
+  pedal: null,
+  matribox: null,
 };
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -141,10 +180,7 @@ export function usePocketMaster() {
 
   const patch = useCallback((p: Partial<PocketMasterState>) => setState((s) => ({ ...s, ...p })), []);
 
-  const appendLog = useCallback(
-    (entry: LogEntry) => setState((s) => ({ ...s, log: [...s.log.slice(-(LOG_LIMIT - 1)), entry] })),
-    [],
-  );
+  const appendLog = useCallback((entry: LogEntry) => setState((s) => ({ ...s, log: [...s.log.slice(-(LOG_LIMIT - 1)), entry] })), []);
 
   /** Opens a plugged-in pedal even when its ports did not change (after Bluetooth or a reset). */
   const lookAgain = useCallback(() => {
@@ -179,40 +215,43 @@ export function usePocketMaster() {
   /** Reads preset number and edit buffer. Resolves with the pedal's preset, or null if stale or failed. */
   /** `freshRestorePoint` makes this read the new restore point (after Revert reloads the slot). */
   /** `locked`: the caller holds the exclusive lock (busyRef) and reads as part of its operation. */
-  const read = useCallback(async (options: { freshRestorePoint?: boolean; locked?: boolean } = {}): Promise<Preset | null> => {
-    const current = link.current;
-    if (!current || (busyRef.current && !options.locked)) return null;
-    patch({ status: 'reading', error: null });
-    try {
-      await current.drained(); // never read while edits are still on their way
-      const generation = editGeneration.current;
-      const index = decodeCurrentPreset((await current.request(Query.CURRENT_PRESET)).payload);
-      const preset = decodePreset((await current.request(Query.EDIT_BUFFER)).payload);
-      const pedalModified = modifiedFlag(await current.request(Query.MODIFIED));
-      if (link.current !== current) return null;
-      if (editGeneration.current !== generation) {
-        // An edit went out while the dump was in flight: this dump is older than the screen.
-        scheduleReread();
+  const read = useCallback(
+    async (options: { freshRestorePoint?: boolean; locked?: boolean } = {}): Promise<Preset | null> => {
+      const current = link.current;
+      if (!current || (busyRef.current && !options.locked)) return null;
+      patch({ status: 'reading', error: null });
+      try {
+        await current.drained(); // never read while edits are still on their way
+        const generation = editGeneration.current;
+        const index = decodeCurrentPreset((await current.request(Query.CURRENT_PRESET)).payload);
+        const preset = decodePreset((await current.request(Query.EDIT_BUFFER)).payload);
+        const pedalModified = modifiedFlag(await current.request(Query.MODIFIED));
+        if (link.current !== current) return null;
+        if (editGeneration.current !== generation) {
+          // An edit went out while the dump was in flight: this dump is older than the screen.
+          scheduleReread();
+          return null;
+        }
+        // A new preset on the pedal gets a new restore point; the same preset keeps the first one.
+        const keep = !options.freshRestorePoint && restoreRef.current !== null && indexRef.current === index;
+        const restorePoint = keep ? restoreRef.current! : preset;
+        restoreRef.current = restorePoint;
+        indexRef.current = index;
+        pedalModifiedRef.current = pedalModified;
+        historyRef.current = keep ? historyRef.current : EMPTY_HISTORY;
+        presetRef.current = preset;
+        setState((s) => ({ ...s, status: 'connected', preset, presetIndex: index, restorePoint, pedalModified, history: historyRef.current }));
+        return preset;
+      } catch (e) {
+        // A read from a link that was closed or replaced must not touch the current state.
+        if (e instanceof LinkClosedError || link.current !== current) return null;
+        console.error('read failed', e);
+        patch({ status: 'connected', error: message(e) });
         return null;
       }
-      // A new preset on the pedal gets a new restore point; the same preset keeps the first one.
-      const keep = !options.freshRestorePoint && restoreRef.current !== null && indexRef.current === index;
-      const restorePoint = keep ? restoreRef.current! : preset;
-      restoreRef.current = restorePoint;
-      indexRef.current = index;
-      pedalModifiedRef.current = pedalModified;
-      historyRef.current = keep ? historyRef.current : EMPTY_HISTORY;
-      presetRef.current = preset;
-      setState((s) => ({ ...s, status: 'connected', preset, presetIndex: index, restorePoint, pedalModified, history: historyRef.current }));
-      return preset;
-    } catch (e) {
-      // A read from a link that was closed or replaced must not touch the current state.
-      if (e instanceof LinkClosedError || link.current !== current) return null;
-      console.error('read failed', e);
-      patch({ status: 'connected', error: message(e) });
-      return null;
-    }
-  }, [patch, scheduleReread]);
+    },
+    [patch, scheduleReread],
+  );
   const readRef = useRef(read);
   readRef.current = read;
 
@@ -229,10 +268,10 @@ export function usePocketMaster() {
       if (edits.length === 0) return null;
       try {
         // Validate and build everything first; queue only when the whole list is good.
-        const { next, commands } = edits.reduce(
-          (acc, e) => ({ next: applyEdit(acc.next, e), commands: [...acc.commands, ...editToCommands(acc.next, e)] }),
-          { next: preset, commands: [] as Uint8Array[] },
-        );
+        const { next, commands } = edits.reduce((acc, e) => ({ next: applyEdit(acc.next, e), commands: [...acc.commands, ...editToCommands(acc.next, e)] }), {
+          next: preset,
+          commands: [] as Uint8Array[],
+        });
         commands.forEach((bytes) => current.edit(bytes));
         editGeneration.current += 1;
         presetRef.current = next;
@@ -286,48 +325,54 @@ export function usePocketMaster() {
   const ready = () => {
     if (busyRef.current) throw new Error('The editor is busy (saving or loading); try again in a moment.');
   };
-  const assistantBase = useMemo(() => ({
-    snapshot: () => {
-      const s = stateRef.current;
-      const preset = presetRef.current;
-      const index = indexRef.current;
-      if (!preset || index === null) throw new Error('No preset has been read from the pedal yet.');
-      return {
-        index, name: (s.names?.[index] ?? '').trim(), preset,
-        slots: { irNames: s.irNames, profileNames: s.profileNames },
-        modified: safeModified(preset, restoreRef.current) || pedalModifiedRef.current === true,
-        names: s.names ?? [],
-      };
-    },
-    async applyEdits(edits: readonly Edit[]) {
-      ready();
-      const failure = send(edits);
-      if (failure) throw new Error(failure);
-    },
-    async undo() {
-      ready();
-      if (historyRef.current.past.length === 0) return false;
-      undoRef.current();
-      return true;
-    },
-    async revert() {
-      ready();
-      if (!(await revertRef.current())) throw new Error('The pedal did not reload the preset.');
-    },
-    savedTones: () => libraryNow().map((f) => ({ name: f.name, notes: f.notes, gear: gearOf(f.payload) })),
-    async loadSavedTone(name: string) {
-      ready();
-      const file = libraryNow().find((f) => f.name.toLowerCase() === name.toLowerCase());
-      if (!file) return false;
-      if (!(await importRef.current(file))) throw new Error(stateRef.current.error ?? 'The pedal did not load the tone.');
-      return true;
-    },
-    async keepTone(name: string, notes: string) {
-      const payload = await exclusiveRef.current('Reading', (current) => linkPedal(current).readEditBuffer());
-      if (!payload) throw new Error('The edit buffer could not be read from the pedal.');
-      addToLibrary(presetFile(payload, name, undefined, notes));
-    },
-  }), [send]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ready only reads busyRef, so the copy from any render gives the same answer
+  const assistantBase = useMemo(
+    () => ({
+      snapshot: () => {
+        const s = stateRef.current;
+        const preset = presetRef.current;
+        const index = indexRef.current;
+        if (!preset || index === null) throw new Error('No preset has been read from the pedal yet.');
+        return {
+          index,
+          name: (s.names?.[index] ?? '').trim(),
+          preset,
+          slots: { irNames: s.irNames, profileNames: s.profileNames },
+          modified: safeModified(preset, restoreRef.current) || pedalModifiedRef.current === true,
+          names: s.names ?? [],
+        };
+      },
+      async applyEdits(edits: readonly Edit[]) {
+        ready();
+        const failure = send(edits);
+        if (failure) throw new Error(failure);
+      },
+      async undo() {
+        ready();
+        if (historyRef.current.past.length === 0) return false;
+        undoRef.current();
+        return true;
+      },
+      async revert() {
+        ready();
+        if (!(await revertRef.current())) throw new Error('The pedal did not reload the preset.');
+      },
+      savedTones: () => libraryNow().map((f) => ({ name: f.name, notes: f.notes, gear: gearOf(f.payload) })),
+      async loadSavedTone(name: string) {
+        ready();
+        const file = libraryNow().find((f) => f.name.toLowerCase() === name.toLowerCase());
+        if (!file) return false;
+        if (!(await importRef.current(file))) throw new Error(stateRef.current.error ?? 'The pedal did not load the tone.');
+        return true;
+      },
+      async keepTone(name: string, notes: string) {
+        const payload = await exclusiveRef.current('Reading', (current) => linkPedal(current).readEditBuffer());
+        if (!payload) throw new Error('The edit buffer could not be read from the pedal.');
+        addToLibrary(presetFile(payload, name, undefined, notes));
+      },
+    }),
+    [send],
+  );
 
   /**
    * Reloads the preset from its slot, as switching presets on the unit does: the edit buffer goes
@@ -388,47 +433,50 @@ export function usePocketMaster() {
    * Opens a plugged-in pedal's USB ports and reads it; sync() picks the pedal. An attempt is
    * abandoned when drop() runs meanwhile (the pedal was unplugged while it was being opened).
    */
-  const connect = useCallback(async ({ kind, input, output }: FoundPedal<MIDIInput, MIDIOutput>) => {
-    if (connecting.current) return; // never a second link on the same ports
-    connecting.current = true;
-    const attempt = ++attempts.current;
-    const stale = () => attempts.current !== attempt;
-    link.current?.close();
-    link.current = null;
-    transportClose.current?.();
-    transportClose.current = null;
-    usbPorts.current = { input: input.id, output: output.id };
-    restoreRef.current = null;
-    presetRef.current = null;
-    indexRef.current = null;
-    pedalModifiedRef.current = null;
-    historyRef.current = EMPTY_HISTORY;
-    patch({ status: 'connecting', error: null, restorePoint: null, names: null, history: EMPTY_HISTORY, firmware: null, tuner: false, pedal: kind, matribox: null });
-    try {
-      await Promise.all([input.open(), output.open()]);
-      if (stale()) return;
-      const port = webMidiPort(input, output);
-      if (kind === 'matribox') {
-        // The Matribox II Pro speaks another protocol: its own editor drives the ports.
-        transportClose.current = () => port.listen(null);
-        patch({ status: 'connected', transport: 'usb', matribox: port });
-        return;
-      }
-      link.current = new PocketMasterLink(port, appendLog, (f) => notifyRef.current(f));
-      patch({ status: 'connected', transport: 'usb', error: null, irNames: null, profileNames: null });
-      await read();
-      await refreshSlotNames();
-      await readFirmware();
-    } catch (e) {
-      if (stale()) return;
-      console.error('connect failed', e);
+  const connect = useCallback(
+    async ({ kind, input, output }: FoundPedal<MIDIInput, MIDIOutput>) => {
+      if (connecting.current) return; // never a second link on the same ports
+      connecting.current = true;
+      const attempt = ++attempts.current;
+      const stale = () => attempts.current !== attempt;
+      link.current?.close();
       link.current = null;
-      usbPorts.current = null;
-      patch({ status: 'ready', pedal: null, error: `Could not open the ports: ${message(e)}` });
-    } finally {
-      if (!stale()) connecting.current = false;
-    }
-  }, [patch, appendLog, read, refreshSlotNames, readFirmware]);
+      transportClose.current?.();
+      transportClose.current = null;
+      usbPorts.current = { input: input.id, output: output.id };
+      restoreRef.current = null;
+      presetRef.current = null;
+      indexRef.current = null;
+      pedalModifiedRef.current = null;
+      historyRef.current = EMPTY_HISTORY;
+      patch({ status: 'connecting', error: null, restorePoint: null, names: null, history: EMPTY_HISTORY, firmware: null, tuner: false, pedal: kind, matribox: null });
+      try {
+        await Promise.all([input.open(), output.open()]);
+        if (stale()) return;
+        const port = webMidiPort(input, output);
+        if (kind === 'matribox') {
+          // The Matribox II Pro speaks another protocol: its own editor drives the ports.
+          transportClose.current = () => port.listen(null);
+          patch({ status: 'connected', transport: 'usb', matribox: port });
+          return;
+        }
+        link.current = new PocketMasterLink(port, appendLog, (f) => notifyRef.current(f));
+        patch({ status: 'connected', transport: 'usb', error: null, irNames: null, profileNames: null });
+        await read();
+        await refreshSlotNames();
+        await readFirmware();
+      } catch (e) {
+        if (stale()) return;
+        console.error('connect failed', e);
+        link.current = null;
+        usbPorts.current = null;
+        patch({ status: 'ready', pedal: null, error: `Could not open the ports: ${message(e)}` });
+      } finally {
+        if (!stale()) connecting.current = false;
+      }
+    },
+    [patch, appendLog, read, refreshSlotNames, readFirmware],
+  );
 
   /** Connects over Bluetooth LE MIDI instead of USB; the browser's chooser needs this click. */
   const connectBle = useCallback(async () => {
@@ -478,54 +526,60 @@ export function usePocketMaster() {
   }, [patch, appendLog, read, refreshSlotNames, readFirmware, lookAgain]);
 
   /** A device-wide setting write (setGlobal / setExpFsTarget bytes); queued like an edit. */
-  const writeGlobal = useCallback((bytes: Uint8Array) => {
-    const current = link.current;
-    if (!current || busyRef.current) return;
-    try {
-      current.edit(bytes);
-    } catch (e) {
-      if (e instanceof LinkClosedError) return;
-      console.error('global setting write failed', e);
-      patch({ error: message(e) });
-    }
-  }, [patch]);
+  const writeGlobal = useCallback(
+    (bytes: Uint8Array) => {
+      const current = link.current;
+      if (!current || busyRef.current) return;
+      try {
+        current.edit(bytes);
+      } catch (e) {
+        if (e instanceof LinkClosedError) return;
+        console.error('global setting write failed', e);
+        patch({ error: message(e) });
+      }
+    },
+    [patch],
+  );
 
   /**
    * Runs `run` alone on the link (no edits or automatic re-reads meanwhile), then re-reads the slot
    * names and the preset. Resolves with its result, or null when it failed (the error is shown).
    */
-  const exclusive = useCallback(async <T,>(step: string, run: (current: PocketMasterLink) => Promise<T>): Promise<T | null> => {
-    const current = link.current;
-    if (!current) {
-      patch({ error: 'Connect the pedal first.' });
-      return null;
-    }
-    if (busyRef.current) {
-      patch({ error: 'The pedal is busy with another operation; try again when it ends.' });
-      return null;
-    }
-    busyRef.current = true;
-    if (settleTimer.current) clearTimeout(settleTimer.current);
-    patch({ busy: { step, done: 0, total: 1 }, error: null });
-    let result: T | null = null;
-    let failure: string | null = null;
-    try {
-      await current.drained();
-      result = await run(current);
-    } catch (e) {
-      failure = e instanceof LinkClosedError ? 'The connection to the pedal was closed during the operation.' : message(e);
-    }
-    // The follow-up reads still hold the lock, so nothing else talks to the pedal in between.
-    try {
-      await refreshSlotNames();
-      await read({ locked: true });
-    } finally {
-      busyRef.current = false;
-      // read() clears the error, so the operation's own failure is shown after it.
-      patch({ busy: null, ...(failure ? { error: failure } : {}) });
-    }
-    return failure ? null : result;
-  }, [patch, read, refreshSlotNames]);
+  const exclusive = useCallback(
+    async <T>(step: string, run: (current: PocketMasterLink) => Promise<T>): Promise<T | null> => {
+      const current = link.current;
+      if (!current) {
+        patch({ error: 'Connect the pedal first.' });
+        return null;
+      }
+      if (busyRef.current) {
+        patch({ error: 'The pedal is busy with another operation; try again when it ends.' });
+        return null;
+      }
+      busyRef.current = true;
+      if (settleTimer.current) clearTimeout(settleTimer.current);
+      patch({ busy: { step, done: 0, total: 1 }, error: null });
+      let result: T | null = null;
+      let failure: string | null = null;
+      try {
+        await current.drained();
+        result = await run(current);
+      } catch (e) {
+        failure = e instanceof LinkClosedError ? 'The connection to the pedal was closed during the operation.' : message(e);
+      }
+      // The follow-up reads still hold the lock, so nothing else talks to the pedal in between.
+      try {
+        await refreshSlotNames();
+        await read({ locked: true });
+      } finally {
+        busyRef.current = false;
+        // read() clears the error, so the operation's own failure is shown after it.
+        patch({ busy: null, ...(failure ? { error: failure } : {}) });
+      }
+      return failure ? null : result;
+    },
+    [patch, read, refreshSlotNames],
+  );
   const exclusiveRef = useRef(exclusive);
   exclusiveRef.current = exclusive;
 
@@ -554,9 +608,12 @@ export function usePocketMaster() {
 
   /** Loads another preset, like turning the preset knob; unsaved edits on the pedal are lost. */
   /** True once the pedal loaded it (false when busy or the link failed). */
-  const loadPreset = useCallback(async (index: number): Promise<boolean> => {
-    return (await exclusive('Loading', (current) => linkPedal(current).selectPreset(index))) !== null;
-  }, [exclusive]);
+  const loadPreset = useCallback(
+    async (index: number): Promise<boolean> => {
+      return (await exclusive('Loading', (current) => linkPedal(current).selectPreset(index))) !== null;
+    },
+    [exclusive],
+  );
 
   /** Closes the connection and forgets the pedal's preset: the page goes back to waiting for one. */
   const drop = useCallback(() => {
@@ -574,8 +631,18 @@ export function usePocketMaster() {
     pedalModifiedRef.current = null;
     historyRef.current = EMPTY_HISTORY;
     patch({
-      status: access.current ? 'ready' : 'idle', transport: null, tuner: false, pedal: null, matribox: null,
-      preset: null, presetIndex: null, restorePoint: null, pedalModified: null, history: EMPTY_HISTORY, names: null, firmware: null,
+      status: access.current ? 'ready' : 'idle',
+      transport: null,
+      tuner: false,
+      pedal: null,
+      matribox: null,
+      preset: null,
+      presetIndex: null,
+      restorePoint: null,
+      pedalModified: null,
+      history: EMPTY_HISTORY,
+      names: null,
+      firmware: null,
     });
   }, [patch]);
 
@@ -623,7 +690,9 @@ export function usePocketMaster() {
       .then((s) => {
         if (cancelled) return;
         status = s;
-        s.onchange = () => { if (s.state === 'granted') void enable(); };
+        s.onchange = () => {
+          if (s.state === 'granted') void enable();
+        };
       })
       .catch(() => undefined); // browsers without the MIDI permission name: the Allow button stays
     return () => {
@@ -679,19 +748,16 @@ export function usePocketMaster() {
     patch({ backups: backupsRef.current });
   }, [patch]);
 
-  const keepBackup = useCallback(
-    (file: BackupFile) => {
-      const { list, stored } = storeBackup(backupsRef.current, file);
-      backupsRef.current = list;
-      setState((s) => ({
-        ...s,
-        backups: list,
-        flowBackups: [...s.flowBackups, file],
-        storageWarning: stored ? s.storageWarning : 'This browser could not keep the backup. Download it now and keep the file.',
-      }));
-    },
-    [],
-  );
+  const keepBackup = useCallback((file: BackupFile) => {
+    const { list, stored } = storeBackup(backupsRef.current, file);
+    backupsRef.current = list;
+    setState((s) => ({
+      ...s,
+      backups: list,
+      flowBackups: [...s.flowBackups, file],
+      storageWarning: stored ? s.storageWarning : 'This browser could not keep the backup. Download it now and keep the file.',
+    }));
+  }, []);
 
   /** Runs a save or restore flow with live edit paused; on success the saved preset is the new restore point. */
   const runFlow = useCallback(
@@ -730,33 +796,33 @@ export function usePocketMaster() {
   );
 
   const save = useCallback(
-    (target: number, name: string, backup = true) =>
-      runFlow(target, (pedal, onProgress) =>
-        saveToSlot(pedal, { target, name, backup, edited: presetRef.current, onProgress, onBackup: keepBackup }),
-      ),
+    (target: number, name: string, backup = true) => runFlow(target, (pedal, onProgress) => saveToSlot(pedal, { target, name, backup, edited: presetRef.current, onProgress, onBackup: keepBackup })),
     [runFlow, keepBackup],
   );
 
   /** Copies a stored preset over a user slot (checked by reading both back); the loaded preset is untouched. */
-  const copyPreset = useCallback(async (destination: number, source: number) => {
-    const current = link.current;
-    if (!current || busyRef.current) return false;
-    busyRef.current = true;
-    patch({ busy: { step: `Copying ${presetLabel(source)} to ${presetLabel(destination)}`, done: 0, total: 1 }, error: null });
-    try {
-      await current.drained();
-      await copyStoredPreset(current, destination, source);
-      const names = await linkPedal(current).readNames();
-      busyRef.current = false;
-      patch({ busy: null, names });
-      return true;
-    } catch (e) {
-      busyRef.current = false;
-      if (e instanceof LinkClosedError) patch({ busy: null });
-      else patch({ busy: null, error: message(e) });
-      return false;
-    }
-  }, [patch]);
+  const copyPreset = useCallback(
+    async (destination: number, source: number) => {
+      const current = link.current;
+      if (!current || busyRef.current) return false;
+      busyRef.current = true;
+      patch({ busy: { step: `Copying ${presetLabel(source)} to ${presetLabel(destination)}`, done: 0, total: 1 }, error: null });
+      try {
+        await current.drained();
+        await copyStoredPreset(current, destination, source);
+        const names = await linkPedal(current).readNames();
+        busyRef.current = false;
+        patch({ busy: null, names });
+        return true;
+      } catch (e) {
+        busyRef.current = false;
+        if (e instanceof LinkClosedError) patch({ busy: null });
+        else patch({ busy: null, error: message(e) });
+        return false;
+      }
+    },
+    [patch],
+  );
 
   /** Backs up all 50 user presets (read without loading them), keeps it in the list and downloads the file. */
   const backupAll = useCallback(async () => {
@@ -779,45 +845,45 @@ export function usePocketMaster() {
   }, [patch, keepBackup]);
 
   /** Writes a whole backup file back (after backing up the slots as they are now), then re-reads the pedal. */
-  const restoreAll = useCallback(async (file: BackupFile) => {
-    const current = link.current;
-    if (!current || busyRef.current) return false;
-    busyRef.current = true;
-    patch({ busy: { step: 'Preparing', done: 0, total: 1 }, error: null, flowBackups: [] });
-    try {
-      await current.drained();
-      await restoreAllFromBackup(linkPedal(current), file, { onProgress: (busy) => patch({ busy }), onBackup: keepBackup });
-      busyRef.current = false;
-      patch({ busy: null });
-      await read({ freshRestorePoint: true });
-      await refreshSlotNames();
-      return true;
-    } catch (e) {
-      busyRef.current = false;
-      patch({ busy: null, error: e instanceof LinkClosedError ? null : message(e) });
-      return false;
-    }
-  }, [patch, keepBackup, read, refreshSlotNames]);
+  const restoreAll = useCallback(
+    async (file: BackupFile) => {
+      const current = link.current;
+      if (!current || busyRef.current) return false;
+      busyRef.current = true;
+      patch({ busy: { step: 'Preparing', done: 0, total: 1 }, error: null, flowBackups: [] });
+      try {
+        await current.drained();
+        await restoreAllFromBackup(linkPedal(current), file, { onProgress: (busy) => patch({ busy }), onBackup: keepBackup });
+        busyRef.current = false;
+        patch({ busy: null });
+        await read({ freshRestorePoint: true });
+        await refreshSlotNames();
+        return true;
+      } catch (e) {
+        busyRef.current = false;
+        patch({ busy: null, error: e instanceof LinkClosedError ? null : message(e) });
+        return false;
+      }
+    },
+    [patch, keepBackup, read, refreshSlotNames],
+  );
 
   /** Turns the pedal's tuner on or off. */
-  const setTuner = useCallback(async (on: boolean) => {
-    const current = link.current;
-    if (!current) return;
-    try {
-      await current.setTuner(on);
-      patch({ tuner: on });
-    } catch (e) {
-      if (!(e instanceof LinkClosedError)) patch({ error: message(e) });
-    }
-  }, [patch]);
-
-  const restore = useCallback(
-    (slot: SlotBackup) =>
-      runFlow(slot.index, (pedal, onProgress) =>
-        restoreFromBackup(pedal, slot, { onProgress, onBackup: keepBackup }),
-      ),
-    [runFlow, keepBackup],
+  const setTuner = useCallback(
+    async (on: boolean) => {
+      const current = link.current;
+      if (!current) return;
+      try {
+        await current.setTuner(on);
+        patch({ tuner: on });
+      } catch (e) {
+        if (!(e instanceof LinkClosedError)) patch({ error: message(e) });
+      }
+    },
+    [patch],
   );
+
+  const restore = useCallback((slot: SlotBackup) => runFlow(slot.index, (pedal, onProgress) => restoreFromBackup(pedal, slot, { onProgress, onBackup: keepBackup })), [runFlow, keepBackup]);
 
   /** Re-reads the edit buffer from the pedal and hands it over as a preset file. */
   const exportPreset = useCallback(async () => {
@@ -897,10 +963,7 @@ export function usePocketMaster() {
     [patch],
   );
 
-  const modified = useMemo(
-    () => safeModified(state.preset, state.restorePoint) || state.pedalModified === true,
-    [state.preset, state.restorePoint, state.pedalModified],
-  );
+  const modified = useMemo(() => safeModified(state.preset, state.restorePoint) || state.pedalModified === true, [state.preset, state.restorePoint, state.pedalModified]);
 
   stateRef.current = state;
   return {

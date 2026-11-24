@@ -4,7 +4,9 @@ import { CATALOG_FILE, connectMatribox, expect, pickCatalog, test } from './matr
 
 // Groq is simulated: every call is answered here, so nothing leaves the machine.
 type Reply = { body: unknown };
-const call = (name: string, args: unknown): Reply => ({ body: { choices: [{ message: { role: 'assistant', content: null, tool_calls: [{ id: 'g1', type: 'function', function: { name, arguments: JSON.stringify(args) } }] } }] } });
+const call = (name: string, args: unknown): Reply => ({
+  body: { choices: [{ message: { role: 'assistant', content: null, tool_calls: [{ id: 'g1', type: 'function', function: { name, arguments: JSON.stringify(args) } }] } }] },
+});
 const say = (text: string): Reply => ({ body: { choices: [{ message: { role: 'assistant', content: text } }] } });
 
 async function fakeGroq(page: Page, replies: Reply[]) {
@@ -41,11 +43,13 @@ test('without the catalog the assistant explains what it needs', async ({ page }
 
 test('the assistant builds a whole chain on the unit, shows what changed, and Undo/Redo replay it', async ({ page, unit }) => {
   const requests = await fakeGroq(page, [
-    call('build_tone', { blocks: [
-      { module: 'DRV', model: 'Fake Fuzz', params: [{ name: 'Fuzz', value: 80 }] },
-      { module: 'AMP', model: 'Fake Plexi', params: [{ name: 'Gain', value: 60 }] },
-      { module: 'DLY', model: 'Fake Echo', on: false },
-    ] }),
+    call('build_tone', {
+      blocks: [
+        { module: 'DRV', model: 'Fake Fuzz', params: [{ name: 'Fuzz', value: 80 }] },
+        { module: 'AMP', model: 'Fake Plexi', params: [{ name: 'Gain', value: 60 }] },
+        { module: 'DLY', model: 'Fake Echo', on: false },
+      ],
+    }),
     say('A Fuzz Face into a Plexi.'),
   ]);
   await connectMatribox(page);
@@ -60,7 +64,11 @@ test('the assistant builds a whole chain on the unit, shows what changed, and Un
   expect(first).toContain('Name: Drive AD');
 
   await chain(page, 'DRV → AMP → DLY');
-  expect(loaded(unit).chain.map((b) => [b.fxid, b.on, b.values[0]])).toEqual([[0x03000010, true, 80], [0x0700001a, true, 60], [0x0b000001, false, 0]]);
+  expect(loaded(unit).chain.map((b) => [b.fxid, b.on, b.values[0]])).toEqual([
+    [0x03000010, true, 80],
+    [0x0700001a, true, 60],
+    [0x0b000001, false, 0],
+  ]);
   const changes = panel(page).getByRole('region', { name: 'What changed' });
   await expect(changes.getByText('DYN DRV AMP CAB RVB VOL → DRV AMP DLY')).toBeVisible();
   await expect(changes.getByText('DRV · Fake Fuzz')).toHaveCount(2);
@@ -73,7 +81,7 @@ test('the assistant builds a whole chain on the unit, shows what changed, and Un
   expect(loaded(unit).chain[0]!.values[0]).toBe(80);
 });
 
-test('Undo and Redo replay the editor\'s own edits through the unit, from the buttons and the keyboard', async ({ page, unit }) => {
+test("Undo and Redo replay the editor's own edits through the unit, from the buttons and the keyboard", async ({ page, unit }) => {
   await connectMatribox(page);
   await pickCatalog(page);
   const undo = page.getByRole('button', { name: 'Undo' });
@@ -81,8 +89,14 @@ test('Undo and Redo replay the editor\'s own edits through the unit, from the bu
 
   await page.getByRole('slider', { name: 'DRV Gain' }).fill('77');
   await expect.poll(() => loaded(unit).chain[1]!.values[0]).toBe(77);
-  await page.getByRole('listitem', { name: /^2\. DRV/ }).getByRole('checkbox').check();
-  await page.getByRole('listitem', { name: /^5\. RVB/ }).getByRole('button', { name: 'Remove' }).click();
+  await page
+    .getByRole('listitem', { name: /^2\. DRV/ })
+    .getByRole('checkbox')
+    .check();
+  await page
+    .getByRole('listitem', { name: /^5\. RVB/ })
+    .getByRole('button', { name: 'Remove' })
+    .click();
   await chain(page, 'DYN → DRV → AMP → CAB → VOL');
 
   await undo.click();

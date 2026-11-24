@@ -10,7 +10,8 @@ import { MB_IR_SLOTS, mbIrUpload, mbReadIrNames, parseMbIrNames } from '@pocket-
 import type { MatriboxConnection } from './matribox-link.ts';
 import { inside } from './session.ts';
 
-export const MB_IR_UNCHECKED = 'Experimental: the IR upload is rebuilt byte for byte from the official editor\'s uploads, but not yet sent to a unit by us. Check the slot with matribox_list_irs and by ear.';
+export const MB_IR_UNCHECKED =
+  "Experimental: the IR upload is rebuilt byte for byte from the official editor's uploads, but not yet sent to a unit by us. Check the slot with matribox_list_irs and by ear.";
 const NAME_MAX = 16;
 const STORED = 1;
 
@@ -27,7 +28,10 @@ const defaultSlotName = (slot: number) => `User IR ${slot}`;
 
 /** The file name without folder and extension, printable ASCII, cut to 16 characters like the official editor. */
 function nameFromFile(file: string): string {
-  const name = basename(file, extname(file)).replace(/[^\x20-\x7e]/g, '_').slice(0, NAME_MAX).trim();
+  const name = basename(file, extname(file))
+    .replace(/[^\x20-\x7e]/g, '_')
+    .slice(0, NAME_MAX)
+    .trim();
   return name === '' ? 'User IR' : name;
 }
 
@@ -56,10 +60,5 @@ export async function uploadMatriboxIr(unit: MatriboxConnection, slot: number, p
   const after = parseMbIrNames(await unit.read(mbReadIrNames()));
   if (after[slot - 1]?.trim() !== prepared.name.trim()) throw new Error(`User IR ${slot} shows "${after[slot - 1]?.trim() ?? ''}" after the upload, not "${prepared.name.trim()}"`);
   const list = after.map((n, i) => `User IR ${i + 1}: ${n.trim()}`).join('\n');
-  return [
-    `Loaded "${prepared.name.trim()}" into User IR ${slot}${occupied ? ` (replacing "${current}")` : ''}. Pick it in an IR block.`,
-    MB_IR_UNCHECKED,
-    '',
-    list,
-  ].join('\n');
+  return [`Loaded "${prepared.name.trim()}" into User IR ${slot}${occupied ? ` (replacing "${current}")` : ''}. Pick it in an IR block.`, MB_IR_UNCHECKED, '', list].join('\n');
 }

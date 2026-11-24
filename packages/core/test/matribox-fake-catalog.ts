@@ -9,7 +9,14 @@ const model = (fxid: number, name: string, origin: string, widget: unknown[], de
 export const FAKE_ALG_DATA = {
   Modules: [
     { name: 'DYN', index: 0, alg: [model(0x1b, 'Fake Gate', 'Imaginary Gate\nAlias: Gate X', [w('Threshold', '0', '-80', '0')])] },
-    { name: 'DRV', index: 3, alg: [model(0x0300002a, 'Fake Drive', 'Imaginary Overdrive 808', [w('Gain', '0'), w('Tone', '1'), w('Volume', '2')], 'A mid-boost overdrive.'), model(0x03000010, 'Fake Fuzz', 'Imaginary Fuzz Face', [w('Fuzz', '0'), w('Level', '1')])] },
+    {
+      name: 'DRV',
+      index: 3,
+      alg: [
+        model(0x0300002a, 'Fake Drive', 'Imaginary Overdrive 808', [w('Gain', '0'), w('Tone', '1'), w('Volume', '2')], 'A mid-boost overdrive.'),
+        model(0x03000010, 'Fake Fuzz', 'Imaginary Fuzz Face', [w('Fuzz', '0'), w('Level', '1')]),
+      ],
+    },
     { name: 'AMP', index: 4, alg: [model(0x0700001a, 'Fake Plexi', 'Imaginary Plexi 50W', [w('Gain', '0'), w('Master', '5')])] },
     { name: 'CAB', index: 5, alg: [model(0x0a000001, 'Fake 4x12', '55', [w('Volume', '1')])] },
     { name: 'IR', index: 6, alg: [model(0x0a100000, 'User IR 1', '', [w('Volume', '1')])] },

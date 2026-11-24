@@ -63,7 +63,12 @@ const FX: Readonly<Record<string, ModelGuide>> = {
   Octave: g('pitch', 'Octave up and down', 'Oitava acima e abaixo', 'Oitava polifônica: uma oitava abaixo e uma acima, misturadas ao som limpo.'),
   Pitch: g('pitch', 'Harmonizer', 'Harmonizador', 'Pitch shifter / harmonizador polifônico, em semitons.'),
   Detune: g('pitch', 'Detune (doubling)', 'Detune (dobra)', 'Cópia levemente desafinada (±50 cents) misturada ao som limpo, dobrando como um chorus.'),
-  'AC G': g('acoustic', 'Acoustic guitar simulator', 'Simulador de violão', 'Simula um violão: Body (ressonância grave), Top (harmônicos agudos); captação Standard, Jumbo, Enhanced (ataque) ou Piezo.'),
+  'AC G': g(
+    'acoustic',
+    'Acoustic guitar simulator',
+    'Simulador de violão',
+    'Simula um violão: Body (ressonância grave), Top (harmônicos agudos); captação Standard, Jumbo, Enhanced (ataque) ou Piezo.',
+  ),
 };
 
 export const MODEL_GUIDE: Readonly<Record<string, Readonly<Record<string, ModelGuide>>>> = {
@@ -168,7 +173,5 @@ export interface ModelGroup<T> {
 export function groupModels<T extends { readonly name: string }>(blockKey: string, models: readonly T[], lang: GuideLang): ModelGroup<T>[] {
   const keyOf = (m: T) => modelGuide(blockKey, m.name)?.group ?? null;
   const keys = [...Object.keys(GROUPS), null];
-  return keys
-    .map((key) => ({ name: key === null ? null : (GROUPS[key] as Text)[lang], models: models.filter((m) => keyOf(m) === key) }))
-    .filter((group) => group.models.length > 0);
+  return keys.map((key) => ({ name: key === null ? null : (GROUPS[key] as Text)[lang], models: models.filter((m) => keyOf(m) === key) })).filter((group) => group.models.length > 0);
 }

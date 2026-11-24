@@ -23,8 +23,14 @@ function matmulInto(m: readonly Float64Array[], x: Rows, out: Rows, n: number): 
     outr.fill(0, 0, n);
     let i = 0;
     for (; i + 4 <= mr.length; i += 4) {
-      const w0 = mr[i]!, w1 = mr[i + 1]!, w2 = mr[i + 2]!, w3 = mr[i + 3]!;
-      const x0 = x[i]!, x1 = x[i + 1]!, x2 = x[i + 2]!, x3 = x[i + 3]!;
+      const w0 = mr[i]!,
+        w1 = mr[i + 1]!,
+        w2 = mr[i + 2]!,
+        w3 = mr[i + 3]!;
+      const x0 = x[i]!,
+        x1 = x[i + 1]!,
+        x2 = x[i + 2]!,
+        x3 = x[i + 3]!;
       for (let j = 0; j < n; j++) {
         let a = outr[j]!;
         a += w0 * x0[j]!;
@@ -64,8 +70,14 @@ function conv1dBlock(x: Rows, kernels: readonly (readonly Float64Array[])[], b: 
       let i = 0;
       // Four input channels per pass keep the running sum in a register; same order as one by one.
       for (; i + 4 <= cin; i += 4) {
-        const w0 = kro[i]!, w1 = kro[i + 1]!, w2 = kro[i + 2]!, w3 = kro[i + 3]!;
-        const x0 = x[i]!, x1 = x[i + 1]!, x2 = x[i + 2]!, x3 = x[i + 3]!;
+        const w0 = kro[i]!,
+          w1 = kro[i + 1]!,
+          w2 = kro[i + 2]!,
+          w3 = kro[i + 3]!;
+        const x0 = x[i]!,
+          x1 = x[i + 1]!,
+          x2 = x[i + 2]!,
+          x3 = x[i + 3]!;
         for (let j = j0; j < n; j++) {
           const s = base + j;
           let a = tmp[j]!;

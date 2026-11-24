@@ -58,12 +58,16 @@ export function Toolbar(p: Props) {
   const [bluetooth, setBluetooth] = useState(true);
   useEffect(() => setBluetooth(bluetoothAvailable()), []);
   const bluetoothButton = bluetooth && (
-    <button type="button" className="btn" onClick={p.onBluetooth} disabled={p.status === 'connecting'}>{t('action.bluetooth')}</button>
+    <button type="button" className="btn" onClick={p.onBluetooth} disabled={p.status === 'connecting'}>
+      {t('action.bluetooth')}
+    </button>
   );
   return (
     <header className="toolbar">
       <div className="brand">
-        <span className="brand-mark" aria-hidden>◉</span>
+        <span className="brand-mark" aria-hidden>
+          ◉
+        </span>
         <span>OpenSonicX</span>
         {linked && p.pedal && <span className="brand-pedal">· {PEDAL_NAMES[p.pedal]}</span>}
       </div>
@@ -72,28 +76,46 @@ export function Toolbar(p: Props) {
         <LanguageSwitch />
         <span className={`status status-${p.status}`} role="status">
           <span className="status-dot" aria-hidden />
-          {p.status === 'connected' && p.pedal
-            ? t(p.transport === 'ble' ? 'status.bluetooth' : 'status.usb', { pedal: PEDAL_NAMES[p.pedal] })
-            : t(STATUS_KEY[p.status])}
+          {p.status === 'connected' && p.pedal ? t(p.transport === 'ble' ? 'status.bluetooth' : 'status.usb', { pedal: PEDAL_NAMES[p.pedal] }) : t(STATUS_KEY[p.status])}
         </span>
         {!linked ? (
           <>
             {bluetoothButton}
-            {p.midiRefused && <button className="btn btn-primary" onClick={p.onEnable} disabled={p.status === 'requesting'}>{t('action.enable')}</button>}
+            {p.midiRefused && (
+              <button type="button" className="btn btn-primary" onClick={p.onEnable} disabled={p.status === 'requesting'}>
+                {t('action.enable')}
+              </button>
+            )}
           </>
         ) : p.matribox ? null : (
           <>
             <button type="button" className="btn btn-icon" onClick={p.onUndo} disabled={!p.canUndo} aria-label={t('action.undo')} title={`${t('action.undo')} (${MOD}Z)`}>
-              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" /></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 14 4 9l5-5" />
+                <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+              </svg>
             </button>
             <button type="button" className="btn btn-icon" onClick={p.onRedo} disabled={!p.canRedo} aria-label={t('action.redo')} title={`${t('action.redo')} (${MOD}⇧Z)`}>
-              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 14 5-5-5-5" /><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" /></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m15 14 5-5-5-5" />
+                <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />
+              </svg>
             </button>
-            <button className="btn" onClick={p.onRevert} disabled={!p.modified}>{t('action.revert')}</button>
-            <button className="btn" onClick={p.onSave} disabled={p.busy || !p.canSave}>{t('action.save')}</button>
-            <button className="btn" onClick={p.onCopy} disabled={p.busy}>{t('action.copy')}</button>
-            <button type="button" className={`btn${p.tuner ? ' btn-primary' : ''}`} aria-pressed={p.tuner} onClick={() => p.onTuner(!p.tuner)} disabled={p.busy}>{t('action.tuner')}</button>
-            <button className="btn btn-primary" onClick={p.onRead} disabled={p.status === 'reading' || p.busy}>{t('action.read')}</button>
+            <button type="button" className="btn" onClick={p.onRevert} disabled={!p.modified}>
+              {t('action.revert')}
+            </button>
+            <button type="button" className="btn" onClick={p.onSave} disabled={p.busy || !p.canSave}>
+              {t('action.save')}
+            </button>
+            <button type="button" className="btn" onClick={p.onCopy} disabled={p.busy}>
+              {t('action.copy')}
+            </button>
+            <button type="button" className={`btn${p.tuner ? ' btn-primary' : ''}`} aria-pressed={p.tuner} onClick={() => p.onTuner(!p.tuner)} disabled={p.busy}>
+              {t('action.tuner')}
+            </button>
+            <button type="button" className="btn btn-primary" onClick={p.onRead} disabled={p.status === 'reading' || p.busy}>
+              {t('action.read')}
+            </button>
             <button type="button" className="btn btn-icon" onClick={p.onSettings} disabled={p.busy} aria-label={t('settings.open')} title={t('settings.open')}>
               <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3" />

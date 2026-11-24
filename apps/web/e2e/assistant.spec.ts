@@ -29,7 +29,9 @@ const groqSetup = (page: Page) => panel(page).getByRole('region', { name: 'Groq 
 const GROQ_KEY = 'fake-groq-key-e2e-0000';
 
 type GroqReply = { status?: number; body: unknown; headers?: Record<string, string> };
-const groqCall = (name: string, args: unknown, id = 'g1'): GroqReply => ({ body: { choices: [{ message: { role: 'assistant', content: null, tool_calls: [{ id, type: 'function', function: { name, arguments: JSON.stringify(args) } }] } }] } });
+const groqCall = (name: string, args: unknown, id = 'g1'): GroqReply => ({
+  body: { choices: [{ message: { role: 'assistant', content: null, tool_calls: [{ id, type: 'function', function: { name, arguments: JSON.stringify(args) } }] } }] },
+});
 const groqSay = (text: string): GroqReply => ({ body: { choices: [{ message: { role: 'assistant', content: text } }] } });
 
 /** Answers Groq requests with `replies` in order; returns the request bodies. */
@@ -85,7 +87,12 @@ test('the key is checked before it is kept, and never shown back', async ({ page
 
 test('describing a tone builds it live, lists what changed, and Undo takes it back', async ({ page, pedal }) => {
   const requests = await fakeGemini(page, [
-    call('edit_preset', { changes: [{ kind: 'model', block: 'AMP', model: 'Calif DualM' }, { kind: 'parameter', block: 'AMP', parameter: 'Gain', value: 70 }] }),
+    call('edit_preset', {
+      changes: [
+        { kind: 'model', block: 'AMP', model: 'Calif DualM' },
+        { kind: 'parameter', block: 'AMP', parameter: 'Gain', value: 70 },
+      ],
+    }),
     say('Mesa Dual Rectifier with gain 70, like the Black Album rhythm.'),
   ]);
   await connect(page, pedal);
@@ -120,7 +127,10 @@ test('saving is only a proposal: the Save dialog opens filled in, and Cancel sav
 });
 
 test('a used-up free quota hands the message to the next model on its own', async ({ page, pedal }) => {
-  const quota: Reply = { status: 429, body: { error: { code: 429, status: 'RESOURCE_EXHAUSTED', message: 'quota', details: [{ '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '3600s' }] } } };
+  const quota: Reply = {
+    status: 429,
+    body: { error: { code: 429, status: 'RESOURCE_EXHAUSTED', message: 'quota', details: [{ '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '3600s' }] } },
+  };
   const requests = await fakeGemini(page, [quota, say('Hello from Flash-Lite')]);
   await connect(page, pedal);
   await addKey(page);
@@ -133,9 +143,13 @@ test('a used-up free quota hands the message to the next model on its own', asyn
 
 test('what a tool reports matches the pedal: loading, reverting, and undo with nothing to undo', async ({ page, pedal }) => {
   const requests = await fakeGemini(page, [
-    call('undo_edit', {}), say('Nothing to undo.'),
-    call('select_preset', { preset: 'P10' }), say('Loaded P10.'),
-    call('edit_preset', { changes: [{ kind: 'volume', value: 50 }] }, 'c3'), call('revert_preset', {}, 'c4'), say('Back as it was.'),
+    call('undo_edit', {}),
+    say('Nothing to undo.'),
+    call('select_preset', { preset: 'P10' }),
+    say('Loaded P10.'),
+    call('edit_preset', { changes: [{ kind: 'volume', value: 50 }] }, 'c3'),
+    call('revert_preset', {}, 'c4'),
+    say('Back as it was.'),
   ]);
   await connect(page, pedal);
   await addKey(page);
@@ -158,7 +172,8 @@ test('what a tool reports matches the pedal: loading, reverting, and undo with n
 
 test('with a Groq key, Groq builds the tone; when its quota runs out, Gemini takes over', async ({ page, pedal }) => {
   const groq = await fakeGroq(page, [
-    groqCall('edit_preset', { changes: [{ kind: 'model', block: 'AMP', model: 'Calif DualM' }] }), groqSay('Rectifier on.'),
+    groqCall('edit_preset', { changes: [{ kind: 'model', block: 'AMP', model: 'Calif DualM' }] }),
+    groqSay('Rectifier on.'),
     { status: 429, body: { error: { message: 'Rate limit reached for requests per day' } }, headers: { 'retry-after': '3600' } },
   ]);
   const gemini = await fakeGemini(page, [say('Gemini here.')]);
@@ -186,9 +201,9 @@ test('with a Groq key, Groq builds the tone; when its quota runs out, Gemini tak
 });
 
 test('a refused Groq key is reported once while Gemini answers; a quota cut mid-answer is not redone elsewhere', async ({ page, pedal }) => {
-  await page.route('https://api.groq.com/**', (route) => route.request().url().endsWith('/models')
-    ? route.fulfill({ json: { data: [] } })
-    : route.fulfill({ status: 401, json: { error: { message: 'Invalid API Key' } } }));
+  await page.route('https://api.groq.com/**', (route) =>
+    route.request().url().endsWith('/models') ? route.fulfill({ json: { data: [] } }) : route.fulfill({ status: 401, json: { error: { message: 'Invalid API Key' } } }),
+  );
   const gemini = await fakeGemini(page, [
     say('Hi from Gemini.'),
     call('edit_preset', { changes: [{ kind: 'volume', value: 50 }] }),
@@ -208,7 +223,10 @@ test('a refused Groq key is reported once while Gemini answers; a quota cut mid-
   await ask(page, 'louder');
   await expect(panel(page).getByText(/Gemini Flash reached its free limit \(back at .+\) in the middle of this answer/)).toBeVisible();
   await expect(panel(page).getByText('Groq refused the saved key.', { exact: false })).toHaveCount(1);
-  expect(gemini.map((r) => r.model), 'Flash-Lite was not asked to redo the edit').toEqual(['gemini-3.8-flash', 'gemini-3.8-flash', 'gemini-3.8-flash']);
+  expect(
+    gemini.map((r) => r.model),
+    'Flash-Lite was not asked to redo the edit',
+  ).toEqual(['gemini-3.8-flash', 'gemini-3.8-flash', 'gemini-3.8-flash']);
   expect(pedal.pedal.received.filter((r) => r === 'edit 42')).toHaveLength(1);
 });
 
@@ -237,8 +255,10 @@ test('a key the browser will not keep says so; a failed answer stays in what the
 
 test('a tone kept by the assistant goes to the library, and a later conversation loads it from there', async ({ page, pedal }) => {
   const requests = await fakeGemini(page, [
-    call('keep_tone', { name: 'BLACK RHY', notes: 'Metallica Black Album, rhythm' }), say('Kept it as BLACK RHY.'),
-    call('load_saved_tone', { name: 'BLACK RHY' }, 'c2'), say('Loaded your Black Album tone.'),
+    call('keep_tone', { name: 'BLACK RHY', notes: 'Metallica Black Album, rhythm' }),
+    say('Kept it as BLACK RHY.'),
+    call('load_saved_tone', { name: 'BLACK RHY' }, 'c2'),
+    say('Loaded your Black Album tone.'),
   ]);
   await connect(page, pedal);
   await addKey(page);
@@ -265,7 +285,7 @@ test('an example request fills the message box, so a first-time user only has to
   await expect(panel(page).getByRole('textbox', { name: 'Message to the tone assistant' })).toBeFocused();
 });
 
-test('Google refusing the free tier in the person\'s region says so, with its list of regions', async ({ page, pedal }) => {
+test("Google refusing the free tier in the person's region says so, with its list of regions", async ({ page, pedal }) => {
   const region: Reply = { status: 400, body: { error: { code: 400, status: 'FAILED_PRECONDITION', message: 'User location is not supported for the API use.' } } };
   await fakeGemini(page, [region]);
   await connect(page, pedal);
@@ -276,11 +296,7 @@ test('Google refusing the free tier in the person\'s region says so, with its li
 });
 
 test('a tone saved to another slot still lists what changed', async ({ page, pedal }) => {
-  await fakeGemini(page, [
-    call('edit_preset', { changes: [{ kind: 'model', block: 'AMP', model: 'Calif DualM' }] }),
-    call('save_preset', { slot: 'P45', name: 'BLACK ALB' }),
-    say('Saved on P45.'),
-  ]);
+  await fakeGemini(page, [call('edit_preset', { changes: [{ kind: 'model', block: 'AMP', model: 'Calif DualM' }] }), call('save_preset', { slot: 'P45', name: 'BLACK ALB' }), say('Saved on P45.')]);
   await connect(page, pedal);
   await addKey(page);
   await ask(page, 'black album rhythm, save it on 45');
@@ -303,7 +319,14 @@ test('an answer that changed nothing says so, instead of an empty space where th
 
 test('a long change list scrolls with the conversation, not on its own', async ({ page, pedal }) => {
   await fakeGemini(page, [
-    call('edit_preset', { changes: [{ kind: 'model', block: 'AMP', model: 'Calif DualM' }, { kind: 'model', block: 'DRV', model: 'Butter OD' }, { kind: 'model', block: 'RVB', model: 'Room' }, { kind: 'block', block: 'RVB', on: true }] }),
+    call('edit_preset', {
+      changes: [
+        { kind: 'model', block: 'AMP', model: 'Calif DualM' },
+        { kind: 'model', block: 'DRV', model: 'Butter OD' },
+        { kind: 'model', block: 'RVB', model: 'Room' },
+        { kind: 'block', block: 'RVB', on: true },
+      ],
+    }),
     say('Done.'),
   ]);
   await connect(page, pedal);
@@ -395,10 +418,12 @@ test('Claude added as a paid provider answers through its own API, with the brow
   expect(sent[0]!.body.model).toBe('claude-test-haiku');
 });
 
-test('the answer order is the person\'s, and rotation starts each new conversation with the next provider', async ({ page, pedal }) => {
-  await page.route('https://api.openai.com/**', async (route: Route) => route.request().url().endsWith('/models')
-    ? route.fulfill({ json: { data: [{ id: 'gpt-9-mini' }] } })
-    : route.fulfill({ json: { choices: [{ message: { role: 'assistant', content: 'From OpenAI.' } }] } }));
+test("the answer order is the person's, and rotation starts each new conversation with the next provider", async ({ page, pedal }) => {
+  await page.route('https://api.openai.com/**', async (route: Route) =>
+    route.request().url().endsWith('/models')
+      ? route.fulfill({ json: { data: [{ id: 'gpt-9-mini' }] } })
+      : route.fulfill({ json: { choices: [{ message: { role: 'assistant', content: 'From OpenAI.' } }] } }),
+  );
   await fakeGroq(page, [groqSay('From Groq.'), groqSay('From Groq again.')]);
   await connect(page, pedal);
   await addGroqKey(page);
@@ -419,15 +444,21 @@ test('the answer order is the person\'s, and rotation starts each new conversati
   await panel(page).getByRole('button', { name: 'New conversation' }).click();
   await ask(page, 'hi again');
   await expect(panel(page).getByText('From OpenAI.')).toBeVisible();
-  expect(await page.evaluate(() => [localStorage.getItem('pocket-master-editor.aiOrder.v1'), localStorage.getItem('pocket-master-editor.aiRotate.v1')]))
-    .toEqual(['["groq","openai"]', 'true']);
+  expect(await page.evaluate(() => [localStorage.getItem('pocket-master-editor.aiOrder.v1'), localStorage.getItem('pocket-master-editor.aiRotate.v1')])).toEqual(['["groq","openai"]', 'true']);
 });
 
 test('a paid Gemini key answers with the model picked from its list and the thorough request; the keys screen explains free and paid', async ({ page, pedal }) => {
   const sent: Record<string, unknown>[] = [];
   await page.route('https://generativelanguage.googleapis.com/**', async (route: Route) => {
     if (route.request().url().includes('/models')) {
-      return route.fulfill({ json: { models: [{ name: 'models/gemini-9-flash', supportedGenerationMethods: ['generateContent'] }, { name: 'models/gemini-9-pro', supportedGenerationMethods: ['generateContent'] }] } });
+      return route.fulfill({
+        json: {
+          models: [
+            { name: 'models/gemini-9-flash', supportedGenerationMethods: ['generateContent'] },
+            { name: 'models/gemini-9-pro', supportedGenerationMethods: ['generateContent'] },
+          ],
+        },
+      });
     }
     sent.push(route.request().postDataJSON());
     return route.fulfill({ json: { status: 'completed', steps: [{ type: 'model_output', content: [{ type: 'text', text: 'From paid Gemini.' }] }] } });

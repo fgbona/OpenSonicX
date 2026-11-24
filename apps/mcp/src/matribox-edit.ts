@@ -5,8 +5,7 @@
  */
 import { MB_SLOTS, type MbCatalog, type MbModel, type MbModule, type MbParam, type MbResolvedBlock, type MbResolvedPreset } from '@pocket-master/core';
 
-export const EXPERIMENTAL =
-  'Experimental: Matribox writes are validated on one unit only so far. Check the result with matribox_get_preset and by ear on the unit.';
+export const EXPERIMENTAL = 'Experimental: Matribox writes are validated on one unit only so far. Check the result with matribox_get_preset and by ear on the unit.';
 
 const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 const round = (n: number) => String(Number(n.toFixed(2)));
@@ -54,7 +53,8 @@ export function findModule(catalog: MbCatalog, name: string): MbModule {
 /** A model by name, in `module` when given, else anywhere in the catalog. */
 export function findModel(catalog: MbCatalog, name: string, module?: MbModule): { module: MbModule; model: MbModel } {
   const found = (module ? [module] : catalog.modules).flatMap((m) => m.models.filter((model) => same(model.name, name)).map((model) => ({ module: m, model })));
-  if (found.length === 0) throw new Error(module ? `No ${module.name} model "${name}". Models: ${module.models.map((m) => m.name).join(', ')}` : `No model "${name}": pick one from matribox_list_models.`);
+  if (found.length === 0)
+    throw new Error(module ? `No ${module.name} model "${name}". Models: ${module.models.map((m) => m.name).join(', ')}` : `No model "${name}": pick one from matribox_list_models.`);
   if (found.length > 1) throw new Error(`"${name}" is a model of ${found.map((f) => f.module.name).join(' and ')}: name the module too.`);
   return found[0] as { module: MbModule; model: MbModel };
 }

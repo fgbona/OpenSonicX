@@ -10,7 +10,9 @@ import { modelsFor } from '../src/catalog.ts';
 const knobs = readCapture('knob-capture.txt').map((m) => parseFrame(m.bytes).payload);
 function p08(): Preset {
   const r = new Reassembler();
-  const rx = readCapture('p08-capture.txt').filter((m) => m.dir === 'RX').slice(1);
+  const rx = readCapture('p08-capture.txt')
+    .filter((m) => m.dir === 'RX')
+    .slice(1);
   return decodePreset(rx.map((m) => r.feed(parseFrame(m.bytes), 0)).at(-1)!.payload);
 }
 

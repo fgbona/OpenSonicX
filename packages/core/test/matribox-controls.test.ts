@@ -3,18 +3,19 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parseMbFrame, readFloat32LE } from '../src/matribox/frame.ts';
 import { unwrapMbMessage } from '../src/matribox/message.ts';
-import {
-  mbAssignExpression, mbAssignFootswitch, mbExpressionWrites, mbSetExpressionMax, mbSetExpressionMin, mbSetPatchVolume,
-} from '../src/matribox/write.ts';
+import { mbAssignExpression, mbAssignFootswitch, mbExpressionWrites, mbSetExpressionMax, mbSetExpressionMin, mbSetPatchVolume } from '../src/matribox/write.ts';
 import { fromHex, toHex } from '../src/hex.ts';
 import { parseMbPreset } from '../src/matribox/preset.ts';
 import { mbAssignments, withMbVolume } from '../src/matribox/assignments.ts';
 import { isMbControlChange, MB_CC, mbBpmControlChanges, mbControlChange, mbSwitch } from '../src/matribox/cc.ts';
 
 // Host frames the official editor sent (captures mb-01, mb-04, mb-09), by name.
-const HOST = new Map(readFileSync(new URL('./fixtures/matribox-controls.txt', import.meta.url), 'utf8')
-  .split('\n').filter((l) => l && !l.startsWith('#'))
-  .map((l) => [l.slice(0, l.indexOf(' ')), fromHex(l.slice(l.indexOf(' ') + 1))] as const));
+const HOST = new Map(
+  readFileSync(new URL('./fixtures/matribox-controls.txt', import.meta.url), 'utf8')
+    .split('\n')
+    .filter((l) => l && !l.startsWith('#'))
+    .map((l) => [l.slice(0, l.indexOf(' ')), fromHex(l.slice(l.indexOf(' ') + 1))] as const),
+);
 
 const host = (name: string) => {
   const frame = HOST.get(name);
@@ -54,7 +55,7 @@ test('expression assignment, min and max rebuild the captured frames byte for by
   assert.equal(toHex(mbSetExpressionMax(0, capturedFloat('exp-max-entry0', 12))), toHex(host('exp-max-entry0')));
 });
 
-test('expression assignment field order, as the owner\'s unit took it (2026-11-24): group, position, slot, param', () => {
+test("expression assignment field order, as the owner's unit took it (2026-11-24): group, position, slot, param", () => {
   // Checked live: (1,0,1,0) landed in entry 4 (group 1 = EXP 1 mode B, position 0) on slot 1 (AMP),
   // (0,0,1,1) in entry 1 on slot 1 parameter 1 (AMP Volume). Entry 0..8 = group * 3 + position.
   const data = (frame: Uint8Array) => toHex(frame).replace(/ /g, '');
@@ -84,8 +85,14 @@ test('expression writes check the entry, slot, parameter and the 0..100 range', 
 });
 
 // The owner's "Drive AD" (decompressed device reply).
-const DRIVE_AD = parseMbPreset(fromHex(readFileSync(new URL('./fixtures/matribox-preset-drive-ad.txt', import.meta.url), 'utf8')
-  .split('\n').filter((l) => l && !l.startsWith('#')).join('')));
+const DRIVE_AD = parseMbPreset(
+  fromHex(
+    readFileSync(new URL('./fixtures/matribox-preset-drive-ad.txt', import.meta.url), 'utf8')
+      .split('\n')
+      .filter((l) => l && !l.startsWith('#'))
+      .join(''),
+  ),
+);
 
 test('mbAssignments reads volume, tempo, footswitches and expression entries', () => {
   const a = mbAssignments(DRIVE_AD);
@@ -108,7 +115,13 @@ test('withMbVolume changes the volume only, leaving the preset as it was', () =>
 test('Control Change messages: channel 1..16, 7-bit controller and value', () => {
   assert.deepEqual([...mbControlChange(1, MB_CC.tuner, mbSwitch(true))], [0xb0, 58, 127]);
   assert.deepEqual([...mbControlChange(16, MB_CC.tapTempo, 127)], [0xbf, 70, 127]);
-  for (const [ch, cc, v] of [[0, 1, 1], [17, 1, 1], [1, 128, 1], [1, 1, 128], [1, 1, 1.5]] as const) {
+  for (const [ch, cc, v] of [
+    [0, 1, 1],
+    [17, 1, 1],
+    [1, 128, 1],
+    [1, 1, 128],
+    [1, 1, 1.5],
+  ] as const) {
     assert.throws(() => mbControlChange(ch, cc, v), RangeError);
   }
   assert.equal(isMbControlChange(mbControlChange(3, 7, 50)), true);
@@ -116,8 +129,26 @@ test('Control Change messages: channel 1..16, 7-bit controller and value', () =>
 });
 
 test('BPM is sent as CC 68 (MSB) and CC 69 (LSB), 40..300', () => {
-  assert.deepEqual(mbBpmControlChanges(1, 120).map((m) => [...m]), [[0xb0, 68, 0], [0xb0, 69, 120]]);
-  assert.deepEqual(mbBpmControlChanges(1, 300).map((m) => [...m]), [[0xb0, 68, 2], [0xb0, 69, 44]]);
-  assert.deepEqual(mbBpmControlChanges(2, 128).map((m) => [...m]), [[0xb1, 68, 1], [0xb1, 69, 0]]);
+  assert.deepEqual(
+    mbBpmControlChanges(1, 120).map((m) => [...m]),
+    [
+      [0xb0, 68, 0],
+      [0xb0, 69, 120],
+    ],
+  );
+  assert.deepEqual(
+    mbBpmControlChanges(1, 300).map((m) => [...m]),
+    [
+      [0xb0, 68, 2],
+      [0xb0, 69, 44],
+    ],
+  );
+  assert.deepEqual(
+    mbBpmControlChanges(2, 128).map((m) => [...m]),
+    [
+      [0xb1, 68, 1],
+      [0xb1, 69, 0],
+    ],
+  );
   for (const bad of [39, 301, 120.5]) assert.throws(() => mbBpmControlChanges(1, bad), RangeError);
 });

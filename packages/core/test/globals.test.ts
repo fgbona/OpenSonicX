@@ -1,6 +1,5 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildFrame } from '../src/frame.ts';
 import { toHex } from '../src/hex.ts';
 import { fromHex } from '../src/hex.ts';
 import { decodeFirmware, decodeGlobals, factoryReset, setExpFsTarget, setGlobal, TESTED_FIRMWARE } from '../src/globals.ts';
@@ -34,14 +33,24 @@ test('global writes refuse values out of range', () => {
 // <address a0 a1> <length u16 LE> <value>. Settings this firmware does not have are absent.
 const OWNER_GLOBALS = fromHex(
   '12 10 01 01 04 00 03 03 01 01 02 01 04 00 02 00 00 00 02 02 04 00 3C 00 00 00 01 02 01 00 00 03 ' +
-  '02 01 00 64 01 03 01 00 FB 01 04 01 00 00 02 04 01 00 00 03 04 01 00 01 04 04 01 00 01 05 04 01 ' +
-  '00 EC 05 02 01 00 01',
+    '02 01 00 64 01 03 01 00 FB 01 04 01 00 00 02 04 01 00 00 03 04 01 00 01 04 04 01 00 01 05 04 01 ' +
+    '00 EC 05 02 01 00 01',
 );
 
 test('the globals reply decodes by record address, not by byte position', () => {
   assert.deepEqual(decodeGlobals(OWNER_GLOBALS), {
-    masterVolume: 60, backlight: 100, inputLevel: -5, fxRecLevel: 0, monitorLevel: 0, btRecLevel: -20,
-    mode: 1, bootProtection: 1, reamp: null, eco: null, expFsType: null, firmware: 'V1.3.3',
+    masterVolume: 60,
+    backlight: 100,
+    inputLevel: -5,
+    fxRecLevel: 0,
+    monitorLevel: 0,
+    btRecLevel: -20,
+    mode: 1,
+    bootProtection: 1,
+    reamp: null,
+    eco: null,
+    expFsType: null,
+    firmware: 'V1.3.3',
   });
   assert.equal(decodeGlobals(Uint8Array.from([0x12, 0x41, ...OWNER_GLOBALS.slice(2)])), null);
   assert.equal(decodeGlobals(OWNER_GLOBALS.slice(0, 10)), null, 'no master volume record');

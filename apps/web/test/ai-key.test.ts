@@ -4,9 +4,15 @@ import assert from 'node:assert/strict';
 /** A Storage stand-in, enough for aiKey.ts. */
 class MemoryStorage {
   readonly items = new Map<string, string>();
-  getItem(k: string) { return this.items.get(k) ?? null; }
-  setItem(k: string, v: string) { this.items.set(k, String(v)); }
-  removeItem(k: string) { this.items.delete(k); }
+  getItem(k: string) {
+    return this.items.get(k) ?? null;
+  }
+  setItem(k: string, v: string) {
+    this.items.set(k, String(v));
+  }
+  removeItem(k: string) {
+    this.items.delete(k);
+  }
 }
 const local = new MemoryStorage();
 const session = new MemoryStorage();
@@ -28,7 +34,10 @@ test('not remembering moves the keys to this session only, and back when turned 
   assert.equal(local.getItem('pocket-master-editor.groqKey.v1'), null, 'nothing left for the next person on this browser');
   assert.equal(local.getItem('pocket-master-editor.aiProviders.v1'), null);
   assert.equal(loadKey('groq'), 'gsk_one');
-  assert.deepEqual(loadPaid(isPaid).map((e) => e.key), ['sk-two']);
+  assert.deepEqual(
+    loadPaid(isPaid).map((e) => e.key),
+    ['sk-two'],
+  );
   saveKey('gemini', 'AIza-three');
   assert.equal(session.getItem('pocket-master-editor.geminiKey.v1'), 'AIza-three');
   assert.equal(local.getItem('pocket-master-editor.geminiKey.v1'), null);

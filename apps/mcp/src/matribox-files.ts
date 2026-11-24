@@ -5,9 +5,7 @@
  */
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import {
-  fromHex, mbPresetLabel, MB_PRESET_SIZE, parseMatriboxPrst, parseMbBackupAll, parseMbPreset, writeMatriboxPrst, type MbBackupAll, type MbPreset,
-} from '@pocket-master/core';
+import { fromHex, mbPresetLabel, MB_PRESET_SIZE, parseMatriboxPrst, parseMbBackupAll, parseMbPreset, writeMatriboxPrst, type MbBackupAll, type MbPreset } from '@pocket-master/core';
 import { inside } from './session.ts';
 
 export const MATRIBOX_DEVICE = 'Sonicake Matribox II Pro';

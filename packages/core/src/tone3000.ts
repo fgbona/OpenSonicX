@@ -83,7 +83,12 @@ export async function pkcePair(): Promise<{ verifier: string; challenge: string 
 /** Where to send the browser to sign in (optionally straight into TONE3000's tone picker). */
 export function authorizeUrl(o: { clientId: string; redirectUri: string; challenge: string; state: string; prompt?: 'select_tone' }): string {
   const q = new URLSearchParams({
-    client_id: o.clientId, redirect_uri: o.redirectUri, response_type: 'code', code_challenge: o.challenge, code_challenge_method: 'S256', state: o.state,
+    client_id: o.clientId,
+    redirect_uri: o.redirectUri,
+    response_type: 'code',
+    code_challenge: o.challenge,
+    code_challenge_method: 'S256',
+    state: o.state,
   });
   if (o.prompt) q.set('prompt', o.prompt);
   return `${TONE3000_API}/oauth/authorize?${q}`;

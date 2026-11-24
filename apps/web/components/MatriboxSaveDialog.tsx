@@ -54,7 +54,9 @@ export function MatriboxSaveDialog({ open, current, names, loadedName, busy, err
   const backupOffer = lastBackup && (
     <p className="small">
       {storageWarning && <strong>{t('mb.backupNotKept')} </strong>}
-      <button type="button" className="btn-link" onClick={() => downloadJson(lastBackup, mbBackupFileName(lastBackup))}>{t('mb.backupDownload', { slot: lastBackup.label })}</button>
+      <button type="button" className="btn-link" onClick={() => downloadJson(lastBackup, mbBackupFileName(lastBackup))}>
+        {t('mb.backupDownload', { slot: lastBackup.label })}
+      </button>
     </p>
   );
   return (
@@ -63,18 +65,35 @@ export function MatriboxSaveDialog({ open, current, names, loadedName, busy, err
         <>
           <p>{t('mb.saved', { slot: label, name })}</p>
           {backupOffer}
-          <div className="sheet-actions"><button className="btn btn-primary" onClick={onClose}>{t('action.done')}</button></div>
+          <div className="sheet-actions">
+            <button type="button" className="btn btn-primary" onClick={onClose}>
+              {t('action.done')}
+            </button>
+          </div>
         </>
       ) : (
-        <form className="sheet-form" onSubmit={async (e) => {
-          e.preventDefault();
-          if (valid && confirmed && (await onSave(target, name))) setDone(true);
-        }}>
+        <form
+          className="sheet-form"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (valid && confirmed && (await onSave(target, name))) setDone(true);
+          }}
+        >
           <label className="field">
             <span>{t('save.slot')}</span>
-            <select value={target} onChange={(e) => { setTarget(Number(e.target.value)); setConfirmed(false); }} disabled={busy}>
+            <select
+              value={target}
+              onChange={(e) => {
+                setTarget(Number(e.target.value));
+                setConfirmed(false);
+              }}
+              disabled={busy}
+            >
               {Array.from({ length: MB_PRESET_COUNT }, (_, i) => (
-                <option key={i} value={i}>{mbPresetLabel(i)} · {names[i]?.name ?? ''}{i === current ? ` ${t('save.loaded')}` : ''}</option>
+                <option key={i} value={i}>
+                  {mbPresetLabel(i)} · {names[i]?.name ?? ''}
+                  {i === current ? ` ${t('save.loaded')}` : ''}
+                </option>
               ))}
             </select>
           </label>
@@ -87,11 +106,19 @@ export function MatriboxSaveDialog({ open, current, names, loadedName, busy, err
             <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} disabled={busy} />
             <span>{t('mb.saveConfirm', { slot: label, name: names[target]?.name ?? '' })}</span>
           </label>
-          {error && <p className="alert" role="alert">{te(error)}</p>}
+          {error && (
+            <p className="alert" role="alert">
+              {te(error)}
+            </p>
+          )}
           {error && backupOffer}
           <div className="sheet-actions">
-            <button type="button" className="btn" onClick={onClose} disabled={busy}>{t('action.cancel')}</button>
-            <button type="submit" className="btn btn-danger" disabled={busy || !valid || !confirmed}>{t(busy ? 'mb.saving' : 'save.submit', { slot: label })}</button>
+            <button type="button" className="btn" onClick={onClose} disabled={busy}>
+              {t('action.cancel')}
+            </button>
+            <button type="submit" className="btn btn-danger" disabled={busy || !valid || !confirmed}>
+              {t(busy ? 'mb.saving' : 'save.submit', { slot: label })}
+            </button>
           </div>
         </form>
       )}

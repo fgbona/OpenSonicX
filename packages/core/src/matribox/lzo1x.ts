@@ -73,7 +73,7 @@ export function lzo1xDecompress(src: Uint8Array, maxOut: number = LZO1X_MAX_OUT)
   if ((src[0] as number) > 17) {
     const n = byte() - 17;
     literals(n);
-    state = n < 4 ? n : 4;
+    state = Math.min(n, 4);
   }
   for (;;) {
     const t = byte();
