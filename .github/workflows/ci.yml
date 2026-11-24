@@ -8,6 +8,8 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  TURBO_TELEMETRY_DISABLED: '1'
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -22,6 +24,13 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      # Turborepo's local cache (no remote cache): test/typecheck/build of a workspace whose inputs
+      # did not change are replayed from the previous run instead of run again.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-
       - run: npm test
         env:
           # The slow converter parity tests run in converter.yml, only when the converter changes.
