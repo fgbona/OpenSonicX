@@ -1,5 +1,5 @@
 name: CI
-# Every push and pull request: unit tests, typecheck, production build, then the
+# Every push and pull request: lint and format check, unit tests, typecheck, production build, then the
 # container image is built and started for real and checked by scripts/smoke-test.sh.
 on:
   push:
@@ -24,6 +24,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      # Biome: lint findings and files that are not formatted fail the job (biome.jsonc).
+      - run: npm run lint
       # Turborepo's local cache (no remote cache): test/typecheck/build of a workspace whose inputs
       # did not change are replayed from the previous run instead of run again.
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
