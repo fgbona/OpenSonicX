@@ -11,13 +11,13 @@ declare global {
   }
 }
 
-/** Runs in the page before any of its scripts: replaces navigator.requestMIDIAccess. */
-function installFakeMidi() {
+/** Runs in the page before any of its scripts: replaces navigator.requestMIDIAccess with one pedal's ports. */
+export function installFakeMidi(portName: string) {
   const listeners: { onmidimessage: ((e: { data: Uint8Array }) => void) | null } = { onmidimessage: null };
   const common = { manufacturer: 'Sonicake', state: 'connected', connection: 'open', open: async () => undefined, close: async () => undefined };
-  const input = { ...common, id: 'in-1', name: 'Pocket Master', type: 'input', set onmidimessage(f: typeof listeners.onmidimessage) { listeners.onmidimessage = f; }, get onmidimessage() { return listeners.onmidimessage; } };
+  const input = { ...common, id: 'in-1', name: portName, type: 'input', set onmidimessage(f: typeof listeners.onmidimessage) { listeners.onmidimessage = f; }, get onmidimessage() { return listeners.onmidimessage; } };
   const output = {
-    ...common, id: 'out-1', name: 'Pocket Master', type: 'output',
+    ...common, id: 'out-1', name: portName, type: 'output',
     send(bytes: ArrayLike<number>) {
       void window.__pedalSend(Array.from(bytes)).then((replies) => {
         // One packet after the other, a few ms apart, like the USB link.
@@ -35,7 +35,7 @@ export const test = base.extend<{ pedal: SysexPedal }>({
   pedal: async ({ page }, use) => {
     const pedal = new SysexPedal();
     await page.exposeFunction('__pedalSend', async (bytes: number[]) => (await pedal.receive(Uint8Array.from(bytes))).map((f) => Array.from(f)));
-    await page.addInitScript(installFakeMidi);
+    await page.addInitScript(installFakeMidi, 'Pocket Master');
     // The price catalog the assistant reads for paid answers: a small fixed one, never the network.
     await page.route('https://openrouter.ai/api/v1/models', (route) => route.fulfill({ json: { data: [{ id: 'openai/gpt-9', pricing: { prompt: '0.000001', completion: '0.000004' } }] } }));
     await use(pedal);

@@ -3,7 +3,8 @@
 Free, open-source tools for Sonicake guitar pedals. Today: the **Pocket Master Editor**, for
 the **Sonicake Pocket Master** multi-effects pedal, over USB MIDI or Bluetooth. No driver: open
 the page in Chrome, Edge or Opera, plug the pedal in, and read your preset.
-Support for the **Sonicake Matribox II Pro** is in progress ([docs/matribox.md](docs/matribox.md)).
+The **Sonicake Matribox II Pro** is supported too, experimentally: the same page recognises it
+by its USB MIDI port and opens its own editor ([docs/matribox.md](docs/matribox.md)).
 
 **Open it:** https://fgbona.github.io/OpenSonicX/ (updated
 with every release) · **Download the app:** [latest release](https://github.com/fgbona/OpenSonicX/releases/latest)
@@ -90,6 +91,16 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
   protection, backlight.
 - A SysEx log (hidden by default; *Show the SysEx log* at the bottom of the page)
   with every message sent and received, in hex, with a label.
+- **Matribox II Pro (experimental):** Connect recognises it by its MIDI port and shows its own
+  editor: the 240 presets (1A..60D) with a filter, the loaded preset's chain with each model and
+  the gear it is based on, live on/off, parameters (within each model's range) and models, add,
+  move and remove blocks, and Save to a slot with an explicit confirmation and a backup of the
+  slot first (kept in the browser, downloadable). Model names and parameters come from the
+  catalog of Sonicake's official Matribox II PRO app, which is not ours to ship: in the browser
+  you pick its `alg_data.json` once (on a Mac:
+  `/Applications/Matribox II PRO.app/Contents/Frameworks/App.framework/Resources/flutter_assets/assets/alg/alg_data.json`)
+  and it stays in that browser; the desktop app reads it from the installed app (or
+  `MATRIBOX_CATALOG`). Without it the presets and chains still show, by module number.
 
 ## What works where
 

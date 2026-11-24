@@ -4,7 +4,7 @@ The goal: an MCP server where you describe a tone and the AI builds it on the Ma
 like the Pocket Master server does today. What exists so far: the protocol groundwork in
 `packages/core/src/matribox/` (framing, pages, LZO1X, messages, name tables, the preset decoder),
 the model catalog reader, and the MCP server (below): the read tools, and **experimental** write tools
-decoded from captures but not yet validated on the unit. No editor UI yet.
+decoded from captures but not yet validated on the unit, and the editor UI (below).
 
 Everything below was learned from our own captures of the owner's unit (USB MIDI, 2026-11-24):
 the official editor's traffic, and replays of its **read** requests only.
@@ -223,6 +223,21 @@ Builders in `packages/core/src/matribox/write.ts`; tests compare them with the c
   the backup taken before saving over the loaded slot holds the edits, not what was stored.
 
 Every write above has been checked on the owner's unit (2026-11-24).
+
+## Editor (web and desktop)
+
+Connect picks the editor by the MIDI port name (`pedalOfPort`, core): a `Matribox II PRO` port
+opens the Matribox editor, a `Pocket Master` port the Pocket Master's, which comes first when both
+are plugged in. The Matribox editor (`apps/web/components/Matribox*.tsx`, `lib/useMatribox.ts`,
+`lib/matribox.ts`) talks through core's `matriboxLink`, the same request rules as the MCP server,
+and sends only the official editor's reads and the core write builders, one request at a time.
+A parameter drag sends only the newest value once the previous write is confirmed. After a chain
+edit or a preset select it reads the loaded preset again. Save reads the slot, keeps it as a
+backup in the browser (localStorage, newest 20, same JSON as the MCP server's backups), sends the
+save and reads the slot back. The catalog: in the browser the owner picks his own `alg_data.json`
+and it is kept in IndexedDB; the desktop app serves the installed one (or `MATRIBOX_CATALOG`) at
+`app://editor/matribox-catalog.json`. The e2e tests (`apps/web/e2e/matribox.spec.ts`) run the
+editor against the simulated unit with an invented catalog.
 
 ## Phases
 

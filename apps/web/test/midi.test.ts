@@ -1,6 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { pickPocketMaster, webMidiPort } from '../lib/midi.ts';
+import { pickPedal, pickPocketMaster, webMidiPort } from '../lib/midi.ts';
+
+test('pickPedal preselects a supported pedal, the Pocket Master first', () => {
+  const ports = [{ name: 'UMC404HD 192k' }, { name: 'Matribox II PRO' }, { name: 'Pocket Master' }] as MIDIPort[];
+  assert.equal(pickPedal(ports)?.name, 'Pocket Master');
+  assert.equal(pickPedal(ports.slice(0, 2))?.name, 'Matribox II PRO');
+  assert.equal(pickPedal(ports.slice(0, 1)), undefined);
+});
 
 test('pickPocketMaster never falls back to another device', () => {
   const ports = [{ name: 'UMC404HD 192k' }, { name: 'Pocket Master' }] as MIDIPort[];

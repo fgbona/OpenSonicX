@@ -6,8 +6,9 @@ import {
   backupAllSlots, loadIntoEditBuffer, presetFile, presetLabel, restoreAllFromBackup, restoreFromBackup, saveToSlot,
   type BackupFile, type Edit, type Frame, type Pedal, type Preset, type PresetFile, type Progress, type SaveResult, type SlotBackup,
 } from '@pocket-master/core';
+import { pedalOfPort, type MidiPort, type PedalKind } from '@pocket-master/core';
 import { copyStoredPreset, LinkClosedError, linkPedal, PocketMasterLink, readProfileNames, readUserIrNames, toneGear, type LogEntry } from '@pocket-master/core';
-import { openMidi, pickPocketMaster, webMidiPort } from './midi';
+import { openMidi, pickPedal, webMidiPort } from './midi';
 import { addToLibrary, libraryNow } from './presetLibrary';
 import { EMPTY_HISTORY, record, redo as redoStep, undo as undoStep, type History } from './history';
 import { connectBluetooth } from './ble';
@@ -69,6 +70,10 @@ export interface PocketMasterState {
   readonly firmware: string | null;
   /** The tuner as the editor last set it; the pedal does not report it. */
   readonly tuner: boolean;
+  /** Which pedal is connected, told by its port name; the Matribox has its own editor. */
+  readonly pedal: PedalKind | null;
+  /** The Matribox II Pro's open ports while it is the connected pedal (its editor drives them). */
+  readonly matribox: MidiPort | null;
 }
 
 const INITIAL: PocketMasterState = {
@@ -76,6 +81,7 @@ const INITIAL: PocketMasterState = {
   status: 'idle', error: null, inputs: [], outputs: [], inputId: '', outputId: '',
   preset: null, presetIndex: null, restorePoint: null, log: [],
   busy: null, names: null, backups: [], flowBackups: [], storageWarning: null, irNames: null, profileNames: null, pedalModified: null, history: EMPTY_HISTORY, firmware: null, tuner: false,
+  pedal: null, matribox: null,
 };
 
 const toOptions = (ports: Iterable<MIDIPort>): PortOption[] =>
@@ -147,8 +153,8 @@ export function usePocketMaster() {
       inputs: toOptions(inputs),
       outputs: toOptions(outputs),
       // Never preselect another device: Connect would send Pocket Master SysEx to it.
-      inputId: inputs.some((p) => p.id === s.inputId) ? s.inputId : (pickPocketMaster(inputs)?.id ?? ''),
-      outputId: outputs.some((p) => p.id === s.outputId) ? s.outputId : (pickPocketMaster(outputs)?.id ?? ''),
+      inputId: inputs.some((p) => p.id === s.inputId) ? s.inputId : (pickPedal(inputs)?.id ?? ''),
+      outputId: outputs.some((p) => p.id === s.outputId) ? s.outputId : (pickPedal(outputs)?.id ?? ''),
     }));
   }, []);
 
@@ -393,12 +399,28 @@ export function usePocketMaster() {
     link.current = null;
     transportClose.current?.();
     transportClose.current = null;
+    if (pedalOfPort(output.name) === 'matribox') {
+      // The Matribox II Pro speaks another protocol: open its ports and hand them to its editor.
+      try {
+        patch({ status: 'connecting', error: null });
+        await Promise.all([input.open(), output.open()]);
+        const port = webMidiPort(input, output);
+        transportClose.current = () => port.listen(null);
+        patch({ status: 'connected', transport: 'usb', pedal: 'matribox', matribox: port });
+      } catch (e) {
+        console.error('connect failed', e);
+        patch({ status: 'ready', error: `Could not open the ports: ${message(e)}` });
+      } finally {
+        connecting.current = false;
+      }
+      return;
+    }
     restoreRef.current = null;
     presetRef.current = null;
     indexRef.current = null;
     pedalModifiedRef.current = null;
     historyRef.current = EMPTY_HISTORY;
-    patch({ status: 'connecting', error: null, restorePoint: null, names: null, history: EMPTY_HISTORY, firmware: null, tuner: false });
+    patch({ status: 'connecting', error: null, restorePoint: null, names: null, history: EMPTY_HISTORY, firmware: null, tuner: false, pedal: 'pocket-master', matribox: null });
     try {
       await Promise.all([input.open(), output.open()]);
       link.current = new PocketMasterLink(webMidiPort(input, output), appendLog, (f) => notifyRef.current(f));
@@ -429,7 +451,7 @@ export function usePocketMaster() {
     pedalModifiedRef.current = null;
     const idle = () => (access.current ? 'ready' : 'idle') as Status;
     historyRef.current = EMPTY_HISTORY;
-    patch({ status: 'connecting', error: null, restorePoint: null, names: null, history: EMPTY_HISTORY, firmware: null, tuner: false });
+    patch({ status: 'connecting', error: null, restorePoint: null, names: null, history: EMPTY_HISTORY, firmware: null, tuner: false, pedal: 'pocket-master', matribox: null });
     try {
       const ble = await connectBluetooth(
         (e) => patch({ error: `Bluetooth: ${message(e)}` }),
@@ -546,7 +568,7 @@ export function usePocketMaster() {
     link.current = null;
     transportClose.current?.();
     transportClose.current = null;
-    patch({ status: access.current ? 'ready' : 'idle', transport: null, tuner: false });
+    patch({ status: access.current ? 'ready' : 'idle', transport: null, tuner: false, pedal: null, matribox: null });
   }, [patch]);
 
   // Skip the Enable MIDI click when the visitor already granted access earlier; never prompts by itself.

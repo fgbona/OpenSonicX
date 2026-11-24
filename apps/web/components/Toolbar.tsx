@@ -37,6 +37,8 @@ interface Props {
   canSave: boolean;
   onSettings: () => void;
   onBluetooth: () => void;
+  /** The Matribox II Pro has its own editor: the toolbar only disconnects it. */
+  matribox?: boolean;
 }
 
 /** The shortcut modifier as the keyboard labels it. */
@@ -105,6 +107,8 @@ export function Toolbar(p: Props) {
             {bluetoothButton}
             <button className="btn btn-primary" onClick={p.onEnable} disabled={p.status === 'requesting'}>{t('action.enable')}</button>
           </>
+        ) : linked && p.matribox ? (
+          <button className="btn" onClick={p.onDisconnect}>{t('action.disconnect')}</button>
         ) : linked ? (
           <>
             <>
