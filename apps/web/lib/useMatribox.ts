@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   matriboxLink, mbAddBlock, mbChangeModel, mbMoveBlock, mbRemoveBlock, mbSelectPreset, mbSetBlockOn, mbSetParam,
-  type MatriboxLink, type MbCatalog, type MidiPort,
+  type MatriboxLink, type MbCatalog, type MbPreset, type MidiPort,
 } from '@pocket-master/core';
 import { readLoaded, readUnit, saveToSlot, serialQueue, withBlockOn, withParam, type MbBackup, type MbUnit } from './matribox';
+import { applyOps } from './matriboxOps';
+import type { MbOp } from './matriboxPlan';
 import { keepMbBackup, loadMbBackups, storeMbBackups } from './matriboxBackups';
 import { forgetCatalog, loadDesktopCatalog, loadStoredCatalog, parseCatalogText, storeCatalog } from './matriboxCatalog';
 
@@ -131,6 +133,17 @@ export function useMatribox(port: MidiPort | null, desktop: boolean) {
     patch({ edited: true });
   }), [run, reloadLoaded, patch]);
 
+  /** Chain-position writes (Undo, Redo, the assistant) as one step; the preset as the unit has it, null when it failed. */
+  const apply = useCallback(async (ops: readonly MbOp[]): Promise<MbPreset | null> => {
+    let preset: MbPreset | null = null;
+    const ok = await run('Editing', async (unit) => {
+      const done = await applyOps(unit, ops);
+      preset = done;
+      setState((s) => ({ ...s, edited: true, unit: s.unit ? { ...s.unit, preset: done } : s.unit }));
+    });
+    return ok ? preset : null;
+  }, [run]);
+
   const save = useCallback((index: number, name: string) => run('Saving', async (unit) => {
     const keep = (backup: MbBackup) => {
       backupsRef.current = keepMbBackup(backupsRef.current, backup);
@@ -152,6 +165,7 @@ export function useMatribox(port: MidiPort | null, desktop: boolean) {
     addBlock: (position: number, moduleIndex: number, fxid: number) => chainEdit(() => mbAddBlock(position, moduleIndex, fxid)),
     moveBlock: (from: number, to: number) => chainEdit(() => mbMoveBlock(from, to)),
     removeBlock: (position: number) => chainEdit(() => mbRemoveBlock(position)),
+    apply,
     save,
     clearError: () => patch({ error: null }),
   };
