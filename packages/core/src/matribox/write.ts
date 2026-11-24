@@ -1,15 +1,16 @@
 /**
  * Matribox II Pro write frames (live edits of the loaded preset, preset select, save), rebuilt from
  * the official editor's traffic (docs/matribox.md, "Writes"). Every write is a flag-1 message,
- * cmd 0x10 except save (0x05), in a type-0x12 frame; the unit echoes each one back.
+ * cmd 0x10 except save (0x05), in a type-0x12 frame. The unit echoes set param, on/off, select and
+ * save; it answers a chain edit (add, move, remove, change model) with its chain notice instead.
  *
- * Set param, on/off and select are byte-exact with captured host frames. Chain changes, the
- * assignment tables and save are rebuilt from the unit's echoes only. None of them has been sent
- * by this code to a real unit yet: experimental until the owner validates them on the hardware.
+ * Set param, on/off, select and the chain edits are byte-exact with captured host frames; save is
+ * rebuilt from the unit's echo. Hardware-validated: select, set param, on/off, change model, add, remove
+ * (owner's unit, 2026-11-24). The rest is experimental until the owner validates it.
  */
 import { buildMbFrame, float32LE, MB_WRITE } from './frame.ts';
 import { wrapMbMessage } from './message.ts';
-import { MB_PRESET_COUNT, type MbPreset } from './preset.ts';
+import { MB_PRESET_COUNT } from './preset.ts';
 
 export const MB_SLOTS = 12;
 /** Values per slot in sec5: parameter ids are 0..14. */
@@ -53,63 +54,43 @@ export function mbSelectPreset(index: number): Uint8Array {
   return write(SET_CMD, [0x01, 0x00, 0x0a, 0x01, ...u32(checkPreset(index))]);
 }
 
-export interface MbChainBlock {
-  /** Storage slot 0..11. */
-  readonly slot: number;
-  /** Catalog module index (DYN 0 … VOL 15). */
-  readonly moduleIndex: number;
-  readonly fxid: number;
-  readonly on: boolean;
+/** A chain edit: `01 00 04 01` + from + to + module + fxid. NONE as `from` adds, NONE as `to` removes. */
+function chainEdit(from: number, to: number, moduleIndex: number, fxid: number): Uint8Array {
+  return write(SET_CMD, [0x01, 0x00, 0x04, 0x01, from, to, moduleIndex, ...u32(fxid)]);
+}
+
+function checkPosition(position: number): number {
+  return isIn(position, MB_SLOTS) ? position : fail(`chain position must be 0..${MB_SLOTS - 1}, got ${position}`);
+}
+
+function checkModel(moduleIndex: number, fxid: number): void {
+  if (!isIn(moduleIndex, MODULES)) fail(`module index must be 0..${MODULES - 1}, got ${moduleIndex}`);
+  if (!Number.isInteger(fxid) || fxid < 0 || fxid > 0xffffffff) fail(`fxid must be a u32, got ${fxid}`);
+}
+
+/** Inserts a block of `moduleIndex`/`fxid` at 0-based chain `position`; the unit picks the slot and loads the model's defaults. */
+export function mbAddBlock(position: number, moduleIndex: number, fxid: number): Uint8Array {
+  checkModel(moduleIndex, fxid);
+  return chainEdit(NO_SLOT, checkPosition(position), moduleIndex, fxid);
+}
+
+/** Moves the block at chain position `from` to position `to`. */
+export function mbMoveBlock(from: number, to: number): Uint8Array {
+  return chainEdit(checkPosition(from), checkPosition(to), NO_SLOT, 0xffffffff);
+}
+
+/** Removes the block at chain `position`. */
+export function mbRemoveBlock(position: number): Uint8Array {
+  return chainEdit(checkPosition(position), NO_SLOT, 0, 0);
 }
 
 /**
- * The whole chain of the loaded preset (sec4 from byte 4, then one on/off byte per slot, then
- * `focus`): blocks in signal order; slots not listed are emptied. The official editor sets
- * `focus` to the slot it added, changed or removed, and to FF for a reorder (meaning unconfirmed).
+ * Swaps the model of the block at `position` (`02 00 04 01` + position + module + fxid); the unit
+ * loads the new model's defaults. Position or storage slot: they were the same (0) in the capture.
  */
-export function mbSetChain(blocks: readonly MbChainBlock[], focus: number = NO_SLOT): Uint8Array {
-  if (blocks.length < 1 || blocks.length > MB_SLOTS) fail(`a chain holds at least one and at most ${MB_SLOTS} blocks, got ${blocks.length}`);
-  blocks.forEach((b, i) => {
-    checkSlot(b.slot);
-    if (blocks.findIndex((o) => o.slot === b.slot) !== i) fail(`slot ${b.slot} is used twice`);
-    if (!isIn(b.moduleIndex, MODULES)) fail(`module index must be 0..${MODULES - 1}, got ${b.moduleIndex}`);
-    if (!Number.isInteger(b.fxid) || b.fxid < 0 || b.fxid > 0xffffffff) fail(`fxid must be a u32, got ${b.fxid}`);
-  });
-  if (focus !== NO_SLOT && !isIn(focus, MB_SLOTS)) fail(`focus must be a slot 0..${MB_SLOTS - 1} or 0xff, got ${focus}`);
-  const bySlot = (slot: number) => blocks.find((b) => b.slot === slot);
-  const slots = Array.from({ length: MB_SLOTS }, (_, slot) => bySlot(slot));
-  const order = Array.from({ length: MB_SLOTS }, (_, i) => blocks[i]?.slot ?? NO_SLOT);
-  return write(SET_CMD, [
-    0x00, 0x00, 0x04, 0x01,
-    ...order,
-    ...slots.map((b) => b?.moduleIndex ?? NO_SLOT),
-    ...slots.flatMap((b) => u32(b?.fxid ?? 0)),
-    ...slots.map((b) => (b?.on ? 1 : 0)),
-    focus,
-  ]);
-}
-
-/** sec2, sec7 and sec8 of a preset with no assignments (what the unit's empty preset 60D holds). */
-const EMPTY_TABLES = [
-  ...[0xff, 0xff, 0x0d, 0x00, 0x00, 0x00], // sec2 from byte 4
-  ...Array<number>(9).fill(0xff), ...Array<number>(9).fill(0), // sec7 from byte 5: 9 targets, 9 param ids,
-  ...Array<number>(36).fill(0), ...Array.from({ length: 9 }, () => [...float32LE(100)]).flat(), // 9 min, 9 max
-  ...Array<number>(60).fill(0), // sec8 from byte 9: footswitch × slot flags
-];
-
-/**
- * The official editor sends this before every chain change except a reorder: `04 00 04 01` + sec2
- * from byte 4 + sec7 from byte 5 + sec8 from byte 9 (160 bytes; likely the expression-pedal and
- * footswitch assignments, which name slots). Only the empty preset's tables were captured; that
- * the bytes are those tables, split this way, is a hypothesis (sec2[9] and sec7[4] are 0 in every
- * sample, so the split could be one byte off). Without a preset: the empty tables.
- */
-export function mbSetAssignments(preset?: MbPreset): Uint8Array {
-  const body = (id: number) => preset?.sections.find((s) => s.id === id)?.body ?? fail(`preset has no section ${id}`);
-  const tables = preset === undefined
-    ? EMPTY_TABLES
-    : [...body(2).subarray(4, 10), ...body(7).subarray(5, 95), ...body(8).subarray(9, 69)];
-  return write(SET_CMD, [0x04, 0x00, 0x04, 0x01, ...tables]);
+export function mbChangeModel(position: number, moduleIndex: number, fxid: number): Uint8Array {
+  checkModel(moduleIndex, fxid);
+  return write(SET_CMD, [0x02, 0x00, 0x04, 0x01, checkPosition(position), moduleIndex, ...u32(fxid)]);
 }
 
 /** Printable ASCII, 1..16 characters: the unit's 17-byte, NUL-terminated name field. */

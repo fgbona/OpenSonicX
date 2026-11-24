@@ -378,7 +378,7 @@ function registerMatriboxWrites(server: McpServer, options: ServerOptions, matri
 
   server.registerTool('matribox_build_tone', {
     title: 'Build a whole Matribox tone',
-    description: mbLive(`replaces the loaded preset's chain with these blocks in signal order (input to output, at most 12), each with its model and parameters; parameters not given get the model's default. ${mbPickModels} To match a reference, work out the gear used (pedals, amp, cab, effects) and choose the models whose origin matches. Expression-pedal and footswitch assignments are cleared.`),
+    description: mbLive(`replaces the loaded preset's chain with these blocks in signal order (input to output, at most 12), each with its model and parameters; parameters not given get the model's default. ${mbPickModels} To match a reference, work out the gear used (pedals, amp, cab, effects) and choose the models whose origin matches. The unit may drop expression-pedal and footswitch assignments that named removed blocks.`),
     inputSchema: {
       blocks: z.array(z.object({
         module: z.string().describe('Module name: DYN, FREQ, WAH, DRV, AMP, CAB, IR, EQ, MOD, DLY, RVB, CLONE, FXLOOP, FXSND, FXRTN or VOL'),

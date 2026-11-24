@@ -3,8 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { MB_WRITE, parseMbFrame } from '../src/matribox/frame.ts';
 import { unwrapMbMessage } from '../src/matribox/message.ts';
-import { parseMbPreset, type MbPreset } from '../src/matribox/preset.ts';
-import { mbSavePreset, mbSelectPreset, mbSetAssignments, mbSetBlockOn, mbSetChain, mbSetParam } from '../src/matribox/write.ts';
+import { mbAddBlock, mbChangeModel, mbMoveBlock, mbRemoveBlock, mbSavePreset, mbSelectPreset, mbSetBlockOn, mbSetParam } from '../src/matribox/write.ts';
 import { fromHex, toHex } from '../src/hex.ts';
 
 // Real host frames from capture 1 (cap3): set param, on/off, cmd 05, select.
@@ -48,30 +47,21 @@ test('set param, on/off and select match capture 2', () => {
   assert.deepEqual(carried(mbSetBlockOn(1, false)), echo('on-slot1-off'));
 });
 
-const DRV = (fxid: number) => ({ slot: 0, moduleIndex: 3, fxid, on: true });
-const DLY = { slot: 1, moduleIndex: 9, fxid: 0x0b000001, on: true };
+// Captures 3 and 4: the official editor's own host frames for chain edits, by name.
+const CHAIN = new Map(readFileSync(new URL('./fixtures/matribox-chain-edits.txt', import.meta.url), 'utf8')
+  .split('\n').filter((l) => l && !l.startsWith('#')).map((l) => l.split(' ') as [string, string]));
+const chainFrame = (name: string) => {
+  const hex = CHAIN.get(name);
+  assert.ok(hex, `fixture has ${name}`);
+  return toHex(fromHex(hex));
+};
 
-test('chain changes match capture 2: add, change model, add a second slot, reorder, remove', () => {
-  assert.deepEqual(carried(mbSetChain([DRV(0x03000000)], 0)), echo('chain-add-drv-slot0'));
-  assert.deepEqual(carried(mbSetChain([DRV(0x0300000a)], 0)), echo('chain-model-0300000a'));
-  assert.deepEqual(carried(mbSetChain([DRV(0x0300000a), DLY], 1)), echo('chain-add-dly-slot1'));
-  assert.deepEqual(carried(mbSetChain([DLY, DRV(0x0300000a)])), echo('chain-reorder'));
-  assert.deepEqual(carried(mbSetChain([DRV(0x0300000a)], 1)), echo('chain-remove-slot1'));
-});
-
-test('the assignment tables of an empty preset are the message sent before every chain change', () => {
-  assert.deepEqual(carried(mbSetAssignments()), echo('assignments'));
-});
-
-test('mbSetAssignments copies the preset\'s sec2, sec7 and sec8 tables', () => {
-  const preset = parseMbPreset(fromHex(readFileSync(new URL('./fixtures/matribox-preset-drive-ad.txt', import.meta.url), 'utf8').split('\n').filter((l) => l && !l.startsWith('#')).join('')));
-  const body = (p: MbPreset, id: number) => p.sections.find((s) => s.id === id)!.body;
-  const data = fromHex(carried(mbSetAssignments(preset)).data);
-  assert.equal(data.length, 160);
-  assert.deepEqual([...data.subarray(0, 4)], [0x04, 0x00, 0x04, 0x01]);
-  assert.deepEqual([...data.subarray(4, 10)], [...body(preset, 2).subarray(4, 10)]);
-  assert.deepEqual([...data.subarray(10, 100)], [...body(preset, 7).subarray(5, 95)]);
-  assert.deepEqual([...data.subarray(100, 160)], [...body(preset, 8).subarray(9, 69)]);
+test('chain edits rebuild the official editor\'s host frames byte for byte', () => {
+  assert.equal(toHex(mbChangeModel(0, 3, 0x03000000)), chainFrame('model-drv-skreamer'));
+  assert.equal(toHex(mbChangeModel(0, 3, 0x0300000a)), chainFrame('model-drv-full-od'));
+  assert.equal(toHex(mbAddBlock(1, 9, 0x0b000001)), chainFrame('add-dly-at-1'));
+  assert.equal(toHex(mbMoveBlock(1, 0)), chainFrame('move-1-to-0'));
+  assert.equal(toHex(mbRemoveBlock(0)), chainFrame('remove-at-0'));
 });
 
 test('the builders refuse what the unit cannot hold', () => {
@@ -83,9 +73,9 @@ test('the builders refuse what the unit cannot hold', () => {
   assert.throws(() => mbSavePreset(0, ''), /name/);
   assert.throws(() => mbSavePreset(0, 'x'.repeat(17)), /name/);
   assert.throws(() => mbSavePreset(0, 'Café'), /name/);
-  assert.throws(() => mbSetChain([]), /at least one/);
-  assert.throws(() => mbSetChain([DRV(1), DRV(2)]), /twice/);
-  assert.throws(() => mbSetChain([{ ...DLY, moduleIndex: 16 }]), /module/);
-  assert.throws(() => mbSetChain([{ ...DLY, fxid: -1 }]), /fxid/);
-  assert.throws(() => mbSetChain([DLY], 12), /focus/);
+  assert.throws(() => mbAddBlock(12, 3, 1), /position/);
+  assert.throws(() => mbAddBlock(0, 16, 1), /module/);
+  assert.throws(() => mbChangeModel(0, 3, -1), /fxid/);
+  assert.throws(() => mbMoveBlock(0, 12), /position/);
+  assert.throws(() => mbRemoveBlock(-1), /position/);
 });

@@ -9,7 +9,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   checkMbPresetName, mbPresetLabel, mbReadCloneNames, mbReadCurrentPresetNumber, mbReadIrNames, mbReadPreset, mbReadPresetNames,
-  mbSavePreset, mbSelectPreset, mbSetAssignments, mbSetBlockOn, mbSetChain, mbSetParam, parseMbPresetLabel, toHex,
+  mbAddBlock, mbChangeModel, mbRemoveBlock, mbSavePreset, mbSelectPreset, mbSetBlockOn, mbSetParam, parseMbPresetLabel, toHex,
   parseMbCloneNames, parseMbCurrentPresetNumber, parseMbIrNames, parseMbPreset, parseMbPresetNames, resolveMbPreset,
   type MbCatalog, type MbModel, type MbModule, type MbPreset, type MbResolvedBlock, type MbResolvedPreset,
 } from '@pocket-master/core';
@@ -170,30 +170,37 @@ export class MatriboxSession {
     });
   }
 
-  /** Swaps the model in one block (any module's model), then writes all of the new model's defaults. */
+  /** Swaps the model in one block (any module's model); the unit loads the new model's defaults. */
   setModel(options: { block: string; model: string }): Promise<string> {
     return this.#use(async (unit) => {
-      const { catalog, raw, preset } = await this.#loaded(unit);
+      const { catalog, preset } = await this.#loaded(unit);
       const block = findBlock(preset, options.block);
       const { module, model } = findModel(catalog, options.model);
-      const chain = raw.chain.map((b) => (b.slot === block.slot ? { ...b, moduleIndex: module.index, fxid: model.fxid } : b));
-      const params = modelValues(model, block.slot);
-      await MatriboxSession.#writeAll(unit, [mbSetAssignments(raw), mbSetChain(chain, block.slot), ...MatriboxSession.#paramFrames(params)]);
-      const was = block.model?.name ?? 'unknown model';
-      return experimental([`${module.name}: ${was} → ${modelTitle(model)}${params.length ? `: ${describeValues(model, params)}` : ''}`]);
+      await unit.write(mbChangeModel(block.position - 1, module.index, model.fxid));
+      const now = findBlock((await this.#loaded(unit)).preset, String(block.position));
+      const values = now.params.map((p) => `${p.name} ${round(p.value)}`).join(', ');
+      return experimental([`${module.name}: ${block.model?.name ?? 'unknown model'} → ${modelTitle(model)}${values ? `: ${values}` : ''}`]);
     });
   }
 
   /**
-   * Replaces the loaded preset's chain with `blocks` in signal order (block i in slot i), every
-   * parameter written. Expression-pedal and footswitch assignments are cleared: they name slots.
+   * Replaces the loaded preset's chain with `blocks` in signal order: removes every block, adds the
+   * new ones (the unit picks their slots), then writes every parameter and on/off by slot.
    */
   buildTone(options: { blocks: readonly ToneBlock[] }): Promise<string> {
     return this.#catalogOnce().then((catalog) => {
       const plan = planTone(catalog, options.blocks); // everything checked before the unit is opened
       return this.#use(async (unit) => {
-        await MatriboxSession.#writeAll(unit, [mbSetAssignments(), mbSetChain(plan.chain), ...MatriboxSession.#paramFrames(plan.params)]);
-        return experimental([...plan.lines, 'Expression-pedal and footswitch assignments were cleared. Nothing is stored until matribox_save_preset.']);
+        const old = (await this.#loaded(unit)).preset.chain;
+        for (let i = old.length - 1; i >= 0; i--) await unit.write(mbRemoveBlock(i)); // from the end: positions stay put
+        for (const [i, b] of plan.blocks.entries()) await unit.write(mbAddBlock(i, b.moduleIndex, b.fxid));
+        const added = (await this.#loaded(unit)).preset.chain;
+        for (const [i, b] of plan.blocks.entries()) {
+          const slot = added[i]?.slot;
+          if (slot === undefined) throw new Error(`Matribox II PRO did not add block ${i + 1}: its chain now has ${added.length} blocks`);
+          await MatriboxSession.#writeAll(unit, [...MatriboxSession.#paramFrames(modelValues(b.model, slot, b.params)), mbSetBlockOn(slot, b.on)]);
+        }
+        return experimental([...plan.lines, 'Nothing is stored until matribox_save_preset.']);
       });
     });
   }

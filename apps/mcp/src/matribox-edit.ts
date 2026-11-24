@@ -3,7 +3,7 @@
  * the read tools show, check values against the catalog's ranges, and plan a whole tone as a chain
  * plus parameter writes. Nothing here talks to the unit.
  */
-import { MB_SLOTS, type MbCatalog, type MbChainBlock, type MbModel, type MbModule, type MbParam, type MbResolvedBlock, type MbResolvedPreset } from '@pocket-master/core';
+import { MB_SLOTS, type MbCatalog, type MbModel, type MbModule, type MbParam, type MbResolvedBlock, type MbResolvedPreset } from '@pocket-master/core';
 
 export const EXPERIMENTAL =
   'Experimental: Matribox writes are not validated on the hardware yet. Check the result with matribox_get_preset and by ear on the unit.';
@@ -77,26 +77,33 @@ export interface ToneBlock {
   readonly params?: Readonly<Record<string, number>>;
 }
 
+export interface PlannedBlock {
+  readonly moduleIndex: number;
+  readonly fxid: number;
+  readonly on: boolean;
+  readonly model: MbModel;
+  /** The values asked for, by parameter name (checked); the rest take the model's default. */
+  readonly params: Readonly<Record<string, number>>;
+}
+
 export interface TonePlan {
-  /** Signal order; block i in slot i. */
-  readonly chain: readonly MbChainBlock[];
-  readonly params: readonly ParamWrite[];
+  /** Signal order. The unit picks each block's storage slot when it is added. */
+  readonly blocks: readonly PlannedBlock[];
   readonly lines: readonly string[];
 }
 
-/** A whole tone in signal order, checked against the catalog; slot i holds block i. */
+/** A whole tone in signal order, checked against the catalog before anything is sent. */
 export function planTone(catalog: MbCatalog, blocks: readonly ToneBlock[]): TonePlan {
   if (blocks.length < 1 || blocks.length > MB_SLOTS) throw new Error(`A Matribox chain holds at least 1 and at most ${MB_SLOTS} blocks, got ${blocks.length}`);
-  const planned = blocks.map((block, slot) => {
+  const planned = blocks.map((block, i) => {
     const { module, model } = findModel(catalog, block.model, findModule(catalog, block.module));
-    const params = modelValues(model, slot, block.params);
+    const values = modelValues(model, 0, block.params); // checks the values; the slot is not known yet
     const on = block.on ?? true;
-    const line = `${slot + 1}. ${module.name} ${on ? 'on ' : 'off'} ${modelTitle(model)}${params.length ? `: ${describeValues(model, params)}` : ''}`;
-    return { chain: { slot, moduleIndex: module.index, fxid: model.fxid, on }, params, module, line };
+    const line = `${i + 1}. ${module.name} ${on ? 'on ' : 'off'} ${modelTitle(model)}${values.length ? `: ${describeValues(model, values)}` : ''}`;
+    return { block: { moduleIndex: module.index, fxid: model.fxid, on, model, params: block.params ?? {} }, module, line };
   });
   return {
-    chain: planned.map((p) => p.chain),
-    params: planned.flatMap((p) => p.params),
+    blocks: planned.map((p) => p.block),
     lines: [`Chain: ${planned.map((p) => p.module.name).join(' → ')}`, ...planned.map((p) => p.line)],
   };
 }
