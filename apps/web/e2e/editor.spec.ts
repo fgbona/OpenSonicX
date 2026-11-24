@@ -223,8 +223,9 @@ test('the firmware version shows in Global options, and a different one gets a n
   await page.keyboard.press('Escape');
 
   pedal.globals = Uint8Array.from(pedal.globals.map((b, i) => (i === 6 ? 0 : i === 7 ? 4 : b))); // 00 04 01 01: V1.4.0
-  await page.getByRole('button', { name: 'Disconnect' }).click();
-  await page.getByRole('button', { name: 'Connect', exact: true }).click();
+  // Unplugged and plugged back in: read again from scratch.
+  await page.evaluate(() => window.__midi.unplug('Pocket Master'));
+  await page.evaluate(() => window.__midi.plug('Pocket Master'));
   await expect(page.getByText('This pedal reports firmware V1.4.0; the editor was tested on V1.3.3.', { exact: false })).toBeVisible();
 });
 

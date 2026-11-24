@@ -1,4 +1,6 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures.ts';
+
+test.use({ plugged: [] });
 
 // Content that appears after hydration (the Bluetooth button did) pushes the page down on a phone.
 test('the page does not shift while it loads on a phone', async ({ page }) => {

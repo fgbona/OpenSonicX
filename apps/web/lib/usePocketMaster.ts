@@ -6,9 +6,9 @@ import {
   backupAllSlots, loadIntoEditBuffer, presetFile, presetLabel, restoreAllFromBackup, restoreFromBackup, saveToSlot,
   type BackupFile, type Edit, type Frame, type Pedal, type Preset, type PresetFile, type Progress, type SaveResult, type SlotBackup,
 } from '@pocket-master/core';
-import { pedalOfPort, type MidiPort, type PedalKind } from '@pocket-master/core';
+import type { MidiPort, PedalKind } from '@pocket-master/core';
 import { copyStoredPreset, LinkClosedError, linkPedal, PocketMasterLink, readProfileNames, readUserIrNames, toneGear, type LogEntry } from '@pocket-master/core';
-import { openMidi, pickPedal, webMidiPort } from './midi';
+import { findPedal, openMidi, pedalPortsKey, webMidiPort, type FoundPedal } from './midi';
 import { addToLibrary, libraryNow } from './presetLibrary';
 import { EMPTY_HISTORY, record, redo as redoStep, undo as undoStep, type History } from './history';
 import { connectBluetooth } from './ble';
@@ -27,22 +27,19 @@ export const LOG_LIMIT = 2000;
 /** After a model or chain change the pedal applies defaults; re-read once it settles. */
 const SETTLE_MS = 250;
 
-export type Status = 'idle' | 'requesting' | 'ready' | 'connecting' | 'connected' | 'reading';
+/** After a factory reset, look for the pedal again once it has had time to reboot. */
+const REBOOT_MS = 5000;
 
-export interface PortOption {
-  readonly id: string;
-  readonly name: string;
-}
+/** idle: no MIDI access (yet); ready: MIDI on, waiting for a pedal to be plugged in. */
+export type Status = 'idle' | 'requesting' | 'ready' | 'connecting' | 'connected' | 'reading';
 
 export interface PocketMasterState {
   readonly status: Status;
   /** How the pedal is connected, while it is: USB MIDI ports or Bluetooth LE MIDI. */
   readonly transport: 'usb' | 'ble' | null;
   readonly error: string | null;
-  readonly inputs: readonly PortOption[];
-  readonly outputs: readonly PortOption[];
-  readonly inputId: string;
-  readonly outputId: string;
+  /** The browser refused MIDI access (or wants a click first): the toolbar offers to ask again. */
+  readonly midiRefused: boolean;
   readonly preset: Preset | null;
   readonly presetIndex: number | null;
   /** Edit buffer as first read for this preset; Revert brings the pedal back to it. */
@@ -78,14 +75,11 @@ export interface PocketMasterState {
 
 const INITIAL: PocketMasterState = {
   transport: null,
-  status: 'idle', error: null, inputs: [], outputs: [], inputId: '', outputId: '',
+  status: 'requesting', error: null, midiRefused: false, // the page asks for MIDI as it loads
   preset: null, presetIndex: null, restorePoint: null, log: [],
   busy: null, names: null, backups: [], flowBackups: [], storageWarning: null, irNames: null, profileNames: null, pedalModified: null, history: EMPTY_HISTORY, firmware: null, tuner: false,
   pedal: null, matribox: null,
 };
-
-const toOptions = (ports: Iterable<MIDIPort>): PortOption[] =>
-  Array.from(ports, (p) => ({ id: p.id, name: p.name ?? p.id }));
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -135,6 +129,15 @@ export function usePocketMaster() {
   const notifyRef = useRef<(f: Frame) => void>(() => undefined);
   const busyRef = useRef(false);
   const backupsRef = useRef<BackupFile[]>([]);
+  /** The USB ports the open connection runs over, to notice them being unplugged. */
+  const usbPorts = useRef<{ input: string; output: string } | null>(null);
+  /** The plugged-in pedal ports last seen (pedalPortsKey): a change is a plug or an unplug. */
+  const seenPorts = useRef<string | null>(null);
+  const syncRef = useRef<() => void>(() => undefined);
+  const rebootTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Counts USB connection attempts; drop() bumps it so an attempt in flight gives up. */
+  const attempts = useRef(0);
+  const requestingMidi = useRef(false);
 
   const patch = useCallback((p: Partial<PocketMasterState>) => setState((s) => ({ ...s, ...p })), []);
 
@@ -143,33 +146,29 @@ export function usePocketMaster() {
     [],
   );
 
-  const refreshPorts = useCallback(() => {
-    const midi = access.current;
-    if (!midi) return;
-    const inputs = Array.from(midi.inputs.values());
-    const outputs = Array.from(midi.outputs.values());
-    setState((s) => ({
-      ...s,
-      inputs: toOptions(inputs),
-      outputs: toOptions(outputs),
-      // Never preselect another device: Connect would send Pocket Master SysEx to it.
-      inputId: inputs.some((p) => p.id === s.inputId) ? s.inputId : (pickPedal(inputs)?.id ?? ''),
-      outputId: outputs.some((p) => p.id === s.outputId) ? s.outputId : (pickPedal(outputs)?.id ?? ''),
-    }));
+  /** Opens a plugged-in pedal even when its ports did not change (after Bluetooth or a reset). */
+  const lookAgain = useCallback(() => {
+    seenPorts.current = null;
+    syncRef.current();
   }, []);
 
+  /** Asks for MIDI (the page does on load) and follows pedals being plugged in and out from then on. */
   const enable = useCallback(async () => {
-    patch({ status: 'requesting', error: null });
+    if (access.current || requestingMidi.current) return;
+    requestingMidi.current = true;
+    patch({ status: 'requesting', error: null, midiRefused: false });
     try {
       const midi = await openMidi();
       access.current = midi;
-      midi.onstatechange = refreshPorts;
-      refreshPorts();
+      midi.onstatechange = () => syncRef.current();
       patch({ status: 'ready' });
+      syncRef.current();
     } catch (e) {
-      patch({ status: 'idle', error: message(e) });
+      patch({ status: 'idle', error: message(e), midiRefused: 'requestMIDIAccess' in navigator });
+    } finally {
+      requestingMidi.current = false;
     }
-  }, [patch, refreshPorts]);
+  }, [patch]);
 
   const scheduleReread = useCallback(() => {
     if (settleTimer.current) clearTimeout(settleTimer.current);
@@ -385,57 +384,51 @@ export function usePocketMaster() {
     }
   }, [patch]);
 
-  const connect = useCallback(async () => {
-    const midi = access.current;
-    const input = midi?.inputs.get(state.inputId);
-    const output = midi?.outputs.get(state.outputId);
-    if (!input || !output) {
-      patch({ error: 'Choose an input and an output port first.' });
-      return;
-    }
-    if (connecting.current) return; // a double click must not open a second link on the same ports
+  /**
+   * Opens a plugged-in pedal's USB ports and reads it; sync() picks the pedal. An attempt is
+   * abandoned when drop() runs meanwhile (the pedal was unplugged while it was being opened).
+   */
+  const connect = useCallback(async ({ kind, input, output }: FoundPedal<MIDIInput, MIDIOutput>) => {
+    if (connecting.current) return; // never a second link on the same ports
     connecting.current = true;
+    const attempt = ++attempts.current;
+    const stale = () => attempts.current !== attempt;
     link.current?.close();
     link.current = null;
     transportClose.current?.();
     transportClose.current = null;
-    if (pedalOfPort(output.name) === 'matribox') {
-      // The Matribox II Pro speaks another protocol: open its ports and hand them to its editor.
-      try {
-        patch({ status: 'connecting', error: null });
-        await Promise.all([input.open(), output.open()]);
-        const port = webMidiPort(input, output);
-        transportClose.current = () => port.listen(null);
-        patch({ status: 'connected', transport: 'usb', pedal: 'matribox', matribox: port });
-      } catch (e) {
-        console.error('connect failed', e);
-        patch({ status: 'ready', error: `Could not open the ports: ${message(e)}` });
-      } finally {
-        connecting.current = false;
-      }
-      return;
-    }
+    usbPorts.current = { input: input.id, output: output.id };
     restoreRef.current = null;
     presetRef.current = null;
     indexRef.current = null;
     pedalModifiedRef.current = null;
     historyRef.current = EMPTY_HISTORY;
-    patch({ status: 'connecting', error: null, restorePoint: null, names: null, history: EMPTY_HISTORY, firmware: null, tuner: false, pedal: 'pocket-master', matribox: null });
+    patch({ status: 'connecting', error: null, restorePoint: null, names: null, history: EMPTY_HISTORY, firmware: null, tuner: false, pedal: kind, matribox: null });
     try {
       await Promise.all([input.open(), output.open()]);
-      link.current = new PocketMasterLink(webMidiPort(input, output), appendLog, (f) => notifyRef.current(f));
+      if (stale()) return;
+      const port = webMidiPort(input, output);
+      if (kind === 'matribox') {
+        // The Matribox II Pro speaks another protocol: its own editor drives the ports.
+        transportClose.current = () => port.listen(null);
+        patch({ status: 'connected', transport: 'usb', matribox: port });
+        return;
+      }
+      link.current = new PocketMasterLink(port, appendLog, (f) => notifyRef.current(f));
       patch({ status: 'connected', transport: 'usb', error: null, irNames: null, profileNames: null });
       await read();
       await refreshSlotNames();
       await readFirmware();
     } catch (e) {
+      if (stale()) return;
       console.error('connect failed', e);
       link.current = null;
-      patch({ status: 'ready', error: `Could not open the ports: ${message(e)}` });
+      usbPorts.current = null;
+      patch({ status: 'ready', pedal: null, error: `Could not open the ports: ${message(e)}` });
     } finally {
-      connecting.current = false;
+      if (!stale()) connecting.current = false;
     }
-  }, [state.inputId, state.outputId, patch, appendLog, read, refreshSlotNames, readFirmware]);
+  }, [patch, appendLog, read, refreshSlotNames, readFirmware]);
 
   /** Connects over Bluetooth LE MIDI instead of USB; the browser's chooser needs this click. */
   const connectBle = useCallback(async () => {
@@ -445,6 +438,7 @@ export function usePocketMaster() {
     link.current = null;
     transportClose.current?.();
     transportClose.current = null;
+    usbPorts.current = null;
     restoreRef.current = null;
     presetRef.current = null;
     indexRef.current = null;
@@ -460,6 +454,7 @@ export function usePocketMaster() {
           link.current = null;
           transportClose.current = null;
           patch({ status: idle(), transport: null, error: 'The pedal disconnected from Bluetooth.' });
+          lookAgain();
         },
       );
       transportClose.current = ble.close;
@@ -478,8 +473,9 @@ export function usePocketMaster() {
       patch({ status: idle(), error: cancelled ? null : `Could not connect over Bluetooth: ${message(e)}` });
     } finally {
       connecting.current = false;
+      if (!link.current) lookAgain(); // a USB pedal still plugged in is opened again
     }
-  }, [patch, appendLog, read, refreshSlotNames, readFirmware]);
+  }, [patch, appendLog, read, refreshSlotNames, readFirmware, lookAgain]);
 
   /** A device-wide setting write (setGlobal / setExpFsTarget bytes); queued like an edit. */
   const writeGlobal = useCallback((bytes: Uint8Array) => {
@@ -562,32 +558,84 @@ export function usePocketMaster() {
     return (await exclusive('Loading', (current) => linkPedal(current).selectPreset(index))) !== null;
   }, [exclusive]);
 
-  const disconnect = useCallback(() => {
+  /** Closes the connection and forgets the pedal's preset: the page goes back to waiting for one. */
+  const drop = useCallback(() => {
     if (settleTimer.current) clearTimeout(settleTimer.current);
+    attempts.current += 1;
+    connecting.current = false;
     link.current?.close();
     link.current = null;
     transportClose.current?.();
     transportClose.current = null;
-    patch({ status: access.current ? 'ready' : 'idle', transport: null, tuner: false, pedal: null, matribox: null });
+    usbPorts.current = null;
+    restoreRef.current = null;
+    presetRef.current = null;
+    indexRef.current = null;
+    pedalModifiedRef.current = null;
+    historyRef.current = EMPTY_HISTORY;
+    patch({
+      status: access.current ? 'ready' : 'idle', transport: null, tuner: false, pedal: null, matribox: null,
+      preset: null, presetIndex: null, restorePoint: null, pedalModified: null, history: EMPTY_HISTORY, names: null, firmware: null,
+    });
   }, [patch]);
 
-  // Skip the Enable MIDI click when the visitor already granted access earlier; never prompts by itself.
+  /**
+   * Follows the USB pedals (MIDIAccess statechange): drops the connection when its ports are
+   * unplugged (a power cycle leaves dead port objects behind), and opens a pedal when one is
+   * plugged in and nothing is connected. A connection that is up is kept even when a pedal of
+   * higher priority is plugged in: switching would pull the editor away mid-edit.
+   */
+  const sync = useCallback(() => {
+    const midi = access.current;
+    if (!midi) return;
+    const inputs = [...midi.inputs.values()];
+    const outputs = [...midi.outputs.values()];
+    const usb = usbPorts.current;
+    const plugged = (port: MIDIPort | undefined) => port?.state === 'connected';
+    if (usb && !(plugged(midi.inputs.get(usb.input)) && plugged(midi.outputs.get(usb.output)))) drop();
+    // Only a plug or an unplug opens a pedal: opening ports fires statechange too, and a pedal that
+    // failed to open is not retried in a loop.
+    const seen = pedalPortsKey([...inputs, ...outputs]);
+    if (seen === seenPorts.current) return;
+    seenPorts.current = seen;
+    if (connecting.current || link.current || transportClose.current) return;
+    const found = findPedal(inputs, outputs);
+    if (found) void connect(found);
+  }, [drop, connect]);
+  syncRef.current = sync;
+
+  /** After a factory reset: the pedal reboots; it is opened again when it comes back. */
+  const reconnect = useCallback(() => {
+    drop();
+    if (rebootTimer.current) clearTimeout(rebootTimer.current);
+    // ponytail: a fixed wait; if the unit drops its USB ports while rebooting, sync() reopens it sooner.
+    rebootTimer.current = setTimeout(lookAgain, REBOOT_MS);
+  }, [drop, lookAgain]);
+
+  // Ask for MIDI on load, like the official app: silent when allowed before, the browser's prompt
+  // the first time. Allowing it later in the site settings connects too, without a reload.
   useEffect(() => {
+    void enable(); // without Web MIDI, this shows why USB is not available here
+    let status: PermissionStatus | null = null;
     let cancelled = false;
     navigator.permissions
       ?.query({ name: 'midi', sysex: true } as unknown as PermissionDescriptor)
       .then((s) => {
-        if (!cancelled && s.state === 'granted') void enable();
+        if (cancelled) return;
+        status = s;
+        s.onchange = () => { if (s.state === 'granted') void enable(); };
       })
-      .catch(() => undefined); // browsers without the MIDI permission name keep the manual button
+      .catch(() => undefined); // browsers without the MIDI permission name: the Allow button stays
     return () => {
       cancelled = true;
+      if (status) status.onchange = null;
     };
   }, [enable]);
 
   useEffect(
     () => () => {
       if (settleTimer.current) clearTimeout(settleTimer.current);
+      if (rebootTimer.current) clearTimeout(rebootTimer.current);
       link.current?.close();
       transportClose.current?.();
     },
@@ -860,9 +908,8 @@ export function usePocketMaster() {
     assistantBase,
     modified,
     enable,
-    connect,
     connectBle: () => void connectBle(),
-    disconnect,
+    reconnect,
     read,
     edit,
     revert: () => void revert(),
@@ -889,8 +936,6 @@ export function usePocketMaster() {
     exportPreset: () => void exportPreset(),
     importPreset,
     downloadBackup,
-    selectInput: (inputId: string) => patch({ inputId }),
-    selectOutput: (outputId: string) => patch({ outputId }),
     clearLog: () => patch({ log: [] }),
     showError: (error: string) => patch({ error }),
     clearError: () => patch({ error: null }),

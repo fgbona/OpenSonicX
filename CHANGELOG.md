@@ -54,6 +54,25 @@ and the project uses [Semantic Versioning](https://semver.org/).
   model id. Core gains `matriboxLink` (the request/answer rules over any MIDI port) and
   `pedalOfPort`; tests run against a simulated unit with an invented catalog.
 
+### Changed
+
+- Web and desktop editor: no Connect or Disconnect button any more. On load the page asks for MIDI
+  (silently when it was allowed before; the browser asks the first time), finds the plugged-in
+  pedal by its USB MIDI port name and loads it: presets, chain, functions. Plugged in later, it is
+  opened then; unplugged, the page waits calmly ("Plug in your pedal"); plugged back in, also after
+  a power cycle, it is opened again with fresh ports, without a reload. With both pedals plugged
+  in, the Pocket Master is opened first; a connection that is up is kept when the other pedal is
+  plugged in, and the editor moves to the other pedal when the open one is unplugged. When the
+  browser refuses MIDI (or wants a click first), one *Allow MIDI access* button asks again; Bluetooth
+  keeps its button (the browser needs the click). After a factory reset the pedal is opened again
+  once it reboots.
+- Toolbar: the Input and Output port pickers are gone; a status chip names the connected pedal
+  and how ("Pocket Master · USB", "Pocket Master · Bluetooth"), or says it is waiting for one.
+  The header reads "OpenSonicX" plus the connected pedal, and so does the window title.
+- Desktop app: MIDI with SysEx is granted to the editor's own page only, checked by scheme and
+  host (the old prefix check also matched look-alike hosts), so it opens the pedal without a prompt.
+- Core: the "could not send" error no longer says to click Connect.
+
 ### Fixed
 
 - Android tablets and phones: a swipe over the signal chain scrolls it to the blocks off screen

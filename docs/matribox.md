@@ -226,9 +226,10 @@ Every write above has been checked on the owner's unit (2026-11-24).
 
 ## Editor (web and desktop)
 
-Connect picks the editor by the MIDI port name (`pedalOfPort`, core): a `Matribox II PRO` port
+The editor opens the plugged-in pedal by itself and picks its editor by the MIDI port name (`pedalOfPort`, core): a `Matribox II PRO` port
 opens the Matribox editor, a `Pocket Master` port the Pocket Master's, which comes first when both
-are plugged in. The Matribox editor (`apps/web/components/Matribox*.tsx`, `lib/useMatribox.ts`,
+are plugged in (an open connection is kept until its pedal is unplugged; see `findPedal` in
+`apps/web/lib/midi.ts`). The Matribox editor (`apps/web/components/Matribox*.tsx`, `lib/useMatribox.ts`,
 `lib/matribox.ts`) talks through core's `matriboxLink`, the same request rules as the MCP server,
 and sends only the official editor's reads and the core write builders, one request at a time.
 A parameter drag sends only the newest value once the previous write is confirmed. After a chain

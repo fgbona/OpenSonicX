@@ -95,19 +95,8 @@ button, select { font: inherit; color: inherit; }
 }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 1.0625rem; }
 .brand-mark { color: var(--blue); }
-.ports { display: flex; flex-wrap: wrap; gap: 12px; flex: 1; }
-.port { display: flex; align-items: center; gap: 8px; }
-.port-label { font-size: 0.8125rem; color: var(--label-2); }
-.port select {
-  min-width: 160px; padding: 6px 28px 6px 10px;
-  border: none; border-radius: var(--radius-small);
-  background: var(--fill); appearance: none;
-  background-image: linear-gradient(45deg, transparent 50%, var(--label-2) 50%), linear-gradient(135deg, var(--label-2) 50%, transparent 50%);
-  background-position: calc(100% - 15px) 55%, calc(100% - 10px) 55%;
-  background-size: 5px 5px; background-repeat: no-repeat;
-}
-.port select:disabled { opacity: 0.5; }
-.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.brand-pedal { font-weight: 500; color: var(--label-2); }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-left: auto; }
 .actions .btn, .status { white-space: nowrap; }
 .theme-toggle {
   display: inline-grid; place-items: center; width: 30px; height: 30px; padding: 0; border: none;
@@ -533,7 +522,6 @@ button, select { font: inherit; color: inherit; }
 @media (max-width: 720px) {
   .log-line { grid-template-columns: 84px 24px 1fr; }
   .log-note { display: none; }
-  .port select { min-width: 0; width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
