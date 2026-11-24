@@ -1,10 +1,10 @@
 # Sonicake Matribox II Pro (in progress)
 
 The goal: an MCP server where you describe a tone and the AI builds it on the Matribox II Pro,
-like the Pocket Master server does today. What exists so far is the protocol groundwork in
-`packages/core/src/matribox/` (framing, pages, LZO1X, messages, name tables) and the model
-catalog reader. No editor UI and no
-MCP tools yet.
+like the Pocket Master server does today. What exists so far: the protocol groundwork in
+`packages/core/src/matribox/` (framing, pages, LZO1X, messages, name tables, the preset decoder),
+the model catalog reader, and the **read-only** half of the MCP server (below). No editor UI and no
+writes to the unit yet.
 
 Everything below was learned from our own captures of the owner's unit (USB MIDI, 2026-11-24):
 the official editor's traffic, and replays of its **read** requests only.
@@ -81,8 +81,8 @@ After the `~GP-2` probe, in this order (`arg` = the decompressed request data):
 | flag | cmd | arg | Reply (decompressed) |
 |------|-----|-----|----------------------|
 | 1 | 10 | `00 00 0A 01` | Preset list, 7444 bytes (below). `mbReadPresetNames()` |
-| 1 | 10 | `01 00 0A 01` | 8 bytes: the argument, then u32 LE current preset number (66) |
-| 0 | 10 | `43 00 00 00` | A preset, 1211 bytes ("Drive AD"; see below) |
+| 1 | 10 | `01 00 0A 01` | 8 bytes: the argument, then u32 LE current preset number (66). `mbReadCurrentPresetNumber()`, `parseMbCurrentPresetNumber` |
+| 0 | 10 | `43 00 00 00` | A preset, 1211 bytes ("Drive AD"; see below). `mbReadPreset(0x43)` |
 | 1 | 11 | `00 08 00 00` | 8 bytes: the argument, then `00 00 00 00` |
 | 0 | 14 | none | User IR names, 500 bytes. `mbReadIrNames()` |
 | 0 | 18 | none | Capture (clone) names, 252 bytes. `mbReadCloneNames()` |
@@ -90,11 +90,15 @@ After the `~GP-2` probe, in this order (`arg` = the decompressed request data):
 | 0 | 13 | none | 10 bytes `00 00 07 00 00 00 3C 00 00 5D`, not decoded |
 | 0 | 16 | none | 124 bytes of float32 values, not decoded |
 | 1 | 16 | `01 00 00 16` | 8 bytes `00 00 00 00 01 00 00 00` |
-| 0 | 10 | `42 00 00 00` | A preset again, 1211 bytes, "Drive AD" |
+| 0 | 10 | `42 00 00 00` | A preset again, 1211 bytes, "Drive AD". `mbReadPreset(0x42)` |
 
 The preset read's argument is a u32 that the reply's first 4 bytes repeat. `42` (66) is the current
 preset; the first read asks for `43` and also gets "Drive AD" (preset 67 is "Cry&Cry"), and the two
-replies differ in one byte (offset 37: `00` / `80`), so `43` may mean the edit buffer. Not confirmed.
+replies differ in one byte (offset 37: `00` / `80`), so `43` may mean the edit buffer. Not confirmed:
+open question. The MCP server reads the current preset number first and then `mbReadPreset(number)`,
+the editor's last read; after a preset select the official editor also re-reads that way. Whether this
+returns the stored slot or the edit buffer with unsaved changes is to be checked on the unit (change a
+knob, then read).
 
 ### Name tables
 
@@ -113,9 +117,56 @@ over from older names and are ignored.
 
 ### Presets
 
-A preset (1211 bytes decompressed) starts with its u32 number and is a list of sections. A
-Matribox `.prst` file is base64 of a JSON byte array that is itself a raw LZO1X stream (no message
-header), the same format. Parsing presets is the next step.
+A preset read from the unit is 1211 bytes decompressed: its u32 number, then 9 sections. A Matribox
+`.prst` file is base64 of a JSON byte array that is itself a raw LZO1X stream (no message header)
+holding the same 9 sections, 1207 bytes. Checked on 22 presets (the owner's unit and `.prst` files);
+nothing in a preset is a checksum.
+
+Each section is `u32 tag` (`0x10000000` on the unit, `0x10000002` in a `.prst`), `u32 length`, then
+a body that starts `00 00 <id> 01`. Ids and body sizes are fixed: 0 (11), 1 (105), 2 (10), 3 (15),
+4 (76), 5 (742), 7 (95), 8 (69), 9 (12).
+
+| Section | Offset in body | Meaning |
+|---------|----------------|---------|
+| 1 | 8 | Name, NUL-terminated (stale bytes after it) |
+| 1 | 95 | Style tag ("Rock", "@lex") |
+| 4 | 4 | Chain: up to 12 storage slots in signal order, `FF` = none |
+| 4 | 16 | Module index per slot (catalog `Modules[].index`: DYN 0 … VOL 15), `FF` = unused |
+| 4 | 28 | u32 fxid per slot (catalog `alg[].fxid`). IR `0x0A1000nn` = user IR nn, CLONE `0x0F00000n` = capture n |
+| 5 | 4 + slot × 60 | 15 float32 per slot, indexed by the catalog widget `ID`, in real units |
+| 5 | 724 + slot | On/off per slot |
+
+A slot is a storage slot, not a chain position (live edits address the slot). Values at positions
+the slot's model does not use are left over from earlier models: only the model's widget IDs are read.
+Sections 0, 3 and 9 are constant; 2, 7 and 8 (likely quick-knob, expression pedal and footswitch
+assignments) and the rest of 1 and 5 are not decoded yet.
+
+`parseMbPreset` (core) takes either size and returns a frozen preset: number (null for a `.prst`),
+name, style, chain (slot, module index, fxid, on, the 15 values) and every section raw, for a later
+writer. `parseMatriboxPrst(text)` reads a `.prst`. `resolveMbPreset(preset, catalog)` names the
+modules, models (with the gear they are based on) and parameters with their ranges; an fxid the
+catalog does not know is kept and shown as unknown. `mbPresetLabel(i)` gives the label the unit
+shows: four presets per bank, `1A`..`60D` (the official editor selected 60D with index 239).
+
+## MCP tools (read-only)
+
+The MCP server in `apps/mcp` talks to whichever supported pedal is plugged in. The pedals are told
+apart by their MIDI port name (`Pocket Master`, `Matribox II PRO`; `apps/mcp/src/devices.ts`). The
+Pocket Master keeps its tools; the Matribox's start with `matribox_`, and nothing they send writes:
+
+- `which_pedal`: which supported pedals are connected (it lists MIDI ports, nothing is sent).
+- `matribox_list_presets`: the 240 presets by label, with style tags, the loaded one marked.
+- `matribox_get_preset`: the loaded preset: chain in order, each block's model and the gear it is
+  based on, on/off, parameters by name with their ranges; IR and CLONE blocks show the slot's name.
+- `matribox_list_models`: the catalog by module (all 16, or one), with origins and parameter ranges:
+  the palette the assistant plans a tone from. Read from the official app's install (below); the
+  tool says how to fix a missing catalog.
+- `matribox_list_irs`, `matribox_list_captures`: the user IR and capture slot names.
+
+Each call opens the ports, sends only the official editor's read requests (`11` frames), collects
+and joins the reply pages, and closes. A reply is matched by its flag, cmd and the argument it
+repeats, so notifications the unit sends on its own (footswitches, knobs) are skipped; no answer in
+3 seconds is an error. Tests run against a simulated unit that answers with our captured replies.
 
 ## Phases
 
@@ -123,10 +174,11 @@ The same gates as the Pocket Master: each phase is validated by the owner on his
 next one starts.
 
 1. **Read only:** connect, read device info, preset names, the current preset. Nothing sent but
-   the read requests the official editor sends.
+   the read requests the official editor sends. Done in the MCP server; waiting for the owner's
+   check on the unit.
 2. **Live edit:** parameter and block writes (`12` frames), with the original read and kept first.
 3. **Save:** writing presets to slots, with a backup of every slot it overwrites.
-4. **MCP tools:** describe a tone, the assistant builds it on the unit.
+4. **MCP tools:** describe a tone, the assistant builds it on the unit (the read-only tools exist).
 
 ## The model catalog
 

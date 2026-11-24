@@ -1,6 +1,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import packageJson from '../package.json' with { type: 'json' };
+import { describePedals } from './devices.ts';
+import type { MatriboxSession } from './matribox-session.ts';
 import type { Session } from './session.ts';
 
 const { version: VERSION } = packageJson;
@@ -33,6 +35,10 @@ export interface Timing {
 
 export interface ServerOptions {
   onTiming?: (timing: Timing) => void;
+  /** The Matribox II Pro (read-only tools); without it those tools answer with an error. */
+  matribox?: MatriboxSession;
+  /** MIDI port names, for which_pedal. */
+  midiPorts?: () => Promise<readonly string[]>;
 }
 
 /** Runs a session call, times it, and turns its result or error into tool text the assistant can act on. */
@@ -57,12 +63,13 @@ const WRITE_SLOT = { readOnlyHint: false, destructiveHint: true, idempotentHint:
 export function createServer(session: Session, options: ServerOptions = {}): McpServer {
   const server = new McpServer({ name: 'pocket-master', version: VERSION }, {
     instructions: [
-      'Controls a Sonicake Pocket Master guitar pedal over USB.',
+      'Controls Sonicake guitar pedals over USB: the Pocket Master (the tools without a prefix) and the Matribox II Pro (the matribox_ tools, read-only for now). If you do not know which pedal the user has, call which_pedal first.',
       'The loaded preset lives in an edit buffer: edit_preset changes the sound at once but nothing is stored until save_preset.',
       'select_preset and revert_preset discard unsaved edits; check "unsaved changes" in get_preset and ask the user first. To go back one change instead of all of them, use undo_edit.',
       'save_preset and restore_backup overwrite a user slot: only call them when the user asked for that slot, and pass its label as confirm.',
       'Before building a tone from a reference, call list_preset_files: if an approved tone matches the request, load it with import_preset instead of rebuilding it.',
       'To match a reference tone (an artist, a record, a song), work out the gear used on it, call list_models once to see which pedal models are based on that gear (model names are disguised, e.g. "Calif DualM" is a Mesa/Boogie Dual Rectifier), then build the whole chain with one edit_preset: drive, amp, cabinet, EQ, gate, modulation, delay and reverb, with sensible values. Do not ask for details the user did not give: make reasonable choices, say briefly what you chose and why, and invite them to ask for adjustments by ear. When the user says a tone sounds right, offer to keep it with export_preset and notes naming the reference, so next time it loads at once.',
+      'Matribox II Pro: matribox_get_preset shows the loaded preset (chain in signal order, each block\'s model and the real gear it is based on, on/off, parameters with ranges); matribox_list_models is the palette, with each model\'s origin (the real gear: e.g. a model based on "Ibanez TS808" is the Tube Screamer). To plan a tone from a reference, work out the gear used, then find the models whose origin matches it. Matribox changes cannot be sent yet: describe the chain and settings for the user to dial in.',
       'Keep calls few: edit_preset, select_preset, save_preset and import_preset already return the resulting preset, and list_models only needs to be called once per conversation.',
     ].join(' '),
   });
@@ -281,5 +288,52 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
     annotations: LIVE,
   }, ({ file }) => reply('import_preset', options, () => session.importPreset(file)));
 
+  registerMatriboxTools(server, options);
   return server;
+}
+
+const noMatribox = (): never => {
+  throw new Error('The Matribox II Pro tools are not available in this server.');
+};
+
+/** which_pedal and the Matribox II Pro's read-only tools (prefixed: the Pocket Master's names are frozen). */
+function registerMatriboxTools(server: McpServer, options: ServerOptions): void {
+  const matribox = () => options.matribox ?? noMatribox();
+
+  server.registerTool('which_pedal', {
+    title: 'Which pedal is connected',
+    description: 'Which supported Sonicake pedals are plugged in over USB (Pocket Master, Matribox II Pro), and which tools drive each. Lists MIDI ports only; nothing is sent.',
+    annotations: READ,
+  }, () => reply('which_pedal', options, async () => describePedals(await (options.midiPorts ?? noMatribox)())));
+
+  server.registerTool('matribox_list_presets', {
+    title: 'List Matribox presets',
+    description: 'Matribox II Pro: the 240 presets by bank label (1A..60D, four per bank) with their style tags, the loaded one marked with *.',
+    annotations: READ,
+  }, () => reply('matribox_list_presets', options, () => matribox().listPresets()));
+
+  server.registerTool('matribox_get_preset', {
+    title: 'Get the loaded Matribox preset',
+    description: 'Matribox II Pro: the loaded preset: name, chain in signal order, and each block with its model, the real gear the model is based on, on/off and its parameters with their ranges.',
+    annotations: READ,
+  }, () => reply('matribox_get_preset', options, () => matribox().describe()));
+
+  server.registerTool('matribox_list_models', {
+    title: 'List the Matribox models',
+    description: 'Matribox II Pro: every model of a module (or of all 16), with the real gear it is based on, a short description and its parameters with ranges. Read from the official Matribox II PRO app installed on this computer. Call it once without module to learn the palette before planning a tone.',
+    inputSchema: { module: z.string().optional().describe('Module name: DYN, FREQ, WAH, DRV, AMP, CAB, IR, EQ, MOD, DLY, RVB, CLONE, FXLOOP, FXSND, FXRTN or VOL') },
+    annotations: READ,
+  }, ({ module }) => reply('matribox_list_models', options, () => matribox().listModels(module)));
+
+  server.registerTool('matribox_list_irs', {
+    title: 'List the Matribox user IRs',
+    description: 'Matribox II Pro: the names of the 20 user IR slots.',
+    annotations: READ,
+  }, () => reply('matribox_list_irs', options, () => matribox().listIrs()));
+
+  server.registerTool('matribox_list_captures', {
+    title: 'List the Matribox captures',
+    description: 'Matribox II Pro: the names of the 10 capture (clone) slots the CLONE module plays.',
+    annotations: READ,
+  }, () => reply('matribox_list_captures', options, () => matribox().listCaptures()));
 }

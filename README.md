@@ -212,6 +212,12 @@ Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
   move both folders). The server reads and writes files only inside these
   folders.
 - `.prst` preset files exported by Sonicake's own app can be imported too, here and in the web editor's Import preset.
+- **Matribox II Pro (preview, read-only):** the same server also reads a Matribox II Pro.
+  `which_pedal` says which pedal is plugged in; `matribox_get_preset`, `matribox_list_presets`,
+  `matribox_list_models`, `matribox_list_irs` and `matribox_list_captures` let the assistant read the
+  loaded preset and plan a tone from the models' real gear. The model list comes from Sonicake's
+  official Matribox II PRO app, which must be installed (or set `MATRIBOX_CATALOG` to its
+  `alg_data.json`). Nothing is written to the Matribox yet. See [docs/matribox.md](docs/matribox.md).
 
 ## Protocol
 
