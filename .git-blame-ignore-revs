@@ -1,0 +1,6 @@
+# Commits that git blame should skip (formatting only, or almost).
+# GitHub reads this file by itself; locally: git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# chore: add Biome as linter and formatter (#202): the one-time format pass (198 files),
+# squashed together with the configuration and 118 lines of lint fixes.
+58723b5a7ac1c742c3d3c59429faf3c5e22a06f4
