@@ -13,7 +13,9 @@ export async function openMidi(): Promise<MIDIAccess> {
   try {
     return await navigator.requestMIDIAccess({ sysex: true });
   } catch (error) {
-    console.error('requestMIDIAccess failed', error);
+    // A refusal is the person's choice (or the browser's setting), explained on the page; only
+    // something unexpected is worth an error in the console.
+    if (!(error instanceof DOMException && error.name === 'NotAllowedError')) console.error('requestMIDIAccess failed', error);
     throw new MidiUnavailableError(
       'MIDI access was blocked. Allow "MIDI devices" for this site in the browser settings, then try again.',
     );
