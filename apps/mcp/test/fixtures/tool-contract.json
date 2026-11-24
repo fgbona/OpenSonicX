@@ -13,6 +13,11 @@
   "list_presets": "{  }",
   "load_ir": "{ file: string, slot: integer, confirm: string, name?: string, replace?: boolean }",
   "load_nam": "{ file: string, slot: integer, confirm: string, name?: string, replace?: boolean }",
+  "matribox_get_preset": "{  }",
+  "matribox_list_captures": "{  }",
+  "matribox_list_irs": "{  }",
+  "matribox_list_models": "{ module?: string }",
+  "matribox_list_presets": "{  }",
   "rename_slot": "{ kind: \"ir\" | \"profile\", slot: integer, name: string }",
   "restore_backup": "{ file: string, slot?: string, confirm: string }",
   "revert_preset": "{  }",
@@ -22,5 +27,6 @@
   "set_global_settings": "{ masterVolume?: integer, inputLevel?: integer, fxRecLevel?: integer, monitorLevel?: integer, btRecLevel?: integer, bootProtection?: integer, backlight?: integer }",
   "set_tuner": "{ on: boolean }",
   "tone3000_login": "{  }",
-  "undo_edit": "{  }"
+  "undo_edit": "{  }",
+  "which_pedal": "{  }"
 }

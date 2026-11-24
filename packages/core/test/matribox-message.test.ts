@@ -3,8 +3,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   mbReadCloneNames,
+  mbReadCurrentPresetNumber,
   mbReadIrNames,
+  mbReadPreset,
   mbReadPresetNames,
+  parseMbCurrentPresetNumber,
   mbRequest,
   parseMbCloneNames,
   parseMbIrNames,
@@ -51,6 +54,20 @@ test('the named read builders are the captured requests', () => {
   assert.equal(toHex(mbReadPresetNames()), toHex(REQUESTS[0] as Uint8Array));
   assert.equal(toHex(mbReadIrNames()), toHex(REQUESTS[4] as Uint8Array));
   assert.equal(toHex(mbReadCloneNames()), toHex(REQUESTS[5] as Uint8Array));
+});
+
+test('the preset read builders are the captured requests', () => {
+  assert.equal(toHex(mbReadCurrentPresetNumber()), toHex(REQUESTS[1] as Uint8Array));
+  assert.equal(toHex(mbReadPreset(0x43)), toHex(REQUESTS[2] as Uint8Array));
+  assert.equal(toHex(mbReadPreset(0x42)), toHex(REQUESTS[10] as Uint8Array));
+  assert.throws(() => mbReadPreset(240), /0\.\.239/);
+});
+
+test('parseMbCurrentPresetNumber reads the real reply: preset 66', () => {
+  assert.equal(parseMbCurrentPresetNumber(unwrapMbMessage(replyTo(REQUESTS[1] as Uint8Array)).data), 66);
+  assert.throws(() => parseMbCurrentPresetNumber(fromHex('01 00 0A 01')), /8 bytes/);
+  assert.throws(() => parseMbCurrentPresetNumber(fromHex('00 00 0A 01 42 00 00 00')), /01 00 0A 01/);
+  assert.throws(() => parseMbCurrentPresetNumber(fromHex('01 00 0A 01 F0 00 00 00')), /240/);
 });
 
 test('a request payload is itself a message: header plus a literal-only LZO1X stream', () => {

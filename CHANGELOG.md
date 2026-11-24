@@ -16,6 +16,17 @@ and the project uses [Semantic Versioning](https://semver.org/).
   liblzo2), message unwrapping (every message is an 8-byte header plus an LZO1X stream), the read
   requests the official editor sends, and parsers for the preset names (240, with style tags), the
   20 user IR names and the 10 capture names.
+- Matribox II Pro presets: `parseMbPreset` decodes a preset read from the unit (1211 bytes) or a
+  `.prst` body (1207 bytes; `parseMatriboxPrst` reads the file) into name, style and the chain in
+  signal order (slot, module, model, on/off, parameter values), keeping every section raw for a
+  later writer; `resolveMbPreset` names models, the gear they are based on and parameters from the
+  catalog, reading only the selected model's parameters. Read builders for the loaded preset
+  (`mbReadCurrentPresetNumber`, `mbReadPreset`) match the official editor's requests byte for byte.
+- MCP server: works with whichever supported pedal is plugged in, told apart by MIDI port name.
+  New read-only tools: `which_pedal`, and for the Matribox II Pro `matribox_list_presets`,
+  `matribox_get_preset`, `matribox_list_models` (the catalog with each model's real gear),
+  `matribox_list_irs` and `matribox_list_captures`. Nothing is written to the Matribox yet. The
+  Pocket Master tools are unchanged; the tool contract only gains entries.
 
 ## [0.17.1] - 2026-11-23
 
