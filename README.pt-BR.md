@@ -111,6 +111,10 @@ Todo menu mostra o nome que a pedaleira usa ao lado do que ele é, agrupado por 
   `/Applications/Matribox II PRO.app/Contents/Frameworks/App.framework/Resources/flutter_assets/assets/alg/alg_data.json`)
   e ele fica naquele navegador; o app desktop lê do app instalado (ou de `MATRIBOX_CATALOG`). Sem
   ele, os presets e as cadeias aparecem mesmo assim, pelo número do módulo.
+  Desfazer e refazer cobrem todas as edições ao vivo ali. O **assistente de timbre** também
+  funciona na Matribox, com as mesmas chaves gratuitas: ele escolhe os modelos pelo equipamento
+  real em que se baseiam (do seu catálogo, que ele precisa), monta a cadeia inteira ou ajusta, mostra
+  o que mudou, e salvar continua passando pela janela de Salvar que você confirma.
 
 ## O que funciona onde
 
