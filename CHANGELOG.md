@@ -78,6 +78,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - Android tablets and phones: a swipe over the signal chain scrolls it to the blocks off screen
   (FX, delay, reverb). On touch the blocks were draggable, so the swipe started a drag instead;
   there they now move with the arrows only (#92).
+- The signal chain scrolls with a mouse too: ‹ › buttons at its ends while blocks are hidden,
+  the mouse wheel scrolls it sideways (the page scrolls again once the chain reaches its end), a
+  scrollbar big enough to grab, and dragging over the blocks no longer selects their names.
 
 ## [0.17.1] - 2026-11-23
 

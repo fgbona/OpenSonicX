@@ -42,6 +42,20 @@ test('the chain strip scrolls sideways under the finger: blocks are not draggabl
   await expect(units.last()).toBeInViewport();
 });
 
+test('the chain\'s › and ‹ buttons page through the blocks off screen', async ({ page, pedal }) => {
+  await connect(page, pedal);
+  const later = page.getByRole('button', { name: 'Show later blocks' });
+  await expect(page.getByRole('button', { name: 'Show earlier blocks' })).toHaveCount(0);
+  for (let i = 0; i < 6 && (await later.isVisible()); i++) {
+    await later.tap();
+    await page.waitForTimeout(400); // smooth scroll
+  }
+  await expect(later).toHaveCount(0);
+  await expect(page.locator('.tiles .tile-unit').last()).toBeInViewport();
+  await expect(page.getByRole('button', { name: 'Show earlier blocks' })).toBeVisible();
+  expect(await sideways(page)).toBeLessThanOrEqual(0);
+});
+
 // Dark glass panels are the containing block of a fixed menu; light ones are not.
 for (const theme of ['dark', 'light'] as const) {
   test(`the model menu opens as a sheet inside the screen (${theme} theme)`, async ({ page, pedal }) => {

@@ -4,6 +4,7 @@ import { useState, useSyncExternalStore } from 'react';
 import { type Block, blockModelLabel, chainUnits, type Edit, moveInChain } from '@pocket-master/core';
 import { ModuleIcon } from './ModuleIcon';
 import { useI18n } from './I18n';
+import { useStripScroll } from './useStripScroll';
 
 interface Props {
   chain: readonly Block[];
@@ -35,6 +36,7 @@ export function ChainTiles({ chain, editable, selected, onSelect, onEdit, irName
   const touch = useSyncExternalStore(onTouchChange, touchOnly, () => false);
   const [dragging, setDragging] = useState<number | null>(null);
   const [over, setOver] = useState<number | null>(null);
+  const strip = useStripScroll<HTMLOListElement>([chain.length]);
   const order = chain.map((b) => b.module);
   const byModule = new Map(chain.map((b) => [b.module, b]));
   const units = chainUnits(order);
@@ -44,7 +46,9 @@ export function ChainTiles({ chain, editable, selected, onSelect, onEdit, irName
   };
 
   return (
-    <ol className={`tiles${editable ? ' tiles-editable' : ''}`} aria-label={t('chain.aria')}>
+    <div className="tiles-wrap">
+    {strip.hidden.start && <button type="button" className="tiles-page tiles-page-start" aria-label={t('chain.scrollStart')} onClick={() => strip.page(-1)}>‹</button>}
+    <ol ref={strip.ref} className={`tiles${editable ? ' tiles-editable' : ''}`} aria-label={t('chain.aria')}>
       {units.map((unit, index) => {
         const lead = unit[0] as number;
         const name = unit.map((m) => byModule.get(m)?.label).join('-');
@@ -103,5 +107,7 @@ export function ChainTiles({ chain, editable, selected, onSelect, onEdit, irName
         );
       })}
     </ol>
+    {strip.hidden.end && <button type="button" className="tiles-page tiles-page-end" aria-label={t('chain.scrollEnd')} onClick={() => strip.page(1)}>›</button>}
+    </div>
   );
 }
