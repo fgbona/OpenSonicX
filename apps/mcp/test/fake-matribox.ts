@@ -3,7 +3,7 @@
  * unit (packages/core/test/fixtures), paged as the unit pages them, and applies the write frames to
  * an in-memory edit buffer the way docs/matribox.md describes, echoing each write as the unit does
  * (a chain edit is answered with the chain notice instead, and a save with nothing, like the unit).
- * A whole-preset write (flag 2, paged) replaces the edit buffer and is answered with cmd 0x17.
+ * A whole-preset write (flag 2, paged) is stored in the slot it names, like the unit, and answered with cmd 0x17.
  * Never a real device.
  */
 import { readFileSync } from 'node:fs';
@@ -136,8 +136,11 @@ export class FakeMatribox {
       preset.set([0x00, 0x00, 0x00, 0x10], at);
       at += 8 + u32(preset, at + 4);
     }
-    // ponytail: the write lands in the edit buffer only here; whether the unit also stores the slot is not known yet.
-    this.#edit = preset;
+    // The unit keeps it in the slot it names (owner's captures mb-20 and midi-123), name included.
+    const index = u32(preset, 0);
+    this.#stored = new Map([...this.#stored, [index, preset]]);
+    this.#names = patched(this.#names, NAMES_AT + index * 17, preset.subarray(BODY_AT[1] + 8, BODY_AT[1] + 24));
+    if (index === this.#current) this.#edit = preset;
     if (this.echoes) this.#reply(replyFrames(wrapMbMessage(0, 0x17, [0x02, 0x00, 0x00, 0x10])));
   }
 

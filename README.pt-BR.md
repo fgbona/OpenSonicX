@@ -253,11 +253,12 @@ Ferramentas: `get_preset`, `list_presets`, `list_models`, `edit_preset`, `select
   que se baseiam. `matribox_save_preset` grava com `confirm` repetindo o slot (ex.: `"58D"`) depois
   de um backup em `~/.pocket-master-editor/backups`. Presets inteiros: `matribox_export_preset`
   grava o preset carregado ou um slot como `.prst` (o formato do app da Sonicake) em
-  `~/.pocket-master-editor/presets/matribox`, `matribox_import_preset` carrega um, e
-  `matribox_restore_backup` devolve um backup ao slot dele. Importar e restaurar mandam o preset
-  inteiro numa escrita só, como o app oficial faz (cadeia, parâmetros, atribuições dos knobs, do
-  pedal de expressão e dos footswitches, volume e andamento); essa escrita foi decodificada do
-  tráfego do app oficial e ainda não foi conferida na pedaleira. A lista de modelos vem do app oficial Matribox
+  `~/.pocket-master-editor/presets/matribox`, `matribox_import_preset` grava um num slot
+  que você confirma, e `matribox_restore_backup` devolve um backup ao slot dele. Importar e
+  restaurar mandam o preset inteiro numa escrita só, como o app oficial faz (cadeia, parâmetros,
+  atribuições dos knobs, do pedal de expressão e dos footswitches, volume e andamento), e a
+  pedaleira já guarda no slot; antes é feito o backup do slot. A escrita do app oficial foi
+  conferida na pedaleira; a nossa (os mesmos dados, sem compressão) ainda falta conferir. A lista de modelos vem do app oficial Matribox
   II PRO da Sonicake, que precisa estar instalado (ou defina `MATRIBOX_CATALOG` com o caminho do
   `alg_data.json`). Carregar IRs e capturas suas na Matribox ainda não está disponível: a
   conversão do WAV e o envio já batem byte a byte com o editor oficial, falta decifrar um campo da

@@ -17,7 +17,7 @@
   "matribox_build_tone": "{ blocks: { module: string, model: string, on?: boolean, params?: object }[] }",
   "matribox_export_preset": "{ preset?: string, file?: string }",
   "matribox_get_preset": "{  }",
-  "matribox_import_preset": "{ file: string, preset?: string, name?: string, confirm?: string }",
+  "matribox_import_preset": "{ file: string, preset: string, name?: string, confirm: string }",
   "matribox_list_captures": "{  }",
   "matribox_list_irs": "{  }",
   "matribox_list_models": "{ module?: string }",
