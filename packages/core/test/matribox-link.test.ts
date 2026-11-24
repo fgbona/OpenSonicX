@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mbReadPresetNames, mbRequest, parseMbPresetNames } from '../src/matribox/message.ts';
 import {
-  mbAddBlock, mbAssignExpression, mbAssignFootswitch, mbSavePreset, mbSetBlockOn, mbSetExpressionMax, mbSetPatchVolume,
+  mbAddBlock, mbExpressionWrites, mbAssignFootswitch, mbSavePreset, mbSetBlockOn, mbSetExpressionMax, mbSetPatchVolume,
 } from '../src/matribox/write.ts';
 import { MB_CC, mbControlChange } from '../src/matribox/cc.ts';
 import { mbAssignments } from '../src/matribox/assignments.ts';
@@ -51,7 +51,8 @@ test('control sends a Control Change as is and refuses anything else; the new wr
   assert.throws(() => unit.control(mbSetBlockOn(0, true)), /Control Change/);
   await unit.write(mbSetPatchVolume(80));
   await unit.write(mbAssignFootswitch(1, 2, true));
-  await unit.write(mbAssignExpression({ entry: 3, slot: 4, paramId: 2, min: 10, max: 90 }));
+  // Like the unit: an assignment's own range is ignored (echoed as 0..100), so the ends follow.
+  for (const frame of mbExpressionWrites({ entry: 3, slot: 4, paramId: 2, min: 10, max: 90 })) await unit.write(frame);
   await unit.write(mbSetExpressionMax(3, 80));
   const a = mbAssignments(parseMbPreset(fake.editBuffer));
   assert.equal(a.volume, 80);

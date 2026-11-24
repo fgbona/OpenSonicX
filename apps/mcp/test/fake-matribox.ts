@@ -267,14 +267,19 @@ export class FakeMatribox {
     if (head === '01000401' || head === '02000401') return this.#editChain(data);
     if (head === '03000501') return edit(5, 736, [data[4] as number, 0]); // patch volume, u16
     if (head === '01000801') return edit(8, 9 + u32(data, 4) * 12 + u32(data, 8), [u32(data, 12)]); // footswitch row, slot
+    // Expression (owner's unit, 2026-11-24): u32 group + u32 position address entry group*3+position.
+    // An assignment sets the target only; like the unit, the range in it is ignored (0..100) and the
+    // echo says so, so the range has to follow with the min/max writes.
     if (head === '02000701') {
-      const entry = u32(data, 4);
-      edit(7, 5 + entry, [u32(data, 8)]);
-      edit(7, 14 + entry, [u32(data, 12)]);
-      edit(7, 23 + entry * 4, data.subarray(20, 24));
-      return edit(7, 59 + entry * 4, data.subarray(24, 28));
+      const entry = u32(data, 4) * 3 + u32(data, 8);
+      const full = [...new Uint8Array(new Float32Array([0]).buffer), ...new Uint8Array(new Float32Array([100]).buffer)];
+      edit(7, 5 + entry, [u32(data, 12)]);
+      edit(7, 14 + entry, [u32(data, 16)]);
+      edit(7, 23 + entry * 4, full.slice(0, 4));
+      edit(7, 59 + entry * 4, full.slice(4, 8));
+      return Uint8Array.from([...data.subarray(0, 20), ...full]);
     }
-    if (head === '03000701' || head === '04000701') return edit(7, (head === '03000701' ? 23 : 59) + u32(data, 4) * 4, data.subarray(12, 16));
+    if (head === '03000701' || head === '04000701') return edit(7, (head === '03000701' ? 23 : 59) + (u32(data, 4) * 3 + u32(data, 8)) * 4, data.subarray(12, 16));
     if (head === '01000a01') {
       this.#current = u32(data, 4);
       this.#edit = this.#stored.get(this.#current) ?? this.#blank;

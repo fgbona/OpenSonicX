@@ -99,6 +99,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Matribox II Pro expression pedal: the assignment's fields are group (EXP 1 A / B, EXP 2), position,
+  slot and parameter, and the unit ignores the range sent with it (owner's unit). Assigning to any
+  entry other than the first, or to a block outside slot 0, was refused before; now the editor and
+  the MCP server assign with the full range and then set min and max, as the official editor does.
 - Matribox II Pro: a preset read by index returns the loaded preset's edit buffer whenever that
   index is not loaded (confirmed on the owner's unit: an export of 58D gave the loaded 3B, the
   backup before saving to 59D held the loaded 60D). Every read of a slot that may not be loaded
