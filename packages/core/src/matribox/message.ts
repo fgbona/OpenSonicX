@@ -9,6 +9,7 @@
  */
 import { buildMbFrame, MB_READ } from './frame.ts';
 import { lzo1xDecompress, lzo1xLiterals } from './lzo1x.ts';
+import { MB_PRESET_COUNT } from './preset.ts';
 
 export interface MbMessage {
   readonly flag: number;
@@ -58,6 +59,29 @@ export function mbRequest(flag: number, cmd: number, arg: ArrayLike<number> = []
 
 /** Preset list: 240 names and style tags. */
 export const mbReadPresetNames = (): Uint8Array => mbRequest(1, 0x10, [0x00, 0x00, 0x0a, 0x01]);
+/** Argument of the current-preset-number read; the reply repeats it, then the u32 number. */
+const CURRENT_PRESET_ARG = [0x01, 0x00, 0x0a, 0x01] as const;
+/** The number of the loaded preset (0..239). */
+export const mbReadCurrentPresetNumber = (): Uint8Array => mbRequest(1, 0x10, CURRENT_PRESET_ARG);
+/**
+ * A preset (1211 bytes once decompressed; the reply starts with `number`). The official editor
+ * reads 0x43 and then 0x42 (the current one, 66) and got "Drive AD" both times, one byte apart:
+ * whether `number` picks a stored slot or the edit buffer is not confirmed (docs/matribox.md).
+ */
+export function mbReadPreset(number: number): Uint8Array {
+  if (!Number.isInteger(number) || number < 0 || number >= MB_PRESET_COUNT) throw new RangeError(`preset number must be 0..${MB_PRESET_COUNT - 1}, got ${number}`);
+  return mbRequest(0, 0x10, [number, 0, 0, 0]);
+}
+
+/** The decompressed reply to mbReadCurrentPresetNumber: `01 00 0A 01` + u32 LE number. */
+export function parseMbCurrentPresetNumber(data: Uint8Array): number {
+  if (data.length !== 8) throw new Error(`current preset reply must be 8 bytes, got ${data.length}`);
+  if (CURRENT_PRESET_ARG.some((b, i) => data[i] !== b)) throw new Error('current preset reply must start 01 00 0A 01');
+  const number = new DataView(data.buffer, data.byteOffset, 8).getUint32(4, true);
+  if (number >= MB_PRESET_COUNT) throw new Error(`current preset ${number} is out of range (240 presets)`);
+  return number;
+}
+
 /** User IR slot names (20). */
 export const mbReadIrNames = (): Uint8Array => mbRequest(0, 0x14);
 /** Capture (clone) slot names (10). */
