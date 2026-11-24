@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  matriboxLink, mbAddBlock, mbChangeModel, mbMoveBlock, mbRemoveBlock, mbSelectPreset, mbSetBlockOn, mbSetParam,
-  type MatriboxLink, type MbCatalog, type MbPreset, type MidiPort,
+  matriboxLink, mbAddBlock, mbAssignExpression, mbAssignFootswitch, mbChangeModel, mbMoveBlock, mbRemoveBlock, mbSelectPreset, mbSetBlockOn,
+  mbSetParam, mbSetPatchVolume, withMbVolume,
+  type MatriboxLink, type MbCatalog, type MbExpressionAssignment, type MbPreset, type MidiPort,
 } from '@pocket-master/core';
 import { readLoaded, readUnit, saveToSlot, serialQueue, withBlockOn, withParam, type MbBackup, type MbUnit } from './matribox';
 import { applyOps } from './matriboxOps';
@@ -126,6 +127,32 @@ export function useMatribox(port: MidiPort | null, desktop: boolean) {
     return run(null, (unit) => unit.write(mbSetBlockOn(slot, on)));
   }, [run]);
 
+  /** Latest patch volume not sent yet: a slider drag sends only the newest value. */
+  const pendingVolume = useRef<number | null>(null);
+  const setVolume = useCallback((volume: number) => {
+    setState((s) => ({ ...s, edited: true, unit: s.unit ? { ...s.unit, preset: withMbVolume(s.unit.preset, volume) } : s.unit }));
+    const queued = pendingVolume.current !== null;
+    pendingVolume.current = volume;
+    if (queued) return;
+    void run(null, async (unit) => {
+      const latest = pendingVolume.current;
+      pendingVolume.current = null;
+      if (latest !== null) await unit.write(mbSetPatchVolume(latest));
+    });
+  }, [run]);
+
+  /** An assignment write (footswitch, expression), then the loaded preset is read again to show what the unit holds. */
+  const assign = useCallback((frames: () => readonly Uint8Array[]) => run('Editing', async (unit) => {
+    for (const frame of frames()) await unit.write(frame);
+    await reloadLoaded(unit);
+    patch({ edited: true });
+  }), [run, reloadLoaded, patch]);
+
+  /** MIDI Control Changes (tuner, tempo): the unit sends no answer. */
+  const control = useCallback((messages: () => readonly Uint8Array[]) => run(null, async (unit) => {
+    messages().forEach((m) => unit.control(m));
+  }), [run]);
+
   /** A chain edit, then the loaded preset is read again: the unit picks slots and loads defaults. */
   const chainEdit = useCallback((frame: () => Uint8Array) => run('Editing', async (unit) => {
     await unit.write(frame());
@@ -165,6 +192,10 @@ export function useMatribox(port: MidiPort | null, desktop: boolean) {
     addBlock: (position: number, moduleIndex: number, fxid: number) => chainEdit(() => mbAddBlock(position, moduleIndex, fxid)),
     moveBlock: (from: number, to: number) => chainEdit(() => mbMoveBlock(from, to)),
     removeBlock: (position: number) => chainEdit(() => mbRemoveBlock(position)),
+    setVolume,
+    assignFootswitch: (footswitch: number, slot: number, on: boolean) => assign(() => [mbAssignFootswitch(footswitch, slot, on)]),
+    assignExpression: (a: MbExpressionAssignment) => assign(() => [mbAssignExpression(a)]),
+    control,
     apply,
     save,
     clearError: () => patch({ error: null }),

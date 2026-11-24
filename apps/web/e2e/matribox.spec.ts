@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { parseMbPreset } from '@pocket-master/core';
+import { mbAssignments, parseMbPreset } from '@pocket-master/core';
 import { connectMatribox, expect, pickCatalog, test } from './matribox-fixtures.ts';
 
 const loaded = (unit: { editBuffer: Uint8Array }) => parseMbPreset(unit.editBuffer);
@@ -12,7 +12,8 @@ test('a Matribox is recognised by its port and gets its own editor, usable witho
   await expect(page.getByText('/Applications/Matribox II PRO.app/Contents/Frameworks/App.framework/Resources/flutter_assets/assets/alg/alg_data.json')).toBeVisible();
   await expect(page.getByText('Chain: module 0 → module 3 → module 4 → module 5 → module 10 → module 15')).toBeVisible();
   await expect(page.getByText('Unknown model (0x0300002a)')).toBeVisible();
-  await expect(page.getByRole('slider')).toHaveCount(0);
+  await expect(page.getByRole('slider')).toHaveCount(1); // the patch volume only: parameters need the catalog
+  await expect(page.getByRole('slider', { name: 'Patch volume' })).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Add a block…' })).toHaveCount(0);
 });
 
@@ -43,6 +44,37 @@ test('with the picked catalog: models, gear, live parameters, on/off and chain e
   await page.getByRole('listitem', { name: /^1\. DYN/ }).getByRole('button', { name: 'Remove' }).click();
   await expect(page.getByText('Chain: DRV → AMP → CAB → RVB → DLY → VOL')).toBeVisible();
   expect(loaded(unit).chain.map((b) => b.moduleIndex)).toEqual([3, 4, 5, 10, 9, 15]);
+});
+
+test('patch volume, footswitch and expression assignments reach the unit; tuner and tempo go as Control Changes', async ({ page, unit }) => {
+  await connectMatribox(page);
+  await pickCatalog(page);
+  const assigned = () => mbAssignments(loaded(unit));
+
+  await page.getByRole('slider', { name: 'Patch volume' }).fill('80');
+  await expect.poll(() => assigned().volume).toBe(80);
+
+  // The box follows the unit: it shows the preset read back after the write.
+  const switchC = page.getByRole('checkbox', { name: 'Footswitch C toggles 2. DRV' });
+  await switchC.click();
+  await expect(switchC).toBeChecked();
+  expect(assigned().footswitches[2]).toContain(0);
+  await switchC.click();
+  await expect(switchC).not.toBeChecked();
+  expect(assigned().footswitches[2]).not.toContain(0);
+
+  await page.getByRole('combobox', { name: 'Block of expression entry 4' }).selectOption({ label: '2. DRV Fake Drive' });
+  await page.getByRole('combobox', { name: 'Parameter of expression entry 4' }).selectOption({ label: 'Tone' });
+  await page.getByRole('spinbutton', { name: 'Minimum of expression entry 4' }).fill('10');
+  await page.getByRole('spinbutton', { name: 'Maximum of expression entry 4' }).fill('90');
+  await page.getByRole('listitem').filter({ has: page.getByRole('combobox', { name: 'Block of expression entry 4' }) }).getByRole('button', { name: 'Apply' }).click();
+  await expect.poll(() => assigned().expression[3]).toEqual({ entry: 3, slot: 0, paramId: 1, min: 10, max: 90 });
+
+  await page.getByRole('checkbox', { name: 'Tuner' }).check();
+  await page.getByRole('button', { name: 'Tap tempo' }).click();
+  await page.getByRole('spinbutton', { name: 'BPM' }).fill('140');
+  await page.getByRole('button', { name: 'Set BPM' }).click();
+  await expect.poll(() => unit.controls).toEqual(['b03a7f', 'b0467f', 'b04401', 'b0450c']);
 });
 
 test('the catalog stays in this browser across visits', async ({ page }) => {

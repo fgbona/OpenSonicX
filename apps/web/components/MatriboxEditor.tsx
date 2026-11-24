@@ -9,7 +9,9 @@ import { useMatriboxHistory } from '@/lib/useMatriboxHistory';
 import { useUndoKeys } from '@/lib/useUndoKeys';
 import { MatriboxAssistant } from './MatriboxAssistant';
 import { MatriboxBlock, MatriboxModelSelect } from './MatriboxBlock';
+import { MatriboxAssignments } from './MatriboxAssignments';
 import { MatriboxCatalog } from './MatriboxCatalog';
+import { MatriboxControls } from './MatriboxControls';
 import { MatriboxPresets } from './MatriboxPresets';
 import { MatriboxSaveDialog } from './MatriboxSaveDialog';
 import { useI18n } from './I18n';
@@ -78,6 +80,9 @@ export function MatriboxEditor({ port, desktop }: { port: MidiPort; desktop: boo
                 <MatriboxModelSelect catalog={mb.catalog} label={t('mb.addBlock')} value="" disabled={disabled} onChange={(m, fxid) => void history.addBlock(chain.length, m, fxid)} />
               </p>
             )}
+            <MatriboxControls preset={unit.preset} disabled={disabled} onVolume={mb.setVolume} onControl={(m) => void mb.control(m)} />
+            <MatriboxAssignments preset={unit.preset} chain={chain} disabled={disabled}
+              onFootswitch={(f, s, on) => void mb.assignFootswitch(f, s, on)} onExpression={(a) => void mb.assignExpression(a)} />
             <MatriboxSaveDialog open={saveOpen} current={proposal?.index ?? unit.current} names={unit.names} loadedName={proposal?.name ?? unit.preset.name} busy={mb.busy === 'Saving'} error={mb.error}
               lastBackup={mb.backups[0] ?? null} storageWarning={mb.storageWarning} onSave={save} onClose={closeSave} />
             <MatriboxAssistant mb={mb} history={history} proposeSave={proposeSave} />
