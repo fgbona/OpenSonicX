@@ -106,6 +106,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The desktop app builds on Windows again: the script that writes the offline service worker
+  (`apps/web/scripts/build-sw.ts`, added with the PWA) took file paths from `URL.pathname`, which
+  on Windows is `/D:/...` and resolved to `D:\D:\...`; it now uses `fileURLToPath`. No released
+  version was affected.
 - Matribox II Pro expression pedal: the assignment's fields are group (EXP 1 A / B, EXP 2), position,
   slot and parameter, and the unit ignores the range sent with it (owner's unit). Assigning to any
   entry other than the first, or to a block outside slot 0, was refused before; now the editor and
