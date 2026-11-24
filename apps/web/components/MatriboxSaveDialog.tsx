@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { checkMbPresetName, MB_PRESET_COUNT, mbPresetLabel, type MbPresetName } from '@pocket-master/core';
 import { downloadJson } from '@/lib/backupStore';
 import type { MbBackup } from '@/lib/matribox';
@@ -38,8 +38,12 @@ export function MatriboxSaveDialog({ open, current, names, loadedName, busy, err
   const [name, setName] = useState(loadedName);
   const [confirmed, setConfirmed] = useState(false);
   const [done, setDone] = useState(false);
+  // Filled in when it opens only: a save to another slot loads that slot, which must not reset the dialog.
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (!open) return;
+    const opening = open && !wasOpen.current;
+    wasOpen.current = open;
+    if (!opening) return;
     setTarget(current);
     setName(loadedName.trim());
     setConfirmed(false);

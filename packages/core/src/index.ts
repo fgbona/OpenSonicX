@@ -42,4 +42,6 @@ export * from './matribox/write.ts';
 export * from './matribox/assignments.ts';
 export * from './matribox/cc.ts';
 export * from './matribox/link.ts';
+export * from './matribox/slots.ts';
+export * from './matribox/backup-all.ts';
 export * from './pedals.ts';

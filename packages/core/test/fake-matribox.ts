@@ -3,6 +3,9 @@
  * unit (packages/core/test/fixtures), paged as the unit pages them, and applies the write frames to
  * an in-memory edit buffer the way docs/matribox.md describes, echoing each write as the unit does
  * (a chain edit is answered with the chain notice instead, and a save with nothing, like the unit).
+ * Like the unit, a preset read returns the loaded preset's edit buffer whatever index it names (tagged
+ * with that index): only a selected slot reads what it stores.
+ * A whole-preset write (flag 2, paged) is stored in the slot it names, like the unit, and answered with cmd 0x17.
  * Never a real device.
  */
 import { readFileSync } from 'node:fs';
@@ -78,6 +81,11 @@ export class FakeMatribox {
   echoes = true;
   /** When true the unit drops saves (to test that a save is checked by reading it back). */
   dropsSaves = false;
+  /** Every whole-preset write received, decompressed (u32 index + 1207-byte body). */
+  readonly presetWrites: Uint8Array[] = [];
+  /** When set, a whole-preset write to this index is acknowledged but not stored (to test the read-back). */
+  dropsPresetWriteTo: number | null = null;
+  #pages: ReturnType<typeof parseMbFrame>[] = [];
   #names = dataOf(this.#replies.get(key(mbReadPresetNames()))!);
   #current = 0x42;
   /** Stored presets by number (1211 bytes, number first). */
@@ -108,6 +116,12 @@ export class FakeMatribox {
     const request = key(bytes);
     this.received.push(request);
     const frame = parseMbFrame(bytes);
+    if (frame.offset > 0 || frame.payload.length < frame.total) {
+      this.#pages = frame.offset === 0 ? [frame] : [...this.#pages, frame];
+      const joined = joinMbPages(this.#pages);
+      if (joined) this.#wholePreset(unwrapMbMessage(joined));
+      return;
+    }
     const message = unwrapMbMessage(frame.payload);
     if (frame.type === MB_WRITE && message.cmd === 0x05) {
       if (!this.dropsSaves) this.#apply(message.cmd, message.data);
@@ -120,6 +134,25 @@ export class FakeMatribox {
     }
     const reply = frame.type === MB_READ ? this.#read(message.flag, message.cmd, message.data) ?? this.#replies.get(request) : undefined;
     if (reply) this.#reply(reply); // the unit stays silent on what it does not know
+  }
+
+  /** flag 2, cmd 0x10: u32 index + body; the unit keeps it with its own section tags and acknowledges. */
+  #wholePreset(message: { flag: number; cmd: number; data: Uint8Array }): void {
+    this.#pages = [];
+    if (message.flag !== 2 || message.cmd !== 0x10 || message.data.length !== 1211) throw new Error('fake Matribox: unknown paged write');
+    this.presetWrites.push(message.data);
+    const preset = Uint8Array.from(message.data);
+    for (let at = 4, i = 0; i < 9; i++) {
+      preset.set([0x00, 0x00, 0x00, 0x10], at);
+      at += 8 + u32(preset, at + 4);
+    }
+    const index = u32(preset, 0);
+    if (index !== this.dropsPresetWriteTo) {
+      this.#stored = new Map([...this.#stored, [index, preset]]);
+      this.#names = patched(this.#names, NAMES_AT + index * 17, preset.subarray(BODY_AT[1] + 8, BODY_AT[1] + 24));
+      if (index === this.#current) this.#edit = preset;
+    }
+    if (this.echoes) this.#reply(replyFrames(wrapMbMessage(0, 0x17, [0x02, 0x00, 0x00, 0x10])));
   }
 
   listen(receiver: (bytes: Uint8Array) => void): void {
@@ -139,7 +172,8 @@ export class FakeMatribox {
     if (flag === 0 && cmd === 0x10 && arg.length === 4) {
       const number = u32(arg, 0);
       if (number >= 240) return null;
-      return answer(patched(number === this.#current ? this.#edit : this.#stored.get(number) ?? this.#blank, 0, arg));
+      // The unit's bug (owner's unit, 2026-11-24): any index reads the edit buffer, tagged with that index.
+      return answer(patched(this.#edit, 0, arg));
     }
     return null;
   }

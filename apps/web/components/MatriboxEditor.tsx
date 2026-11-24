@@ -10,6 +10,7 @@ import { useUndoKeys } from '@/lib/useUndoKeys';
 import { MatriboxAssistant } from './MatriboxAssistant';
 import { MatriboxBlock, MatriboxModelSelect } from './MatriboxBlock';
 import { MatriboxAssignments } from './MatriboxAssignments';
+import { MatriboxBackupAll } from './MatriboxBackupAll';
 import { MatriboxCatalog } from './MatriboxCatalog';
 import { MatriboxControls } from './MatriboxControls';
 import { MatriboxPresets } from './MatriboxPresets';
@@ -86,6 +87,7 @@ export function MatriboxEditor({ port, desktop }: { port: MidiPort; desktop: boo
             <MatriboxSaveDialog open={saveOpen} current={proposal?.index ?? unit.current} names={unit.names} loadedName={proposal?.name ?? unit.preset.name} busy={mb.busy === 'Saving'} error={mb.error}
               lastBackup={mb.backups[0] ?? null} storageWarning={mb.storageWarning} onSave={save} onClose={closeSave} />
             <MatriboxAssistant mb={mb} history={history} proposeSave={proposeSave} />
+            <MatriboxBackupAll mb={mb} loaded={mbPresetLabel(unit.current)} />
           </>
         )}
         {mb.backups.length > 0 && (

@@ -301,8 +301,58 @@ Whole presets (experimental, **not yet checked on the owner's unit**; see "Whole
   `preset` and `confirm` (the same label) it is also saved there, after the usual backup.
 - `matribox_restore_backup`: a backup `matribox_save_preset` wrote, loaded whole and saved back to
   its own slot (`confirm` repeats its label; that slot is backed up again first).
+- `matribox_backup_all_presets`: all 240 presets, each read with its slot loaded, in one file in
+  `~/.pocket-master-editor/backups` (default `<time>-matribox-all.json`; see "Backup all").
+- `matribox_restore_all_presets`: writes every preset of such a file back into its slot
+  (`confirm: "ALL"`); by default all 240 are backed up to a new file first (`backup: false` skips it).
 
 File names are resolved inside their folder: `..`, absolute paths and other extensions are refused.
+
+## Reading a slot: the unit reads only the loaded one
+
+Owner's unit, 2026-11-24: a preset read by index (flag 0, cmd `10`, u32 index: `mbReadPreset`)
+returns the **loaded preset's edit buffer**, tagged with the requested index, whenever that index
+is not the loaded one. Seen twice: an export of 58D while 3B was loaded gave 3B's "Chorus Clean",
+and the backup taken before saving to 59D while 60D was loaded held 60D's "TESTE OSX". The
+official editor never reads an unloaded slot: it selects it (`01 00 0A 01` + u32 index) and then
+reads. The simulated units (`apps/mcp/test/fake-matribox.ts`, `packages/core/test/fake-matribox.ts`)
+now behave the same way.
+
+So every read of a slot that may not be loaded selects it first (core `mbReadSlot`), which
+discards the loaded preset's unsaved edits. What changed (MCP server and editor alike):
+
+- **Save to another slot** (`matribox_save_preset`, the editor's Save dialog): the loaded preset
+  (edit buffer, edits included) is read first; the target is selected and read (now what it
+  stores) and that is the backup; the edit buffer is written into the target with the
+  whole-preset write (`mbWritePreset`, which stores the slot it names) and read back (sections 2,
+  3, 4, 5, 7, 9); a save (cmd `05`) follows only when the name changes. **The target stays loaded**
+  (before, the slot that was loaded stayed loaded). If anything fails after the select, the edit
+  buffer is kept too (MCP: a backup file of the slot that was loaded, `source: "edit-buffer"`;
+  editor: in the backups list), so the edits are not lost.
+- **Save over the loaded slot**: unchanged (backup, cmd `05`, read back). Reading what that slot
+  stores would need a select, which would drop the very edits being saved, so its backup is the
+  edit buffer as it was before the save, marked `source: "edit-buffer"` in the backup record
+  (`"slot"` for one read with its slot loaded). To keep a restorable copy of what the loaded slot
+  stores, back up before editing (export, or *Back up all*).
+- **Export of a slot** (`matribox_export_preset` with `preset`): when it is not the loaded one it
+  is selected, read, and the original preset selected again; unsaved edits of the loaded preset
+  are lost. Exporting the loaded preset still reads the edit buffer (edits included).
+- **Import and restore of one backup** (`matribox_import_preset`, `matribox_restore_backup`): the
+  slot is selected before it is read for the backup (before, the backup was read first, so it held
+  the edit buffer).
+
+## Backup all
+
+One file with all 240 presets (format: [docs/preset-file-format.md](preset-file-format.md#matribox-ii-pro-backup-all-file)).
+*Back up*: remember the loaded index, then for each index select it and read it (1211 bytes), then
+select the original index again (also after an error). *Restore*: the file is checked whole
+first; then for each preset select its index, write it whole (`mbWritePreset`) and read it back
+(sections 2, 3, 4, 5, 7, 9 must match); the first failure stops it with the slots already written;
+then the original index is selected again. Both lose the loaded preset's unsaved edits (the
+editor asks first when there are any). Before a restore, all 240 presets are backed up (MCP: a new
+file in the backups folder; editor: downloaded), unless that is turned off. The preset names
+come with the whole-preset write (section 1); whether the unit's preset list shows them without a
+save is still to be checked on the unit.
 
 ## Whole-preset write
 
@@ -528,8 +578,11 @@ are plugged in (an open connection is kept until its pedal is unplugged; see `fi
 and sends only the official editor's reads and the core write builders, one request at a time.
 A parameter drag sends only the newest value once the previous write is confirmed. After a chain
 edit or a preset select it reads the loaded preset again. Save reads the slot, keeps it as a
-backup in the browser (localStorage, newest 20, same JSON as the MCP server's backups), sends the
-save and reads the slot back. It also shows the patch volume (a slider, newest value only, like a knob), a grid of which blocks
+backup in the browser (localStorage, newest 20, same JSON as the MCP server's backups), and stores
+the loaded preset as described in "Reading a slot" (another slot: whole-preset write, the slot
+stays loaded; the loaded slot: save), then reads the slot back. *Back up all presets* and
+*Restore all…* (section "All presets") download and read one backup-all file, with progress
+("Backing up 12A", "Restoring 12A"); see "Backup all". It also shows the patch volume (a slider, newest value only, like a knob), a grid of which blocks
 footswitches A–D toggle, the nine expression entries (block, parameter, min, max, Apply) and a
 tuner / tap tempo / BPM row sent as Control Changes on a chosen MIDI channel; after an assignment
 it reads the loaded preset again. Undo and Redo cover the chain edits only (the history replays

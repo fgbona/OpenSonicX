@@ -1,11 +1,13 @@
 /**
  * The Matribox II Pro's files on disk: .prst presets in their own folder
  * (~/.pocket-master-editor/presets/matribox) and the slot backups save_preset writes
- * (~/.pocket-master-editor/backups). Every path the assistant gives is resolved inside its folder.
+ * (~/.pocket-master-editor/backups), with the backup-all files (one file, all 240 presets). Every path the assistant gives is resolved inside its folder.
  */
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { fromHex, mbPresetLabel, MB_PRESET_SIZE, parseMatriboxPrst, parseMbPreset, writeMatriboxPrst, type MbPreset } from '@pocket-master/core';
+import {
+  fromHex, mbPresetLabel, MB_PRESET_SIZE, parseMatriboxPrst, parseMbBackupAll, parseMbPreset, writeMatriboxPrst, type MbBackupAll, type MbPreset,
+} from '@pocket-master/core';
 import { inside } from './session.ts';
 
 export const MATRIBOX_DEVICE = 'Sonicake Matribox II Pro';
@@ -59,4 +61,29 @@ export async function readMatriboxBackup(folder: string, file: string): Promise<
   const bytes = fromHex(preset);
   if (bytes.length !== MB_PRESET_SIZE) throw new Error(`${file}: the preset holds ${bytes.length} bytes, expected ${MB_PRESET_SIZE}`);
   return Object.freeze({ label, index, name, preset: parseMbPreset(bytes) });
+}
+
+const JSON_FILE = /\.json$/i;
+
+function jsonPath(folder: string, file: string): string {
+  if (!JSON_FILE.test(file)) throw new Error(`a Matribox backup-all file ends in .json, got "${file}"`);
+  return inside(folder, file);
+}
+
+/** Writes a backup-all file in `folder` (default name: time + matribox-all); never replaces a file. */
+export async function writeMatriboxBackupAll(folder: string, backup: MbBackupAll, file?: string): Promise<string> {
+  const path = jsonPath(folder, file ?? `${backup.createdAt.replace(/[:.]/g, '-')}-matribox-all.json`);
+  await mkdir(join(path, '..'), { recursive: true });
+  try {
+    await writeFile(path, JSON.stringify(backup, null, 2), { flag: 'wx' });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'EEXIST') throw new Error(`${path} already exists; choose another file name`);
+    throw error;
+  }
+  return path;
+}
+
+/** Reads and checks a backup-all file from `folder` (format, version, presets, labels, sizes). */
+export async function readMatriboxBackupAll(folder: string, file: string): Promise<MbBackupAll> {
+  return parseMbBackupAll(await readFile(jsonPath(folder, file), 'utf8'));
 }

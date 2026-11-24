@@ -16,6 +16,19 @@ and the project uses [Semantic Versioning](https://semver.org/).
   of slot, zero, name field and the first 1366 converted samples) from two more captures of WAVs
   made for it; core gains `mbIrUploadData` and `mbIrUpload`, which rebuild the real IR's captured
   upload frame for frame and the other two byte for byte. The simulated unit acknowledges uploads.
+- Matribox II Pro backup all / restore all, as one file (format `opensonicx-matribox-backup`,
+  version 1, documented in docs/preset-file-format.md): all 240 presets (1A..60D), each read with
+  its slot loaded, then the loaded preset loaded again; restore checks the whole file first, writes
+  each preset whole into its slot (read back), stops at the first failure saying which slots were
+  written, and loads the original preset again. By default all 240 presets are backed up first so a
+  restore can be undone. MCP: new tools `matribox_backup_all_presets` (file in
+  `~/.pocket-master-editor/backups`) and `matribox_restore_all_presets` (`confirm: "ALL"`,
+  `backup` optional); the tool contract only gains entries. Editor (web and desktop): an "All
+  presets" section with *Back up all presets* (asks first over unsaved edits, downloads the file)
+  and *Restore all…* (file upload, explicit confirmation, backup-first box on by default,
+  progress). Core: `mbBackupAllPresets`, `mbRestoreAllPresets`, `parseMbBackupAll`, `mbReadSlot`,
+  `mbStoreSlot`, `mbReadLoadedIndex`; core's `matriboxLink` gains `writePreset`.
+
 - The web editor is an installable app (PWA) that works offline: a web app manifest (name,
   icons, maskable icon, dark theme colors, standalone window, scoped to the GitHub Pages base
   path) and a small hand-written service worker that precaches the whole static export (pages,
@@ -62,6 +75,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Matribox II Pro: saving the loaded preset to **another** slot (`matribox_save_preset`, the
+  editor's Save dialog) now loads that slot to back it up, writes the loaded preset (unsaved edits
+  included) into it with the whole-preset write and saves only to rename it: **the target slot
+  stays loaded** afterwards. Exporting a slot that is not loaded (`matribox_export_preset` with
+  `preset`) loads it to read it and then loads the original preset again, so unsaved edits of the
+  loaded preset are lost. Saving over the loaded slot is unchanged; its backup is the preset as
+  loaded, marked `source: "edit-buffer"` in the backup record (`"slot"` otherwise).
 - README for 1.0: both pedals in the introduction, the Matribox II Pro MCP write tools, Android
   checked, and a Portuguese version ([README.pt-BR.md](README.pt-BR.md)) linked from the top of each.
 - Builds and tests run through Turborepo (`turbo`, local cache only): `npm test`,
@@ -79,6 +99,14 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Matribox II Pro: a preset read by index returns the loaded preset's edit buffer whenever that
+  index is not loaded (confirmed on the owner's unit: an export of 58D gave the loaded 3B, the
+  backup before saving to 59D held the loaded 60D). Every read of a slot that may not be loaded
+  now selects it first, as the official editor does: the backup before a save to another slot,
+  the export of a slot, and the backup before an import or restore (MCP and editor). Backups made
+  before this fix of a slot other than the loaded one hold the loaded preset, not that slot. The
+  simulated units model the bug.
+- Matribox editor: the Save dialog no longer resets itself when the save loads another slot.
 - Matribox II Pro: `matribox_import_preset` and `matribox_restore_backup` treat the whole-preset
   write as what it is on the unit, a write that stores the slot (owner's capture): both need the slot
   and `confirm`, back that slot up and load it before the write. Before, import without a slot

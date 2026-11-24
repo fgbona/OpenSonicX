@@ -107,7 +107,9 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
   editor: the 240 presets (1A..60D) with a filter, the loaded preset's chain with each model and
   the gear it is based on, live on/off, parameters (within each model's range) and models, add,
   move and remove blocks, and Save to a slot with an explicit confirmation and a backup of the
-  slot first (kept in the browser, downloadable). Model names and parameters come from the
+  slot first (kept in the browser, downloadable). *Back up all presets* downloads all 240 presets
+  in one file and *Restore all…* puts them back from one (explicit confirmation; by default all
+  240 are backed up and downloaded first, so it can be undone). Model names and parameters come from the
   catalog of Sonicake's official Matribox II PRO app, which is not ours to ship: in the browser
   you pick its `alg_data.json` once (on a Mac:
   `/Applications/Matribox II PRO.app/Contents/Frameworks/App.framework/Resources/flutter_assets/assets/alg/alg_data.json`)
@@ -270,7 +272,11 @@ Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
   backup to `~/.pocket-master-editor/backups`. Whole presets: `matribox_export_preset` writes the
   loaded preset or a slot as a `.prst` (the format of Sonicake's own app) in
   `~/.pocket-master-editor/presets/matribox`, `matribox_import_preset` stores one in a slot
-  you confirm, and `matribox_restore_backup` puts a backup back into its slot. Import and restore
+  you confirm, and `matribox_restore_backup` puts a backup back into its slot.
+  `matribox_backup_all_presets` keeps all 240 presets in one file in `~/.pocket-master-editor/backups`
+  and `matribox_restore_all_presets` writes them back (`confirm: "ALL"`; all 240 are backed up
+  first unless `backup: false`). The unit only shows what a slot stores once it is loaded, so these
+  load slots in turn: unsaved edits of the loaded preset are lost. Import and restore
   send the whole preset in one write, as the official app does (chain, parameters, knob,
   expression-pedal and footswitch assignments, volume and tempo), and the unit keeps it in that
   slot at once; the slot is backed up first. The official app's write is checked on the unit; ours
