@@ -110,14 +110,21 @@ export function lzo1xDecompress(src: Uint8Array, maxOut: number = LZO1X_MAX_OUT)
   return out.slice(0, op);
 }
 
+/** Head of a literal run longer than one first byte holds: 0, then (n − 18) as 0 × 255s + the rest (1..255). */
+function longRunHead(n: number): number[] {
+  const rest = n - 18;
+  const zeros = Math.floor((rest - 1) / 255);
+  return [0, ...Array<number>(zeros).fill(0), rest - zeros * 255];
+}
+
 /**
- * A valid LZO1X stream that stores `bytes` as one literal run (no compression). This is what the
- * official editor sends in its small read requests.
+ * A valid LZO1X stream that stores `bytes` as one literal run (no compression): what the official
+ * editor sends in its requests and writes. Runs over 238 bytes use the long form.
  */
 export function lzo1xLiterals(bytes: ArrayLike<number>): Uint8Array {
   const data = Array.from(bytes);
-  // ponytail: one first-byte run only; longer data needs a real compressor, add one with a use for it.
-  if (data.length < 1 || data.length > MAX_FIRST_LITERALS) fail(`literal-only stream holds 1..${MAX_FIRST_LITERALS} bytes, got ${data.length}`);
+  if (data.length < 1) fail('a literal-only stream holds at least 1 byte');
   if (data.some((b) => !Number.isInteger(b) || b < 0 || b > 0xff)) fail('literals must be byte values 0..255');
-  return Uint8Array.from([17 + data.length, ...data, ...END_MARKER]);
+  const head = data.length <= MAX_FIRST_LITERALS ? [17 + data.length] : longRunHead(data.length);
+  return Uint8Array.from([...head, ...data, ...END_MARKER]);
 }

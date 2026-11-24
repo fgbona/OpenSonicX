@@ -6,6 +6,7 @@ import {
   MB_PRESET_BODY_SIZE,
   MB_PRESET_SIZE,
   mbPresetLabel,
+  parseMbPresetLabel,
   parseMatriboxPrst,
   parseMbPreset,
   resolveMbPreset,
@@ -190,4 +191,12 @@ test('mbPresetLabel: four presets per bank, A..D', () => {
   assert.equal(mbPresetLabel(66), '17C');
   assert.equal(mbPresetLabel(239), '60D'); // the capture's select of 60D sent 0xEF
   assert.throws(() => mbPresetLabel(240), /0\.\.239/);
+});
+
+test('parseMbPresetLabel reads 1A..60D (case-insensitive) and refuses the rest', () => {
+  assert.equal(parseMbPresetLabel('1A'), 0);
+  assert.equal(parseMbPresetLabel('17c'), 66);
+  assert.equal(parseMbPresetLabel(' 60D '), 239);
+  for (let i = 0; i < 240; i += 37) assert.equal(parseMbPresetLabel(mbPresetLabel(i)), i);
+  for (const bad of ['0A', '61A', '1E', 'P01', '', '1']) assert.throws(() => parseMbPresetLabel(bad), /preset label/, bad);
 });

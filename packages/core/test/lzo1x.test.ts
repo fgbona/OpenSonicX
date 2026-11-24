@@ -56,12 +56,14 @@ test('the 3-byte match after a literal run reaches 2049 bytes back', () => {
 
 test('lzo1xLiterals makes the literal-only stream the official editor sends', () => {
   assert.equal(toHex(lzo1xLiterals([0x00, 0x00, 0x0a, 0x01])), '15 00 00 0A 01 11 00 00');
-  for (const n of [1, 3, 4, 100, 238]) {
+  for (const n of [1, 3, 4, 100, 238, 239, 273, 274, 1211, 7444]) {
     const bytes = lcg(n, n);
     assert.deepEqual(lzo1xDecompress(lzo1xLiterals(bytes)), bytes, `n=${n}`);
   }
-  assert.throws(() => lzo1xLiterals([]), /1\.\.238/);
-  assert.throws(() => lzo1xLiterals(new Uint8Array(239)), /1\.\.238/);
+  // Longer runs: 00, one 00 per 255, then the rest of (n - 18): 239 bytes = 00 DD, 274 = 00 00 01.
+  assert.equal(toHex(lzo1xLiterals(new Uint8Array(239)).subarray(0, 2)), '00 DD');
+  assert.equal(toHex(lzo1xLiterals(new Uint8Array(274)).subarray(0, 3)), '00 00 01');
+  assert.throws(() => lzo1xLiterals([]), /at least 1/);
   assert.throws(() => lzo1xLiterals([256]), /byte/);
 });
 
