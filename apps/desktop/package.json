@@ -2,7 +2,7 @@
   "name": "@pocket-master/desktop",
   "version": "0.17.1",
   "private": true,
-  "description": "Pocket Master Editor as a desktop app: works offline and updates itself.",
+  "description": "OpenSonicX as a desktop app: works offline and updates itself.",
   "author": "Fernando Bona",
   "homepage": "https://github.com/fgbona/OpenSonicX#readme",
   "license": "MIT",
@@ -23,8 +23,8 @@
   },
   "build": {
     "appId": "io.github.fgbona.pocketmastereditor",
-    "productName": "Pocket Master Editor",
-    "artifactName": "Pocket-Master-Editor-${version}-${os}-${arch}.${ext}",
+    "productName": "OpenSonicX",
+    "artifactName": "OpenSonicX-${version}-${os}-${arch}.${ext}",
     "electronVersion": "45.4.1",
     "npmRebuild": false,
     "directories": {
@@ -64,7 +64,7 @@
       "identity": "-",
       "hardenedRuntime": false,
       "extendInfo": {
-        "NSBluetoothAlwaysUsageDescription": "Pocket Master Editor connects to the pedal over Bluetooth MIDI."
+        "NSBluetoothAlwaysUsageDescription": "OpenSonicX connects to the pedal over Bluetooth MIDI."
       }
     },
     "win": {
@@ -73,7 +73,7 @@
     "linux": {
       "target": "AppImage",
       "category": "Audio",
-      "executableName": "pocket-master-editor"
+      "executableName": "opensonicx"
     }
   }
 }

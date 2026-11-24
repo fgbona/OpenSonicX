@@ -1,6 +1,6 @@
 # OpenSonicX
 
-Free, open-source tools for Sonicake guitar pedals. Today: the **Pocket Master Editor**, for
+Free, open-source tools for Sonicake guitar pedals: an editor for
 the **Sonicake Pocket Master** multi-effects pedal, over USB MIDI or Bluetooth. No driver and no Connect button: open
 the page in Chrome, Edge or Opera and plug the pedal in; the editor finds it and loads its presets.
 The **Sonicake Matribox II Pro** is supported too, experimentally: the same page recognises it
@@ -136,14 +136,17 @@ attaches installers:
 
 | System | File |
 |---|---|
-| macOS, Apple Silicon (M1 and later) | `Pocket-Master-Editor-<version>-mac-arm64.dmg` |
-| macOS, Intel | `Pocket-Master-Editor-<version>-mac-x64.dmg` |
-| Windows | `Pocket-Master-Editor-<version>-win-x64.exe` |
-| Linux | `Pocket-Master-Editor-<version>-linux-x86_64.AppImage` |
+| macOS, Apple Silicon (M1 and later) | `OpenSonicX-<version>-mac-arm64.dmg` |
+| macOS, Intel | `OpenSonicX-<version>-mac-x64.dmg` |
+| Windows | `OpenSonicX-<version>-win-x64.exe` |
+| Linux | `OpenSonicX-<version>-linux-x86_64.AppImage` |
  The app runs the same editor without a
 browser or an internet connection; only TONE3000 and the first NAM conversion
 (which downloads a reference file once) need the network.
 
+- **Renamed in 1.0.0** from *Pocket Master Editor* to *OpenSonicX*. Installed copies update in
+  place and keep their data (backups, keys, settings); on macOS an updated copy keeps its old
+  name in Applications.
 - **The app updates itself** on every system: a new version downloads in the
   background and installs when you choose *Restart now* (or the next time you
   open the app).

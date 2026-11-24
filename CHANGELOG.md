@@ -56,6 +56,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The desktop app is now **OpenSonicX** (was *Pocket Master Editor*): app name, installers
+  (`OpenSonicX-<version>-…`), the Linux executable and the update message. The app id is unchanged,
+  so installed copies update in place, and the data folder keeps its old name, so backups, keys and
+  settings stay. Browser storage keys, `~/.pocket-master-editor` and the Docker image keep their
+  names. The update check in CI accepts both names.
 - Web and desktop editor: no Connect or Disconnect button any more. On load the page asks for MIDI
   (silently when it was allowed before; the browser asks the first time), finds the plugged-in
   pedal by its USB MIDI port name and loads it: presets, chain, functions. Plugged in later, it is
