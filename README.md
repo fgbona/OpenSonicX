@@ -265,11 +265,12 @@ Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
   `matribox_save_preset` stores it with `confirm` repeating the slot label (e.g. `"58D"`) after a
   backup to `~/.pocket-master-editor/backups`. Whole presets: `matribox_export_preset` writes the
   loaded preset or a slot as a `.prst` (the format of Sonicake's own app) in
-  `~/.pocket-master-editor/presets/matribox`, `matribox_import_preset` loads one, and
-  `matribox_restore_backup` puts a backup back into its slot. Import and restore send the whole
-  preset in one write, as the official app does (chain, parameters, knob, expression-pedal and
-  footswitch assignments, volume and tempo); that write is decoded from the official app's
-  traffic and not yet checked on the unit. The model list comes from Sonicake's official
+  `~/.pocket-master-editor/presets/matribox`, `matribox_import_preset` stores one in a slot
+  you confirm, and `matribox_restore_backup` puts a backup back into its slot. Import and restore
+  send the whole preset in one write, as the official app does (chain, parameters, knob,
+  expression-pedal and footswitch assignments, volume and tempo), and the unit keeps it in that
+  slot at once; the slot is backed up first. The official app's write is checked on the unit; ours
+  (the same data, uncompressed) is still to be checked. The model list comes from Sonicake's official
   Matribox II PRO app, which must be installed (or set `MATRIBOX_CATALOG` to its `alg_data.json`).
   See [docs/matribox.md](docs/matribox.md).
 

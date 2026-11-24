@@ -50,6 +50,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Matribox II Pro: `matribox_import_preset` and `matribox_restore_backup` treat the whole-preset
+  write as what it is on the unit, a write that stores the slot (owner's capture): both need the slot
+  and `confirm`, back that slot up and load it before the write. Before, import without a slot
+  wrote the loaded preset's slot without asking.
 - A refused MIDI permission is no longer logged as an error in the browser console: it is the
   person's choice and the page already explains it (it also showed up in the e2e logs).
 - Matribox II Pro host checksum: it covers the data nibbles only, not the length and offset bytes

@@ -305,52 +305,47 @@ export class MatriboxSession {
     });
   }
 
-  /** Applies a .prst to the loaded preset; with `preset` (and `confirm`), saves it there too. */
-  async importPreset(options: { file: string; preset?: string; name?: string; confirm?: string }): Promise<string> {
+  /** Stores a .prst whole in slot `preset` (confirmed by its label), as Sonicake's app imports one. */
+  async importPreset(options: { file: string; preset: string; name?: string; confirm: string }): Promise<string> {
     const preset = await readMatriboxPrst(this.#folders.presets, options.file);
-    const target = options.preset === undefined ? null : checkSave(options.preset, options.confirm, options.name ?? preset.name);
-    return this.#use(async (unit) => {
-      const applied = await this.#apply(unit, preset);
-      const saved = target ? await this.#save(unit, target) : ['Nothing is stored until matribox_save_preset.'];
-      return [...applied, ...saved, UNCHECKED].join('\n');
-    });
+    const target = checkSave(options.preset, options.confirm, options.name ?? preset.name);
+    return this.#use(async (unit) => [...(await this.#store(unit, target, preset)), UNCHECKED].join('\n'));
   }
 
-  /** Applies a backup save_preset wrote and saves it back to its own slot (itself backed up first). */
+  /** Stores a backup save_preset wrote back in its own slot (itself backed up first). */
   async restoreBackup(options: { file: string; confirm: string; name?: string }): Promise<string> {
     const backup = await readMatriboxBackup(this.#folders.backups, options.file);
     const target = checkSave(backup.label, options.confirm, options.name ?? backup.name);
-    return this.#use(async (unit) => {
-      const applied = await this.#apply(unit, backup.preset);
-      return [...applied, ...(await this.#save(unit, target)), UNCHECKED].join('\n');
-    });
+    return this.#use(async (unit) => [...(await this.#store(unit, target, backup.preset)), UNCHECKED].join('\n'));
   }
 
   /**
-   * Loads `preset` whole (chain, parameters, knob, expression and footswitch assignments, volume,
-   * tempo) into the loaded preset with the official editor's one-message write (capture mb-20),
-   * after a backup of what the loaded preset holds, then reads it back. Whether the unit also stores
-   * the slot is not known yet: the backup covers that case.
+   * Stores `preset` whole (chain, parameters, knob, expression and footswitch assignments, volume,
+   * tempo) in slot `index` with the official editor's one-message write, which the unit keeps in
+   * that slot (captures mb-20 and midi-123: an import survives a preset change with no save). Like
+   * the official app: back the slot up, load it, write it, read it back. A different `name` is then
+   * given with a save.
    */
-  async #apply(unit: MatriboxConnection, preset: MbPreset): Promise<string[]> {
-    const current = parseMbCurrentPresetNumber(await unit.read(mbReadCurrentPresetNumber()));
-    const label = mbPresetLabel(current);
-    const backup = await this.#writeBackup(label, current, await unit.read(mbReadPreset(current)));
+  async #store(unit: MatriboxConnection, target: { index: number; label: string; name: string }, preset: MbPreset): Promise<string[]> {
+    const { index, label } = target;
+    const backup = await this.#writeBackup(label, index, await unit.read(mbReadPreset(index)));
     try {
-      await unit.writePreset(mbWritePreset(current, preset));
-      const loaded = parseMbPreset(await unit.read(mbReadPreset(current)));
-      const differs = KEPT_SECTIONS.filter((id) => sectionHex(loaded, id) !== sectionHex(preset, id));
-      if (differs.length > 0) throw new Error(`the loaded preset differs from "${preset.name}" in section ${differs.join(', ')} after the write`);
+      await unit.write(mbSelectPreset(index));
+      await unit.writePreset(mbWritePreset(index, preset));
+      const stored = parseMbPreset(await unit.read(mbReadPreset(index)));
+      const differs = KEPT_SECTIONS.filter((id) => sectionHex(stored, id) !== sectionHex(preset, id));
+      if (differs.length > 0) throw new Error(`${label} differs from "${preset.name}" in section ${differs.join(', ')} after the write`);
     } catch (error) {
       throw new Error(`${error instanceof Error ? error.message : String(error)} (backup of ${label} kept: ${backup})`, { cause: error });
     }
     const catalog = await this.#catalogOnce().catch(() => undefined); // without the app: module numbers
     const modules = catalog ? resolveMbPreset(preset, catalog).chain.map((b) => b.module) : preset.chain.map((b) => `module ${b.moduleIndex}`);
-    return [
-      `Loaded "${preset.name}" into ${label} (the loaded preset) in one write: chain, parameters, knob, expression-pedal and footswitch assignments, volume and tempo.`,
+    const lines = [
+      `Stored "${preset.name}" in ${label} in one write: chain, parameters, knob, expression-pedal and footswitch assignments, volume and tempo. ${label} is now the loaded preset.`,
       `Chain: ${modules.join(' → ')}`,
-      `Backup of the loaded ${label} first: ${backup}`,
+      `Backup of the old ${label}: ${backup}`,
     ];
+    return target.name === preset.name.trim() ? lines : [...lines, ...(await this.#save(unit, target))];
   }
 
   /** A save is checked by reading the slot back: the name in the preset list, the chain and the parameters. */

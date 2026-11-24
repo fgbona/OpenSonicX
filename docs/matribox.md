@@ -312,11 +312,14 @@ This one write carries everything: chain, parameters, on/off, the knob (sec2), e
 (sec7) and footswitch (sec8) assignments, the patch volume and tempo (sec5 at 736 and 738) and the
 style tag.
 
-**Not known yet:** whether the write only loads the edit buffer or also stores the slot. Until the
-owner checks, the MCP server treats it as "loads into the edit buffer": it writes to the loaded
-preset's own number, keeps a backup of the loaded preset first (in case it is stored), reads the
-loaded preset back (sections 2, 3, 4, 5, 7 and 9 must match), and stores only with the save
-(cmd `05`, confirm, backup of the target slot, read-back check).
+**The write stores the slot it names** (owner's capture "midi para 1,2,3", 2026-11-24, official
+app): a `.prst` imported into 58D was still there after loading 59D and coming back, with no save;
+importing into 59B, the app then sent a save (cmd `05`) only to give the slot its name. So the MCP
+server treats it as destructive, like a save: `matribox_import_preset` and
+`matribox_restore_backup` need the slot and `confirm` with its label, back that slot up, load it
+(select), write it, read it back (sections 2, 3, 4, 5, 7 and 9 must match), and send a save only
+when the name given differs from the preset's. Our write is the official app's data uncompressed
+(7 pages instead of 3); it is still to be checked on the unit.
 
 `writeMatriboxPrst` (core) is the inverse of `parseMatriboxPrst`: `mbPresetBody`, a literal-only
 LZO1X stream, a JSON byte array, base64. Whether the official editor opens a `.prst` written this

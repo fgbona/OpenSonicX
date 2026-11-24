@@ -44,10 +44,10 @@ and macOS and Linux have one.
   after a backup. `matribox_export_preset` and `matribox_import_preset` move
   presets as `.prst` files (the format of Sonicake's own app) in
   `~/.pocket-master-editor/presets/matribox`; `matribox_restore_backup` puts a
-  backup back into its slot. Both send the whole preset in one write, as
-  Sonicake's own app does (chain, parameters, knob, expression-pedal and
-  footswitch assignments, volume and tempo); that write is not yet checked
-  on a real unit.
+  backup back into its slot. Both store the whole preset in a confirmed slot
+  in one write, as Sonicake's own app does (chain, parameters, knob,
+  expression-pedal and footswitch assignments, volume and tempo), after a
+  backup of that slot; our uncompressed write is not yet checked on a unit.
 
 Tested on firmware V1.3.3. Source, protocol notes and the web editor:
 <https://github.com/fgbona/OpenSonicX>.
