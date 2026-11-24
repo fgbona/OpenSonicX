@@ -68,6 +68,8 @@ export const NOTIFICATION = replyFrames(wrapMbMessage(0, 0x11, [0x00, 0x52, 0x00
 
 export class FakeMatribox {
   readonly received: string[] = [];
+  /** Every MIDI Control Change received (tuner, tempo, looper…), as hex. */
+  readonly controls: string[] = [];
   #receiver: ((bytes: Uint8Array) => void) | null = null;
   readonly #replies = capturedReplies();
   /** Sent before every reply, to check that unrelated messages are ignored. */
@@ -99,6 +101,10 @@ export class FakeMatribox {
   }
 
   send(bytes: Uint8Array): void {
+    if (bytes[0] !== 0xf0) {
+      this.controls.push(key(bytes)); // a MIDI Control Change: the unit acts on it and answers nothing
+      return;
+    }
     const request = key(bytes);
     this.received.push(request);
     const frame = parseMbFrame(bytes);
@@ -200,6 +206,16 @@ export class FakeMatribox {
     if (head === '01000501') return edit(5, 4 + u32(data, 4) * 60 + u32(data, 8) * 4, data.subarray(12, 16));
     if (head === '02000501') return edit(5, 724 + u32(data, 4), [u32(data, 8)]);
     if (head === '01000401' || head === '02000401') return this.#editChain(data);
+    if (head === '03000501') return edit(5, 736, [data[4] as number, 0]); // patch volume, u16
+    if (head === '01000801') return edit(8, 9 + u32(data, 4) * 12 + u32(data, 8), [u32(data, 12)]); // footswitch row, slot
+    if (head === '02000701') {
+      const entry = u32(data, 4);
+      edit(7, 5 + entry, [u32(data, 8)]);
+      edit(7, 14 + entry, [u32(data, 12)]);
+      edit(7, 23 + entry * 4, data.subarray(20, 24));
+      return edit(7, 59 + entry * 4, data.subarray(24, 28));
+    }
+    if (head === '03000701' || head === '04000701') return edit(7, (head === '03000701' ? 23 : 59) + u32(data, 4) * 4, data.subarray(12, 16));
     if (head === '01000a01') {
       this.#current = u32(data, 4);
       this.#edit = this.#stored.get(this.#current) ?? this.#blank;

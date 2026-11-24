@@ -39,5 +39,7 @@ export * from './matribox/ir.ts';
 export * from './matribox/message.ts';
 export * from './matribox/preset.ts';
 export * from './matribox/write.ts';
+export * from './matribox/assignments.ts';
+export * from './matribox/cc.ts';
 export * from './matribox/link.ts';
 export * from './pedals.ts';

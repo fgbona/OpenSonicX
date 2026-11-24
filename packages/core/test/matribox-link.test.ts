@@ -1,7 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mbReadPresetNames, mbRequest, parseMbPresetNames } from '../src/matribox/message.ts';
-import { mbAddBlock, mbSavePreset, mbSetBlockOn } from '../src/matribox/write.ts';
+import {
+  mbAddBlock, mbAssignExpression, mbAssignFootswitch, mbSavePreset, mbSetBlockOn, mbSetExpressionMax, mbSetPatchVolume,
+} from '../src/matribox/write.ts';
+import { MB_CC, mbControlChange } from '../src/matribox/cc.ts';
+import { mbAssignments } from '../src/matribox/assignments.ts';
+import { parseMbPreset } from '../src/matribox/preset.ts';
 import { matriboxLink } from '../src/matribox/link.ts';
 import { pedalOfPort } from '../src/pedals.ts';
 import { FakeMatribox } from './fake-matribox.ts';
@@ -36,6 +41,22 @@ test('a write the unit does not echo times out', async () => {
   const fake = new FakeMatribox();
   fake.echoes = false;
   await assert.rejects(link(fake, 50).write(mbSetBlockOn(0, false)), /did not confirm the write/);
+});
+
+test('control sends a Control Change as is and refuses anything else; the new writes resolve on their echo', async () => {
+  const fake = new FakeMatribox();
+  const unit = link(fake);
+  unit.control(mbControlChange(1, MB_CC.tuner, 127));
+  assert.deepEqual(fake.controls, ['b03a7f']);
+  assert.throws(() => unit.control(mbSetBlockOn(0, true)), /Control Change/);
+  await unit.write(mbSetPatchVolume(80));
+  await unit.write(mbAssignFootswitch(1, 2, true));
+  await unit.write(mbAssignExpression({ entry: 3, slot: 4, paramId: 2, min: 10, max: 90 }));
+  await unit.write(mbSetExpressionMax(3, 80));
+  const a = mbAssignments(parseMbPreset(fake.editBuffer));
+  assert.equal(a.volume, 80);
+  assert.deepEqual(a.footswitches[1], [0, 2]); // Drive AD's switch B already toggles slot 0
+  assert.deepEqual(a.expression[3], { entry: 3, slot: 4, paramId: 2, min: 10, max: 80 });
 });
 
 test('pedalOfPort tells the supported pedals apart by their MIDI port name', () => {
