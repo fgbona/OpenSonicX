@@ -55,9 +55,8 @@ const SAVE_CHECKS = 3;
 const SAVE_CHECK_MS = 300;
 const round = (n: number) => String(Number(n.toFixed(2)));
 const experimental = (lines: readonly string[]) => [...lines, EXPERIMENTAL].join('\n');
-/** The whole-preset write (import, restore) is decoded from a capture but not yet sent to a unit by us. */
-export const UNCHECKED =
-  "Experimental: the whole-preset write is decoded from the official editor's traffic and not yet checked on the owner's unit. Check the result with matribox_get_preset and by ear.";
+/** The whole-preset write (import, restore) is decoded from a capture and checked on one unit so far. */
+export const UNCHECKED = "Experimental: the whole-preset write is decoded from the official editor's traffic and checked on one unit so far. Check the result with matribox_get_preset and by ear.";
 const sectionHex = (preset: MbPreset, id: number) => toHex(preset.sections.find((s) => s.id === id)?.body ?? new Uint8Array());
 const reason = (error: unknown) => (error instanceof Error ? error.message : String(error));
 type Target = { index: number; label: string; name: string };

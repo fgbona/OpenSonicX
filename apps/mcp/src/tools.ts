@@ -611,8 +611,7 @@ function registerMatriboxWrites(server: McpServer, options: ServerOptions, matri
   registerMatriboxFiles(server, options, matribox);
 }
 
-const MB_UNCHECKED =
-  "Experimental: the whole-preset write is decoded from the official editor's traffic and not yet checked on the owner's unit; check the result with matribox_get_preset and by ear.";
+const MB_UNCHECKED = "Experimental: the whole-preset write is decoded from the official editor's traffic and checked on one unit so far; check the result with matribox_get_preset and by ear.";
 const MB_WHOLE =
   "The whole preset is stored in the slot with one write, as Sonicake's own app imports a .prst: chain, parameters, on/off, knob, expression-pedal and footswitch assignments, volume and tempo. The unit keeps it in that slot at once (no save needed) and loads that slot; what the slot held is backed up first.";
 
@@ -653,7 +652,7 @@ function registerMatriboxFiles(server: McpServer, options: ServerOptions, matrib
     {
       title: 'Load a WAV into a Matribox user IR slot',
       description:
-        'Matribox II Pro: writes a cabinet impulse response (WAV, 44.1 or 48 kHz) from ~/.pocket-master-editor/irs into user IR slot 1..20, converted the way Sonicake\'s editor does (1024 samples at 44.1 kHz). The unit cannot send an IR back, so an occupied slot (its name is not the default "User IR n") is only overwritten with replace: true. Only call it when the user asked for that slot; matribox_list_irs shows the slots. Experimental: rebuilt byte for byte from the official editor\'s uploads, not yet checked on a unit.',
+        'Matribox II Pro: writes a cabinet impulse response (WAV, 44.1 or 48 kHz) from ~/.pocket-master-editor/irs into user IR slot 1..20, converted the way Sonicake\'s editor does (1024 samples at 44.1 kHz). The unit cannot send an IR back, so an occupied slot (its name is not the default "User IR n") is only overwritten with replace: true. Only call it when the user asked for that slot; matribox_list_irs shows the slots. Experimental: rebuilt byte for byte from the official editor\'s uploads, checked on one unit so far.',
       inputSchema: {
         file: z.string().describe('WAV file name inside ~/.pocket-master-editor/irs'),
         slot: z.number().int().min(1).max(20).describe('User IR slot 1..20'),

@@ -8,7 +8,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Matribox II Pro `matribox_load_ir` (experimental, not yet checked on the owner's unit): loads a
+- Matribox II Pro `matribox_load_ir` (experimental, checked on the owner's unit): loads a
   WAV (44.1 or 48 kHz) from `~/.pocket-master-editor/irs` into user IR slot 1..20, as the official
   editor does. `confirm` repeats `IR<slot>`; a slot whose name is not the default `User IR n` is
   only overwritten with `replace: true` (the unit cannot send an IR back). It waits for the unit's
@@ -37,7 +37,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
   only when you click *Reload* on the "new version" prompt, or on the next launch, never in the
   middle of an edit. Requests to other sites (AI providers, TONE3000) and your own data are never
   cached. The desktop app and `next dev` register no service worker.
-- Matribox II Pro whole presets (experimental, not yet checked on the owner's unit): the official
+- Matribox II Pro whole presets (experimental, checked on the owner's unit): the official
   editor's whole-preset write, decoded from a new capture of it importing a `.prst` (mb-20): one
   flag-2, cmd `10` message holding the u32 index and the 1207-byte body with the `.prst` section
   tags, paged at 183 bytes, answered with cmd `17`. Core gains `mbWritePreset`, `mbPresetBody`,
@@ -57,7 +57,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
   (`mbIrSamplesFromWav`, 44.1 and 48 kHz WAVs), and the IR upload's paged frames,
   rebuilt frame for frame with `buildMbFrames`. The capture (clone) upload format is
   documented, but the official NAM conversion differs from ours. Findings in docs/matribox.md.
-- Matribox II Pro live controls (experimental, not yet checked on the owner's unit), decoded from
+- Matribox II Pro live controls (experimental, checked on the owner's unit), decoded from
   new captures of the official editor (mb-01 patch volume, mb-09 footswitch A, mb-04 expression
   pedal): core builders `mbSetPatchVolume` (`03 00 05 01` + u32), `mbAssignFootswitch`
   (`01 00 08 01` + switch + slot + 1/0), `mbAssignExpression` (`02 00 07 01` + entry + slot +

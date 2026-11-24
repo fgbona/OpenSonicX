@@ -115,7 +115,7 @@ Todo menu mostra o nome que a pedaleira usa ao lado do que ele é, agrupado por 
   ele, os presets e as cadeias aparecem mesmo assim, pelo número do módulo.
   O volume do patch, quais blocos os footswitches A-D ligam e desligam, as entradas do pedal de
   expressão (bloco, parâmetro, mínimo, máximo) e uma linha de afinador / tap tempo / BPM também
-  estão lá (ainda não conferidos na unidade; afinador e andamento vão como os MIDI Control
+  estão lá (conferidos em uma unidade até agora; afinador e andamento vão como os MIDI Control
   Changes do manual).
   Desfazer e refazer cobrem as edições da cadeia (blocos, modelos, parâmetros, liga/desliga). O **assistente de timbre** também
   funciona na Matribox, com as mesmas chaves gratuitas: ele escolhe os modelos pelo equipamento
@@ -270,16 +270,16 @@ Ferramentas: `get_preset`, `list_presets`, `list_models`, `edit_preset`, `select
   restaurar mandam o preset inteiro numa escrita só, como o app oficial faz (cadeia, parâmetros,
   atribuições dos knobs, do pedal de expressão e dos footswitches, volume e andamento), e a
   pedaleira já guarda no slot; antes é feito o backup do slot. A escrita do app oficial foi
-  conferida na pedaleira; a nossa (os mesmos dados, sem compressão) ainda falta conferir.
-  Controles ao vivo (experimentais, ainda não conferidos na unidade):
+  conferida numa pedaleira, e a nossa (os mesmos dados, sem compressão) também.
+  Controles ao vivo (experimentais, conferidos em uma unidade até agora):
   `matribox_get_assignments`, `matribox_set_volume`, `matribox_assign_footswitch`,
   `matribox_assign_expression`, `matribox_set_expression_range` (decodificados do app oficial), e
   os MIDI Control Changes do manual `matribox_tuner`, `matribox_tap_tempo`, `matribox_set_bpm`,
   `matribox_looper`, `matribox_drum`, `matribox_ctrl`, `matribox_quick_knob` (no canal MIDI da
   unidade, 1 por padrão; o MIDI In Source dela precisa incluir USB). A lista de modelos vem do app oficial Matribox
   II PRO da Sonicake, que precisa estar instalado (ou defina `MATRIBOX_CATALOG` com o caminho do
-  `alg_data.json`). `matribox_load_ir` (experimental, ainda não
-  conferido na pedaleira) carrega um WAV de `~/.pocket-master-editor/irs` no slot de IR do usuário
+  `alg_data.json`). `matribox_load_ir` (experimental, conferido em uma
+  unidade até agora) carrega um WAV de `~/.pocket-master-editor/irs` no slot de IR do usuário
   1..20, convertido como o editor oficial faz e refeito byte a byte a partir dos envios dele;
   `confirm` repete `IR<slot>` e um slot ocupado só é sobrescrito com `replace: true`. Carregar
   capturas suas ainda não está disponível. Veja [docs/matribox.md](docs/matribox.md).

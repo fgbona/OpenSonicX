@@ -116,8 +116,8 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
   and it stays in that browser; the desktop app reads it from the installed app (or
   `MATRIBOX_CATALOG`). Without it the presets and chains still show, by module number.
   The patch volume, which blocks footswitches A-D toggle, the expression-pedal entries (block,
-  parameter, min, max) and a tuner / tap tempo / BPM row are there too (not yet checked on the
-  unit; tuner and tempo go as the manual's MIDI Control Changes).
+  parameter, min, max) and a tuner / tap tempo / BPM row are there too (checked on one unit so far;
+  tuner and tempo go as the manual's MIDI Control Changes).
   Undo and Redo cover the chain edits (blocks, models, parameters, on/off). The **tone assistant** works on the Matribox too,
   with the same free keys: it picks models by the real gear they are based on (from your catalog,
   which it needs), builds the whole chain or adjusts it, shows what changed, and saving still
@@ -279,16 +279,15 @@ Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
   load slots in turn: unsaved edits of the loaded preset are lost. Import and restore
   send the whole preset in one write, as the official app does (chain, parameters, knob,
   expression-pedal and footswitch assignments, volume and tempo), and the unit keeps it in that
-  slot at once; the slot is backed up first. The official app's write is checked on the unit; ours
-  (the same data, uncompressed) is still to be checked.
-  Live controls (experimental, not yet checked on the
-  unit): `matribox_get_assignments`, `matribox_set_volume`, `matribox_assign_footswitch`,
+  slot at once; the slot is backed up first. Checked on one unit so far, the official app's write and ours
+  (the same data, uncompressed).
+  Live controls (experimental, checked on one unit so far): `matribox_get_assignments`, `matribox_set_volume`, `matribox_assign_footswitch`,
   `matribox_assign_expression`, `matribox_set_expression_range` (decoded from the official app),
   and the manual's MIDI Control Changes `matribox_tuner`, `matribox_tap_tempo`,
   `matribox_set_bpm`, `matribox_looper`, `matribox_drum`, `matribox_ctrl`, `matribox_quick_knob`
   (on the unit's MIDI channel, default 1; its MIDI In Source must include USB). The model list comes from Sonicake's official
   Matribox II PRO app, which must be installed (or set `MATRIBOX_CATALOG` to its `alg_data.json`).
-  `matribox_load_ir` (experimental, not yet checked on the unit) loads a WAV from
+  `matribox_load_ir` (experimental, checked on one unit so far) loads a WAV from
   `~/.pocket-master-editor/irs` into user IR slot 1..20, converted the way the official editor does
   it and rebuilt byte for byte from its uploads; `confirm` repeats `IR<slot>` and an occupied slot
   is only overwritten with `replace: true`. Loading your own captures is not available yet. See

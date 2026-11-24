@@ -47,7 +47,7 @@ and macOS and Linux have one.
   backup back into its slot. Both store the whole preset in a confirmed slot
   in one write, as Sonicake's own app does (chain, parameters, knob,
   expression-pedal and footswitch assignments, volume and tempo), after a
-  backup of that slot; our uncompressed write is not yet checked on a unit.
+  backup of that slot; checked on one unit so far.
   `matribox_load_ir` loads a WAV from `~/.pocket-master-editor/irs` into user
   IR slot 1..20 (confirmed; an occupied slot only with `replace: true`; not
   yet checked on a unit).
