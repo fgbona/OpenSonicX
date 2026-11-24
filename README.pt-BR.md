@@ -251,7 +251,13 @@ Ferramentas: `get_preset`, `list_presets`, `list_models`, `edit_preset`, `select
   `matribox_select_preset`, e `matribox_build_tone`, que monta uma cadeia inteira numa chamada
   ("timbre de base do Appetite for Destruction"), escolhendo os modelos pelo equipamento real em
   que se baseiam. `matribox_save_preset` grava com `confirm` repetindo o slot (ex.: `"58D"`) depois
-  de um backup em `~/.pocket-master-editor/backups`. A lista de modelos vem do app oficial Matribox
+  de um backup em `~/.pocket-master-editor/backups`. Presets inteiros: `matribox_export_preset`
+  grava o preset carregado ou um slot como `.prst` (o formato do app da Sonicake) em
+  `~/.pocket-master-editor/presets/matribox`, `matribox_import_preset` carrega um, e
+  `matribox_restore_backup` devolve um backup ao slot dele. Importar e restaurar mandam o preset
+  inteiro numa escrita só, como o app oficial faz (cadeia, parâmetros, atribuições dos knobs, do
+  pedal de expressão e dos footswitches, volume e andamento); essa escrita foi decodificada do
+  tráfego do app oficial e ainda não foi conferida na pedaleira. A lista de modelos vem do app oficial Matribox
   II PRO da Sonicake, que precisa estar instalado (ou defina `MATRIBOX_CATALOG` com o caminho do
   `alg_data.json`). Veja [docs/matribox.md](docs/matribox.md).
 

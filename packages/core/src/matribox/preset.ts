@@ -3,7 +3,7 @@
  *
  * A preset is 9 sections, each `u32 tag` + `u32 length` + body, with fixed ids and sizes. A device
  * read adds a u32 header (the number it was read with) in front: 1211 bytes. A .prst file holds the
- * sections alone (1207 bytes). Every section is kept raw so a later writer can serialize it back.
+ * sections alone (1207 bytes). Every section is kept raw, so writeMatriboxPrst serializes it back.
  *
  *   sec1: name at 8 (NUL-terminated, stale bytes after it), style tag at 95
  *   sec4: chain order (12 slot numbers, ff = none) at 4, module index per slot at 16, u32 fxid per slot at 28
@@ -12,7 +12,7 @@
  * Positions a model does not use keep stale values from earlier models: read only the model's widget IDs.
  */
 import type { MbCatalog, MbModel } from './catalog.ts';
-import { lzo1xDecompress } from './lzo1x.ts';
+import { lzo1xDecompress, lzo1xLiterals } from './lzo1x.ts';
 
 export const MB_PRESET_BODY_SIZE = 1207;
 /** A preset as the unit sends it: the u32 number, then the body. */
@@ -23,6 +23,7 @@ const VALUES_PER_SLOT = 15;
 const NO_SLOT = 0xff;
 /** Section tags: 0x10000000 on the device, 0x10000002 in .prst files. */
 const TAGS = [0x10000000, 0x10000002];
+const PRST_TAG = 0x10000002;
 const LAYOUT: readonly (readonly [id: number, size: number])[] = [[0, 11], [1, 105], [2, 10], [3, 15], [4, 76], [5, 742], [7, 95], [8, 69], [9, 12]];
 
 export interface MbSection {
@@ -130,6 +131,34 @@ export function parseMatriboxPrst(fileText: string): MbPreset {
   const data = lzo1xDecompress(Uint8Array.from(json as number[]), MB_PRESET_SIZE);
   if (data.length !== MB_PRESET_BODY_SIZE) fail(`a .prst holds ${MB_PRESET_BODY_SIZE} bytes, got ${data.length}`);
   return parseMbPreset(data);
+}
+
+/**
+ * The 1207-byte body of `preset`: its 9 sections, each tagged 0x10000002 as in a .prst and in the
+ * official editor's whole-preset write (capture mb-20). A device preset's u32 number is dropped.
+ */
+export function mbPresetBody(preset: MbPreset): Uint8Array {
+  const body = new Uint8Array(MB_PRESET_BODY_SIZE);
+  const view = new DataView(body.buffer);
+  let at = 0;
+  for (const section of preset.sections) {
+    if (at + 8 + section.body.length > MB_PRESET_BODY_SIZE) fail(`sections hold more than ${MB_PRESET_BODY_SIZE} bytes`);
+    view.setUint32(at, PRST_TAG, true);
+    view.setUint32(at + 4, section.body.length, true);
+    body.set(section.body, at + 8);
+    at += 8 + section.body.length;
+  }
+  if (at !== MB_PRESET_BODY_SIZE) fail(`sections hold ${at} bytes, expected ${MB_PRESET_BODY_SIZE}`);
+  return body;
+}
+
+/**
+ * A .prst file as Sonicake's official editor reads it (the inverse of parseMatriboxPrst): the body
+ * (mbPresetBody) as a literal-only LZO1X stream (valid LZO1X, just not compressed), as a JSON byte
+ * array, as base64.
+ */
+export function writeMatriboxPrst(preset: MbPreset): string {
+  return btoa(JSON.stringify(Array.from(lzo1xLiterals(mbPresetBody(preset)))));
 }
 
 export interface MbResolvedParam {

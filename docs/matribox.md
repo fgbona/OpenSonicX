@@ -31,9 +31,15 @@ F0 21 25 4D 50 00 00 <ck> <type> <len lo> <len hi> <off lo> <off hi> <data nibbl
 | 11-12 | Offset of this page in the message, two 7-bit bytes (lo, hi) |
 | 13…   | Data: each byte sent as two nibbles, high nibble first |
 
-- **Checksum (host frames):** `sum(frame[10 : len-1]) & 0x7F`, every byte after byte 9 up to
-  (not including) `F7`. It matches all 38 host frames captured (11 reads, 27 writes). The unit's
-  replies use another rule, not decoded yet: we keep their checksum and do not check it.
+- **Checksum (host frames):** `sum(frame[13 : len-1]) & 0x7F`, the data nibbles only, up to (not
+  including) `F7`. It matches all 38 single-page host frames captured (11 reads, 27 writes; their
+  bytes 10-12 are 0, so the first reading, from byte 10, matched them too) and the three pages of
+  the official editor's whole-preset write (capture mb-20), whose length and offset bytes are not
+  summed. The unit's replies use another rule, not decoded yet: we keep their checksum and do not
+  check it.
+- **Host pages:** the whole-preset write is the only host message longer than one frame: pages of
+  **183** decoded bytes (380-byte frames), each with the total length and its own offset, like
+  the unit's 185-byte reply pages. `buildMbFrames` (core) pages a host message that way.
 - **Pages:** a long reply comes as 384-byte frames, 185 decoded bytes each, every page carrying
   the same total length and its own offset (0, 185, 370, …). Verified on every reply captured:
   e.g. the reply to the `1D 11 10` read is 17 pages, total 2972 bytes (`1C 17` = 28 + 23 × 128),
@@ -142,8 +148,8 @@ Sections 0, 3 and 9 are constant; 2, 7 and 8 hold the knob, expression pedal and
 assignments, partly decoded: see [Unknown sections](#unknown-sections).
 
 `parseMbPreset` (core) takes either size and returns a frozen preset: number (null for a `.prst`),
-name, style, chain (slot, module index, fxid, on, the 15 values) and every section raw, for a later
-writer. `parseMatriboxPrst(text)` reads a `.prst`. `resolveMbPreset(preset, catalog)` names the
+name, style, chain (slot, module index, fxid, on, the 15 values) and every section raw, for
+`writeMatriboxPrst`. `parseMatriboxPrst(text)` reads a `.prst`. `resolveMbPreset(preset, catalog)` names the
 modules, models (with the gear they are based on) and parameters with their ranges; an fxid the
 catalog does not know is kept and shown as unknown. `mbPresetLabel(i)` gives the label the unit
 shows: four presets per bank, `1A`..`60D` (the official editor selected 60D with index 239).
@@ -269,9 +275,56 @@ The write tools (experimental: every answer says so until the owner validates th
 Each write waits for the unit's echo of it (same flag, cmd and data; 3 s). Tests run against a
 simulated unit that applies the writes to an in-memory preset and echoes them.
 
+Whole presets (experimental, **not yet checked on the owner's unit**; see "Whole-preset write"):
+
+- `matribox_export_preset`: the loaded preset (unsaved edits included) or a slot, written as a
+  `.prst` in `~/.pocket-master-editor/presets/matribox`. Sends only reads; never replaces a file.
+- `matribox_import_preset`: a `.prst` from that folder loaded whole into the loaded preset. With
+  `preset` and `confirm` (the same label) it is also saved there, after the usual backup.
+- `matribox_restore_backup`: a backup `matribox_save_preset` wrote, loaded whole and saved back to
+  its own slot (`confirm` repeats its label; that slot is backed up again first).
+
+File names are resolved inside their folder: `..`, absolute paths and other extensions are refused.
+
+## Whole-preset write
+
+Capture mb-20 (the owner's unit, 2026-11-24): the official editor importing a `.prst` into 57D
+(index `0xE3`). It selected 57D, read it, then sent the whole preset in **one message**:
+
+- Host → unit: type `12`, **flag 2**, cmd `10`, data = **1211 bytes**: u32 index (`E3 00 00 00`) +
+  the 1207-byte body, the shape a preset read returns, in three pages of 183 bytes (above). The
+  body carries the `.prst` section tag `0x10000002` in all 9 sections (a read shows `0x10000000`):
+  the "`02` where reads have `00`" bytes at data offsets 4 and 23 are the first two tags. The editor
+  compressed it for real; our literal-only stream is valid LZO1X too, in 7 pages.
+- Unit → host: flag 0, cmd **`17`**, data `02 00 00 10`. The answer to wait for.
+- The editor then read the current preset number and the preset: the new one, with the unit's own
+  section tag. Sections 0, 2, 3, 4, 5, 7 and 9 came back byte for byte; section 1 differed only in
+  its junk bytes (4..7 and the float noise from 28) and section 8 only in its junk (4..8).
+
+`mbWritePreset(index, preset)` (core) builds it from any parsed preset (unit, backup, `.prst`):
+`mbPresetBody` gives the body with the `.prst` tags, `buildMbFrames` the pages. Checked out of the
+repository against capture mb-20: the data we build from the captured preset is the captured data
+byte for byte, and the captured pages pass our checksum. The capture's data is not in the
+repository (the preset may come from a commercial pack); the tests rebuild the shape from the
+owner's "Drive AD" and keep only the capture's frame heads.
+
+This one write carries everything: chain, parameters, on/off, the knob (sec2), expression-pedal
+(sec7) and footswitch (sec8) assignments, the patch volume and tempo (sec5 at 736 and 738) and the
+style tag.
+
+**Not known yet:** whether the write only loads the edit buffer or also stores the slot. Until the
+owner checks, the MCP server treats it as "loads into the edit buffer": it writes to the loaded
+preset's own number, keeps a backup of the loaded preset first (in case it is stored), reads the
+loaded preset back (sections 2, 3, 4, 5, 7 and 9 must match), and stores only with the save
+(cmd `05`, confirm, backup of the target slot, read-back check).
+
+`writeMatriboxPrst` (core) is the inverse of `parseMatriboxPrst`: `mbPresetBody`, a literal-only
+LZO1X stream, a JSON byte array, base64. Whether the official editor opens a `.prst` written this
+way is still to be checked.
+
 ## Writes
 
-Every write is a flag-1 message in a type `12` frame, its data a literal-only LZO1X stream. The
+Every write but the whole preset (below) is a flag-1 message in a type `12` frame, its data a literal-only LZO1X stream. The
 unit echoes set param, on/off and select back as a type `00` message (it may compress the
 echo); it answers a chain edit with its **chain notice** instead (below), and a save with nothing. Host frames from captures
 1, 3 and 4 (MIDI Monitor spying on output to the unit); capture 2 recorded only the unit's side.
@@ -288,6 +341,7 @@ Builders in `packages/core/src/matribox/write.ts`; tests compare them with the c
 | Remove block | 10 | `01 00 04 01` + u8 position + `FF` + `00` + `00 00 00 00` | Host frame (capture 4); owner's unit ✓ |
 | Change model | 10 | `02 00 04 01` + u8 slot + u8 module + u32 fxid | Host frames (capture 3); owner's unit ✓ |
 | Save | 05 | u32 index + 17-byte name (NUL-padded) | One host frame; owner's unit ✓ |
+| Whole preset | 10, **flag 2** | u32 index + 1207-byte body (`.prst` tags), paged | Host pages (capture mb-20); answered by cmd `17`; not yet sent by us |
 
 - Set param and on/off address the **storage slot**, not the chain position (capture 2: the delay
   was slot 1 while first in the chain). Add, move and remove take **chain positions** (0-based):
@@ -306,7 +360,7 @@ Builders in `packages/core/src/matribox/write.ts`; tests compare them with the c
   owner's unit (59D, 2026-11-24). Reading the loaded preset's own number returns the edit buffer, so
   the backup taken before saving over the loaded slot holds the edits, not what was stored.
 
-Every write above has been checked on the owner's unit (2026-11-24).
+Every write above but the whole preset has been checked on the owner's unit (2026-11-24).
 
 ## Editor (web and desktop)
 

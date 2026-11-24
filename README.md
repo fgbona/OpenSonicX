@@ -188,7 +188,7 @@ system in `apps/desktop/release`.
 
 > Pocket Master: reading, live edits, revert and saving with backup are checked on a pedal;
 > restores and preset files are checked against a simulated pedal. Matribox II Pro: every write
-> tool is checked on one unit (experimental).
+> tool is checked on one unit (experimental), except the whole-preset import and restore.
 
 `apps/mcp` lets an assistant such as Claude read and tweak your sound in
 conversation ("more gain on the amp", "try the Randall profile", "save this
@@ -263,7 +263,13 @@ Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
   `matribox_select_preset`, and `matribox_build_tone`, which builds a whole chain in one call
   ("Appetite for Destruction rhythm tone"), picking models by the real gear they are based on.
   `matribox_save_preset` stores it with `confirm` repeating the slot label (e.g. `"58D"`) after a
-  backup to `~/.pocket-master-editor/backups`. The model list comes from Sonicake's official
+  backup to `~/.pocket-master-editor/backups`. Whole presets: `matribox_export_preset` writes the
+  loaded preset or a slot as a `.prst` (the format of Sonicake's own app) in
+  `~/.pocket-master-editor/presets/matribox`, `matribox_import_preset` loads one, and
+  `matribox_restore_backup` puts a backup back into its slot. Import and restore send the whole
+  preset in one write, as the official app does (chain, parameters, knob, expression-pedal and
+  footswitch assignments, volume and tempo); that write is decoded from the official app's
+  traffic and not yet checked on the unit. The model list comes from Sonicake's official
   Matribox II PRO app, which must be installed (or set `MATRIBOX_CATALOG` to its `alg_data.json`).
   See [docs/matribox.md](docs/matribox.md).
 

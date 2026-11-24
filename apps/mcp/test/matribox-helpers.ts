@@ -39,12 +39,13 @@ export async function connected(options: { catalog?: () => Promise<typeof CATALO
   const link = fakeLink(fake);
   const dir = mkdtempSync(join(tmpdir(), 'mb-tools-'));
   const backups = join(dir, 'b');
-  const matribox = new MatriboxSession(() => ({ ...link, close: () => undefined }), options.catalog ?? (async () => CATALOG), backups);
+  const presets = join(dir, 'p', 'matribox');
+  const matribox = new MatriboxSession(() => ({ ...link, close: () => undefined }), options.catalog ?? (async () => CATALOG), { backups, presets });
   const pocketMaster = new Session(() => Promise.reject(new Error('no Pocket Master in this test')) as never, { backups, presets: join(dir, 'p'), irs: join(dir, 'i'), nams: join(dir, 'n') });
   const [a, b] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'test', version: '0' });
   await Promise.all([createServer(pocketMaster, { matribox, midiPorts: async () => options.ports ?? ['Matribox II PRO'] }).connect(a), client.connect(b)]);
-  return { client, fake, backups };
+  return { client, fake, backups, presets };
 }
 
 export const text = (r: unknown) => (r as { content: { text: string }[] }).content.map((c) => c.text).join('\n');

@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { MB_WRITE, parseMbFrame } from '../src/matribox/frame.ts';
+import { joinMbPages, MB_HOST_PAGE_SIZE, MB_WRITE, parseMbFrame } from '../src/matribox/frame.ts';
+import { parseMbPreset } from '../src/matribox/preset.ts';
 import { unwrapMbMessage } from '../src/matribox/message.ts';
-import { mbAddBlock, mbChangeModel, mbMoveBlock, mbRemoveBlock, mbSavePreset, mbSelectPreset, mbSetBlockOn, mbSetParam } from '../src/matribox/write.ts';
+import { mbWritePreset, mbAddBlock, mbChangeModel, mbMoveBlock, mbRemoveBlock, mbSavePreset, mbSelectPreset, mbSetBlockOn, mbSetParam } from '../src/matribox/write.ts';
 import { fromHex, toHex } from '../src/hex.ts';
 
 // Real host frames from capture 1 (cap3): set param, on/off, cmd 05, select.
@@ -78,4 +79,26 @@ test('the builders refuse what the unit cannot hold', () => {
   assert.throws(() => mbChangeModel(0, 3, -1), /fxid/);
   assert.throws(() => mbMoveBlock(0, 12), /position/);
   assert.throws(() => mbRemoveBlock(-1), /position/);
+});
+
+// The owner's unit: preset 66 "Drive AD" (decompressed device reply, 1211 bytes).
+const DRIVE_AD = fromHex(readFileSync(new URL('./fixtures/matribox-preset-drive-ad.txt', import.meta.url), 'utf8').split('\n').filter((l) => l && !l.startsWith('#')).join(''));
+const PRST_TAG = [0x02, 0x00, 0x00, 0x10];
+
+test('mbWritePreset: flag 2, cmd 10, u32 index + the 1207-byte body with the .prst section tags, paged', () => {
+  const frames = mbWritePreset(0xe3, parseMbPreset(DRIVE_AD));
+  const pages = frames.map(parseMbFrame);
+  assert.ok(pages.length > 1 && pages.every((p) => p.type === MB_WRITE && p.checksumOk === true));
+  assert.ok(pages.slice(0, -1).every((p) => p.payload.length === MB_HOST_PAGE_SIZE));
+  const message = unwrapMbMessage(joinMbPages(pages) as Uint8Array);
+  assert.deepEqual([message.flag, message.cmd, message.data.length], [2, 0x10, 1211]);
+  // What the official editor sent in capture mb-20: the index, then each section tagged 0x10000002.
+  const expected = Uint8Array.from(DRIVE_AD);
+  expected.set([0xe3, 0, 0, 0], 0);
+  for (let at = 4, i = 0; i < 9; i++) {
+    expected.set(PRST_TAG, at);
+    at += 8 + new DataView(expected.buffer).getUint32(at + 4, true);
+  }
+  assert.deepEqual(message.data, expected);
+  assert.throws(() => mbWritePreset(240, parseMbPreset(DRIVE_AD)), /preset index/);
 });

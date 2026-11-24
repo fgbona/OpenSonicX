@@ -69,7 +69,7 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
       'save_preset and restore_backup overwrite a user slot: only call them when the user asked for that slot, and pass its label as confirm.',
       'Before building a tone from a reference, call list_preset_files: if an approved tone matches the request, load it with import_preset instead of rebuilding it.',
       'To match a reference tone (an artist, a record, a song), work out the gear used on it, call list_models once to see which pedal models are based on that gear (model names are disguised, e.g. "Calif DualM" is a Mesa/Boogie Dual Rectifier), then build the whole chain with one edit_preset: drive, amp, cabinet, EQ, gate, modulation, delay and reverb, with sensible values. Do not ask for details the user did not give: make reasonable choices, say briefly what you chose and why, and invite them to ask for adjustments by ear. When the user says a tone sounds right, offer to keep it with export_preset and notes naming the reference, so next time it loads at once.',
-      'Matribox II Pro: matribox_get_preset shows the loaded preset (chain in signal order, each block\'s model and the real gear it is based on, on/off, parameters with ranges); matribox_list_models is the palette, with each model\'s origin (the real gear: e.g. a model based on "Ibanez TS808" is the Tube Screamer). To plan a tone from a reference, work out the gear used, then find the models whose origin matches it. matribox_build_tone sends a whole chain in one call; matribox_set_param, matribox_set_module_on, matribox_set_model, matribox_add_block, matribox_remove_block and matribox_move_block adjust it. They change the loaded preset only: matribox_save_preset stores it (confirm with the slot label; the slot is backed up first). Matribox writes are experimental (validated on one unit so far): after writing, check with matribox_get_preset and tell the user.',
+      'Matribox II Pro: matribox_get_preset shows the loaded preset (chain in signal order, each block\'s model and the real gear it is based on, on/off, parameters with ranges); matribox_list_models is the palette, with each model\'s origin (the real gear: e.g. a model based on "Ibanez TS808" is the Tube Screamer). To plan a tone from a reference, work out the gear used, then find the models whose origin matches it. matribox_build_tone sends a whole chain in one call; matribox_set_param, matribox_set_module_on, matribox_set_model, matribox_add_block, matribox_remove_block and matribox_move_block adjust it. They change the loaded preset only: matribox_save_preset stores it (confirm with the slot label; the slot is backed up first). Matribox writes are experimental (validated on one unit so far): after writing, check with matribox_get_preset and tell the user. matribox_export_preset and matribox_import_preset move whole presets as .prst files, and matribox_restore_backup undoes a matribox_save_preset (both overwrite a slot only with confirm); they load the whole preset in one write, assignments, volume and tempo included (experimental, not yet checked on the unit).',
       'Keep calls few: edit_preset, select_preset, save_preset and import_preset already return the resulting preset, and list_models only needs to be called once per conversation.',
     ].join(' '),
   });
@@ -424,4 +424,45 @@ function registerMatriboxWrites(server: McpServer, options: ServerOptions, matri
     inputSchema: { preset: mbPreset, name: z.string().describe('1..16 printable ASCII characters'), confirm: z.string().describe('The same label as preset, to confirm the overwrite') },
     annotations: WRITE_SLOT,
   }, (args) => reply('matribox_save_preset', options, () => matribox().savePreset(args)));
+
+  registerMatriboxFiles(server, options, matribox);
+}
+
+const MB_UNCHECKED = 'Experimental: the whole-preset write is decoded from the official editor\'s traffic and not yet checked on the owner\'s unit; check the result with matribox_get_preset and by ear.';
+const MB_WHOLE = 'The whole preset is loaded with one write, as Sonicake\'s own app imports a .prst: chain, parameters, on/off, knob, expression-pedal and footswitch assignments, volume and tempo. It loads into the edit buffer (the loaded preset is backed up first, in case the unit also stores it); only a save stores it.';
+
+/** .prst export and import, and restoring a save_preset backup: a whole preset applied with the live-edit writes. */
+function registerMatriboxFiles(server: McpServer, options: ServerOptions, matribox: () => MatriboxSession): void {
+  server.registerTool('matribox_export_preset', {
+    title: 'Export a Matribox preset to a .prst file',
+    description: `Matribox II Pro: writes the loaded preset (unsaved edits included), or a stored slot, as a .prst file (the format of Sonicake's own app) inside ~/.pocket-master-editor/presets/matribox. Sends only reads. Never overwrites a file. Experimental: whether Sonicake's own app opens the .prst it writes is not yet checked.`,
+    inputSchema: {
+      preset: mbPreset.optional().describe('Preset label 1A..60D to export; default: the loaded preset with its unsaved edits'),
+      file: z.string().optional().describe('File name ending in .prst inside ~/.pocket-master-editor/presets/matribox; default: label, name and time'),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  }, (args) => reply('matribox_export_preset', options, () => matribox().exportPreset(args)));
+
+  server.registerTool('matribox_import_preset', {
+    title: 'Load a Matribox .prst file',
+    description: `Matribox II Pro: applies a .prst file from ~/.pocket-master-editor/presets/matribox to the loaded preset. With preset and confirm (the same label) it also saves the result there, after a backup of that slot; only do that when the user asked for that slot. ${MB_WHOLE} ${MB_UNCHECKED}`,
+    inputSchema: {
+      file: z.string().describe('.prst file name inside ~/.pocket-master-editor/presets/matribox'),
+      preset: mbPreset.optional().describe('Also save to this slot, 1A..60D; default: nothing is stored'),
+      name: z.string().optional().describe('Name for the save, 1..16 printable ASCII characters; default: the file\'s preset name'),
+      confirm: z.string().optional().describe('Required with preset: the same label, to confirm the overwrite'),
+    },
+    annotations: WRITE_SLOT,
+  }, (args) => reply('matribox_import_preset', options, () => matribox().importPreset(args)));
+
+  server.registerTool('matribox_restore_backup', {
+    title: 'Restore a Matribox backup',
+    description: `Matribox II Pro: puts a backup that matribox_save_preset wrote (in ~/.pocket-master-editor/backups) back into its slot: applies it to the loaded preset, then saves it to the backup's slot (that slot is backed up again first). Only call it when the user asked; confirm repeats the backup's slot label. ${MB_WHOLE} ${MB_UNCHECKED}`,
+    inputSchema: {
+      file: z.string().describe('Backup file name inside ~/.pocket-master-editor/backups, as matribox_save_preset returned it'),
+      confirm: z.string().describe('The backup\'s slot label, e.g. "17C", to confirm the overwrite'),
+      name: z.string().optional().describe('Name for the save, 1..16 printable ASCII characters; default: the backup\'s name'),
+    },
+    annotations: WRITE_SLOT,
+  }, (args) => reply('matribox_restore_backup', options, () => matribox().restoreBackup(args)));
 }

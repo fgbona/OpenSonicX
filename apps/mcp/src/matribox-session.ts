@@ -9,10 +9,11 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   checkMbPresetName, mbPresetLabel, mbReadCloneNames, mbReadCurrentPresetNumber, mbReadIrNames, mbReadPreset, mbReadPresetNames,
-  MB_SLOTS, mbAddBlock, mbChangeModel, mbMoveBlock, mbRemoveBlock, mbSavePreset, mbSelectPreset, mbSetBlockOn, mbSetParam, parseMbPresetLabel, toHex,
+  MB_SLOTS, mbAddBlock, mbChangeModel, mbMoveBlock, mbRemoveBlock, mbSavePreset, mbSelectPreset, mbSetBlockOn, mbSetParam, mbWritePreset, parseMbPresetLabel, toHex,
   parseMbCloneNames, parseMbCurrentPresetNumber, parseMbIrNames, parseMbPreset, parseMbPresetNames, resolveMbPreset,
   type MbCatalog, type MbModel, type MbModule, type MbPreset, type MbResolvedBlock, type MbResolvedPreset,
 } from '@pocket-master/core';
+import { MATRIBOX_DEVICE, readMatriboxBackup, readMatriboxPrst, writeMatriboxPrstFile } from './matribox-files.ts';
 import type { MatriboxConnection } from './matribox-link.ts';
 import {
   checkParam, describeValues, EXPERIMENTAL, findBlock, findModel, findModule, gear, knownModel, modelTitle, modelValues, planTone, type ParamWrite, type ToneBlock,
@@ -23,6 +24,11 @@ const SAVE_CHECKS = 3;
 const SAVE_CHECK_MS = 300;
 const round = (n: number) => String(Number(n.toFixed(2)));
 const experimental = (lines: readonly string[]) => [...lines, EXPERIMENTAL].join('\n');
+/** The whole-preset write (import, restore) is decoded from a capture but not yet sent to a unit by us. */
+export const UNCHECKED = 'Experimental: the whole-preset write is decoded from the official editor\'s traffic and not yet checked on the owner\'s unit. Check the result with matribox_get_preset and by ear.';
+/** Sections the unit keeps exactly as written (capture mb-20); 1 and 8 hold bytes the unit rewrites. */
+const KEPT_SECTIONS = [2, 3, 4, 5, 7, 9];
+const sectionHex = (preset: MbPreset, id: number) => toHex(preset.sections.find((s) => s.id === id)?.body ?? new Uint8Array());
 const firstSentence = (text: string) => /^.*?[.!?](\s|$)/s.exec(text.trim())?.[0].trim() ?? text.trim();
 
 /** IR and CLONE models stand for a user slot: its number is the fxid's low byte. */
@@ -48,18 +54,32 @@ function formatModel(model: MbModel): string {
 
 const formatModule = (module: MbModule) => `${module.name} models:\n${module.models.map(formatModel).join('\n')}`;
 
+export interface MatriboxFolders {
+  /** Where savePreset keeps the overwritten slots, and restoreBackup reads them. */
+  readonly backups: string;
+  /** The Matribox's .prst files (export, import). */
+  readonly presets: string;
+}
+
+/** The slot label `preset`, checked against `confirm`, and the preset name, before anything is sent. */
+function checkSave(preset: string, confirm: string | undefined, name: string): { index: number; label: string; name: string } {
+  const index = parseMbPresetLabel(preset);
+  const label = mbPresetLabel(index);
+  if (confirm?.trim().toUpperCase() !== label) throw new Error(`confirm must be "${label}" to write that slot`);
+  return { index, label, name: checkMbPresetName(name) };
+}
+
 export class MatriboxSession {
   readonly #connect: () => MatriboxConnection | Promise<MatriboxConnection>;
   readonly #loadCatalog: () => Promise<MbCatalog>;
-  readonly #backups: string;
+  readonly #folders: MatriboxFolders;
   #catalog: Promise<MbCatalog> | null = null;
   #queue: Promise<unknown> = Promise.resolve();
 
-  /** `backups`: the folder savePreset keeps the overwritten slots in. */
-  constructor(connect: () => MatriboxConnection | Promise<MatriboxConnection>, loadCatalog: () => Promise<MbCatalog>, backups: string) {
+  constructor(connect: () => MatriboxConnection | Promise<MatriboxConnection>, loadCatalog: () => Promise<MbCatalog>, folders: MatriboxFolders) {
     this.#connect = connect;
     this.#loadCatalog = loadCatalog;
-    this.#backups = backups;
+    this.#folders = folders;
   }
 
   #use<T>(run: (unit: MatriboxConnection) => Promise<T>): Promise<T> {
@@ -130,9 +150,14 @@ export class MatriboxSession {
   /** The loaded preset, raw and named from the catalog. */
   async #loaded(unit: MatriboxConnection): Promise<{ catalog: MbCatalog; raw: MbPreset; preset: MbResolvedPreset }> {
     const catalog = await this.#catalogOnce();
-    const current = parseMbCurrentPresetNumber(await unit.read(mbReadCurrentPresetNumber()));
-    const raw = parseMbPreset(await unit.read(mbReadPreset(current)));
+    const raw = await MatriboxSession.#loadedRaw(unit);
     return { catalog, raw, preset: resolveMbPreset(raw, catalog) };
+  }
+
+  /** The loaded preset as the unit holds it (edits included), no catalog needed. */
+  static async #loadedRaw(unit: MatriboxConnection): Promise<MbPreset> {
+    const current = parseMbCurrentPresetNumber(await unit.read(mbReadCurrentPresetNumber()));
+    return parseMbPreset(await unit.read(mbReadPreset(current)));
   }
 
   static async #writeAll(unit: MatriboxConnection, frames: readonly Uint8Array[]): Promise<void> {
@@ -252,22 +277,80 @@ export class MatriboxSession {
 
   /** Stores the loaded preset in slot `preset` under `name`, after a backup of what the slot holds. */
   savePreset(options: { preset: string; name: string; confirm: string }): Promise<string> {
-    const index = parseMbPresetLabel(options.preset);
-    const label = mbPresetLabel(index);
-    if (options.confirm.trim().toUpperCase() !== label) throw new Error(`confirm must be "${label}" to write that slot`);
-    const name = checkMbPresetName(options.name);
+    const target = checkSave(options.preset, options.confirm, options.name);
+    return this.#use(async (unit) => experimental(await this.#save(unit, target)));
+  }
+
+  async #save(unit: MatriboxConnection, { index, label, name }: { index: number; label: string; name: string }): Promise<string[]> {
+    const loaded = await MatriboxSession.#loadedRaw(unit); // no catalog needed: restore works without the app
+    const old = await unit.read(mbReadPreset(index));
+    const backup = await this.#writeBackup(label, index, old);
+    try {
+      unit.post(mbSavePreset(index, name)); // the unit sends no answer to a save
+      await MatriboxSession.#checkSaved(unit, index, name, loaded);
+    } catch (error) {
+      throw new Error(`${error instanceof Error ? error.message : String(error)} (backup kept: ${backup})`, { cause: error });
+    }
+    return [`Saved the loaded preset to ${label} "${name}".`, `Backup of the old ${label}: ${backup}`];
+  }
+
+  /** The loaded preset (default) or slot `preset` as a .prst file in the presets folder. */
+  exportPreset(options: { preset?: string; file?: string }): Promise<string> {
+    const asked = options.preset === undefined ? null : parseMbPresetLabel(options.preset);
     return this.#use(async (unit) => {
-      const loaded = (await this.#loaded(unit)).raw;
-      const old = await unit.read(mbReadPreset(index));
-      const backup = await this.#writeBackup(label, index, old);
-      try {
-        unit.post(mbSavePreset(index, name)); // the unit sends no answer to a save
-        await MatriboxSession.#checkSaved(unit, index, name, loaded);
-      } catch (error) {
-        throw new Error(`${error instanceof Error ? error.message : String(error)} (backup kept: ${backup})`, { cause: error });
-      }
-      return experimental([`Saved the loaded preset to ${label} "${name}".`, `Backup of the old ${label}: ${backup}`]);
+      const index = asked ?? parseMbCurrentPresetNumber(await unit.read(mbReadCurrentPresetNumber()));
+      const preset = parseMbPreset(await unit.read(mbReadPreset(index)));
+      const path = await writeMatriboxPrstFile(this.#folders.presets, preset, mbPresetLabel(index), options.file);
+      return `Exported ${mbPresetLabel(index)} "${preset.name}" to ${path}`;
     });
+  }
+
+  /** Applies a .prst to the loaded preset; with `preset` (and `confirm`), saves it there too. */
+  async importPreset(options: { file: string; preset?: string; name?: string; confirm?: string }): Promise<string> {
+    const preset = await readMatriboxPrst(this.#folders.presets, options.file);
+    const target = options.preset === undefined ? null : checkSave(options.preset, options.confirm, options.name ?? preset.name);
+    return this.#use(async (unit) => {
+      const applied = await this.#apply(unit, preset);
+      const saved = target ? await this.#save(unit, target) : ['Nothing is stored until matribox_save_preset.'];
+      return [...applied, ...saved, UNCHECKED].join('\n');
+    });
+  }
+
+  /** Applies a backup save_preset wrote and saves it back to its own slot (itself backed up first). */
+  async restoreBackup(options: { file: string; confirm: string; name?: string }): Promise<string> {
+    const backup = await readMatriboxBackup(this.#folders.backups, options.file);
+    const target = checkSave(backup.label, options.confirm, options.name ?? backup.name);
+    return this.#use(async (unit) => {
+      const applied = await this.#apply(unit, backup.preset);
+      return [...applied, ...(await this.#save(unit, target)), UNCHECKED].join('\n');
+    });
+  }
+
+  /**
+   * Loads `preset` whole (chain, parameters, knob, expression and footswitch assignments, volume,
+   * tempo) into the loaded preset with the official editor's one-message write (capture mb-20),
+   * after a backup of what the loaded preset holds, then reads it back. Whether the unit also stores
+   * the slot is not known yet: the backup covers that case.
+   */
+  async #apply(unit: MatriboxConnection, preset: MbPreset): Promise<string[]> {
+    const current = parseMbCurrentPresetNumber(await unit.read(mbReadCurrentPresetNumber()));
+    const label = mbPresetLabel(current);
+    const backup = await this.#writeBackup(label, current, await unit.read(mbReadPreset(current)));
+    try {
+      await unit.writePreset(mbWritePreset(current, preset));
+      const loaded = parseMbPreset(await unit.read(mbReadPreset(current)));
+      const differs = KEPT_SECTIONS.filter((id) => sectionHex(loaded, id) !== sectionHex(preset, id));
+      if (differs.length > 0) throw new Error(`the loaded preset differs from "${preset.name}" in section ${differs.join(', ')} after the write`);
+    } catch (error) {
+      throw new Error(`${error instanceof Error ? error.message : String(error)} (backup of ${label} kept: ${backup})`, { cause: error });
+    }
+    const catalog = await this.#catalogOnce().catch(() => undefined); // without the app: module numbers
+    const modules = catalog ? resolveMbPreset(preset, catalog).chain.map((b) => b.module) : preset.chain.map((b) => `module ${b.moduleIndex}`);
+    return [
+      `Loaded "${preset.name}" into ${label} (the loaded preset) in one write: chain, parameters, knob, expression-pedal and footswitch assignments, volume and tempo.`,
+      `Chain: ${modules.join(' → ')}`,
+      `Backup of the loaded ${label} first: ${backup}`,
+    ];
   }
 
   /** A save is checked by reading the slot back: the name in the preset list, the chain and the parameters. */
@@ -284,9 +367,9 @@ export class MatriboxSession {
 
   async #writeBackup(label: string, index: number, data: Uint8Array): Promise<string> {
     const createdAt = new Date().toISOString();
-    const file = { device: 'Sonicake Matribox II Pro', label, index, name: parseMbPreset(data).name, createdAt, preset: toHex(data) };
-    await mkdir(this.#backups, { recursive: true });
-    const base = join(this.#backups, `${createdAt.replace(/[:.]/g, '-')}-matribox-${label}`);
+    const file = { device: MATRIBOX_DEVICE, label, index, name: parseMbPreset(data).name, createdAt, preset: toHex(data) };
+    await mkdir(this.#folders.backups, { recursive: true });
+    const base = join(this.#folders.backups, `${createdAt.replace(/[:.]/g, '-')}-matribox-${label}`);
     for (let n = 1; ; n++) {
       const path = n === 1 ? `${base}.json` : `${base}-${n}.json`;
       try {
