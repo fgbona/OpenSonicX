@@ -2,7 +2,8 @@
 
 The goal: an MCP server where you describe a tone and the AI builds it on the Matribox II Pro,
 like the Pocket Master server does today. What exists so far is the protocol groundwork in
-`packages/core/src/matribox/` (framing, pages) and the model catalog reader. No editor UI and no
+`packages/core/src/matribox/` (framing, pages, LZO1X, messages, name tables) and the model
+catalog reader. No editor UI and no
 MCP tools yet.
 
 Everything below was learned from our own captures of the owner's unit (USB MIDI, 2026-11-24):
@@ -47,15 +48,74 @@ names, current preset) and `11 08` (user IR names, capture names, other tables).
 streams `12 1C` writes, a block on/off is `12 18`, selecting a preset is `12 21` followed by a
 re-read. Saving and renaming were not captured yet.
 
-## Compressed payloads
+## Messages
 
-The joined data of most replies starts with an 8-byte header, `[flag, 0, 0, cmd, length u32 LE]`,
-followed by an LZO1X stream (`length` matches: e.g. 2964 for the 2972-byte preset list). Decoded
-with liblzo2's `lzo1x_decompress_safe`: the preset list (2964 → 7444 bytes, 200 names in 17-byte
-records), the current preset (351 → 1211 bytes), user IR names and capture names. 20-byte replies
-are uncompressed acknowledgements. A Matribox `.prst` file is base64 of a JSON byte array that is
-itself a raw LZO1X stream, the same format as the preset the unit sends. Decoding this in the core
-is the next step; nothing decodes it yet.
+The joined page data of every message, both ways, is a message:
+
+```
+[flag u8] [0] [0] [cmd u8] [length u32 LE] [LZO1X stream, length bytes]
+```
+
+`length` is always the payload length − 8 (checked on all 22 messages of the capture). There is no
+uncompressed form: even the 20-byte replies carry a 12-byte LZO1X stream that decodes to 8 bytes,
+and the host's read requests store their 4-byte argument as a literal-only stream
+(`15 <4 bytes> 11 00 00`). A request without an argument has length 0 and no stream.
+`unwrapMbMessage` (core) checks the header and length and decompresses; `mbRequest(flag, cmd, arg)`
+builds a read request frame.
+
+### LZO1X
+
+`lzo1xDecompress` in `packages/core/src/matribox/lzo1x.ts` is our own implementation, written from
+the public description of the format (the Linux kernel's `Documentation/staging/lzo.rst`). The
+data comes from a USB device or a downloaded file, so every read, write and back-reference is
+checked, the output is capped (1 MiB by default), and malformed, truncated or trailing input
+throws. It was checked byte for byte against liblzo2's `lzo1x_decompress_safe` outside the
+repository: every real reply, 1500 random inputs compressed by `lzo1x_1_compress`, 1500 mutated
+streams and 3000 random byte strings (same output, and the same accept or reject). The test
+vectors in the repository are compressed from invented plaintext.
+
+### The reads the official editor sends on connect
+
+After the `~GP-2` probe, in this order (`arg` = the decompressed request data):
+
+| flag | cmd | arg | Reply (decompressed) |
+|------|-----|-----|----------------------|
+| 1 | 10 | `00 00 0A 01` | Preset list, 7444 bytes (below). `mbReadPresetNames()` |
+| 1 | 10 | `01 00 0A 01` | 8 bytes: the argument, then u32 LE current preset number (66) |
+| 0 | 10 | `43 00 00 00` | A preset, 1211 bytes ("Drive AD"; see below) |
+| 1 | 11 | `00 08 00 00` | 8 bytes: the argument, then `00 00 00 00` |
+| 0 | 14 | none | User IR names, 500 bytes. `mbReadIrNames()` |
+| 0 | 18 | none | Capture (clone) names, 252 bytes. `mbReadCloneNames()` |
+| 0 | 11 | none | 52 bytes, not decoded (global settings?) |
+| 0 | 13 | none | 10 bytes `00 00 07 00 00 00 3C 00 00 5D`, not decoded |
+| 0 | 16 | none | 124 bytes of float32 values, not decoded |
+| 1 | 16 | `01 00 00 16` | 8 bytes `00 00 00 00 01 00 00 00` |
+| 0 | 10 | `42 00 00 00` | A preset again, 1211 bytes, "Drive AD" |
+
+The preset read's argument is a u32 that the reply's first 4 bytes repeat. `42` (66) is the current
+preset; the first read asks for `43` and also gets "Drive AD" (preset 67 is "Cry&Cry"), and the two
+replies differ in one byte (offset 37: `00` / `80`), so `43` may mean the edit buffer. Not confirmed.
+
+### Name tables
+
+Names are 17-byte fields, NUL-terminated (16 characters at most); the bytes after the NUL are left
+over from older names and are ignored.
+
+- **Preset list** (`parseMbPresetNames`): 4 bytes (the request's argument), 240 u32 LE (values
+  2..241 on the owner's unit, meaning unknown), 240 names (17 bytes), 240 style tags (10 bytes:
+  "Rock", "Metal", "Acoustic", "" when unset; the owner's rig presets say "@lex"). 4 + 240 × 31 =
+  7444. The index is the preset number: the current-preset read returns 66, and name 66 is
+  "Drive AD". Name 0 is "Matribox II PRO" (the default name of an empty preset) and "Love of God"
+  is 1.
+- **User IRs** (`parseMbIrNames`): 20 × 8 bytes (all zero so far), then 20 names: 500 bytes.
+- **Captures** (`parseMbCloneNames`): 10 × 8 bytes (zero), then 10 names ("1 FENDER", …,
+  "Clone 10"), padded to 252 bytes.
+
+### Presets
+
+A preset (1211 bytes decompressed) starts with its u32 number and is a list of sections. A
+Matribox `.prst` file is base64 of a JSON byte array that is itself a raw LZO1X stream (no message
+header), the same format. Parsing presets is the next step.
 
 ## Phases
 
