@@ -6,7 +6,7 @@
  * capture each.
  */
 import {
-  MB_EXP_ENTRIES, MB_FOOTSWITCHES, mbAssignExpression, mbAssignFootswitch, mbAssignments, mbPresetLabel, mbSetExpressionMax, mbSetExpressionMin,
+  MB_EXP_ENTRIES, MB_FOOTSWITCHES, mbExpressionWrites, mbAssignFootswitch, mbAssignments, mbPresetLabel, mbSetExpressionMax, mbSetExpressionMin,
   mbSetPatchVolume, parseMbCurrentPresetNumber, parseMbPreset, mbReadCurrentPresetNumber, mbReadPreset, type MbPreset, type MbResolvedPreset,
 } from '@pocket-master/core';
 import type { MatriboxConnection } from './matribox-link.ts';
@@ -60,7 +60,7 @@ export async function assignExpression(unit: MatriboxConnection, preset: MbResol
   const model = knownModel(block);
   const param = findParam(model, options.parameter);
   const [min, max] = [options.min ?? 0, options.max ?? 100];
-  await unit.write(mbAssignExpression({ entry, slot: block.slot, paramId: param.id, min, max }));
+  for (const frame of mbExpressionWrites({ entry, slot: block.slot, paramId: param.id, min, max })) await unit.write(frame);
   const read = mbAssignments(await readLoaded(unit)).expression[entry];
   if (read?.slot !== block.slot || read.paramId !== param.id) {
     throw new Error(`the unit echoed the expression write, but entry ${options.entry} reads back as slot ${read?.slot ?? 'none'}, parameter ${read?.paramId}: the field order of this write may be wrong (docs/matribox.md)`);

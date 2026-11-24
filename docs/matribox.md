@@ -482,8 +482,8 @@ Builders in `packages/core/src/matribox/write.ts`; tests compare them with the c
 | Save | 05 | u32 index + 17-byte name (NUL-padded) | One host frame; owner's unit ✓ |
 | Patch volume | 10 | `03 00 05 01` + u32 0..100 | Host frames (mb-01), byte-exact; not yet sent by us |
 | Footswitch | 10 | `01 00 08 01` + u32 switch (A = 0) + u32 slot + u32 1/0 | Host frames (mb-09), byte-exact; not yet sent by us |
-| Expression assign | 10 | `02 00 07 01` + u32 entry + u32 slot + u32 param + u32 0 + f32 min + f32 max | Host frame (mb-04), byte-exact; field order not proven (below) |
-| Expression min / max | 10 | `03 00 07 01` / `04 00 07 01` + u32 entry + u32 0 + f32 | Host frames (mb-04), byte-exact; not yet sent by us |
+| Expression assign | 10 | `02 00 07 01` + u32 group + u32 position + u32 slot + u32 param + f32 min + f32 max (range ignored) | Host frame (mb-04), byte-exact; owner's unit ✓ |
+| Expression min / max | 10 | `03 00 07 01` / `04 00 07 01` + u32 group + u32 position + f32 | Host frames (mb-04), byte-exact; owner's unit ✓ |
 | Whole preset | 10, **flag 2** | u32 index + 1207-byte body (`.prst` tags), paged | Host pages (capture mb-20); answered by cmd `17`; not yet sent by us |
 
 - Set param and on/off address the **storage slot**, not the chain position (capture 2: the delay
@@ -517,12 +517,15 @@ tempo, footswitch rows and expression entries back from a preset.
 
 - **Footswitch:** switch A = 0 (capture mb-09: assign A to slot 0, unassign it, assign A to
   slot 1). A switch can toggle several slots (one section 8 row). Captured in stomp mode only.
-- **Expression assign:** in capture mb-04 (EXP 1 on DRV Gain: DRV in slot 0, Gain = ID 0, the
-  first entry) the four u32 were all 0, so the order entry, slot, parameter is the owner's
-  reading, not proven: the MCP tools read section 7 back after the write and say so when it does
-  not match. The fourth u32, and the second one of min / max, were 0 (unknown). Min and max are
-  0..100: the editor's slider values (3.88 … 99.98), stored as f32 in section 7 at 23 and 59.
-  Removing an assignment was not captured.
+- **Expression assign:** settled on the owner's unit (2026-11-24; capture mb-04 had every field at
+  0): u32 **group** (0 = EXP 1 mode A, 1 = mode B, 2 = EXP 2), u32 **position** in the group
+  (0..2), u32 **slot**, u32 **parameter**, f32 min, f32 max. Entry = group × 3 + position, the
+  order section 7 lists them in: (1,0,1,0) landed in entry 4 on slot 1, (0,0,1,1) in entry 1 on
+  slot 1 parameter 1, and the pedal then swept that parameter. **The unit ignores the range in an
+  assignment** (it applies 0..100 and echoes 0..100 back), so the official editor's way is the
+  one to follow: assign, then send min / max (`mbExpressionWrites`). Min / max take the same group
+  and position (checked: setting entry 4's range left entry 1 alone). Min and max are 0..100,
+  stored as f32 in section 7 at 23 and 59. Removing an assignment was not captured.
 - Unsaved edits, these included, are discarded when another preset is loaded. The tuner sends no
   SysEx at all (the official editor has no tuner traffic); it is a MIDI Control Change (below).
 

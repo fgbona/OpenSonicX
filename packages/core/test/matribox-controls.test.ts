@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { parseMbFrame, readFloat32LE } from '../src/matribox/frame.ts';
 import { unwrapMbMessage } from '../src/matribox/message.ts';
 import {
-  mbAssignExpression, mbAssignFootswitch, mbSetExpressionMax, mbSetExpressionMin, mbSetPatchVolume,
+  mbAssignExpression, mbAssignFootswitch, mbExpressionWrites, mbSetExpressionMax, mbSetExpressionMin, mbSetPatchVolume,
 } from '../src/matribox/write.ts';
 import { fromHex, toHex } from '../src/hex.ts';
 import { parseMbPreset } from '../src/matribox/preset.ts';
@@ -52,6 +52,25 @@ test('expression assignment, min and max rebuild the captured frames byte for by
   assert.equal(toHex(mbAssignExpression({ entry: 0, slot: 0, paramId: 0, min: 0, max: 100 })), toHex(host('exp-assign-entry0-slot0-param0')));
   assert.equal(toHex(mbSetExpressionMin(0, capturedFloat('exp-min-entry0', 12))), toHex(host('exp-min-entry0')));
   assert.equal(toHex(mbSetExpressionMax(0, capturedFloat('exp-max-entry0', 12))), toHex(host('exp-max-entry0')));
+});
+
+test('expression assignment field order, as the owner\'s unit took it (2026-11-24): group, position, slot, param', () => {
+  // Checked live: (1,0,1,0) landed in entry 4 (group 1 = EXP 1 mode B, position 0) on slot 1 (AMP),
+  // (0,0,1,1) in entry 1 on slot 1 parameter 1 (AMP Volume). Entry 0..8 = group * 3 + position.
+  const data = (frame: Uint8Array) => toHex(frame).replace(/ /g, '');
+  const body = (vals: number[]) => vals.map((v) => [v, 0, 0, 0].map((b) => b.toString(16).padStart(2, '0')).join('')).join('');
+  const sent = (frame: Uint8Array) => unwrapMbMessage(parseMbFrame(frame).payload).data;
+  assert.equal(Buffer.from(sent(mbAssignExpression({ entry: 3, slot: 1, paramId: 0, min: 0, max: 100 })).subarray(4, 20)).toString('hex'), body([1, 0, 1, 0]));
+  assert.equal(Buffer.from(sent(mbAssignExpression({ entry: 0, slot: 1, paramId: 1, min: 0, max: 100 })).subarray(4, 20)).toString('hex'), body([0, 0, 1, 1]));
+  assert.equal(Buffer.from(sent(mbAssignExpression({ entry: 8, slot: 11, paramId: 14, min: 0, max: 100 })).subarray(4, 20)).toString('hex'), body([2, 2, 11, 14]));
+  assert.equal(Buffer.from(sent(mbSetExpressionMin(4, 10)).subarray(4, 12)).toString('hex'), body([1, 1]));
+  void data;
+});
+
+test('an expression assignment goes with the full range, the ends that differ follow (the unit ignores the range in it)', () => {
+  const a = { entry: 4, slot: 4, paramId: 1, min: 20, max: 80 };
+  assert.deepEqual(mbExpressionWrites(a).map(toHex), [mbAssignExpression({ ...a, min: 0, max: 100 }), mbSetExpressionMin(4, 20), mbSetExpressionMax(4, 80)].map(toHex));
+  assert.equal(mbExpressionWrites({ ...a, min: 0, max: 100 }).length, 1);
 });
 
 test('expression writes check the entry, slot, parameter and the 0..100 range', () => {

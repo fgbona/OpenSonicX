@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  matriboxLink, mbAddBlock, mbAssignExpression, mbAssignFootswitch, mbBackupAllPresets, mbChangeModel, mbMoveBlock, mbRemoveBlock, mbRestoreAllPresets,
+  matriboxLink, mbAddBlock, mbExpressionWrites, mbAssignFootswitch, mbBackupAllPresets, mbChangeModel, mbMoveBlock, mbRemoveBlock, mbRestoreAllPresets,
   mbSelectPreset, mbSetBlockOn, mbSetParam, mbSetPatchVolume, withMbVolume,
   type MatriboxLink, type MbBackupAll, type MbCatalog, type MbExpressionAssignment, type MbPreset, type MbProgress, type MidiPort, type Progress,
 } from '@pocket-master/core';
@@ -231,7 +231,7 @@ export function useMatribox(port: MidiPort | null, desktop: boolean) {
     removeBlock: (position: number) => chainEdit(() => mbRemoveBlock(position)),
     setVolume,
     assignFootswitch: (footswitch: number, slot: number, on: boolean) => assign(() => [mbAssignFootswitch(footswitch, slot, on)]),
-    assignExpression: (a: MbExpressionAssignment) => assign(() => [mbAssignExpression(a)]),
+    assignExpression: (a: MbExpressionAssignment) => assign(() => mbExpressionWrites(a)),
     control,
     apply,
     save,
