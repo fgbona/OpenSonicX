@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Pocket Master Editor web server.
+# OpenSonicX web server.
 # Web MIDI runs in the visitor's browser, so this container never needs USB access.
 #
 # Hardening:

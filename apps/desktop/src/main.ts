@@ -22,9 +22,13 @@ protocol.registerSchemesAsPrivileged([
   { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
 ]);
 
+// Renamed from "Pocket Master Editor" in 1.0.0. Electron names the data folder (backups, keys,
+// settings, the Matribox catalog) after the product, so keep the old folder: nothing is lost.
+app.setPath('userData', join(app.getPath('appData'), 'Pocket Master Editor'));
+
 const pt = () => app.getLocale().toLowerCase().startsWith('pt');
 const text = {
-  available: (v: string) => (pt() ? `A versão ${v} do Pocket Master Editor está disponível.` : `Pocket Master Editor ${v} is available.`),
+  available: (v: string) => (pt() ? `A versão ${v} do OpenSonicX está disponível.` : `OpenSonicX ${v} is available.`),
   download: () => (pt() ? 'Abrir página de download' : 'Open download page'),
   ready: (v: string) => (pt() ? `A versão ${v} foi baixada e será instalada ao reiniciar.` : `Version ${v} was downloaded and installs on restart.`),
   restart: () => (pt() ? 'Reiniciar agora' : 'Restart now'),
