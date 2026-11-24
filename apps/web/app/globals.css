@@ -988,3 +988,11 @@ button, select { font: inherit; color: inherit; }
 .mb-backups { list-style: none; margin: 0; padding: 8px 16px; display: grid; gap: 6px; }
 .mb-backups li { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
 .mb-sidebar { grid-template-rows: auto 1fr; }
+
+/* "A new version is ready — Reload" (components/UpdatePrompt.tsx), above everything, out of the way. */
+.update-prompt {
+  position: fixed; z-index: 1000; left: 50%; bottom: 16px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 32px);
+  padding: 10px 12px 10px 16px; border-radius: var(--radius); background: var(--surface); color: var(--label);
+  border: 1px solid var(--separator); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3); font-size: 0.875rem;
+}

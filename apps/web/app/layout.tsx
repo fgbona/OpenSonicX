@@ -3,6 +3,7 @@ import { Yellowtail } from 'next/font/google';
 import './globals.css';
 import { I18nProvider } from '@/components/I18n';
 import { THEME_BOOT_SCRIPT } from '@/components/ThemeToggle';
+import { UpdatePrompt } from '@/components/UpdatePrompt';
 
 /** The script lettering on the amp's faceplate; self-hosted by Next, so it works offline. */
 const script = Yellowtail({ weight: '400', subsets: ['latin'], variable: '--font-script', display: 'swap' });
@@ -42,7 +43,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </radialGradient>
           </defs>
         </svg>
-        <I18nProvider>{children}</I18nProvider>
+        <I18nProvider>
+          {children}
+          <UpdatePrompt />
+        </I18nProvider>
       </body>
     </html>
   );

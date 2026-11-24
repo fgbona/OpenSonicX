@@ -6,6 +6,17 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- The web editor is an installable app (PWA) that works offline: a web app manifest (name,
+  icons, maskable icon, dark theme colors, standalone window, scoped to the GitHub Pages base
+  path) and a small hand-written service worker that precaches the whole static export (pages,
+  JS/CSS chunks, fonts, the NAM conversion worker, images) in one cache per release, named after
+  the version and a digest of the files. A new release installs in the background and takes over
+  only when you click *Reload* on the "new version" prompt, or on the next launch, never in the
+  middle of an edit. Requests to other sites (AI providers, TONE3000) and your own data are never
+  cached. The desktop app and `next dev` register no service worker.
+
 ### Changed
 
 - README for 1.0: both pedals in the introduction, the Matribox II Pro MCP write tools, Android

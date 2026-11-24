@@ -131,6 +131,18 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
   offer them (on this firmware a footswitch toggles a block through the pedal's own
   Function 1/2 setting).
 
+## Install it as an app
+
+The web editor installs like an app and then opens without an internet connection, for example
+on an Android tablet on the pedalboard. In Chrome on Android, open
+https://fgbona.github.io/OpenSonicX/ and choose *menu (⋮) > Install app* (or *Add to Home
+screen*); on a computer, the install icon at the right of the address bar. It opens in its own
+window, USB and Bluetooth work as in the browser, and the editor files are kept on the device
+after the first visit. TONE3000, the AI assistant and the first NAM conversion still need the
+network, and your own data (backups, keys, settings) stays in the browser's storage as before.
+When a new version is out the editor says so and reloads only when you choose *Reload*
+(otherwise the next time you open it).
+
 ## Repository layout
 
 | Path | What it is |
