@@ -6,7 +6,7 @@
  * nothing (check it by reading the slot back).
  *
  * Every builder is byte-exact with a captured host frame. Hardware-validated on the owner's unit
- * (2026-11-24): select, set param, on/off, change model, add, remove, save. Move is not yet.
+ * (2026-11-24): every builder here.
  */
 import { buildMbFrame, float32LE, MB_WRITE } from './frame.ts';
 import { wrapMbMessage } from './message.ts';
@@ -85,12 +85,13 @@ export function mbRemoveBlock(position: number): Uint8Array {
 }
 
 /**
- * Swaps the model of the block at `position` (`02 00 04 01` + position + module + fxid); the unit
- * loads the new model's defaults. Position or storage slot: they were the same (0) in the capture.
+ * Swaps the model of the block in storage `slot` (`02 00 04 01` + slot + module + fxid), like set
+ * param and on/off; the unit loads the new model's defaults. Slot, not chain position: checked on
+ * the owner's unit with a block whose slot and position differ.
  */
-export function mbChangeModel(position: number, moduleIndex: number, fxid: number): Uint8Array {
+export function mbChangeModel(slot: number, moduleIndex: number, fxid: number): Uint8Array {
   checkModel(moduleIndex, fxid);
-  return write(SET_CMD, [0x02, 0x00, 0x04, 0x01, checkPosition(position), moduleIndex, ...u32(fxid)]);
+  return write(SET_CMD, [0x02, 0x00, 0x04, 0x01, checkSlot(slot), moduleIndex, ...u32(fxid)]);
 }
 
 /** Printable ASCII, 1..16 characters: the unit's 17-byte, NUL-terminated name field. */

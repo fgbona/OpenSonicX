@@ -201,16 +201,16 @@ Builders in `packages/core/src/matribox/write.ts`; tests compare them with the c
 | On/off | 10 | `02 00 05 01` + u32 slot + u32 0/1 | Host frames, byte-exact; owner's unit ✓ |
 | Select | 10 | `01 00 0A 01` + u32 index (60D = 239) | Host frames, byte-exact; owner's unit ✓ |
 | Add block | 10 | `01 00 04 01` + `FF` + u8 position + u8 module + u32 fxid | Host frame (capture 4); owner's unit ✓ |
-| Move block | 10 | `01 00 04 01` + u8 from + u8 to + `FF` + `FF FF FF FF` | Host frame (capture 4) |
+| Move block | 10 | `01 00 04 01` + u8 from + u8 to + `FF` + `FF FF FF FF` | Host frame (capture 4); owner's unit ✓ |
 | Remove block | 10 | `01 00 04 01` + u8 position + `FF` + `00` + `00 00 00 00` | Host frame (capture 4); owner's unit ✓ |
-| Change model | 10 | `02 00 04 01` + u8 position + u8 module + u32 fxid | Host frames (capture 3); owner's unit ✓ |
+| Change model | 10 | `02 00 04 01` + u8 slot + u8 module + u32 fxid | Host frames (capture 3); owner's unit ✓ |
 | Save | 05 | u32 index + 17-byte name (NUL-padded) | One host frame; owner's unit ✓ |
 
 - Set param and on/off address the **storage slot**, not the chain position (capture 2: the delay
   was slot 1 while first in the chain). Add, move and remove take **chain positions** (0-based):
   "from" `FF` adds, "to" `FF` removes. The unit picks the storage slot of an added block.
-- Change model: the position and the slot were both 0 in the capture, so which one it takes is not
-  settled yet. The unit loads the new model's defaults by itself (checked on the owner's unit).
+- Change model takes the **storage slot**, like set param and on/off (checked on the owner's unit
+  with a block in slot 0 at position 2). The unit loads the new model's defaults by itself.
 - **Chain notice**: after a chain edit the unit sends `00 00 04 01` + sec4 from byte 4 (order,
   module per slot, u32 fxid per slot) + 12 on/off bytes + 1 byte (the slot touched, `FF` for a
   move), often after a 160-byte `04 00 04 01 …` message (likely the expression-pedal and footswitch
@@ -222,8 +222,7 @@ Builders in `packages/core/src/matribox/write.ts`; tests compare them with the c
   owner's unit (59D, 2026-11-24). Reading the loaded preset's own number returns the edit buffer, so
   the backup taken before saving over the loaded slot holds the edits, not what was stored.
 
-Open questions for the hardware test: move on the unit; whether change model takes the position
-or the slot.
+Every write above has been checked on the owner's unit (2026-11-24).
 
 ## Phases
 

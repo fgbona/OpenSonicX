@@ -69,7 +69,7 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
       'save_preset and restore_backup overwrite a user slot: only call them when the user asked for that slot, and pass its label as confirm.',
       'Before building a tone from a reference, call list_preset_files: if an approved tone matches the request, load it with import_preset instead of rebuilding it.',
       'To match a reference tone (an artist, a record, a song), work out the gear used on it, call list_models once to see which pedal models are based on that gear (model names are disguised, e.g. "Calif DualM" is a Mesa/Boogie Dual Rectifier), then build the whole chain with one edit_preset: drive, amp, cabinet, EQ, gate, modulation, delay and reverb, with sensible values. Do not ask for details the user did not give: make reasonable choices, say briefly what you chose and why, and invite them to ask for adjustments by ear. When the user says a tone sounds right, offer to keep it with export_preset and notes naming the reference, so next time it loads at once.',
-      'Matribox II Pro: matribox_get_preset shows the loaded preset (chain in signal order, each block\'s model and the real gear it is based on, on/off, parameters with ranges); matribox_list_models is the palette, with each model\'s origin (the real gear: e.g. a model based on "Ibanez TS808" is the Tube Screamer). To plan a tone from a reference, work out the gear used, then find the models whose origin matches it. matribox_build_tone sends a whole chain in one call; matribox_set_param, matribox_set_module_on and matribox_set_model adjust it. They change the loaded preset only: matribox_save_preset stores it (confirm with the slot label; the slot is backed up first). Matribox writes are experimental (validated on one unit so far): after writing, check with matribox_get_preset and tell the user.',
+      'Matribox II Pro: matribox_get_preset shows the loaded preset (chain in signal order, each block\'s model and the real gear it is based on, on/off, parameters with ranges); matribox_list_models is the palette, with each model\'s origin (the real gear: e.g. a model based on "Ibanez TS808" is the Tube Screamer). To plan a tone from a reference, work out the gear used, then find the models whose origin matches it. matribox_build_tone sends a whole chain in one call; matribox_set_param, matribox_set_module_on, matribox_set_model, matribox_add_block, matribox_remove_block and matribox_move_block adjust it. They change the loaded preset only: matribox_save_preset stores it (confirm with the slot label; the slot is backed up first). Matribox writes are experimental (validated on one unit so far): after writing, check with matribox_get_preset and tell the user.',
       'Keep calls few: edit_preset, select_preset, save_preset and import_preset already return the resulting preset, and list_models only needs to be called once per conversation.',
     ].join(' '),
   });
@@ -342,6 +342,7 @@ function registerMatriboxTools(server: McpServer, options: ServerOptions): void 
 
 const MB_EXPERIMENTAL = 'Experimental: validated on one unit only so far; check the result with matribox_get_preset.';
 const mbBlock = z.string().describe('Block of the loaded preset: its 1-based position in the chain ("2") or its module name ("DRV") when the chain has only one');
+const mbModule = z.string().describe('Module name: DYN, FREQ, WAH, DRV, AMP, CAB, IR, EQ, MOD, DLY, RVB, CLONE, FXLOOP, FXSND, FXRTN or VOL');
 const mbPreset = z.string().describe('Preset label, 1A..60D (four per bank)');
 const mbLive = (what: string) => `Matribox II Pro: ${what} The change is live in the loaded preset; nothing is stored until matribox_save_preset. ${MB_EXPERIMENTAL}`;
 const mbPickModels = 'Pick models by their origin (the real gear they are based on) from matribox_list_models.';
@@ -376,12 +377,39 @@ function registerMatriboxWrites(server: McpServer, options: ServerOptions, matri
     annotations: LIVE,
   }, (args) => reply('matribox_set_model', options, () => matribox().setModel(args)));
 
+  server.registerTool('matribox_add_block', {
+    title: 'Add a block to the Matribox chain',
+    description: mbLive(`inserts one block (module + model) at a 1-based chain position, the end by default; parameters not given get the model's default. ${mbPickModels}`),
+    inputSchema: {
+      module: mbModule,
+      model: z.string().describe('Model name of that module, from matribox_list_models'),
+      position: z.number().int().optional().describe('1-based position in the chain; default: after the last block'),
+      on: z.boolean().optional().describe('Default true'),
+      params: z.record(z.string(), z.number()).optional().describe('Parameter name → value, within the ranges matribox_list_models gives'),
+    },
+    annotations: LIVE,
+  }, (args) => reply('matribox_add_block', options, () => matribox().addBlock(args)));
+
+  server.registerTool('matribox_remove_block', {
+    title: 'Remove a block from the Matribox chain',
+    description: mbLive('removes one block of the loaded preset\'s chain.'),
+    inputSchema: { block: mbBlock },
+    annotations: LIVE,
+  }, (args) => reply('matribox_remove_block', options, () => matribox().removeBlock(args)));
+
+  server.registerTool('matribox_move_block', {
+    title: 'Move a block in the Matribox chain',
+    description: mbLive('moves one block to another 1-based position in the chain (signal order).'),
+    inputSchema: { block: mbBlock, to: z.number().int().describe('New 1-based position in the chain') },
+    annotations: LIVE,
+  }, (args) => reply('matribox_move_block', options, () => matribox().moveBlock(args)));
+
   server.registerTool('matribox_build_tone', {
     title: 'Build a whole Matribox tone',
     description: mbLive(`replaces the loaded preset's chain with these blocks in signal order (input to output, at most 12), each with its model and parameters; parameters not given get the model's default. ${mbPickModels} To match a reference, work out the gear used (pedals, amp, cab, effects) and choose the models whose origin matches. The unit may drop expression-pedal and footswitch assignments that named removed blocks.`),
     inputSchema: {
       blocks: z.array(z.object({
-        module: z.string().describe('Module name: DYN, FREQ, WAH, DRV, AMP, CAB, IR, EQ, MOD, DLY, RVB, CLONE, FXLOOP, FXSND, FXRTN or VOL'),
+        module: mbModule,
         model: z.string().describe('Model name of that module, from matribox_list_models'),
         on: z.boolean().optional().describe('Default true'),
         params: z.record(z.string(), z.number()).optional().describe('Parameter name → value, within the ranges matribox_list_models gives'),
@@ -392,7 +420,7 @@ function registerMatriboxWrites(server: McpServer, options: ServerOptions, matri
 
   server.registerTool('matribox_save_preset', {
     title: 'Save the loaded Matribox preset',
-    description: `Matribox II Pro: stores the loaded preset in a preset slot under a name, overwriting it. Only call it when the user asked for that slot, and pass its label as confirm. The slot is read and backed up to ~/.pocket-master-editor/backups first. ${MB_EXPERIMENTAL} The save command itself was decoded from one capture and is the least verified.`,
+    description: `Matribox II Pro: stores the loaded preset in a preset slot under a name, overwriting it. Only call it when the user asked for that slot, and pass its label as confirm. The slot is read and backed up to ~/.pocket-master-editor/backups first. The unit does not answer a save: it is checked by reading the slot back. ${MB_EXPERIMENTAL}`,
     inputSchema: { preset: mbPreset, name: z.string().describe('1..16 printable ASCII characters'), confirm: z.string().describe('The same label as preset, to confirm the overwrite') },
     annotations: WRITE_SLOT,
   }, (args) => reply('matribox_save_preset', options, () => matribox().savePreset(args)));

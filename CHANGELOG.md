@@ -37,8 +37,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
   `~/.pocket-master-editor/backups` first). Each write waits for the unit's answer (its echo, or
   its chain notice after a chain edit; a save, which the unit does not answer, is checked by
   reading the slot back), and every write tool says its result is experimental.
-  Select, set param, on/off, change model, add, remove and save work on the owner's unit; move is
-  still to be checked there. `lzo1xLiterals` now encodes runs of any length.
+  `matribox_add_block`, `matribox_remove_block` and `matribox_move_block` edit one block of the
+  chain. Every write works on the owner's unit; change model names the block's storage slot, not
+  its chain position (a block whose slot and position differed got the wrong block changed). `lzo1xLiterals` now encodes runs of any length.
 
 ## [0.17.1] - 2026-11-23
 

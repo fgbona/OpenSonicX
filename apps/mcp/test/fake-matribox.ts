@@ -168,7 +168,7 @@ export class FakeMatribox {
     };
     const [op, from, to, type] = [data[0], data[4] as number, data[5] as number, data[6] as number];
     if (op === 0x02) {
-      const slot = chain.order[from] as number;
+      const slot = from; // change model names the storage slot
       put(slot, data[5] as number, u32(data, 6));
       return this.#setChain(chain, slot);
     }
