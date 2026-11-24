@@ -8,6 +8,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- README for 1.0: both pedals in the introduction, the Matribox II Pro MCP write tools, Android
+  checked, and a Portuguese version ([README.pt-BR.md](README.pt-BR.md)) linked from the top of each.
 - Builds and tests run through Turborepo (`turbo`, local cache only): `npm test`,
   `npm run typecheck` and `npm run build` skip workspaces whose inputs did not change, locally
   and in CI (the cache is kept between CI runs with `actions/cache`). Releases always rebuild

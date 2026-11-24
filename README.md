@@ -1,10 +1,16 @@
 # OpenSonicX
 
-Free, open-source tools for Sonicake guitar pedals: an editor for
-the **Sonicake Pocket Master** multi-effects pedal, over USB MIDI or Bluetooth. No driver and no Connect button: open
-the page in Chrome, Edge or Opera and plug the pedal in; the editor finds it and loads its presets.
-The **Sonicake Matribox II Pro** is supported too, experimentally: the same page recognises it
-by its USB MIDI port and opens its own editor ([docs/matribox.md](docs/matribox.md)).
+**English** · [Português](README.pt-BR.md)
+
+Free, open-source editor for Sonicake guitar pedals, in the browser, as a desktop app, and as an
+MCP server so an AI assistant builds the tone you describe on the pedal.
+
+- **Sonicake Pocket Master**: full editor over USB MIDI or Bluetooth.
+- **Sonicake Matribox II Pro** (experimental): presets, chain, models and parameters, live edits
+  and save ([docs/matribox.md](docs/matribox.md)).
+
+No driver and no Connect button: open the page in Chrome, Edge or Opera and plug the pedal in;
+the editor recognises which pedal it is and loads its presets.
 
 **Open it:** https://fgbona.github.io/OpenSonicX/ (updated
 with every release) · **Download the app:** [latest release](https://github.com/fgbona/OpenSonicX/releases/latest)
@@ -15,8 +21,10 @@ for macOS, Windows and Linux ([details](#desktop-app)).
 Unofficial: not affiliated with or endorsed by Sonicake. Product names are
 trademarks of their owners, used only to describe the modeled gear.
 
-> **Status: preview.** Reading, live editing and saving to preset slots work.
-> Every save backs up the slot it overwrites, unless you opt out for that save.
+> **Status: 1.0.** The Pocket Master editor is stable: reading, live editing and saving are
+> checked on a real pedal, on a computer and on an Android tablet (USB and Bluetooth). Every save
+> backs up the slot it overwrites, unless you opt out for that save. The Matribox II Pro is
+> **experimental**: every write is checked on one unit so far.
 
 ## Describe a tone, get it on the pedal
 
@@ -114,11 +122,11 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
 
 - **Pedal firmware:** tested on **V1.3.3**. The editor reads the version from the pedal
   (shown in *Global options*) and warns when it is another one, which may behave differently.
-- **Browsers:** Chrome, Edge and Opera on a computer, over USB. Bluetooth in Chrome and Edge;
-  tested in desktop Chrome, Android still to be confirmed on a real phone.
+- **Browsers:** Chrome, Edge and Opera on a computer, over USB. Bluetooth in Chrome and Edge,
+  checked in desktop Chrome and in Chrome on an Android tablet (USB and Bluetooth).
 - **Not supported:** Safari and every browser on iPhone and iPad (no Web MIDI there); Firefox is untested.
   The desktop app covers macOS, Windows and Linux without a browser.
-- **Not on this firmware:** a tempo (BPM) per preset, Sync and Trail on delays and modulation,
+- **Pocket Master firmware limits:** a tempo (BPM) per preset, Sync and Trail on delays and modulation,
   and per-preset footswitch assignments. The unit ignores those writes, so the editor does not
   offer them (on this firmware a footswitch toggles a block through the pedal's own
   Function 1/2 setting).
@@ -144,8 +152,8 @@ attaches installers:
 | macOS, Intel | `OpenSonicX-<version>-mac-x64.dmg` |
 | Windows | `OpenSonicX-<version>-win-x64.exe` |
 | Linux | `OpenSonicX-<version>-linux-x86_64.AppImage` |
- The app runs the same editor without a
-browser or an internet connection; only TONE3000 and the first NAM conversion
+
+The app runs the same editor without a browser or an internet connection; only TONE3000 and the first NAM conversion
 (which downloads a reference file once) need the network.
 
 - **Renamed in 1.0.0** from *Pocket Master Editor* to *OpenSonicX*. Installed copies update in
@@ -166,8 +174,9 @@ system in `apps/desktop/release`.
 
 ## Use it from an AI assistant (MCP)
 
-> **Preview.** Reading, live edits, revert and saving with backup are checked
-> on a pedal; restores and preset files are checked against a simulated pedal.
+> Pocket Master: reading, live edits, revert and saving with backup are checked on a pedal;
+> restores and preset files are checked against a simulated pedal. Matribox II Pro: every write
+> tool is checked on one unit (experimental).
 
 `apps/mcp` lets an assistant such as Claude read and tweak your sound in
 conversation ("more gain on the amp", "try the Randall profile", "save this
@@ -234,12 +243,17 @@ Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
   move both folders). The server reads and writes files only inside these
   folders.
 - `.prst` preset files exported by Sonicake's own app can be imported too, here and in the web editor's Import preset.
-- **Matribox II Pro (preview, read-only):** the same server also reads a Matribox II Pro.
-  `which_pedal` says which pedal is plugged in; `matribox_get_preset`, `matribox_list_presets`,
-  `matribox_list_models`, `matribox_list_irs` and `matribox_list_captures` let the assistant read the
-  loaded preset and plan a tone from the models' real gear. The model list comes from Sonicake's
-  official Matribox II PRO app, which must be installed (or set `MATRIBOX_CATALOG` to its
-  `alg_data.json`). Nothing is written to the Matribox yet. See [docs/matribox.md](docs/matribox.md).
+- **Matribox II Pro (experimental):** the same server reads and edits a Matribox II Pro.
+  `which_pedal` says which pedal is plugged in. Reading: `matribox_get_preset`,
+  `matribox_list_presets`, `matribox_list_models`, `matribox_list_irs`, `matribox_list_captures`.
+  Editing the loaded preset live: `matribox_set_param`, `matribox_set_module_on`,
+  `matribox_set_model`, `matribox_add_block`, `matribox_remove_block`, `matribox_move_block`,
+  `matribox_select_preset`, and `matribox_build_tone`, which builds a whole chain in one call
+  ("Appetite for Destruction rhythm tone"), picking models by the real gear they are based on.
+  `matribox_save_preset` stores it with `confirm` repeating the slot label (e.g. `"58D"`) after a
+  backup to `~/.pocket-master-editor/backups`. The model list comes from Sonicake's official
+  Matribox II PRO app, which must be installed (or set `MATRIBOX_CATALOG` to its `alg_data.json`).
+  See [docs/matribox.md](docs/matribox.md).
 
 ## Protocol
 
@@ -252,7 +266,9 @@ the reference the tests check against.
 
 Each version is a git tag, a [GitHub release](https://github.com/fgbona/OpenSonicX/releases)
 and a container image in the GitHub Container Registry. Changes are listed in
-[CHANGELOG.md](CHANGELOG.md). Versions below 1.0 are previews.
+[CHANGELOG.md](CHANGELOG.md). From 1.0 the project follows semantic versioning: the MCP tool
+contract and the preset file format only change in a major version; versions below 1.0 were
+previews.
 
 ## Contributing
 
