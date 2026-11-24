@@ -30,6 +30,18 @@ test('the chain is reordered with the arrows, since touch has no drag and drop',
   await expect.poll(() => pedal.pedal.received).toContain('edit 44');
 });
 
+test('the chain strip scrolls sideways under the finger: blocks are not draggable on touch', async ({ page, pedal }) => {
+  await connect(page, pedal);
+  const units = page.locator('.tiles .tile-unit');
+  expect(await units.count()).toBeGreaterThan(5);
+  for (const unit of await units.all()) await expect(unit).toHaveAttribute('draggable', 'false');
+  const strip = page.locator('.tiles');
+  await expect(strip).toHaveCSS('touch-action', 'pan-x');
+  const scrolled = await strip.evaluate((el) => { el.scrollLeft = el.scrollWidth; return el.scrollLeft; });
+  expect(scrolled).toBeGreaterThan(0);
+  await expect(units.last()).toBeInViewport();
+});
+
 // Dark glass panels are the containing block of a fixed menu; light ones are not.
 for (const theme of ['dark', 'light'] as const) {
   test(`the model menu opens as a sheet inside the screen (${theme} theme)`, async ({ page, pedal }) => {
