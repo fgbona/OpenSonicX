@@ -6,7 +6,7 @@ import { fromHex, MB_WRITE, parseMbFrame, parseMbPreset, unwrapMbMessage } from 
 import { call, connected, text } from './matribox-helpers.ts';
 
 const WRITE_TOOLS = ['matribox_set_param', 'matribox_set_module_on', 'matribox_select_preset', 'matribox_set_model', 'matribox_build_tone', 'matribox_save_preset'];
-const EXPERIMENTAL = /Experimental: .*not validated on the hardware/;
+const EXPERIMENTAL = /Experimental: .*validated on one unit only/;
 /** How many write frames the simulated unit received. */
 const writes = (fake: { received: string[] }) => fake.received.filter((hex) => parseMbFrame(fromHex(hex)).type === MB_WRITE).length;
 
@@ -158,6 +158,14 @@ test('matribox_save_preset needs confirm with the slot label and backs the slot 
   assert.equal(parseMbPreset(fromHex(backup.preset)).name, 'Drive AD');
   assert.match(await call(client, 'matribox_list_presets'), /^\* 17C {1}My Tone \(Rock\)$/m);
   assert.equal(parseMbPreset(fake.stored(66) as Uint8Array).name, 'My Tone');
+});
+
+test('a save the unit did not store fails, keeping the backup', async () => {
+  const { client, fake } = await connected();
+  fake.dropsSaves = true;
+  const result = await client.callTool({ name: 'matribox_save_preset', arguments: { preset: '17C', name: 'My Tone', confirm: '17C' } });
+  assert.equal(result.isError, true);
+  assert.match(text(result), /17C does not hold "My Tone" after the save.*backup kept: .*-matribox-17C\.json/s);
 });
 
 test('a write the unit does not echo fails with a clear error', async () => {

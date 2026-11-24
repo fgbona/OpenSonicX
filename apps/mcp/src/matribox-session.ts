@@ -2,7 +2,7 @@
  * The Matribox II Pro as the MCP tools see it. Like the Pocket Master session, every call opens its
  * own connection and closes it, and calls run one at a time. The model catalog comes from the user's
  * install of Sonicake's official editor; it is loaded once, when first needed. Writes (experimental,
- * not validated on the hardware yet) change the loaded preset; only savePreset stores it, after a
+ * validated on one unit only so far) change the loaded preset; only savePreset stores it, after a
  * backup of the slot it overwrites.
  */
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -18,6 +18,9 @@ import {
   checkParam, describeValues, EXPERIMENTAL, findBlock, findModel, gear, knownModel, modelTitle, modelValues, planTone, type ParamWrite, type ToneBlock,
 } from './matribox-edit.ts';
 
+/** Reads of the slot after a save before giving up, and the pause between them. */
+const SAVE_CHECKS = 3;
+const SAVE_CHECK_MS = 300;
 const round = (n: number) => String(Number(n.toFixed(2)));
 const experimental = (lines: readonly string[]) => [...lines, EXPERIMENTAL].join('\n');
 const firstSentence = (text: string) => /^.*?[.!?](\s|$)/s.exec(text.trim())?.[0].trim() ?? text.trim();
@@ -212,15 +215,29 @@ export class MatriboxSession {
     if (options.confirm.trim().toUpperCase() !== label) throw new Error(`confirm must be "${label}" to write that slot`);
     const name = checkMbPresetName(options.name);
     return this.#use(async (unit) => {
+      const loaded = (await this.#loaded(unit)).raw;
       const old = await unit.read(mbReadPreset(index));
       const backup = await this.#writeBackup(label, index, old);
       try {
-        await unit.write(mbSavePreset(index, name));
+        unit.post(mbSavePreset(index, name)); // the unit sends no answer to a save
+        await MatriboxSession.#checkSaved(unit, index, name, loaded);
       } catch (error) {
         throw new Error(`${error instanceof Error ? error.message : String(error)} (backup kept: ${backup})`, { cause: error });
       }
       return experimental([`Saved the loaded preset to ${label} "${name}".`, `Backup of the old ${label}: ${backup}`]);
     });
+  }
+
+  /** A save is checked by reading the slot back: the name in the preset list, the chain and the parameters. */
+  static async #checkSaved(unit: MatriboxConnection, index: number, name: string, loaded: MbPreset): Promise<void> {
+    const sameAs = (preset: MbPreset, id: number) => toHex(preset.sections.find((s) => s.id === id)?.body ?? new Uint8Array()) === toHex(loaded.sections.find((s) => s.id === id)?.body ?? new Uint8Array());
+    for (let attempt = 0; attempt < SAVE_CHECKS; attempt++) {
+      if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, SAVE_CHECK_MS));
+      const listed = parseMbPresetNames(await unit.read(mbReadPresetNames()))[index]?.name.trim();
+      const stored = parseMbPreset(await unit.read(mbReadPreset(index)));
+      if (listed === name && sameAs(stored, 4) && sameAs(stored, 5)) return;
+    }
+    throw new Error(`${mbPresetLabel(index)} does not hold "${name}" after the save: the unit did not store it`);
   }
 
   async #writeBackup(label: string, index: number, data: Uint8Array): Promise<string> {

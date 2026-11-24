@@ -17,8 +17,10 @@ export interface MatriboxPorts {
 export interface MatriboxConnection {
   /** Sends a read request frame (mbRead…) and resolves with the reply's decompressed data. */
   read(request: Uint8Array): Promise<Uint8Array>;
-  /** Sends a write frame (mbSet…, mbSelectPreset, mbSavePreset) and resolves once the unit echoes it. */
+  /** Sends a write frame (mbSet…, mbSelectPreset, chain edits) and resolves once the unit echoes it. */
   write(frame: Uint8Array): Promise<void>;
+  /** Sends a write frame the unit does not answer (mbSavePreset): check its effect with a read. */
+  post(frame: Uint8Array): void;
   close(): void;
 }
 
@@ -40,7 +42,7 @@ function tryParse(bytes: Uint8Array): MbFrame | null {
   }
 }
 
-export function matriboxLink(ports: MatriboxPorts, timeoutMs: number = MATRIBOX_TIMEOUT_MS): Pick<MatriboxConnection, 'read' | 'write'> {
+export function matriboxLink(ports: MatriboxPorts, timeoutMs: number = MATRIBOX_TIMEOUT_MS): Pick<MatriboxConnection, 'read' | 'write' | 'post'> {
   /** Sends `frame` and resolves with the data of the first message `accepts` takes. */
   const exchange = (frame: Uint8Array, type: number, accepts: (data: Uint8Array, sent: Uint8Array) => boolean, noAnswer: string): Promise<Uint8Array> => {
     const sent = parseMbFrame(frame);
@@ -90,6 +92,10 @@ export function matriboxLink(ports: MatriboxPorts, timeoutMs: number = MATRIBOX_
   return {
     read: async (request) => exchange(request, MB_READ, startsWith, 'answer the read'),
     write: async (frame) => void (await exchange(frame, MB_WRITE, confirms, 'confirm the write')),
+    post: (frame) => {
+      if (parseMbFrame(frame).type !== MB_WRITE) throw new Error('Matribox link: post sends write frames only');
+      ports.send(frame);
+    },
   };
 }
 

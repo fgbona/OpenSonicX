@@ -2,7 +2,7 @@
  * A simulated Matribox II Pro: answers the read requests with the replies captured from the owner's
  * unit (packages/core/test/fixtures), paged as the unit pages them, and applies the write frames to
  * an in-memory edit buffer the way docs/matribox.md describes, echoing each write as the unit does
- * (a chain edit is answered with the chain notice instead, like the unit).
+ * (a chain edit is answered with the chain notice instead, and a save with nothing, like the unit).
  * Never a real device.
  */
 import { readFileSync } from 'node:fs';
@@ -74,6 +74,8 @@ export class FakeMatribox {
   noise: Uint8Array[] = [NOTIFICATION];
   /** When false the unit applies writes but sends no echo. */
   echoes = true;
+  /** When true the unit drops saves (to test that a save is checked by reading it back). */
+  dropsSaves = false;
   #names = dataOf(this.#replies.get(key(mbReadPresetNames()))!);
   #current = 0x42;
   /** Stored presets by number (1211 bytes, number first). */
@@ -101,6 +103,10 @@ export class FakeMatribox {
     this.received.push(request);
     const frame = parseMbFrame(bytes);
     const message = unwrapMbMessage(frame.payload);
+    if (frame.type === MB_WRITE && message.cmd === 0x05) {
+      if (!this.dropsSaves) this.#apply(message.cmd, message.data);
+      return; // the unit answers a save with nothing
+    }
     if (frame.type === MB_WRITE) {
       const notice = this.#apply(message.cmd, message.data);
       if (this.echoes) this.#reply(replyFrames(wrapMbMessage(message.flag, message.cmd, notice ?? message.data)));

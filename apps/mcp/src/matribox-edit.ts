@@ -6,7 +6,7 @@
 import { MB_SLOTS, type MbCatalog, type MbModel, type MbModule, type MbParam, type MbResolvedBlock, type MbResolvedPreset } from '@pocket-master/core';
 
 export const EXPERIMENTAL =
-  'Experimental: Matribox writes are not validated on the hardware yet. Check the result with matribox_get_preset and by ear on the unit.';
+  'Experimental: Matribox writes are validated on one unit only so far. Check the result with matribox_get_preset and by ear on the unit.';
 
 const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 const round = (n: number) => String(Number(n.toFixed(2)));
