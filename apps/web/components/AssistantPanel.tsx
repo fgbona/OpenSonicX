@@ -1,17 +1,16 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { presetLabel, type Difference, type ToneHost, type ToneSnapshot } from '@pocket-master/core';
+import type { Difference } from '@pocket-master/core';
 import { forgetKeys, loadKey, loadOrder, loadPaid, loadRemember, loadRotate, maskKey, removeKey, saveKey, saveOrder, savePaid, saveRemember, saveRotate, type PaidEntry } from '@/lib/aiKey';
 import { nextReset, recordRequest, usedToday, useAiUsage } from '@/lib/aiUsage';
-import { ask, askedToSave, BusyError, KeyError, providerOf, QuotaError, RegionError, ROUTE, type AiModel, type Converse, type Cooldown, type Provider, type Turn } from '@/lib/assistant';
+import { ask, BusyError, KeyError, providerOf, QuotaError, RegionError, ROUTE, type AiModel, type Converse, type Cooldown, type Provider, type ToneAgent, type Turn } from '@/lib/assistant';
 import { converseGemini, GEMINI_MODELS, testGeminiKey } from '@/lib/gemini';
 import { converseGroq, GROQ_MODEL, testGroqKey } from '@/lib/groq';
 import { converseWith, paidById, paidName } from '@/lib/providers';
 import { moveInOrder, orderRoute, rotated } from '@/lib/route-order';
 import { answerCost, loadPrices, priceOf, type Usage } from '@/lib/prices';
 import { recordSpend, spentToday } from '@/lib/spend';
-import { toneChanges } from '@/lib/tone-changes';
 import type { MessageKey } from '@/lib/i18n';
 import { Changes, DIFF_KEY } from './PresetFiles';
 import { PaidProviders } from './PaidProviders';
@@ -20,7 +19,11 @@ import { InfoTip } from './InfoTip';
 import { useI18n } from './I18n';
 
 interface Props {
-  host: ToneHost;
+  agent: ToneAgent;
+  /** The examples' lead-in; each pedal names its own slots ("save it on P45"). */
+  hint?: MessageKey;
+  /** What goes to the provider. */
+  privacy?: MessageKey;
 }
 
 interface Message {
@@ -69,13 +72,6 @@ const SETUP: readonly {
     test: (k) => testGeminiKey(k), usage: 'https://aistudio.google.com/rate-limit',
   },
 ];
-
-/**
- * What the reply changed on the sound; undefined when another preset is loaded now (nothing to compare).
- * A save to another slot moves the index but keeps the sound, so it still compares.
- */
-const changed = (before: ToneSnapshot, after: ToneSnapshot, off: string, moved: { loaded: boolean; saved: boolean }) =>
-  moved.loaded || (before.index !== after.index && !moved.saved) ? undefined : toneChanges(before.preset, after.preset, off);
 
 /** One provider's key: how to get it, or the saved one with a way to remove it. */
 function KeySetup({ setup, saved, kept, onSaved, onRemove }: { setup: (typeof SETUP)[number]; saved: string | null; kept: boolean; onSaved: (key: string, kept: boolean) => void; onRemove: () => void }) {
@@ -127,7 +123,7 @@ function KeySetup({ setup, saved, kept, onSaved, onRemove }: { setup: (typeof SE
 }
 
 /** Chat that builds tones on the pedal from a description, with the person's own free AI keys. */
-export function AssistantPanel({ host }: Props) {
+export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assistant.privacy' }: Props) {
   const { t, lang } = useI18n();
   const [keys, setKeys] = useState<Partial<Record<Provider, string>>>({});
   const [paid, setPaid] = useState<readonly PaidEntry[]>([]);
@@ -189,10 +185,8 @@ export function AssistantPanel({ host }: Props) {
 
   /** Asked to save, but the model did not propose it: open the Save dialog itself; nothing is written until confirmed. */
   const offerSave = (message: string) => {
-    const slot = askedToSave(message);
-    if (slot === null) return;
-    setMessages((m) => [...m, { role: 'assistant', text: t('assistant.saveOpened', { slot: presetLabel(slot) }) }]);
-    void host.proposeSave(slot, host.snapshot().name);
+    const slot = agent.offerSave(message);
+    if (slot !== null) setMessages((m) => [...m, { role: 'assistant', text: t('assistant.saveOpened', { slot }) }]);
   };
 
   const send = async () => {
@@ -201,7 +195,7 @@ export function AssistantPanel({ host }: Props) {
     setDraft('');
     setMessages((m) => [...m, { role: 'user', text: message }]);
     setWorking(true);
-    let before: ToneSnapshot | null = null;
+    let changed: ReturnType<ToneAgent['watch']> | null = null;
     let proposed = false;
     let loaded = false;
     const used: Partial<Record<AiModel, Usage>> = {};
@@ -218,9 +212,9 @@ export function AssistantPanel({ host }: Props) {
       return costs;
     };
     try {
-      before = host.snapshot();
+      changed = agent.watch(t('assistant.off'));
       const result = await ask({
-        keys: allKeys, cooldown, converse, route, turns, message, host, language: lang === 'pt' ? 'Brazilian Portuguese' : 'English',
+        keys: allKeys, cooldown, converse, route, turns, message, agent, language: lang === 'pt' ? 'Brazilian Portuguese' : 'English',
         onRequest: (model) => recordRequest(model),
         onCooldown: setCooldown,
         onLimits: (model, remaining, limit) => setLimits((l) => ({ ...l, [model]: { remaining, limit } })),
@@ -243,7 +237,7 @@ export function AssistantPanel({ host }: Props) {
       setMessages((m) => [
         ...m,
         ...refused.map((p): Message => ({ role: 'error', text: t('assistant.keyRejected', { provider: providerName(p, t('assistant.paidTag')) }) })),
-        { role: 'assistant', text: reply, model: result.model, cost: costs[result.model], changes: changed(before!, host.snapshot(), t('assistant.off'), { loaded, saved: proposed }) },
+        { role: 'assistant', text: reply, model: result.model, cost: costs[result.model], changes: changed!({ loaded, saved: proposed }) },
       ]);
       if (!proposed) offerSave(message);
     } catch (error) {
@@ -257,7 +251,7 @@ export function AssistantPanel({ host }: Props) {
       // The next answer is told this one was cut, so a model does not lose the request (the preset it gets is current).
       setTurns((h) => [...h, { role: 'user', text: message }, { role: 'assistant', text: `(This answer was interrupted: ${error instanceof Error ? error.message : String(error)})` }]);
       const link = error instanceof RegionError ? { href: REGIONS, text: t('assistant.regionLink') } : undefined;
-      setMessages((m) => [...m, { role: 'error', text, link, changes: before ? changed(before, host.snapshot(), t('assistant.off'), { loaded, saved: proposed }) : undefined }]);
+      setMessages((m) => [...m, { role: 'error', text, link, changes: changed?.({ loaded, saved: proposed }) }]);
       void settleCosts(); // a cut answer was paid for too
       // Cut after the sound changed: the tone is there, so the save that was asked for is still offered.
       if (!proposed && error instanceof QuotaError && error.partial) offerSave(message);
@@ -336,13 +330,13 @@ export function AssistantPanel({ host }: Props) {
                 }}>{t('assistant.forgetKeys')}</button>
               )}
             </div>
-            <p className="muted small">{t('assistant.privacy')}</p>
+            <p className="muted small">{t(privacy)}</p>
           </>
         ) : (
           <>
             {messages.length === 0 && (
               <div className="assistant-examples">
-                <p className="muted">{t('assistant.hint')}</p>
+                <p className="muted">{t(hint)}</p>
                 {EXAMPLES.map((k) => (
                   <button key={k} type="button" className="btn btn-small" onClick={() => { setDraft(t(k)); input.current?.focus(); }}>{t(k)}</button>
                 ))}
@@ -373,7 +367,7 @@ export function AssistantPanel({ host }: Props) {
                 <span key={s.provider}>{i > 0 && ' · '}<a href={s.usage} target="_blank" rel="noreferrer">{providerName(s.provider)}</a></span>
               ))}
             </p>
-            <p className="muted small">{t('assistant.privacy')}</p>
+            <p className="muted small">{t(privacy)}</p>
           </>
         )}
       </div>

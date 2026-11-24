@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { EMPTY_HISTORY, record, redo, undo, type Snapshot } from '../lib/history.ts';
+import { EMPTY_HISTORY, record, redo, undo, type History, type Snapshot } from '../lib/history.ts';
 
 // Presets stand in as plain objects: the history only keeps and returns them.
 const SNAPSHOTS = Array.from({ length: 150 }, (_, n) => ({ n }) as unknown as Snapshot);
@@ -38,7 +38,7 @@ test('a new edit after an undo drops what could have been redone', () => {
 });
 
 test('the history keeps at most 100 steps', () => {
-  const h = Array.from({ length: 150 }, (_, i) => i).reduce((acc, i) => record(acc, p(i), `k${i}`, i * 5000), EMPTY_HISTORY);
+  const h = Array.from({ length: 150 }, (_, i) => i).reduce<History>((acc, i) => record(acc, p(i), `k${i}`, i * 5000), EMPTY_HISTORY);
   assert.equal(h.past.length, 100);
   assert.equal(h.past[0]!.before, p(50));
 });

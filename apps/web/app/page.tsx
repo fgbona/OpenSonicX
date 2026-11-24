@@ -11,6 +11,8 @@ import { PresetLibrary } from '@/components/PresetLibrary';
 import { addToLibrary } from '@/lib/presetLibrary';
 import { PEDAL_NAMES, presetLabel, TESTED_FIRMWARE, type PresetFile, type ToneHost } from '@pocket-master/core';
 import { AssistantPanel } from '@/components/AssistantPanel';
+import { pocketMasterAgent } from '@/lib/pocketAgent';
+import { useUndoKeys } from '@/lib/useUndoKeys';
 import { Dialog } from '@/components/Dialog';
 import { PresetSidebar } from '@/components/PresetSidebar';
 import { SlotsPanel } from '@/components/SlotsPanel';
@@ -75,6 +77,7 @@ export default function EditorPage() {
       void readNames();
     }),
   }), [assistantBase, loadPresetNow, readNames]);
+  const toneAgent = useMemo(() => pocketMasterAgent(toneHost), [toneHost]);
   const closeSave = () => {
     setSaveOpen(false);
     proposal?.resolve(savedRef.current ? 'saved' : 'cancelled');
@@ -87,26 +90,12 @@ export default function EditorPage() {
     if (ok) addToLibrary(file);
     return ok;
   };
-  // ⌘Z / Ctrl+Z undoes a live edit, ⇧⌘Z / Ctrl+Y redoes; text fields keep their own undo.
-  const { undo, redo } = pm;
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
-      const key = e.key.toLowerCase();
-      if (key !== 'z' && key !== 'y') return;
-      const target = e.target as HTMLElement | null;
-      if (target?.closest('input, textarea, select, [contenteditable="true"], dialog[open]')) return;
-      e.preventDefault();
-      if (key === 'y' || e.shiftKey) redo();
-      else undo();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [undo, redo]);
   const linked = pm.status === 'connected' || pm.status === 'reading';
   // The Matribox II Pro has its own editor; everything below is the Pocket Master's.
   const matribox = linked && pm.pedal === 'matribox' ? pm.matribox : null;
   const connected = linked && !matribox;
+  // The Matribox editor has its own Undo (MatriboxEditor).
+  useUndoKeys(pm.undo, pm.redo, !matribox);
   // The window (and the desktop app's title bar) names the connected pedal.
   const pedalName = linked && pm.pedal ? PEDAL_NAMES[pm.pedal] : null;
   // The sidebar lists every preset: read the names once the pedal is connected.
@@ -193,7 +182,7 @@ export default function EditorPage() {
         )}
         {connected && (
           <>
-            {pm.preset && <AssistantPanel host={toneHost} />}
+            {pm.preset && <AssistantPanel agent={toneAgent} />}
             <Tone3000Panel connected={connected} busy={pm.busy !== null} irNames={pm.irNames} profileNames={pm.profileNames} exclusive={pm.exclusive} error={pm.error} />
             <SlotsPanel connected={connected} busy={pm.busy !== null} irNames={pm.irNames} profileNames={pm.profileNames} exclusive={pm.exclusive} error={pm.error} />
           </>

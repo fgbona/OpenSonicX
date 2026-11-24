@@ -349,6 +349,9 @@ export const en = {
   'mb.backupNotKept': "This browser did not keep the backup: download it.",
   'mb.backups': "Matribox backups",
   'mb.download': "Download",
+  'mb.assistantNeedsCatalog': "The tone assistant picks models by the real gear they are based on, which only the model catalog says: choose your alg_data.json above to use it.",
+  'mb.assistantPrivacy': "What you write here, the loaded preset and the model catalog go to the provider of your key (Groq or Google), and nowhere else. On Gemini's free plan, Google may use them to improve its products.",
+  'mb.assistantHint': 'Describe a sound, or start from one of these (then "warmer", "less gain", "save it on 12A"…):',
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -699,4 +702,7 @@ export const pt: Record<MessageKey, string> = {
   'mb.backupNotKept': "Este navegador não guardou o backup: baixe-o.",
   'mb.backups': "Backups da Matribox",
   'mb.download': "Baixar",
+  'mb.assistantNeedsCatalog': "O assistente de timbre escolhe os modelos pelo equipamento real em que se baseiam, e só o catálogo de modelos diz isso: escolha o seu alg_data.json acima para usá-lo.",
+  'mb.assistantPrivacy': "O que você escreve aqui, o preset carregado e o catálogo de modelos vão para o provedor da sua chave (Groq ou Google), e para nenhum outro lugar. No plano gratuito do Gemini, o Google pode usar esse conteúdo para melhorar os produtos dele.",
+  'mb.assistantHint': 'Descreva um som ou comece por um destes (depois "mais quente", "menos gain", "salva no 12A"…):',
 };

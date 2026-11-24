@@ -2,8 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ask, askedToSave, BUSY_WAIT_MS, BusyError, KeyError, post, QuotaError, ROUTE, type AiModel, type Converse } from '../lib/assistant.ts';
 import type { ToneHost } from '@pocket-master/core';
+import { pocketMasterAgent } from '../lib/pocketAgent.ts';
 
-const host = {} as ToneHost;
+const agent = pocketMasterAgent({} as ToneHost);
 const now = new Date('2026-11-21T20:00:00Z');
 const later = (min: number) => new Date(now.getTime() + min * 60_000);
 
@@ -19,7 +20,7 @@ function models(script: Record<string, (() => string) | Error>) {
   return { asked, converse };
 }
 
-const base = { turns: [], message: 'hi', host, onRequest: () => {}, now: () => now };
+const base = { turns: [], message: 'hi', agent, onRequest: () => {}, now: () => now };
 
 test('Groq answers first when it has a key, Gemini otherwise', async () => {
   const both = models({});

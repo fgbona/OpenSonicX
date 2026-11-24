@@ -4,7 +4,7 @@
  * so any provider can take the next message. Free quotas: Groq first (about 1,000 requests a day),
  * then Gemini Flash, then Gemini Flash-Lite; a used-up model hands the message to the next.
  */
-import { CHAT_INSTRUCTIONS, CHAT_INSTRUCTIONS_THOROUGH, chatContext, currentPresetText, type JsonSchema, type ToneHost } from '@pocket-master/core';
+import type { ChatTool, Difference, JsonSchema } from '@pocket-master/core';
 
 /** Paid providers, each used with the model the person picked (providers.ts). */
 export type PaidId = 'openrouter' | 'anthropic' | 'openai' | 'gemini-paid' | 'groq-paid' | 'xai' | 'deepseek' | 'mistral' | 'cerebras';
@@ -22,7 +22,7 @@ export interface Turn {
 }
 
 // "grave" alone is also "low-pitched" in Portuguese, so it counts only as "grave no/na/em".
-const SAVE_VERB = /\b(salv\w*|save|store|gravar?|grave\s+(?:no|na|em)\b)/i;
+export const SAVE_VERB = /\b(salv\w*|save|store|gravar?|grave\s+(?:no|na|em)\b)/i;
 const SLOT_WORD = /\b(?:p|preset|slot)\s*0?(\d{1,2})\b/i;
 const SLOT_AFTER = /\b(?:no|na|em|in|to|into)\s+0?(\d{1,2})\b/i;
 
@@ -78,8 +78,27 @@ export async function post(fetchFn: typeof fetch, url: string, init: RequestInit
   }
 }
 
-/** Tools whose success changes the pedal (or opens the Save dialog): a request that ran one is not repeated elsewhere. */
-const ACTS = new Set(['edit_preset', 'undo_edit', 'revert_preset', 'select_preset', 'save_preset', 'load_saved_tone', 'keep_tone']);
+/**
+ * What the assistant works on: one pedal's tools, instructions and preset text, and the editor's
+ * side of a message (what changed, the Save dialog). The providers and the panel only see this.
+ */
+export interface ToneAgent {
+  readonly tools: readonly ChatTool[];
+  /** Tools whose success changes the pedal (or opens the Save dialog): a request that ran one is not repeated elsewhere. */
+  readonly acts: ReadonlySet<string>;
+  /** The system instructions; paid providers get the thorough ones. */
+  instructions(thorough: boolean): string;
+  /** The first message's context: the loaded preset and the models to pick from. */
+  context(thorough: boolean): string;
+  /** The loaded preset as it is now. */
+  current(): string;
+  /** Runs the tools of one message; it refuses sound changes once the person loads another preset. */
+  runner(): (name: string, args: unknown) => Promise<{ ok: boolean; text: string }>;
+  /** Called as a message is sent; the function it returns lists what the answer changed (undefined: another preset is loaded now). */
+  watch(off: string): (moved: { loaded: boolean; saved: boolean }) => readonly Difference[] | undefined;
+  /** The message asked to save in a slot the model did not propose: opens the Save dialog and returns the slot's label, else null. */
+  offerSave(message: string): string | null;
+}
 
 /** The provider refused the key itself (wrong, deleted, or not allowed). */
 export class KeyError extends Error {
@@ -93,19 +112,15 @@ export class KeyError extends Error {
 /** Google does not offer the Gemini API (or its free tier) where the person is. */
 export class RegionError extends Error {}
 
-/** The system instructions: free plans get the short ones; paid providers the thorough ones too. */
-export const instructions = (thorough?: boolean) => (thorough ? `${CHAT_INSTRUCTIONS} ${CHAT_INSTRUCTIONS_THOROUGH}` : CHAT_INSTRUCTIONS);
-
 /**
  * The new message's text for the first request, and for the later ones of the same message: the
  * model list goes only once (the model has picked by then, and list_models is there), which keeps
  * a tone within Groq's free tokens a minute and a day.
  */
-export function requestTexts(host: ToneHost, turns: readonly Turn[], message: string, language?: string, thorough = false): { first: string; later: string } {
+export function requestTexts(agent: ToneAgent, turns: readonly Turn[], message: string, language?: string, thorough = false): { first: string; later: string } {
   const tail = `\n\nRequest: ${message}${language ? `\n\nAnswer in ${language}.` : ''}`;
-  const preset = currentPresetText(host);
-  const later = `${turns.length === 0 ? 'Loaded preset' : 'Loaded preset now'}:\n${preset}${tail}`;
-  return { first: turns.length === 0 ? `${chatContext(host, thorough ? 'full' : 'compact')}${tail}` : later, later };
+  const later = `${turns.length === 0 ? 'Loaded preset' : 'Loaded preset now'}:\n${agent.current()}${tail}`;
+  return { first: turns.length === 0 ? `${agent.context(thorough)}${tail}` : later, later };
 }
 
 /**
@@ -132,7 +147,7 @@ export interface ConverseOptions {
   readonly model: AiModel;
   readonly turns: readonly Turn[];
   readonly message: string;
-  readonly host: ToneHost;
+  readonly agent: ToneAgent;
   /** The editor's language; models otherwise drift to English, the language of the preset text. */
   readonly language?: string;
   /** Pauses inside a message (a short per-minute limit); tests pass a fake. */
@@ -191,7 +206,7 @@ export async function ask(options: Omit<ConverseOptions, 'key' | 'model' | 'onRe
         onLimits: (remaining, limit) => options.onLimits?.(model, remaining, limit),
         onUsage: (input, output, cost) => options.onModelUsage?.(model, input, output, cost),
         onStep: (tool, ok, text) => {
-          if (ok && ACTS.has(tool)) acted = true;
+          if (ok && options.agent.acts.has(tool)) acted = true;
           options.onStep?.(tool, ok, text);
         },
       });

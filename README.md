@@ -105,6 +105,10 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
   `/Applications/Matribox II PRO.app/Contents/Frameworks/App.framework/Resources/flutter_assets/assets/alg/alg_data.json`)
   and it stays in that browser; the desktop app reads it from the installed app (or
   `MATRIBOX_CATALOG`). Without it the presets and chains still show, by module number.
+  Undo and Redo cover every live edit there. The **tone assistant** works on the Matribox too,
+  with the same free keys: it picks models by the real gear they are based on (from your catalog,
+  which it needs), builds the whole chain or adjusts it, shows what changed, and saving still
+  goes through the Save dialog for you to confirm.
 
 ## What works where
 

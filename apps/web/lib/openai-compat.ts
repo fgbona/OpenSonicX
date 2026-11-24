@@ -4,8 +4,7 @@
  * the person's own key. One message runs one tool loop; quotas, overloads and refused keys become
  * the router's errors.
  */
-import { CHAT_TOOLS, runChatTool, type ChatGuard } from '@pocket-master/core';
-import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, QuotaError, instructions, requestTexts, toToolSchema, type ConverseOptions, type Provider } from './assistant.ts';
+import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, QuotaError, requestTexts, toToolSchema, type ConverseOptions, type Provider, type ToneAgent } from './assistant.ts';
 
 /** When a 429 does not say how long to wait. */
 const DEFAULT_WAIT_MS = 60_000;
@@ -35,7 +34,7 @@ type Message =
   | { role: 'tool'; tool_call_id: string; name: string; content: string };
 type ToolCall = { id: string; type: 'function'; function: { name: string; arguments: string } };
 
-const TOOLS = CHAT_TOOLS.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: toToolSchema(t.parameters) } }));
+const tools = (agent: ToneAgent) => agent.tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: toToolSchema(t.parameters) } }));
 
 const auth = (key: string) => ({ Authorization: `Bearer ${key}` });
 
@@ -75,14 +74,14 @@ export interface ChatEndpoint {
 
 /** Sends one message to an OpenAI-style provider, runs the tools it asks for, and returns its answer. */
 export async function converseChat(endpoint: ChatEndpoint, options: ConverseOptions): Promise<string> {
-  const { key, host, onRequest, onStep, onLimits, onUsage, fetchFn = fetch, now = () => new Date(), wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms)) } = options;
+  const { key, agent, onRequest, onStep, onLimits, onUsage, fetchFn = fetch, now = () => new Date(), wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms)) } = options;
   const messages: Message[] = [
-    { role: 'system', content: instructions(options.thorough) },
+    { role: 'system', content: agent.instructions(options.thorough ?? false) },
     ...options.turns.map((t): Message => ({ role: t.role, content: t.text })),
   ];
-  const text = requestTexts(host, options.turns, options.message, options.language, options.thorough);
+  const text = requestTexts(agent, options.turns, options.message, options.language, options.thorough);
   const asked = messages.push({ role: 'user', content: text.first }) - 1;
-  const guard: ChatGuard = { index: host.snapshot().index };
+  const run = agent.runner();
   let retriedToolCall = false;
   let waited = 0;
   for (let request = 0; request < MAX_REQUESTS; request++) {
@@ -90,7 +89,7 @@ export async function converseChat(endpoint: ChatEndpoint, options: ConverseOpti
     const r = await post(fetchFn, `${endpoint.api}/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...auth(key) },
-      body: JSON.stringify({ model: endpoint.model, messages, tools: TOOLS, ...(endpoint.cap ? { [endpoint.cap.field]: endpoint.cap.tokens } : {}), ...endpoint.extra }),
+      body: JSON.stringify({ model: endpoint.model, messages, tools: tools(agent), ...(endpoint.cap ? { [endpoint.cap.field]: endpoint.cap.tokens } : {}), ...endpoint.extra }),
     }, now);
     // Readable only if the provider exposes them to the browser; otherwise the meter counts on its own.
     const remaining = Number(r.headers.get('x-ratelimit-remaining-requests') ?? Number.NaN);
@@ -133,7 +132,7 @@ export async function converseChat(endpoint: ChatEndpoint, options: ConverseOpti
       } catch {
         // left null: the tool answers with what was wrong
       }
-      const result = await runChatTool(host, c.function.name, args, guard);
+      const result = await run(c.function.name, args);
       onStep?.(c.function.name, result.ok, result.text);
       messages.push({ role: 'tool', tool_call_id: c.id, name: c.function.name, content: result.text });
     }

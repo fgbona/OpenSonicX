@@ -3,8 +3,7 @@
  * with the person's own paid key. The browser header is what Anthropic asks of calls made from a
  * page; the key goes only in x-api-key.
  */
-import { CHAT_TOOLS, runChatTool, type ChatGuard } from '@pocket-master/core';
-import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, QuotaError, instructions, requestTexts, toToolSchema, type ConverseOptions } from './assistant.ts';
+import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, QuotaError, requestTexts, toToolSchema, type ConverseOptions, type ToneAgent } from './assistant.ts';
 
 const API = 'https://api.anthropic.com/v1';
 /** A tone's edit list and a few sentences fit well within this. */
@@ -25,7 +24,7 @@ type Block =
 type Message = { role: 'user' | 'assistant'; content: string | Block[] };
 type ApiError = { error?: { type?: string; message?: string } };
 
-const TOOLS = CHAT_TOOLS.map((t) => ({ name: t.name, description: t.description, input_schema: toToolSchema(t.parameters) }));
+const tools = (agent: ToneAgent) => agent.tools.map((t) => ({ name: t.name, description: t.description, input_schema: toToolSchema(t.parameters) }));
 
 /** The key's model ids, which also checks the key; 'invalid' when refused, 'unavailable' when it could not answer. */
 export async function listClaudeModels(key: string, fetchFn: typeof fetch = fetch): Promise<readonly string[] | 'invalid' | 'unavailable'> {
@@ -42,17 +41,17 @@ export async function listClaudeModels(key: string, fetchFn: typeof fetch = fetc
 
 /** Sends one message to Claude, runs the tools it asks for, and returns its answer. */
 export async function converseClaude(model: string, options: ConverseOptions): Promise<string> {
-  const { key, host, onRequest, onStep, onUsage, fetchFn = fetch, now = () => new Date() } = options;
+  const { key, agent, onRequest, onStep, onUsage, fetchFn = fetch, now = () => new Date() } = options;
   const messages: Message[] = options.turns.map((t) => ({ role: t.role, content: t.text }));
-  const text = requestTexts(host, options.turns, options.message, options.language, options.thorough);
+  const text = requestTexts(agent, options.turns, options.message, options.language, options.thorough);
   const asked = messages.push({ role: 'user', content: text.first }) - 1;
-  const guard: ChatGuard = { index: host.snapshot().index };
+  const run = agent.runner();
   for (let request = 0; request < MAX_REQUESTS; request++) {
     onRequest();
     const r = await post(fetchFn, `${API}/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers(key) },
-      body: JSON.stringify({ model, max_tokens: MAX_TOKENS, system: instructions(options.thorough), tools: TOOLS, messages }),
+      body: JSON.stringify({ model, max_tokens: MAX_TOKENS, system: agent.instructions(options.thorough ?? false), tools: tools(agent), messages }),
     }, now);
     const body = (await r.json().catch(() => ({}))) as ApiError & { content?: Block[]; usage?: { input_tokens?: number; output_tokens?: number } };
     if (body.usage) onUsage?.(body.usage.input_tokens ?? 0, body.usage.output_tokens ?? 0);
@@ -71,7 +70,7 @@ export async function converseClaude(model: string, options: ConverseOptions): P
     messages.push({ role: 'assistant', content });
     const results: Block[] = [];
     for (const c of calls) {
-      const result = await runChatTool(host, c.name, c.input, guard);
+      const result = await run(c.name, c.input);
       onStep?.(c.name, result.ok, result.text);
       results.push({ type: 'tool_result', tool_use_id: c.id, content: result.text, ...(result.ok ? {} : { is_error: true }) });
     }
