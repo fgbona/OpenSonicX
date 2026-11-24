@@ -25,6 +25,6 @@ const timings = join(home, 'timings.log');
 await mkdir(home, { recursive: true });
 const onTiming = ({ tool, ms, ok }: { tool: string; ms: number; ok: boolean }) =>
   void appendFile(timings, `${new Date().toISOString()} ${tool} ${ms} ms${ok ? '' : ' (error)'}\n`).catch((e) => console.error('could not write timings', e));
-const matribox = new MatriboxSession(() => connectMatribox(), () => loadMatriboxCatalog(), { backups: join(home, 'backups'), presets: join(home, 'presets', 'matribox') });
+const matribox = new MatriboxSession(() => connectMatribox(), () => loadMatriboxCatalog(), { backups: join(home, 'backups'), presets: join(home, 'presets', 'matribox'), irs: join(home, 'irs') });
 await createServer(session, { onTiming, matribox, midiPorts: midiPortNames }).connect(new StdioServerTransport());
 console.error(`Sonicake pedals MCP server ready (files in ${home})`);

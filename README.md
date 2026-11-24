@@ -282,9 +282,11 @@ Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
   `matribox_set_bpm`, `matribox_looper`, `matribox_drum`, `matribox_ctrl`, `matribox_quick_knob`
   (on the unit's MIDI channel, default 1; its MIDI In Source must include USB). The model list comes from Sonicake's official
   Matribox II PRO app, which must be installed (or set `MATRIBOX_CATALOG` to its `alg_data.json`).
-  Loading your own IRs and captures into the Matribox is not available yet: the WAV conversion
-  and the transport match the official editor byte for byte, one field of the IR message is still
-  unknown. See [docs/matribox.md](docs/matribox.md).
+  `matribox_load_ir` (experimental, not yet checked on the unit) loads a WAV from
+  `~/.pocket-master-editor/irs` into user IR slot 1..20, converted the way the official editor does
+  it and rebuilt byte for byte from its uploads; `confirm` repeats `IR<slot>` and an occupied slot
+  is only overwritten with `replace: true`. Loading your own captures is not available yet. See
+  [docs/matribox.md](docs/matribox.md).
 
 ## Protocol
 

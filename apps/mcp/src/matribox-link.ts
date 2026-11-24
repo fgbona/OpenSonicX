@@ -4,8 +4,9 @@
  * with the request's argument (the unit repeats it); a write is confirmed by the unit's echo, the
  * same flag, cmd and data, except a chain edit (01/02 00 04 01: add, move, remove, change model), which
  * the unit answers with its chain notice (00 00 04 01 + the new chain) instead. The whole-preset
- * write (flag 2, paged) is answered with flag 0, cmd 0x17, `02 00 00 10` (capture mb-20). Anything else the unit sends meanwhile (footswitch and knob
- * notifications) is skipped. One request at a time: the session queues calls.
+ * write (flag 2, paged) is answered with flag 0, cmd 0x17, `02 00 00 10` (capture mb-20); a user IR
+ * upload (flag 1, cmd 0x14, paged) with flag 3, the same cmd, `slot, status, 0`. Anything else
+ * the unit sends meanwhile (footswitch and knob notifications) is skipped. One request at a time: the session queues calls.
  */
 import { isMbControlChange, joinMbPages, MB_READ, MB_REPLY, MB_WRITE, parseMbFrame, unwrapMbMessage, type MbFrame } from '@pocket-master/core';
 import { MATRIBOX, openPedalPorts } from './devices.ts';
@@ -22,6 +23,11 @@ export interface MatriboxConnection {
   write(frame: Uint8Array): Promise<void>;
   /** Sends the pages of a whole-preset write (mbWritePreset) and resolves once the unit acknowledges it. */
   writePreset(frames: readonly Uint8Array[]): Promise<void>;
+  /**
+   * Sends the pages of an upload (mbIrUpload: flag 1, cmd 0x14) and resolves with the unit's
+   * acknowledgement: flag 3, the same cmd, `u32 slot, u32 status, u32 0` (status 1 = stored).
+   */
+  upload(frames: readonly Uint8Array[]): Promise<Uint8Array>;
   /** Sends a write frame the unit does not answer (mbSavePreset): check its effect with a read. */
   post(frame: Uint8Array): void;
   /** Sends one MIDI Control Change (mbControlChange: tuner, tempo, looper…); the unit sends no answer. */
@@ -64,7 +70,10 @@ function sentMessage(frames: readonly Uint8Array[], type: number) {
   return unwrapMbMessage(joined);
 }
 
-export function matriboxLink(ports: MatriboxPorts, timeoutMs: number = MATRIBOX_TIMEOUT_MS): Pick<MatriboxConnection, 'read' | 'write' | 'writePreset' | 'post' | 'control'> {
+/** The unit acknowledges an upload with this flag (captures mb-17, mb-17b, mb-17c). */
+const UPLOAD_ACK_FLAG = 3;
+
+export function matriboxLink(ports: MatriboxPorts, timeoutMs: number = MATRIBOX_TIMEOUT_MS): Pick<MatriboxConnection, 'read' | 'write' | 'writePreset' | 'upload' | 'post' | 'control'> {
   /** Sends `frames` and resolves with the data of the first message `answer` takes. */
   const exchange = (frames: readonly Uint8Array[], answer: Answer, what: string, noAnswer: string): Promise<Uint8Array> => {
     return new Promise((resolve, reject) => {
@@ -119,6 +128,12 @@ export function matriboxLink(ports: MatriboxPorts, timeoutMs: number = MATRIBOX_
       const sent = sentMessage(frames, MB_WRITE);
       const ack = { ...PRESET_ACK, accepts: (data: Uint8Array) => equal(data, PRESET_ACK.data) };
       await exchange(frames, ack, `flag ${sent.flag}, cmd ${hex(sent.cmd)}`, 'acknowledge the preset write');
+    },
+    upload: async (frames) => {
+      const sent = sentMessage(frames, MB_WRITE);
+      const slot = sent.data.subarray(0, 4);
+      const ack = { flag: UPLOAD_ACK_FLAG, cmd: sent.cmd, accepts: (data: Uint8Array) => startsWith(data, slot) };
+      return exchange(frames, ack, `flag ${sent.flag}, cmd ${hex(sent.cmd)}`, 'acknowledge the upload');
     },
     post: (frame) => {
       if (parseMbFrame(frame).type !== MB_WRITE) throw new Error('Matribox link: post sends write frames only');

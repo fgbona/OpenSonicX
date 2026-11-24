@@ -9,7 +9,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { buildMbFrames, MB_WRITE } from '../src/matribox/frame.ts';
-import { mbIrSamplesFromWav } from '../src/matribox/ir.ts';
+import { mbIrSamplesFromWav, mbIrUpload } from '../src/matribox/ir.ts';
 import { unwrapMbMessage, wrapMbMessage } from '../src/matribox/message.ts';
 import { fromHex, toHex } from '../src/hex.ts';
 
@@ -48,4 +48,9 @@ test('the IR conversion matches the 1024 samples the official editor sent', { sk
   const data = uploadMessage(uploadFrames()).data;
   const sent = new Int32Array(data.slice(32).buffer);
   assert.deepEqual([...mbIrSamplesFromWav(new Uint8Array(readFileSync(WAV)))], [...sent]);
+});
+
+test('mbIrUpload rebuilds the whole captured upload, checksum field included', { skip }, () => {
+  const frames = mbIrUpload(5, 'MT2 MBoogie  Bad', new Uint8Array(readFileSync(WAV)));
+  assert.deepEqual(frames.map(toHex), uploadFrames().map(toHex));
 });
