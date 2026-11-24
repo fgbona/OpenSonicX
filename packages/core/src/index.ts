@@ -32,3 +32,5 @@ export * from './clo/reference-di.ts';
 export * from './clo/synthetic-di.ts';
 export * from './tone3000.ts';
 export * from './globals.ts';
+export * from './matribox/frame.ts';
+export * from './matribox/catalog.ts';

@@ -3,6 +3,7 @@
 Free, open-source tools for Sonicake guitar pedals. Today: the **Pocket Master Editor**, for
 the **Sonicake Pocket Master** multi-effects pedal, over USB MIDI or Bluetooth. No driver: open
 the page in Chrome, Edge or Opera, plug the pedal in, and read your preset.
+Support for the **Sonicake Matribox II Pro** is in progress ([docs/matribox.md](docs/matribox.md)).
 
 **Open it:** https://fgbona.github.io/OpenSonicX/ (updated
 with every release) · **Download the app:** [latest release](https://github.com/fgbona/OpenSonicX/releases/latest)

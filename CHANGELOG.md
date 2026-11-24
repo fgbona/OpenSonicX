@@ -6,6 +6,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Groundwork for a second device, the Sonicake Matribox II Pro (no UI or MCP tools yet): the
+  core builds and parses its SysEx frames (checksum, nibbles, paged replies), and the model
+  catalog is read from the user's own install of Sonicake's official editor, never shipped here
+  (`MATRIBOX_CATALOG` points to it elsewhere). See [docs/matribox.md](docs/matribox.md).
+
 ## [0.17.1] - 2026-11-23
 
 Polish before 1.0: the README states every feature, no stray "No file chosen" tip, and the MCP
