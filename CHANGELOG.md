@@ -6,6 +6,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- A refused MIDI permission is no longer logged as an error in the browser console: it is the
+  person's choice and the page already explains it (it also showed up in the e2e logs).
+
 ## [1.0.0] - 2026-11-24
 
 First stable release, now **OpenSonicX**. The Pocket Master editor is validated end to end on

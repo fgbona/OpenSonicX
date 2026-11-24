@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { findPedal, pedalPortsKey, webMidiPort } from '../lib/midi.ts';
+import { findPedal, MidiUnavailableError, openMidi, pedalPortsKey, webMidiPort } from '../lib/midi.ts';
 
 const port = (id: string, name: string, state = 'connected') => ({ id, name, state }) as MIDIPort;
 
@@ -42,4 +42,29 @@ test('webMidiPort sends to the output and delivers input messages until stopped'
   assert.deepEqual(got, [[0xf0, 1, 0xf7]]);
   assert.deepEqual(sent.map((b) => [...b]), [[0xf0, 2, 0xf7]]);
   assert.equal(input.onmidimessage, null);
+});
+
+/** Runs openMidi with a browser whose requestMIDIAccess rejects with `error`; returns what was logged. */
+async function refusedWith(error: unknown): Promise<unknown[][]> {
+  const logged: unknown[][] = [];
+  const saved = { navigator: globalThis.navigator, window: (globalThis as { window?: unknown }).window, error: console.error };
+  Object.defineProperty(globalThis, 'navigator', { value: { requestMIDIAccess: () => Promise.reject(error) }, configurable: true });
+  (globalThis as { window?: unknown }).window = { isSecureContext: true };
+  console.error = (...args: unknown[]) => { logged.push(args); };
+  try {
+    await assert.rejects(openMidi(), MidiUnavailableError);
+  } finally {
+    Object.defineProperty(globalThis, 'navigator', { value: saved.navigator, configurable: true });
+    (globalThis as { window?: unknown }).window = saved.window;
+    console.error = saved.error;
+  }
+  return logged;
+}
+
+test('a refused MIDI permission is the person\'s choice: explained, not logged as an error', async () => {
+  assert.deepEqual(await refusedWith(new DOMException('Permission denied.', 'NotAllowedError')), []);
+});
+
+test('any other MIDI failure is still logged', async () => {
+  assert.equal((await refusedWith(new DOMException('boom', 'InvalidStateError'))).length, 1);
 });
