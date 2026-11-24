@@ -40,6 +40,19 @@ and the project uses [Semantic Versioning](https://semver.org/).
   `matribox_add_block`, `matribox_remove_block` and `matribox_move_block` edit one block of the
   chain. Every write works on the owner's unit; change model names the block's storage slot, not
   its chain position (a block whose slot and position differed got the wrong block changed). `lzo1xLiterals` now encodes runs of any length.
+- Matribox II Pro in the web editor and the desktop app (experimental): Connect tells the pedals
+  apart by their MIDI port name and shows the Matribox's own editor; the Pocket Master's editor is
+  unchanged (it stays first when both are plugged in). The Matribox editor lists the 240 presets
+  (1A..60D) and loads one (asking first over live edits), shows the loaded preset's chain in signal
+  order with each model and the gear it is based on, and edits it live: block on/off, parameters
+  within the catalog's range, change model (picker grouped by module), add, move and remove
+  blocks. Save to a slot asks for an explicit confirmation, keeps a backup of the slot in the
+  browser first (downloadable, the MCP server's format) and checks the save by reading the slot
+  back. The model catalog is the owner's own `alg_data.json`: picked once in the browser and kept
+  there (IndexedDB), read from the official app's install (or `MATRIBOX_CATALOG`) by the desktop
+  app; never bundled or fetched. Without it, presets and chains still show by module number and
+  model id. Core gains `matriboxLink` (the request/answer rules over any MIDI port) and
+  `pedalOfPort`; tests run against a simulated unit with an invented catalog.
 
 ## [0.17.1] - 2026-11-23
 

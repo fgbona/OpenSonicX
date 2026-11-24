@@ -1,4 +1,4 @@
-import type { MidiPort } from '@pocket-master/core';
+import { pedalOfPort, type MidiPort } from '@pocket-master/core';
 
 const PORT_HINT = /pocket\s*master/i;
 
@@ -24,6 +24,11 @@ export async function openMidi(): Promise<MIDIAccess> {
 
 export function pickPocketMaster<T extends MIDIPort>(ports: readonly T[]): T | undefined {
   return ports.find((p) => PORT_HINT.test(p.name ?? ''));
+}
+
+/** A supported pedal's port, the Pocket Master's first; never another device. */
+export function pickPedal<T extends MIDIPort>(ports: readonly T[]): T | undefined {
+  return pickPocketMaster(ports) ?? ports.find((p) => pedalOfPort(p.name) !== null);
 }
 
 /** A Web MIDI input/output pair as the port the core link talks through. */

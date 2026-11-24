@@ -20,6 +20,7 @@ import { Toolbar } from '@/components/Toolbar';
 import { usePocketMaster } from '@/lib/usePocketMaster';
 import { useI18n } from '@/components/I18n';
 import { useIsDesktop } from '@/lib/desktop';
+import { MatriboxEditor } from '@/components/MatriboxEditor';
 
 const STEPS = ['empty.step1', 'empty.step2', 'empty.step3'] as const;
 const LOG_KEY = 'pocket-master-editor.showLog';
@@ -101,7 +102,10 @@ export default function EditorPage() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [undo, redo]);
-  const connected = pm.status === 'connected' || pm.status === 'reading';
+  const linked = pm.status === 'connected' || pm.status === 'reading';
+  // The Matribox II Pro has its own editor; everything below is the Pocket Master's.
+  const matribox = linked && pm.pedal === 'matribox' ? pm.matribox : null;
+  const connected = linked && !matribox;
   // The sidebar lists every preset: read the names once the pedal is connected.
   const { names, loadNames } = pm;
   useEffect(() => {
@@ -144,9 +148,16 @@ export default function EditorPage() {
         canSave={pm.preset !== null}
         onSettings={() => { pm.clearError(); setSettingsOpen(true); }}
         onBluetooth={pm.connectBle}
+        matribox={matribox !== null}
       />
       <SettingsDialog open={settingsOpen} firmware={pm.firmware} onClose={() => setSettingsOpen(false)} exclusive={pm.exclusive} writeGlobal={pm.writeGlobal}
         busy={pm.busy !== null} error={pm.error} factoryReset={pm.factoryReset} onReset={pm.disconnect} />
+      {matribox ? (
+        <>
+          {pm.error && <p className="alert" role="alert">{te(pm.error)}</p>}
+          <MatriboxEditor port={matribox} desktop={desktop} />
+        </>
+      ) : (
       <div className={connected ? 'layout' : 'layout layout-single'}>
       {connected && (
         <PresetSidebar names={pm.names} current={pm.presetIndex} modified={pm.modified} disabled={pm.busy !== null} onReadNames={() => void pm.loadNames()} onLoad={pm.loadPreset} />
@@ -231,6 +242,7 @@ export default function EditorPage() {
         />
       </main>
       </div>
+      )}
     </>
   );
 }

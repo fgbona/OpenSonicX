@@ -38,3 +38,5 @@ export * from './matribox/lzo1x.ts';
 export * from './matribox/message.ts';
 export * from './matribox/preset.ts';
 export * from './matribox/write.ts';
+export * from './matribox/link.ts';
+export * from './pedals.ts';

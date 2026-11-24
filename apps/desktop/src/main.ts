@@ -11,6 +11,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { appBundle, canReplace, pickZip, prepare, startSwap } from './mac-update.ts';
 import { resolveAppFile } from './serve.ts';
+import { CATALOG_URL_PATH, matriboxCatalogPath } from './matribox-catalog.ts';
 
 const ORIGIN = 'app://editor';
 const RELEASES = 'https://github.com/fgbona/OpenSonicX/releases';
@@ -102,7 +103,14 @@ function checkForUpdates(): void {
 
 void app.whenReady().then(() => {
   const root = join(app.getAppPath(), 'web');
-  protocol.handle('app', (request) => net.fetch(pathToFileURL(resolveAppFile(root, request.url)).toString()));
+  protocol.handle('app', (request) => {
+    // The Matribox catalog is the user's own install of Sonicake's app, never part of this one.
+    if (new URL(request.url).pathname === CATALOG_URL_PATH) {
+      const catalog = matriboxCatalogPath();
+      return catalog ? net.fetch(pathToFileURL(catalog).toString()).catch(() => new Response(null, { status: 404 })) : new Response(null, { status: 404 });
+    }
+    return net.fetch(pathToFileURL(resolveAppFile(root, request.url)).toString());
+  });
   const midiOnly = (origin: string, permission: string) => origin.startsWith(ORIGIN) && (permission === 'midi' || permission === 'midiSysex');
   session.defaultSession.setPermissionRequestHandler((_wc, permission, done, details) => done(midiOnly(details.requestingUrl, permission)));
   session.defaultSession.setPermissionCheckHandler((_wc, permission, origin) => midiOnly(origin, permission));
