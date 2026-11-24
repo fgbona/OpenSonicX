@@ -53,6 +53,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
   app; never bundled or fetched. Without it, presets and chains still show by module number and
   model id. Core gains `matriboxLink` (the request/answer rules over any MIDI port) and
   `pedalOfPort`; tests run against a simulated unit with an invented catalog.
+- Matribox II Pro docs: an "Unknown sections" part in docs/matribox.md (the knob, expression pedal
+  and footswitch assignment tables, patch volume, the unit's own messages, each with evidence and
+  confidence) and docs/matribox-captures.md, the list of short captures that would settle the rest.
 
 ### Changed
 
