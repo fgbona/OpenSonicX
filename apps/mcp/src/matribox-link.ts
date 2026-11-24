@@ -7,7 +7,7 @@
  * write (flag 2, paged) is answered with flag 0, cmd 0x17, `02 00 00 10` (capture mb-20). Anything else the unit sends meanwhile (footswitch and knob
  * notifications) is skipped. One request at a time: the session queues calls.
  */
-import { joinMbPages, MB_READ, MB_REPLY, MB_WRITE, parseMbFrame, unwrapMbMessage, type MbFrame } from '@pocket-master/core';
+import { isMbControlChange, joinMbPages, MB_READ, MB_REPLY, MB_WRITE, parseMbFrame, unwrapMbMessage, type MbFrame } from '@pocket-master/core';
 import { MATRIBOX, openPedalPorts } from './devices.ts';
 
 export interface MatriboxPorts {
@@ -24,6 +24,8 @@ export interface MatriboxConnection {
   writePreset(frames: readonly Uint8Array[]): Promise<void>;
   /** Sends a write frame the unit does not answer (mbSavePreset): check its effect with a read. */
   post(frame: Uint8Array): void;
+  /** Sends one MIDI Control Change (mbControlChange: tuner, tempo, looper…); the unit sends no answer. */
+  control(message: Uint8Array): void;
   close(): void;
 }
 
@@ -62,7 +64,7 @@ function sentMessage(frames: readonly Uint8Array[], type: number) {
   return unwrapMbMessage(joined);
 }
 
-export function matriboxLink(ports: MatriboxPorts, timeoutMs: number = MATRIBOX_TIMEOUT_MS): Pick<MatriboxConnection, 'read' | 'write' | 'writePreset' | 'post'> {
+export function matriboxLink(ports: MatriboxPorts, timeoutMs: number = MATRIBOX_TIMEOUT_MS): Pick<MatriboxConnection, 'read' | 'write' | 'writePreset' | 'post' | 'control'> {
   /** Sends `frames` and resolves with the data of the first message `answer` takes. */
   const exchange = (frames: readonly Uint8Array[], answer: Answer, what: string, noAnswer: string): Promise<Uint8Array> => {
     return new Promise((resolve, reject) => {
@@ -121,6 +123,10 @@ export function matriboxLink(ports: MatriboxPorts, timeoutMs: number = MATRIBOX_
     post: (frame) => {
       if (parseMbFrame(frame).type !== MB_WRITE) throw new Error('Matribox link: post sends write frames only');
       ports.send(frame);
+    },
+    control: (message) => {
+      if (!isMbControlChange(message)) throw new Error('Matribox link: control sends one Control Change message only');
+      ports.send(message);
     },
   };
 }

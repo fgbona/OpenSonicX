@@ -4,13 +4,15 @@
  * and cmd whose data starts with the request's argument (the unit repeats it); a write is confirmed
  * by the unit's echo (same flag, cmd and data), except a chain edit (01/02 00 04 01: add, move,
  * remove, change model), which the unit answers with its chain notice (00 00 04 01 + the new chain).
- * A save gets no answer: send it with post and check it by reading the slot back. Anything else
+ * A save gets no answer: send it with post and check it by reading the slot back. A MIDI Control
+ * Change (control) gets none either. Anything else
  * the unit sends meanwhile (footswitch and knob notifications) is skipped. One request at a time:
  * callers queue their calls.
  */
 import type { MidiPort } from '../link.ts';
 import { joinMbPages, MB_READ, MB_REPLY, MB_WRITE, parseMbFrame, type MbFrame } from './frame.ts';
 import { unwrapMbMessage } from './message.ts';
+import { isMbControlChange } from './cc.ts';
 
 export interface MatriboxLink {
   /** Sends a read request frame (mbRead…) and resolves with the reply's decompressed data. */
@@ -19,6 +21,8 @@ export interface MatriboxLink {
   write(frame: Uint8Array): Promise<void>;
   /** Sends a write frame the unit does not answer (mbSavePreset): check its effect with a read. */
   post(frame: Uint8Array): void;
+  /** Sends one MIDI Control Change (mbControlChange; tuner, tempo, looper…): the unit sends no answer. */
+  control(message: Uint8Array): void;
 }
 
 export const MATRIBOX_TIMEOUT_MS = 3000;
@@ -92,6 +96,10 @@ export function matriboxLink(port: MidiPort, timeoutMs: number = MATRIBOX_TIMEOU
     post: (frame) => {
       if (parseMbFrame(frame).type !== MB_WRITE) throw new Error('Matribox link: post sends write frames only');
       port.send(frame);
+    },
+    control: (message) => {
+      if (!isMbControlChange(message)) throw new Error('Matribox link: control sends one Control Change message only');
+      port.send(message);
     },
   };
 }

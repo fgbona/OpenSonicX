@@ -197,8 +197,11 @@ the EXP/CTRL jack). Only entries 0 and 3 were ever used in our samples.
 | 4..8 | 5 bytes | Junk: differs between two reads of the same unchanged preset; zero in one `.prst` that the editor imports | Two "Drive AD" reads, two "TESTE OSX" reads | High (that it is junk) |
 | 9 + row × 12 + slot | u8 | 1 = switch `row` (0..4) toggles `slot` | Hardware capture: pressing the footswitches on "Cry&Cry" flipped slots 0, 4, 3, 5 in turn (bulk on/off notices, below), the slots its rows 0..4 name. The rig presets map the same musical layout onto different slots | High (row = switch, column = slot) |
 
-Which physical switch each row is, is not known (low): five rows for four switches A–D, so row 4 may
-be the CTRL/external switch. Rows 3 and 4 are identical in 21 of the 24 presets that assign switches.
+Row 0 is footswitch A: the official editor's footswitch write (capture mb-09, the unit in stomp mode)
+takes switch 0 for A, and our reading of a row is `9 + switch × 12 + slot` (high for A, medium for
+B..D). Row 4 is not known (low): five rows for four switches A–D, so it may be the CTRL/external
+switch. Rows 3 and 4 are identical in 21 of the 24 presets that assign switches. The tools offer
+A..D only.
 
 ### Rest of sections 1, 5 and 9; sections 0 and 3
 
@@ -206,7 +209,7 @@ be the CTRL/external switch. Rows 3 and 4 are identical in 21 of the 24 presets 
 |-----------------|------|---------|----------|------------|
 | 1, 4..7 | 4 bytes | Junk (two reads of the same preset differ) | Device reads | High |
 | 1, 24..94 | f32 noise | Junk: tiny floats (pairs of equal values), zero or -0.0 in files | Two reads of "TESTE OSX": noise, then all zero | High |
-| 5, 736 | u16 | Patch volume, 0..100: 45..90 per preset (45, 50, 60, 63, 70, 90 seen) | Varies per preset; not captured being edited | Medium |
+| 5, 736 | u16 | Patch volume, 0..100: 45..90 per preset (45, 50, 60, 63, 70, 90 seen) | Capture mb-01: the preset read before the drag holds 50 and the editor's `03 00 05 01` volume write started at 52 (no read after it) | Medium-high |
 | 5, 738 | u16 | Tempo (BPM): 120 in all 27 presets | Constant | Low |
 | 5, 740 | u16 | 0 in all 27 presets (tempo source or tap mode?) | Constant | Low |
 | 0, 4..10 | 7 bytes | `04 03 0C 01 05 01 0F`, constant (format version?) | 27 presets | Low |
@@ -221,7 +224,7 @@ captures 1 to 4.
 | Data | Meaning | Evidence | Confidence |
 |------|---------|----------|------------|
 | `01 00 05 01` + u32 slot + u32 param + f32 | A knob turned on the unit: same shape as the host's set param | Hardware capture: knob 1 and 2 turns hit the slot and parameter section 2 names | High |
-| `03 00 05 01` + u32 value | Knob 3 turned: values 42, 82, 83, 52, 53 (0..100). Probably the patch volume (section 2 target `0D`, section 5 at 736) | Hardware capture | Medium (knob 3), low (patch volume) |
+| `03 00 05 01` + u32 value | Knob 3 turned: values 42, 82, 83, 52, 53 (0..100). The patch volume: the official editor's volume slider sends this same message (capture mb-01) | Hardware capture, mb-01 | High |
 | `07 00 05 01` + 12 × u8 | Every slot's on/off (section 5 at 724) after a footswitch press | Hardware capture: one bit changes per press, matching section 8 | High |
 | `08 00 05 01` + 18 bytes `07 FF FF 00 FF FF 00 00 \| 00 00 C8 42 \| 00 × 8` | Unknown (holds f32 100.0; expression pedal or toe switch?) | Once, hardware capture | Low |
 | `01 00 0A 01` + u32 index | Preset changed on the unit | Hardware capture | High |
@@ -275,6 +278,18 @@ The write tools (experimental: every answer says so until the owner validates th
 
 Each write waits for the unit's echo of it (same flag, cmd and data; 3 s). Tests run against a
 simulated unit that applies the writes to an in-memory preset and echoes them.
+
+Live controls (experimental, **not yet checked on the owner's unit**; see "Live controls" and
+"MIDI Control Change"):
+
+- `matribox_get_assignments`: the loaded preset's patch volume, tempo, footswitch A–D blocks and
+  expression entries (reads only).
+- `matribox_set_volume` (0..100), `matribox_assign_footswitch` (A..D, a block, assign or not),
+  `matribox_assign_expression` (entry 1..9, a block's parameter by name, min and max 0..100) and
+  `matribox_set_expression_range`: SysEx writes, echoed; the assignments are read back.
+- `matribox_tuner`, `matribox_tap_tempo`, `matribox_set_bpm` (40..300), `matribox_looper`,
+  `matribox_drum`, `matribox_ctrl` (1..4), `matribox_quick_knob` (1..3): Control Changes on
+  `channel` (default 1). Nothing comes back, so the answer says to check on the unit.
 
 Whole presets (experimental, **not yet checked on the owner's unit**; see "Whole-preset write"):
 
@@ -399,6 +414,10 @@ Builders in `packages/core/src/matribox/write.ts`; tests compare them with the c
 | Remove block | 10 | `01 00 04 01` + u8 position + `FF` + `00` + `00 00 00 00` | Host frame (capture 4); owner's unit ✓ |
 | Change model | 10 | `02 00 04 01` + u8 slot + u8 module + u32 fxid | Host frames (capture 3); owner's unit ✓ |
 | Save | 05 | u32 index + 17-byte name (NUL-padded) | One host frame; owner's unit ✓ |
+| Patch volume | 10 | `03 00 05 01` + u32 0..100 | Host frames (mb-01), byte-exact; not yet sent by us |
+| Footswitch | 10 | `01 00 08 01` + u32 switch (A = 0) + u32 slot + u32 1/0 | Host frames (mb-09), byte-exact; not yet sent by us |
+| Expression assign | 10 | `02 00 07 01` + u32 entry + u32 slot + u32 param + u32 0 + f32 min + f32 max | Host frame (mb-04), byte-exact; field order not proven (below) |
+| Expression min / max | 10 | `03 00 07 01` / `04 00 07 01` + u32 entry + u32 0 + f32 | Host frames (mb-04), byte-exact; not yet sent by us |
 | Whole preset | 10, **flag 2** | u32 index + 1207-byte body (`.prst` tags), paged | Host pages (capture mb-20); answered by cmd `17`; not yet sent by us |
 
 - Set param and on/off address the **storage slot**, not the chain position (capture 2: the delay
@@ -418,7 +437,70 @@ Builders in `packages/core/src/matribox/write.ts`; tests compare them with the c
   owner's unit (59D, 2026-11-24). Reading the loaded preset's own number returns the edit buffer, so
   the backup taken before saving over the loaded slot holds the edits, not what was stored.
 
-Every write above but the whole preset has been checked on the owner's unit (2026-11-24).
+Every write above but the whole preset and the live controls has been checked on the owner's unit (2026-11-24).
+
+### Live controls (captures mb-01, mb-04, mb-09)
+
+The official editor streams the patch volume while its slider moves (`03 00 05 01` + u32, the
+message knob 3 sends from the unit) and the unit echoes some of them; a footswitch box and the
+expression pedal's assign, min and max are single writes, each echoed. Builders in
+`packages/core/src/matribox/write.ts` (`mbSetPatchVolume`, `mbAssignFootswitch`,
+`mbAssignExpression`, `mbSetExpressionMin`/`Max`), tested against the captured host frames
+(`packages/core/test/fixtures/matribox-controls.txt`). `mbAssignments` (core) reads the volume,
+tempo, footswitch rows and expression entries back from a preset.
+
+- **Footswitch:** switch A = 0 (capture mb-09: assign A to slot 0, unassign it, assign A to
+  slot 1). A switch can toggle several slots (one section 8 row). Captured in stomp mode only.
+- **Expression assign:** in capture mb-04 (EXP 1 on DRV Gain: DRV in slot 0, Gain = ID 0, the
+  first entry) the four u32 were all 0, so the order entry, slot, parameter is the owner's
+  reading, not proven: the MCP tools read section 7 back after the write and say so when it does
+  not match. The fourth u32, and the second one of min / max, were 0 (unknown). Min and max are
+  0..100: the editor's slider values (3.88 … 99.98), stored as f32 in section 7 at 23 and 59.
+  Removing an assignment was not captured.
+- Unsaved edits, these included, are discarded when another preset is loaded. The tuner sends no
+  SysEx at all (the official editor has no tuner traffic); it is a MIDI Control Change (below).
+
+## MIDI Control Change
+
+Sonicake's manual (firmware V1.2.2, "MIDI Control Information List") lists Control Changes the unit
+acts on. They go over the same USB MIDI port as the SysEx, as plain 3-byte messages
+`Bn cc value` on the unit's MIDI channel (global settings: Omni or 1..16), and only when its
+"MIDI In Source" includes USB. The unit sends no answer. Switches read 0..63 as off (stop, post) and
+64..127 as on (play, pre); we send 0 and 127. `MB_CC`, `mbControlChange` and `mbBpmControlChanges`
+(core, `cc.ts`) build them; the links send one with `control()`. **None is checked on the unit yet.**
+
+| CC | Values | Function |
+|----|--------|----------|
+| 0 | 0..1 | Bank MSB: 0 for 1A..30D, 1 for 31A..60D, then Program Change 1..120 |
+| 7 | 0..100 | Preset (patch) volume |
+| 11 | 0..100 | EXP 1 |
+| 13 | switch | EXP 1 mode A / B |
+| 16, 18, 20 | 0..100 | Quick-access knob 1, 2, 3 value (MSB) |
+| 17, 19, 21 | 0..63 / 64..127 | Quick-access knob 1, 2, 3 one step down / up (LSB) |
+| 22, 23 | any | Bank + / bank − |
+| 24, 25 | any | Preset + / preset − |
+| 26, 27, 28 | any | Bank +, bank −, bank (wait mode) |
+| 29 | switch | Footswitch mode: preset / stomp |
+| 43..54 | switch | Block 1..12 on/off |
+| 58 | switch | Tuner on/off |
+| 59 | switch | Looper on/off |
+| 60, 61 | any | Looper record, auto record |
+| 62 | switch | Looper stop / play |
+| 63, 64 | any | Looper undo/redo, delete loop |
+| 65, 66 | 0..100 | Looper recording volume, playback volume |
+| 67 | switch | Looper placement post / pre |
+| 68, 69 | 0..2, 0..127 | Preset BPM: MSB, LSB; BPM = MSB × 128 + LSB, 40..300 |
+| 70 | any | Tap tempo |
+| 71..74 | 0..127 | CTRL 1..4 |
+| 92 | switch | Drum machine (menu) on/off |
+| 93 | switch | Drum stop / play |
+| 94 | 0..99 | Drum rhythm |
+| 95 | 0..100 | Drum volume |
+
+The manual's BPM example gives CC68 = 1 for both 128..255 and 256..300; with CC68's range 0..2,
+256..300 is CC68 = 2 (we send `bpm >> 7`, `bpm & 127`). Program Change, bank, preset ±, EXP 1, the
+footswitch mode and block on/off CCs are listed but not used: the SysEx writes above already do
+those.
 
 ## Editor (web and desktop)
 
@@ -431,7 +513,11 @@ and sends only the official editor's reads and the core write builders, one requ
 A parameter drag sends only the newest value once the previous write is confirmed. After a chain
 edit or a preset select it reads the loaded preset again. Save reads the slot, keeps it as a
 backup in the browser (localStorage, newest 20, same JSON as the MCP server's backups), sends the
-save and reads the slot back. The catalog: in the browser the owner picks his own `alg_data.json`
+save and reads the slot back. It also shows the patch volume (a slider, newest value only, like a knob), a grid of which blocks
+footswitches A–D toggle, the nine expression entries (block, parameter, min, max, Apply) and a
+tuner / tap tempo / BPM row sent as Control Changes on a chosen MIDI channel; after an assignment
+it reads the loaded preset again. Undo and Redo cover the chain edits only (the history replays
+chains). The catalog: in the browser the owner picks his own `alg_data.json`
 and it is kept in IndexedDB; the desktop app serves the installed one (or `MATRIBOX_CATALOG`) at
 `app://editor/matribox-catalog.json`. The e2e tests (`apps/web/e2e/matribox.spec.ts`) run the
 editor against the simulated unit with an invented catalog.

@@ -6,7 +6,8 @@
  * nothing (check it by reading the slot back).
  *
  * Every builder is byte-exact with a captured host frame. Hardware-validated on the owner's unit
- * (2026-11-24): every builder here.
+ * (2026-11-24): every builder here but the whole preset and the live controls at the end (patch
+ * volume, footswitch and expression assignments: captures mb-01, mb-09, mb-04, not yet sent by us).
  */
 import { buildMbFrame, buildMbFrames, float32LE, MB_WRITE } from './frame.ts';
 import { wrapMbMessage } from './message.ts';
@@ -122,3 +123,64 @@ export function mbWritePreset(index: number, preset: MbPreset): Uint8Array[] {
   const data = [...u32(checkPreset(index)), ...mbPresetBody(preset)];
   return buildMbFrames(MB_WRITE, wrapMbMessage(WHOLE_PRESET_FLAG, SET_CMD, data));
 }
+
+/** Footswitches A..D (A = 0). Section 8 has a fifth row, not known yet (CTRL?): not offered. */
+export const MB_FOOTSWITCHES = 4;
+/** Expression-pedal entries in section 7 (likely EXP 1 mode A 0..2, mode B 3..5, EXP 2 6..8; not confirmed). */
+export const MB_EXP_ENTRIES = 9;
+const PERCENT = 100;
+
+function checkPercent(what: string, value: number): number {
+  return Number.isFinite(value) && value >= 0 && value <= PERCENT ? value : fail(`${what} must be 0..${PERCENT}, got ${value}`);
+}
+
+function checkEntry(entry: number): number {
+  return isIn(entry, MB_EXP_ENTRIES) ? entry : fail(`expression entry must be 0..${MB_EXP_ENTRIES - 1}, got ${entry}`);
+}
+
+/** The loaded preset's patch volume, 0..100 (capture mb-01: streamed while dragging, echoed): `03 00 05 01` + u32. */
+export function mbSetPatchVolume(volume: number): Uint8Array {
+  if (!Number.isInteger(volume)) fail(`patch volume must be an integer, got ${volume}`);
+  return write(SET_CMD, [0x03, 0x00, 0x05, 0x01, ...u32(checkPercent('patch volume', volume))]);
+}
+
+/**
+ * Makes footswitch `footswitch` (A = 0 … D = 3) toggle storage `slot`, or stops it (capture mb-09,
+ * stomp mode): `01 00 08 01` + u32 switch + u32 slot + u32 1/0. A switch may toggle several slots.
+ */
+export function mbAssignFootswitch(footswitch: number, slot: number, assigned: boolean): Uint8Array {
+  if (!isIn(footswitch, MB_FOOTSWITCHES)) fail(`footswitch must be 0..${MB_FOOTSWITCHES - 1} (A..D), got ${footswitch}`);
+  return write(SET_CMD, [0x01, 0x00, 0x08, 0x01, ...u32(footswitch), ...u32(checkSlot(slot)), ...u32(assigned ? 1 : 0)]);
+}
+
+export interface MbExpressionAssignment {
+  /** Section 7 entry 0..8. */
+  readonly entry: number;
+  /** Storage slot of the block the pedal moves. */
+  readonly slot: number;
+  /** Catalog widget ID of the parameter. */
+  readonly paramId: number;
+  /** Heel and toe ends, 0..100 (the official editor's slider values). */
+  readonly min: number;
+  readonly max: number;
+}
+
+/**
+ * Points expression-pedal entry `entry` at a block's parameter (capture mb-04): `02 00 07 01` + u32
+ * entry + u32 slot + u32 param + u32 0 + f32 min + f32 max. The capture had every u32 at 0 (entry 0,
+ * DRV in slot 0, Gain = ID 0), so the order of the first three is the owner's reading, not proven:
+ * the MCP server reads section 7 back after it.
+ */
+export function mbAssignExpression({ entry, slot, paramId, min, max }: MbExpressionAssignment): Uint8Array {
+  if (!isIn(paramId, PARAMS_PER_SLOT)) fail(`parameter id must be 0..${PARAMS_PER_SLOT - 1}, got ${paramId}`);
+  const ends = [...float32LE(checkPercent('expression min', min)), ...float32LE(checkPercent('expression max', max))];
+  return write(SET_CMD, [0x02, 0x00, 0x07, 0x01, ...u32(checkEntry(entry)), ...u32(checkSlot(slot)), ...u32(paramId), ...u32(0), ...ends]);
+}
+
+/** One end of an expression entry: `03 00 07 01` (min) or `04 00 07 01` (max) + u32 entry + u32 0 (unknown) + f32. */
+function expressionEnd(op: number, what: string, entry: number, value: number): Uint8Array {
+  return write(SET_CMD, [op, 0x00, 0x07, 0x01, ...u32(checkEntry(entry)), ...u32(0), ...float32LE(checkPercent(what, value))]);
+}
+
+export const mbSetExpressionMin = (entry: number, value: number): Uint8Array => expressionEnd(0x03, 'expression min', entry, value);
+export const mbSetExpressionMax = (entry: number, value: number): Uint8Array => expressionEnd(0x04, 'expression max', entry, value);

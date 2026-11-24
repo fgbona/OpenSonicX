@@ -988,6 +988,18 @@ button, select { font: inherit; color: inherit; }
 .mb-backups { list-style: none; margin: 0; padding: 8px 16px; display: grid; gap: 6px; }
 .mb-backups li { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
 .mb-sidebar { grid-template-rows: auto 1fr; }
+.mb-controls, .mb-assignments { margin: 12px 0; }
+.mb-controls-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 16px 0; }
+.mb-controls-row .mb-param { flex: 1 1 220px; }
+.mb-controls .small, .mb-pad { margin: 8px 16px 12px; }
+.mb-number { width: 4.5em; }
+.mb-table-wrap { overflow-x: auto; padding: 0 16px 12px; }
+.mb-table { border-collapse: collapse; font-size: 0.8125rem; }
+.mb-table th, .mb-table td { padding: 4px 8px; text-align: center; white-space: nowrap; }
+.mb-table th[scope="row"] { text-align: left; }
+.mb-exp { list-style: none; margin: 0; padding: 0 16px 12px; display: grid; gap: 8px; }
+.mb-exp-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.mb-exp-row select, .mb-controls select { max-width: 100%; padding: 4px 8px; border: none; border-radius: var(--radius-small); background: var(--fill); font: inherit; font-size: 0.8125rem; color: var(--label); }
 
 /* "A new version is ready — Reload" (components/UpdatePrompt.tsx), above everything, out of the way. */
 .update-prompt {

@@ -111,7 +111,11 @@ Todo menu mostra o nome que a pedaleira usa ao lado do que ele é, agrupado por 
   `/Applications/Matribox II PRO.app/Contents/Frameworks/App.framework/Resources/flutter_assets/assets/alg/alg_data.json`)
   e ele fica naquele navegador; o app desktop lê do app instalado (ou de `MATRIBOX_CATALOG`). Sem
   ele, os presets e as cadeias aparecem mesmo assim, pelo número do módulo.
-  Desfazer e refazer cobrem todas as edições ao vivo ali. O **assistente de timbre** também
+  O volume do patch, quais blocos os footswitches A-D ligam e desligam, as entradas do pedal de
+  expressão (bloco, parâmetro, mínimo, máximo) e uma linha de afinador / tap tempo / BPM também
+  estão lá (ainda não conferidos na unidade; afinador e andamento vão como os MIDI Control
+  Changes do manual).
+  Desfazer e refazer cobrem as edições da cadeia (blocos, modelos, parâmetros, liga/desliga). O **assistente de timbre** também
   funciona na Matribox, com as mesmas chaves gratuitas: ele escolhe os modelos pelo equipamento
   real em que se baseiam (do seu catálogo, que ele precisa), monta a cadeia inteira ou ajusta, mostra
   o que mudou, e salvar continua passando pela janela de Salvar que você confirma.
@@ -184,7 +188,8 @@ A partir do repositório: `npm run start -w @pocket-master/desktop` faz o build 
 
 > Pocket Master: leitura, edição ao vivo, reverter e salvar com backup foram conferidos numa
 > pedaleira; restaurar e arquivos de preset foram conferidos numa pedaleira simulada. Matribox II
-> Pro: cada ferramenta de escrita foi conferida em uma unidade (experimental).
+> Pro: cada ferramenta de escrita foi conferida em uma unidade (experimental), exceto importar e
+> restaurar o preset inteiro e os controles ao vivo (volume, atribuições, MIDI CC).
 
 O `apps/mcp` deixa um assistente como o Claude ler e ajustar o seu som numa conversa ("mais ganho
 no amp", "experimenta o perfil Randall", "salva isso no P12"). Ele roda no seu computador e fala
@@ -258,7 +263,13 @@ Ferramentas: `get_preset`, `list_presets`, `list_models`, `edit_preset`, `select
   restaurar mandam o preset inteiro numa escrita só, como o app oficial faz (cadeia, parâmetros,
   atribuições dos knobs, do pedal de expressão e dos footswitches, volume e andamento), e a
   pedaleira já guarda no slot; antes é feito o backup do slot. A escrita do app oficial foi
-  conferida na pedaleira; a nossa (os mesmos dados, sem compressão) ainda falta conferir. A lista de modelos vem do app oficial Matribox
+  conferida na pedaleira; a nossa (os mesmos dados, sem compressão) ainda falta conferir.
+  Controles ao vivo (experimentais, ainda não conferidos na unidade):
+  `matribox_get_assignments`, `matribox_set_volume`, `matribox_assign_footswitch`,
+  `matribox_assign_expression`, `matribox_set_expression_range` (decodificados do app oficial), e
+  os MIDI Control Changes do manual `matribox_tuner`, `matribox_tap_tempo`, `matribox_set_bpm`,
+  `matribox_looper`, `matribox_drum`, `matribox_ctrl`, `matribox_quick_knob` (no canal MIDI da
+  unidade, 1 por padrão; o MIDI In Source dela precisa incluir USB). A lista de modelos vem do app oficial Matribox
   II PRO da Sonicake, que precisa estar instalado (ou defina `MATRIBOX_CATALOG` com o caminho do
   `alg_data.json`). Carregar IRs e capturas suas na Matribox ainda não está disponível: a
   conversão do WAV e o envio já batem byte a byte com o editor oficial, falta decifrar um campo da

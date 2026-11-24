@@ -113,7 +113,10 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
   `/Applications/Matribox II PRO.app/Contents/Frameworks/App.framework/Resources/flutter_assets/assets/alg/alg_data.json`)
   and it stays in that browser; the desktop app reads it from the installed app (or
   `MATRIBOX_CATALOG`). Without it the presets and chains still show, by module number.
-  Undo and Redo cover every live edit there. The **tone assistant** works on the Matribox too,
+  The patch volume, which blocks footswitches A-D toggle, the expression-pedal entries (block,
+  parameter, min, max) and a tuner / tap tempo / BPM row are there too (not yet checked on the
+  unit; tuner and tempo go as the manual's MIDI Control Changes).
+  Undo and Redo cover the chain edits (blocks, models, parameters, on/off). The **tone assistant** works on the Matribox too,
   with the same free keys: it picks models by the real gear they are based on (from your catalog,
   which it needs), builds the whole chain or adjusts it, shows what changed, and saving still
   goes through the Save dialog for you to confirm.
@@ -188,7 +191,8 @@ system in `apps/desktop/release`.
 
 > Pocket Master: reading, live edits, revert and saving with backup are checked on a pedal;
 > restores and preset files are checked against a simulated pedal. Matribox II Pro: every write
-> tool is checked on one unit (experimental), except the whole-preset import and restore.
+> tool is checked on one unit (experimental), except the whole-preset import and restore and the
+> live controls (volume, assignments, MIDI CC).
 
 `apps/mcp` lets an assistant such as Claude read and tweak your sound in
 conversation ("more gain on the amp", "try the Randall profile", "save this
@@ -270,7 +274,13 @@ Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
   send the whole preset in one write, as the official app does (chain, parameters, knob,
   expression-pedal and footswitch assignments, volume and tempo), and the unit keeps it in that
   slot at once; the slot is backed up first. The official app's write is checked on the unit; ours
-  (the same data, uncompressed) is still to be checked. The model list comes from Sonicake's official
+  (the same data, uncompressed) is still to be checked.
+  Live controls (experimental, not yet checked on the
+  unit): `matribox_get_assignments`, `matribox_set_volume`, `matribox_assign_footswitch`,
+  `matribox_assign_expression`, `matribox_set_expression_range` (decoded from the official app),
+  and the manual's MIDI Control Changes `matribox_tuner`, `matribox_tap_tempo`,
+  `matribox_set_bpm`, `matribox_looper`, `matribox_drum`, `matribox_ctrl`, `matribox_quick_knob`
+  (on the unit's MIDI channel, default 1; its MIDI In Source must include USB). The model list comes from Sonicake's official
   Matribox II PRO app, which must be installed (or set `MATRIBOX_CATALOG` to its `alg_data.json`).
   Loading your own IRs and captures into the Matribox is not available yet: the WAV conversion
   and the transport match the official editor byte for byte, one field of the IR message is still

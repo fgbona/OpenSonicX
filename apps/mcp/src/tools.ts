@@ -3,6 +3,7 @@ import { z } from 'zod';
 import packageJson from '../package.json' with { type: 'json' };
 import { describePedals } from './devices.ts';
 import type { MatriboxSession } from './matribox-session.ts';
+import { registerMatriboxLive } from './matribox-live-tools.ts';
 import type { Session } from './session.ts';
 
 const { version: VERSION } = packageJson;
@@ -69,7 +70,7 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
       'save_preset and restore_backup overwrite a user slot: only call them when the user asked for that slot, and pass its label as confirm.',
       'Before building a tone from a reference, call list_preset_files: if an approved tone matches the request, load it with import_preset instead of rebuilding it.',
       'To match a reference tone (an artist, a record, a song), work out the gear used on it, call list_models once to see which pedal models are based on that gear (model names are disguised, e.g. "Calif DualM" is a Mesa/Boogie Dual Rectifier), then build the whole chain with one edit_preset: drive, amp, cabinet, EQ, gate, modulation, delay and reverb, with sensible values. Do not ask for details the user did not give: make reasonable choices, say briefly what you chose and why, and invite them to ask for adjustments by ear. When the user says a tone sounds right, offer to keep it with export_preset and notes naming the reference, so next time it loads at once.',
-      'Matribox II Pro: matribox_get_preset shows the loaded preset (chain in signal order, each block\'s model and the real gear it is based on, on/off, parameters with ranges); matribox_list_models is the palette, with each model\'s origin (the real gear: e.g. a model based on "Ibanez TS808" is the Tube Screamer). To plan a tone from a reference, work out the gear used, then find the models whose origin matches it. matribox_build_tone sends a whole chain in one call; matribox_set_param, matribox_set_module_on, matribox_set_model, matribox_add_block, matribox_remove_block and matribox_move_block adjust it. They change the loaded preset only: matribox_save_preset stores it (confirm with the slot label; the slot is backed up first). Matribox writes are experimental (validated on one unit so far): after writing, check with matribox_get_preset and tell the user. matribox_export_preset and matribox_import_preset move whole presets as .prst files, and matribox_restore_backup undoes a matribox_save_preset (both overwrite a slot only with confirm); they store the whole preset in the slot in one write, assignments, volume and tempo included (experimental).',
+      'Matribox II Pro: matribox_get_preset shows the loaded preset (chain in signal order, each block\'s model and the real gear it is based on, on/off, parameters with ranges); matribox_list_models is the palette, with each model\'s origin (the real gear: e.g. a model based on "Ibanez TS808" is the Tube Screamer). To plan a tone from a reference, work out the gear used, then find the models whose origin matches it. matribox_build_tone sends a whole chain in one call; matribox_set_param, matribox_set_module_on, matribox_set_model, matribox_add_block, matribox_remove_block and matribox_move_block adjust it. They change the loaded preset only: matribox_save_preset stores it (confirm with the slot label; the slot is backed up first). Matribox writes are experimental (validated on one unit so far): after writing, check with matribox_get_preset and tell the user. matribox_export_preset and matribox_import_preset move whole presets as .prst files, and matribox_restore_backup undoes a matribox_save_preset (both overwrite a slot only with confirm); they store the whole preset in the slot in one write, assignments, volume and tempo included (experimental). matribox_get_assignments shows the patch volume, tempo, footswitch and expression-pedal assignments; matribox_set_volume, matribox_assign_footswitch, matribox_assign_expression and matribox_set_expression_range change them live; matribox_tuner, matribox_tap_tempo, matribox_set_bpm, matribox_looper, matribox_drum, matribox_ctrl and matribox_quick_knob send the manual\'s MIDI Control Changes, which the unit does not answer (all experimental).',
       'Keep calls few: edit_preset, select_preset, save_preset and import_preset already return the resulting preset, and list_models only needs to be called once per conversation.',
     ].join(' '),
   });
@@ -338,6 +339,7 @@ function registerMatriboxTools(server: McpServer, options: ServerOptions): void 
   }, () => reply('matribox_list_captures', options, () => matribox().listCaptures()));
 
   registerMatriboxWrites(server, options, matribox);
+  registerMatriboxLive(server, (tool, run) => reply(tool, options, run), matribox);
 }
 
 const MB_EXPERIMENTAL = 'Experimental: validated on one unit only so far; check the result with matribox_get_preset.';
