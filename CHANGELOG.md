@@ -6,6 +6,17 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-24
+
+The Matribox II Pro grows from "opens and edits" to a full second pedal, all of it run on the
+owner's unit: whole presets in one write (import, export, restore), backup and restore of all
+240 presets in one file, user IR upload, patch volume, footswitch and expression-pedal
+assignments, the tuner, tempo, looper and drum machine over MIDI CC, and a tone assistant with
+undo/redo in the editor. The web editor installs as an app and works offline (PWA), NAM
+captures convert 2.5x faster, and the code is now linted and formatted by Biome and built
+through Turborepo. Matribox writes stay experimental (one unit so far); loading captures (NAM)
+on the Matribox is not available yet.
+
 ### Added
 
 - Matribox II Pro `matribox_load_ir` (experimental, checked on the owner's unit): loads a
@@ -1381,7 +1392,8 @@ Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/OpenSonicX/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/fgbona/OpenSonicX/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/fgbona/OpenSonicX/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/fgbona/OpenSonicX/compare/v0.17.1...v1.0.0
 [0.17.1]: https://github.com/fgbona/OpenSonicX/compare/v0.17.0...v0.17.1
 [0.17.0]: https://github.com/fgbona/OpenSonicX/compare/v0.16.1...v0.17.0
