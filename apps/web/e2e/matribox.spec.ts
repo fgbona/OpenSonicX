@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
-import { mbAssignments, parseMbPreset } from '@pocket-master/core';
+import { readFileSync } from 'node:fs';
+import { mbAssignments, parseMbPreset, toHex } from '@pocket-master/core';
 import { connectMatribox, expect, pickCatalog, test } from './matribox-fixtures.ts';
 
 const loaded = (unit: { editBuffer: Uint8Array }) => parseMbPreset(unit.editBuffer);
@@ -111,7 +112,51 @@ test('saving needs an explicit confirmation, backs the slot up first and is chec
   await expect(page.getByRole('button', { name: /Load 2B “My Tone”/ })).toBeVisible();
   const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('pocket-master-editor.matribox-backups.v1') ?? '[]'));
   expect(kept.map((b: { label: string }) => b.label)).toEqual(['2B']);
+  // What 2B stored (empty here), not the loaded preset: the unit reads only a loaded slot truly.
+  expect(kept[0].name).toBe('');
+  expect(unit.current).toBe(5);
   await expect(page.getByRole('region', { name: 'Matribox backups' })).toContainText('2B');
+});
+
+test('back up all presets: every slot read once loaded, one file downloaded, the loaded preset loaded again', async ({ page, unit }) => {
+  await connectMatribox(page);
+  const all = page.getByRole('region', { name: 'All presets' });
+  const download = page.waitForEvent('download');
+  await all.getByRole('button', { name: 'Back up all presets' }).click();
+  const file = JSON.parse(readFileSync(await (await download).path(), 'utf8'));
+  expect(file.format).toBe('opensonicx-matribox-backup');
+  expect(file.presets).toHaveLength(240);
+  expect(file.presets[66].name).toBe('Drive AD');
+  expect(file.presets[0].name).toBe('');
+  await expect(all.getByText('240 presets backed up and downloaded.')).toBeVisible();
+  expect(unit.current).toBe(66);
+});
+
+test('restore all asks for an explicit confirmation, backs everything up first and writes each preset', async ({ page, unit }) => {
+  await connectMatribox(page);
+  const drive = toHex(unit.editBuffer).replaceAll(' ', '');
+  const file = { format: 'opensonicx-matribox-backup', version: 1, device: 'Sonicake Matribox II Pro', createdAt: '2026-11-24T12:00:00.000Z',
+    presets: [{ index: 0, label: '1A', name: 'Drive AD', preset: drive }, { index: 1, label: '1B', name: 'Drive AD', preset: drive }] };
+  await page.getByLabel('Choose a backup-all file').setInputFiles({ name: 'all.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
+  const dialog = page.getByRole('dialog', { name: 'Restore 2 presets' });
+  await expect(dialog.getByText('This overwrites 2 of the 240 presets on the Matribox')).toBeVisible();
+  await expect(dialog.getByRole('checkbox', { name: /First back up all 240 presets/ })).toBeChecked();
+  const submit = dialog.getByRole('button', { name: 'Overwrite 2 presets' });
+  await expect(submit).toBeDisabled();
+  await dialog.getByRole('checkbox', { name: 'I understand: overwrite 2 presets' }).check();
+  const download = page.waitForEvent('download');
+  await submit.click();
+  expect(JSON.parse(readFileSync(await (await download).path(), 'utf8')).presets).toHaveLength(240);
+  await expect(dialog.getByText('2 presets restored, each checked on the Matribox.')).toBeVisible();
+  expect(unit.presetWrites.map((w) => w[0])).toEqual([0, 1]);
+  expect(unit.current).toBe(66);
+  await expect(page.getByRole('button', { name: /Load 1B “Drive AD”/ })).toBeVisible();
+});
+
+test('restore all refuses a file that is not a backup-all file', async ({ page }) => {
+  await connectMatribox(page);
+  await page.getByLabel('Choose a backup-all file').setInputFiles({ name: 'x.json', mimeType: 'application/json', buffer: Buffer.from('{"format":"pocket-master-backup"}') });
+  await expect(page.getByRole('region', { name: 'All presets' }).getByRole('alert')).toContainText('not a Matribox backup-all file');
 });
 
 test('no WCAG A/AA violations in the Matribox editor, without and with the catalog', async ({ page }) => {

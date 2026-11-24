@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { matriboxLink, mbRemoveBlock, parseMbCatalog, parseMbPreset } from '@pocket-master/core';
+import { matriboxLink, mbRemoveBlock, mbSetBlockOn, parseMbCatalog, parseMbPreset } from '@pocket-master/core';
 import { FakeMatribox } from '../../../packages/core/test/fake-matribox.ts';
 import { FAKE_ALG_DATA } from '../../../packages/core/test/matribox-fake-catalog.ts';
-import { backupFromSlot, gearOf, readLoaded, readUnit, saveToSlot, serialQueue, withParam } from '../lib/matribox.ts';
+import { backupFromSlot, gearOf, readLoaded, readUnit, saveToSlot, serialQueue, withParam, type MbBackup } from '../lib/matribox.ts';
 import { keepMbBackup, mbBackupFileName } from '../lib/matriboxBackups.ts';
 import { parseCatalogText } from '../lib/matriboxCatalog.ts';
 
@@ -40,7 +40,31 @@ test('saveToSlot reports a save the unit dropped, after keeping the backup', asy
   fake.dropsSaves = true;
   const kept: string[] = [];
   await assert.rejects(saveToSlot(unitLink(fake), 5, 'My Tone', (b) => void kept.push(b.label), () => 'now', 0), /2B does not hold "My Tone"/);
-  assert.deepEqual(kept, ['2B']);
+  assert.deepEqual(kept, ['2B', '17C'], 'the backup of 2B, then the loaded preset with its edits');
+});
+
+// The unit answers a preset read with its edit buffer whatever slot it names (owner's unit, 2026-11-24).
+test('saveToSlot to another slot backs up what that slot stores, writes the edits whole into it and leaves it loaded', async () => {
+  const fake = new FakeMatribox();
+  const link = unitLink(fake);
+  await link.write(mbSetBlockOn(0, true));
+  const edited = parseMbPreset(fake.editBuffer);
+  const kept: MbBackup[] = [];
+  await saveToSlot(link, 5, 'My Tone', (b) => void kept.push(b), () => 'now', 0);
+  assert.deepEqual(kept.map((b) => [b.label, b.name, b.source]), [['2B', '', 'slot']], 'the empty 2B, not the loaded "Drive AD"');
+  assert.equal(fake.current, 5);
+  assert.equal(fake.presetWrites.length, 1);
+  const stored = parseMbPreset(fake.stored(5)!);
+  assert.equal(stored.chain.find((b) => b.slot === 0)?.on, edited.chain.find((b) => b.slot === 0)?.on);
+});
+
+test('saveToSlot over the loaded slot saves it with cmd 05; its backup is the edit buffer, marked so', async () => {
+  const fake = new FakeMatribox();
+  const kept: MbBackup[] = [];
+  await saveToSlot(unitLink(fake), 66, 'Same Slot', (b) => void kept.push(b), () => 'now', 0);
+  assert.deepEqual(kept.map((b) => [b.label, b.source]), [['17C', 'edit-buffer']]);
+  assert.equal(fake.presetWrites.length, 0);
+  assert.equal(parseMbPreset(fake.stored(66)!).name, 'Same Slot');
 });
 
 test('saveToSlot refuses a bad name before anything is sent', async () => {

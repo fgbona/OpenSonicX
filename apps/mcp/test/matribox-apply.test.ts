@@ -48,8 +48,8 @@ test('matribox_export_preset writes the loaded preset, or a slot, as a .prst in 
   assert.equal(exported.chain[1]?.values[0], 77);
 
   const named = await call(client, 'matribox_export_preset', { preset: '20a', file: 'blank.prst' });
-  assert.match(named, /^Exported 20A ".*" to .*blank\.prst$/m);
-  assert.equal(writes(fake), 1);
+  assert.match(named, /^Exported 20A "" to .*blank\.prst$/m); // what 20A stores, not the loaded preset
+  assert.equal(writes(fake), 3, 'the parameter, then 20A selected to read it and 17C again');
 });
 
 test('matribox_export_preset refuses paths outside its folder, other extensions and existing files', async () => {
@@ -81,8 +81,8 @@ test('matribox_import_preset stores a .prst whole in the confirmed slot with one
   assert.match(out, /^Chain: DYN → DRV → AMP → CAB → RVB → VOL$/m);
   assert.match(out, UNCHECKED);
   assert.equal(liveWrites(fake) - before, 1, 'only the select of 20A: no chain edit, parameter write or save');
-  assert.equal(fake.presetWrites.length, 1);
-  assert.deepEqual([...(fake.presetWrites[0] as Uint8Array).subarray(0, 8)], [76, 0, 0, 0, 0x02, 0, 0, 0x10]); // 20A, .prst tag
+  assert.equal(fake.presetWrites.length, 2, 'the save of the echo tone to 20A, then the import');
+  assert.deepEqual([...(fake.presetWrites[1] as Uint8Array).subarray(0, 8)], [76, 0, 0, 0, 0x02, 0, 0, 0x10]); // 20A, .prst tag
   assert.equal(fake.current, 76, '20A is loaded, as the official app does');
   assert.deepEqual(sound(parseMbPreset(fake.stored(76) as Uint8Array)), sound(file));
   assert.equal(parseMbPreset(fake.stored(76) as Uint8Array).name, 'Drive AD');
@@ -105,7 +105,7 @@ test('matribox_import_preset needs the slot and confirm with its label, sending 
 test('a whole-preset write the unit does not acknowledge fails, keeping the backup', async () => {
   const { client, fake } = await connected();
   await call(client, 'matribox_export_preset', { file: 'drive.prst' });
-  fake.echoes = false;
+  fake.acksPresetWrites = false;
   const result = await client.callTool({ name: 'matribox_import_preset', arguments: { file: 'drive.prst', preset: '17C', confirm: '17C' } });
   assert.equal(result.isError, true);
   assert.match(text(result), /did not (acknowledge the preset write|confirm the write).*backup of 17C kept: .*-matribox-17C\.json/s);
@@ -137,6 +137,7 @@ test('matribox_restore_backup stores a save_preset backup back in its own slot w
   const { client, fake, backups } = await connected();
   const original = parseMbPreset(fake.editBuffer);
   await call(client, 'matribox_save_preset', { preset: '20A', name: 'Drive AD', confirm: '20A' });
+  await call(client, 'matribox_select_preset', { preset: '17C' });
   await call(client, 'matribox_build_tone', { blocks: [{ module: 'AMP', model: 'Fake Plexi' }] });
   await call(client, 'matribox_save_preset', { preset: '20A', name: 'Overwrote', confirm: '20A' });
   // The second save's backup holds what 20A stored before it: Drive AD.

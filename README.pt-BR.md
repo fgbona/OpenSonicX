@@ -105,7 +105,9 @@ Todo menu mostra o nome que a pedaleira usa ao lado do que ele é, agrupado por 
   próprio: os 240 presets (1A..60D) com filtro, a cadeia do preset carregado com cada modelo e o
   equipamento em que ele se baseia, liga/desliga ao vivo, parâmetros (dentro da faixa de cada
   modelo) e modelos, adicionar, mover e remover blocos, e Salvar num slot com confirmação
-  explícita e backup do slot antes (guardado no navegador, para baixar). Os nomes dos modelos e os
+  explícita e backup do slot antes (guardado no navegador, para baixar). *Backup de todos os
+  presets* baixa os 240 presets num arquivo só e *Restaurar todos…* os devolve a partir de um
+  (confirmação explícita; por padrão os 240 são salvos e baixados antes, para poder desfazer). Os nomes dos modelos e os
   parâmetros vêm do catálogo do app oficial Matribox II PRO da Sonicake, que não é nosso para
   distribuir: no navegador você escolhe o `alg_data.json` dele uma vez (no Mac:
   `/Applications/Matribox II PRO.app/Contents/Frameworks/App.framework/Resources/flutter_assets/assets/alg/alg_data.json`)
@@ -259,7 +261,12 @@ Ferramentas: `get_preset`, `list_presets`, `list_models`, `edit_preset`, `select
   de um backup em `~/.pocket-master-editor/backups`. Presets inteiros: `matribox_export_preset`
   grava o preset carregado ou um slot como `.prst` (o formato do app da Sonicake) em
   `~/.pocket-master-editor/presets/matribox`, `matribox_import_preset` grava um num slot
-  que você confirma, e `matribox_restore_backup` devolve um backup ao slot dele. Importar e
+  que você confirma, e `matribox_restore_backup` devolve um backup ao slot dele.
+  `matribox_backup_all_presets` guarda os 240 presets num arquivo em `~/.pocket-master-editor/backups`
+  e `matribox_restore_all_presets` os grava de volta (`confirm: "ALL"`; os 240 são salvos antes,
+  a menos que `backup: false`). A pedaleira só mostra o que um slot guarda depois de carregá-lo,
+  então essas ferramentas carregam um slot por vez: as edições não salvas do preset carregado se
+  perdem. Importar e
   restaurar mandam o preset inteiro numa escrita só, como o app oficial faz (cadeia, parâmetros,
   atribuições dos knobs, do pedal de expressão e dos footswitches, volume e andamento), e a
   pedaleira já guarda no slot; antes é feito o backup do slot. A escrita do app oficial foi

@@ -1,12 +1,13 @@
 /**
  * The Matribox II Pro flows of the editor over a core MatriboxLink: read the unit, read the loaded
  * preset, save to a slot (backup first, then checked by reading the slot back: the unit does not
- * answer a save). Only the core builders and the official editor's reads are sent; never the unit's
- * own notice messages. Nothing here touches React or the browser.
+ * answer a save). The unit answers a preset read with its edit buffer whatever slot it names, so
+ * another slot is read only once loaded (core slots.ts). Only the core builders and the official
+ * editor's reads are sent; never the unit's own notice messages. Nothing here touches React or the browser.
  */
 import {
-  checkMbPresetName, mbPresetLabel, mbReadCloneNames, mbReadCurrentPresetNumber, mbReadIrNames, mbReadPreset, mbReadPresetNames, mbSavePreset,
-  parseMbCloneNames, parseMbCurrentPresetNumber, parseMbIrNames, parseMbPreset, parseMbPresetNames, toHex,
+  checkMbPresetName, mbPresetLabel, mbReadCloneNames, mbReadCurrentPresetNumber, mbReadIrNames, mbReadPreset, mbReadLoadedIndex, mbReadPresetNames, mbReadSlot, mbSavePreset,
+  mbStoreSlot, parseMbCloneNames, parseMbCurrentPresetNumber, parseMbIrNames, parseMbPreset, parseMbPresetNames, toHex,
   type MatriboxLink, type MbModel, type MbPreset, type MbPresetName,
 } from '@pocket-master/core';
 
@@ -28,6 +29,8 @@ export interface MbBackup {
   readonly index: number;
   readonly name: string;
   readonly createdAt: string;
+  /** "slot": read with the slot loaded, what it stores; "edit-buffer": the loaded preset with its unsaved edits. */
+  readonly source?: 'slot' | 'edit-buffer';
   /** The 1211 bytes the unit sent, as hex. */
   readonly preset: string;
 }
@@ -49,33 +52,59 @@ export async function readUnit(link: MatriboxLink): Promise<MbUnit> {
   return { ...loaded, names, irNames, cloneNames };
 }
 
-export function backupFromSlot(index: number, data: Uint8Array, createdAt: string): MbBackup {
-  return { device: 'Sonicake Matribox II Pro', label: mbPresetLabel(index), index, name: parseMbPreset(data).name, createdAt, preset: toHex(data) };
+export function backupFromSlot(index: number, data: Uint8Array, createdAt: string, source: MbBackup['source'] = 'slot'): MbBackup {
+  return { device: 'Sonicake Matribox II Pro', label: mbPresetLabel(index), index, name: parseMbPreset(data).name, createdAt, source, preset: toHex(data) };
 }
 
 const sectionHex = (preset: MbPreset, id: number) => toHex(preset.sections.find((s) => s.id === id)?.body ?? new Uint8Array());
 
-/**
- * Stores the loaded preset in slot `index` under `name`. The slot is read and handed to `keep`
- * before the save is sent; the save is then checked by reading the slot back (name, chain, values).
- */
-export async function saveToSlot(
-  link: MatriboxLink, index: number, name: string, keep: (backup: MbBackup) => void | Promise<void>,
-  now: () => string = () => new Date().toISOString(), checkMs: number = SAVE_CHECK_MS,
-): Promise<MbBackup> {
-  checkMbPresetName(name);
-  const save = mbSavePreset(index, name); // checks the index before anything is sent
-  const loaded = (await readLoaded(link)).preset;
-  const backup = backupFromSlot(index, await link.read(mbReadPreset(index)), now());
-  await keep(backup);
-  link.post(save);
+type Keep = (backup: MbBackup) => void | Promise<void>;
+
+/** Sends a save of the loaded slot `index` (unanswered) and checks it by reading the slot back (name, chain, values). */
+async function saveLoaded(link: MatriboxLink, index: number, name: string, loaded: MbPreset, checkMs: number): Promise<void> {
+  link.post(mbSavePreset(index, name));
   for (let attempt = 0; attempt < SAVE_CHECKS; attempt++) {
     await new Promise((resolve) => setTimeout(resolve, checkMs));
     const listed = parseMbPresetNames(await link.read(mbReadPresetNames()))[index]?.name.trim();
     const stored = parseMbPreset(await link.read(mbReadPreset(index)));
-    if (listed === name && [4, 5].every((id) => sectionHex(stored, id) === sectionHex(loaded, id))) return backup;
+    if (listed === name && [4, 5].every((id) => sectionHex(stored, id) === sectionHex(loaded, id))) return;
   }
   throw new Error(`${mbPresetLabel(index)} does not hold "${name}" after the save: the unit did not store it. The backup of the slot is kept.`);
+}
+
+/**
+ * Stores the loaded preset (unsaved edits included) in slot `index` under `name`; the slot's backup
+ * is handed to `keep` before anything is overwritten. Over the loaded slot: its backup is the
+ * edit buffer (reading what it stores would need a select, which drops the edits), then a save.
+ * Over another slot: the edit buffer is kept, the slot loaded and backed up, the edit buffer written
+ * into it whole, and a save sent only to rename it; that slot stays loaded. If that fails, the
+ * edit buffer is handed to `keep` too, so the edits are not lost.
+ */
+export async function saveToSlot(
+  link: MatriboxLink, index: number, name: string, keep: Keep,
+  now: () => string = () => new Date().toISOString(), checkMs: number = SAVE_CHECK_MS,
+): Promise<MbBackup> {
+  checkMbPresetName(name);
+  mbSavePreset(index, name); // checks the index before anything is sent
+  const current = await mbReadLoadedIndex(link);
+  const data = await link.read(mbReadPreset(current));
+  const loaded = parseMbPreset(data);
+  if (index === current) {
+    const backup = backupFromSlot(index, data, now(), 'edit-buffer');
+    await keep(backup);
+    await saveLoaded(link, index, name, loaded, checkMs);
+    return backup;
+  }
+  try {
+    const backup = backupFromSlot(index, await mbReadSlot(link, index), now());
+    await keep(backup);
+    await mbStoreSlot(link, index, loaded);
+    if (name !== loaded.name.trim()) await saveLoaded(link, index, name, loaded, checkMs);
+    return backup;
+  } catch (error) {
+    await keep(backupFromSlot(current, data, now(), 'edit-buffer'));
+    throw error;
+  }
 }
 
 /** The preset with one value of a storage slot changed (a live edit, shown before the unit confirms it). */

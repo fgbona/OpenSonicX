@@ -3,6 +3,8 @@
  * unit (packages/core/test/fixtures), paged as the unit pages them, and applies the write frames to
  * an in-memory edit buffer the way docs/matribox.md describes, echoing each write as the unit does
  * (a chain edit is answered with the chain notice instead, and a save with nothing, like the unit).
+ * Like the unit, a preset read returns the loaded preset's edit buffer whatever index it names (tagged
+ * with that index): only a selected slot reads what it stores.
  * A whole-preset write (flag 2, paged) is stored in the slot it names, like the unit, and answered with cmd 0x17.
  * A user IR upload (flag 1, cmd 0x14, paged) renames its slot in the IR table and is acknowledged
  * with flag 3, cmd 0x14, `slot, 1, 0`, as captures mb-17, mb-17b and mb-17c show.
@@ -87,6 +89,10 @@ export class FakeMatribox {
   readonly irUploads: Uint8Array[] = [];
   /** The status the unit answers an IR upload with (1 = stored). */
   irStatus = 1;
+  /** When set, a whole-preset write to this index is acknowledged but not stored (to test the read-back). */
+  dropsPresetWriteTo: number | null = null;
+  /** When false the unit stores whole-preset writes but does not acknowledge them. */
+  acksPresetWrites = true;
   #pages: ReturnType<typeof parseMbFrame>[] = [];
   #irNames = dataOf(this.#replies.get(key(mbReadIrNames()))!);
   #names = dataOf(this.#replies.get(key(mbReadPresetNames()))!);
@@ -154,10 +160,12 @@ export class FakeMatribox {
     }
     // The unit keeps it in the slot it names (owner's captures mb-20 and midi-123), name included.
     const index = u32(preset, 0);
-    this.#stored = new Map([...this.#stored, [index, preset]]);
-    this.#names = patched(this.#names, NAMES_AT + index * 17, preset.subarray(BODY_AT[1] + 8, BODY_AT[1] + 24));
-    if (index === this.#current) this.#edit = preset;
-    if (this.echoes) this.#reply(replyFrames(wrapMbMessage(0, 0x17, [0x02, 0x00, 0x00, 0x10])));
+    if (index !== this.dropsPresetWriteTo) {
+      this.#stored = new Map([...this.#stored, [index, preset]]);
+      this.#names = patched(this.#names, NAMES_AT + index * 17, preset.subarray(BODY_AT[1] + 8, BODY_AT[1] + 24));
+      if (index === this.#current) this.#edit = preset;
+    }
+    if (this.echoes && this.acksPresetWrites) this.#reply(replyFrames(wrapMbMessage(0, 0x17, [0x02, 0x00, 0x00, 0x10])));
   }
 
   /** u32 slot, u32 0, u32 checksum, 20-byte name, samples: the slot takes the name; acknowledged with flag 3. */
@@ -189,7 +197,8 @@ export class FakeMatribox {
     if (flag === 0 && cmd === 0x10 && arg.length === 4) {
       const number = u32(arg, 0);
       if (number >= 240) return null;
-      return answer(patched(number === this.#current ? this.#edit : this.#stored.get(number) ?? this.#blank, 0, arg));
+      // The unit's bug (owner's unit, 2026-11-24): any index reads the edit buffer, tagged with that index.
+      return answer(patched(this.#edit, 0, arg));
     }
     return null;
   }

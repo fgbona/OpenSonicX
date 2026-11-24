@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  matriboxLink, mbAddBlock, mbAssignExpression, mbAssignFootswitch, mbChangeModel, mbMoveBlock, mbRemoveBlock, mbSelectPreset, mbSetBlockOn,
-  mbSetParam, mbSetPatchVolume, withMbVolume,
-  type MatriboxLink, type MbCatalog, type MbExpressionAssignment, type MbPreset, type MidiPort,
+  matriboxLink, mbAddBlock, mbAssignExpression, mbAssignFootswitch, mbBackupAllPresets, mbChangeModel, mbMoveBlock, mbRemoveBlock, mbRestoreAllPresets,
+  mbSelectPreset, mbSetBlockOn, mbSetParam, mbSetPatchVolume, withMbVolume,
+  type MatriboxLink, type MbBackupAll, type MbCatalog, type MbExpressionAssignment, type MbPreset, type MbProgress, type MidiPort, type Progress,
 } from '@pocket-master/core';
 import { readLoaded, readUnit, saveToSlot, serialQueue, withBlockOn, withParam, type MbBackup, type MbUnit } from './matribox';
 import { applyOps } from './matriboxOps';
@@ -25,9 +25,11 @@ export interface MatriboxState {
   readonly backups: readonly MbBackup[];
   /** Set when the browser would not keep a backup: it must be downloaded. */
   readonly storageWarning: boolean;
+  /** Backup all / restore all: how far it got ("Backing up 12A", "Restoring 12A"). */
+  readonly progress: Progress | null;
 }
 
-const INITIAL: MatriboxState = { unit: null, catalog: null, catalogError: null, busy: null, error: null, edited: false, backups: [], storageWarning: false };
+const INITIAL: MatriboxState = { unit: null, catalog: null, catalogError: null, busy: null, error: null, edited: false, backups: [], storageWarning: false, progress: null };
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /** The Matribox II Pro editor's state and actions over its open MIDI ports. */
@@ -180,6 +182,41 @@ export function useMatribox(port: MidiPort | null, desktop: boolean) {
     patch({ unit: await readUnit(unit), edited: false });
   }), [run, patch]);
 
+  const track = useCallback((verb: 'Backing up' | 'Restoring') => (p: MbProgress) => patch({ progress: { step: `${verb} ${p.label}`, done: p.done, total: p.total } }), [patch]);
+
+  /** After a backup or restore: the progress cleared and the unit read again (a failure here must not hide the first one). */
+  const settle = useCallback(async (unit: MatriboxLink) => {
+    patch({ progress: null });
+    try {
+      patch({ unit: await readUnit(unit), edited: false });
+    } catch (e) {
+      console.error('Matribox: could not read the unit again', e);
+    }
+  }, [patch]);
+
+  /** All 240 presets, each read once loaded; the loaded preset is loaded again (its unsaved edits are lost). Null when it failed. */
+  const backupAll = useCallback(async (): Promise<MbBackupAll | null> => {
+    let file: MbBackupAll | null = null;
+    await run('Backing up', async (unit) => {
+      try {
+        file = await mbBackupAllPresets(unit, { onProgress: track('Backing up') });
+      } finally {
+        await settle(unit);
+      }
+    });
+    return file;
+  }, [run, track, settle]);
+
+  /** Writes every preset of `file` to its slot, after `before` (the backup-all of the unit, when asked); false when it failed. */
+  const restoreAll = useCallback((file: MbBackupAll, before: ((backup: MbBackupAll) => void) | null) => run('Restoring', async (unit) => {
+    try {
+      if (before) before(await mbBackupAllPresets(unit, { onProgress: track('Backing up') }));
+      await mbRestoreAllPresets(unit, file, { onProgress: track('Restoring') });
+    } finally {
+      await settle(unit);
+    }
+  }), [run, track, settle]);
+
   return {
     ...state,
     refresh,
@@ -198,6 +235,8 @@ export function useMatribox(port: MidiPort | null, desktop: boolean) {
     control,
     apply,
     save,
+    backupAll,
+    restoreAll,
     clearError: () => patch({ error: null }),
   };
 }
