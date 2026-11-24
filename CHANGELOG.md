@@ -35,9 +35,10 @@ and the project uses [Semantic Versioning](https://semver.org/).
   `matribox_set_model`, `matribox_build_tone` (a whole chain of models and parameters in one call)
   and `matribox_save_preset` (confirm with the slot label; the slot is backed up to
   `~/.pocket-master-editor/backups` first). Each write waits for the unit's answer (its echo, or
-  its chain notice after a chain edit), and every write tool says its result is experimental.
-  Select, set param, on/off, change model, add and remove work on the owner's unit; move and save
-  are still to be checked there. `lzo1xLiterals` now encodes runs of any length.
+  its chain notice after a chain edit; a save, which the unit does not answer, is checked by
+  reading the slot back), and every write tool says its result is experimental.
+  Select, set param, on/off, change model, add, remove and save work on the owner's unit; move is
+  still to be checked there. `lzo1xLiterals` now encodes runs of any length.
 
 ## [0.17.1] - 2026-11-23
 

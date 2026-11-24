@@ -189,8 +189,8 @@ simulated unit that applies the writes to an in-memory preset and echoes them.
 ## Writes
 
 Every write is a flag-1 message in a type `12` frame, its data a literal-only LZO1X stream. The
-unit echoes set param, on/off, select and save back as a type `00` message (it may compress the
-echo); it answers a chain edit with its **chain notice** instead (below). Host frames from captures
+unit echoes set param, on/off and select back as a type `00` message (it may compress the
+echo); it answers a chain edit with its **chain notice** instead (below), and a save with nothing. Host frames from captures
 1, 3 and 4 (MIDI Monitor spying on output to the unit); capture 2 recorded only the unit's side.
 Builders in `packages/core/src/matribox/write.ts`; tests compare them with the captured frames
 (`packages/core/test/fixtures/matribox-chain-edits.txt`, `matribox-writes.txt`).
@@ -204,7 +204,7 @@ Builders in `packages/core/src/matribox/write.ts`; tests compare them with the c
 | Move block | 10 | `01 00 04 01` + u8 from + u8 to + `FF` + `FF FF FF FF` | Host frame (capture 4) |
 | Remove block | 10 | `01 00 04 01` + u8 position + `FF` + `00` + `00 00 00 00` | Host frame (capture 4); owner's unit ✓ |
 | Change model | 10 | `02 00 04 01` + u8 position + u8 module + u32 fxid | Host frames (capture 3); owner's unit ✓ |
-| Save | 05 | u32 index + 17-byte name (NUL-padded) | One echo (60D), one host frame |
+| Save | 05 | u32 index + 17-byte name (NUL-padded) | One host frame; owner's unit ✓ |
 
 - Set param and on/off address the **storage slot**, not the chain position (capture 2: the delay
   was slot 1 while first in the chain). Add, move and remove take **chain positions** (0-based):
@@ -216,13 +216,14 @@ Builders in `packages/core/src/matribox/write.ts`; tests compare them with the c
   move), often after a 160-byte `04 00 04 01 …` message (likely the expression-pedal and footswitch
   tables). Both are the unit's, never sent by the host: an earlier reading of capture 2 took them
   for writes, and the unit ignores them (checked on the owner's unit, 2026-11-24).
-- **Save** is the least verified: capture 1 also has a cmd `05` with index 0x43 and that preset's
-  own name, sent before a select. Gated behind `confirm` and a backup.
+- **Save** stores the loaded preset (edits included) in the slot and gives it the name; the loaded
+  preset takes the name too. The unit sends **no answer**, so we check a save by reading the slot
+  back: its name in the preset list, its chain (sec4) and its parameters (sec5). Checked on the
+  owner's unit (59D, 2026-11-24). Reading the loaded preset's own number returns the edit buffer, so
+  the backup taken before saving over the loaded slot holds the edits, not what was stored.
 
-Open questions for the hardware test: move on the unit; whether change model takes
-the position or the slot; whether cmd `05` saves; whether reading the loaded preset's number
-returns the edit buffer or the stored slot (it decides whether the backup taken before saving over
-the loaded slot holds the stored preset or the edits).
+Open questions for the hardware test: move on the unit; whether change model takes the position
+or the slot.
 
 ## Phases
 

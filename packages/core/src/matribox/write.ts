@@ -1,12 +1,12 @@
 /**
  * Matribox II Pro write frames (live edits of the loaded preset, preset select, save), rebuilt from
  * the official editor's traffic (docs/matribox.md, "Writes"). Every write is a flag-1 message,
- * cmd 0x10 except save (0x05), in a type-0x12 frame. The unit echoes set param, on/off, select and
- * save; it answers a chain edit (add, move, remove, change model) with its chain notice instead.
+ * cmd 0x10 except save (0x05), in a type-0x12 frame. The unit echoes set param, on/off and select;
+ * it answers a chain edit (add, move, remove, change model) with its chain notice, and a save with
+ * nothing (check it by reading the slot back).
  *
- * Set param, on/off, select and the chain edits are byte-exact with captured host frames; save is
- * rebuilt from the unit's echo. Hardware-validated: select, set param, on/off, change model, add, remove
- * (owner's unit, 2026-11-24). The rest is experimental until the owner validates it.
+ * Every builder is byte-exact with a captured host frame. Hardware-validated on the owner's unit
+ * (2026-11-24): select, set param, on/off, change model, add, remove, save. Move is not yet.
  */
 import { buildMbFrame, float32LE, MB_WRITE } from './frame.ts';
 import { wrapMbMessage } from './message.ts';
