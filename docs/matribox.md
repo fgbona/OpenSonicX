@@ -255,6 +255,8 @@ Pocket Master keeps its tools; the Matribox's start with `matribox_`, and nothin
   the palette the assistant plans a tone from. Read from the official app's install (below); the
   tool says how to fix a missing catalog.
 - `matribox_list_irs`, `matribox_list_captures`: the user IR and capture slot names.
+- `matribox_load_ir` (write, experimental): a WAV into a user IR slot; see "User IR and capture
+  uploads".
 
 Each call opens the ports, sends only the official editor's read requests (`11` frames), collects
 and joins the reply pages, and closes. A reply is matched by its flag, cmd and the argument it
@@ -341,9 +343,9 @@ when the name given differs from the preset's. Our write is the official app's d
 LZO1X stream, a JSON byte array, base64. Whether the official editor opens a `.prst` written this
 way is still to be checked.
 
-## User IR and capture uploads (research)
+## User IR and capture uploads
 
-Captured from the official editor (captures 17 and 19, with the uploaded files at hand). Both are
+Captured from the official editor (captures 17, 17b, 17c and 19, with the uploaded files at hand). Both are
 flag-1 messages in paged write frames; the unit acknowledges with flag 3, the same cmd and
 `u32 slot, u32 1, u32 0`, and the editor then reads the name table again. An empty slot is the one
 whose name is still the default (`User IR 7`, `Clone 6`, …); the table's 8 bytes per slot are zero
@@ -355,7 +357,7 @@ for every slot, used or not.
 |--------|------|---------|
 | 0      | 4    | Slot, 0-based (5 = the 6th) |
 | 4      | 4    | 0 |
-| 8      | 4    | `0x000A7CD2` in the capture: **not decoded** (see below) |
+| 8      | 4    | Checksum (below) |
 | 12     | 20   | Name, the file name cut to 16 characters, NUL padded |
 | 32     | 4096 | 1024 samples, int32 LE in the int24 range, 44.1 kHz |
 
@@ -376,14 +378,28 @@ it, now reproduced sample for sample (`mbIrSamplesFromWav()`, checked against th
 No other rate was captured: 44.1 kHz files pass through unchanged (r8brain skips equal rates) and
 every other rate is refused for now.
 
-The u32 at offset 8 is the open question. For the capture upload the same field is the byte sum
-of the data after the name (verified exactly), but for the IR the byte sum of the 4096 sample
-bytes is 513 854, not 687 314. Ruled out: sums of the samples as int32, int24, int16, float32 or
-float64 (scaled by 2^-23 .. 2^8), over any prefix of the full 88 201-sample converted IR, over the
-source WAV (data, file, first 1024 samples, first 4096 bytes), 8/16/32-bit word sums of every
-region of the message, and the same modulo 2^16..2^24. **Without it no IR upload is shipped.** A
-second capture would settle it: upload a WAV whose content is easy to sum, e.g. a 48 kHz, 24-bit
-mono file holding a single sample `0x100000` followed by silence, then one of all zeros.
+**Checksum (offset 8):** the byte sum (each byte 0..255) of the u32 slot, the u32 zero, the
+20-byte name field and the first **1366** converted samples as int32 LE, of which only 1024 are
+sent; a WAV shorter than that is padded with silence. It fits the three captured uploads exactly:
+the real 48 kHz IR (mb-17, `0x000A7CD2`; 1366 is the only count that gives it), and two WAVs made
+for it (48 kHz, 24-bit mono): all zeros (mb-17b, slot index 6, `0x05AE`) and one sample
+`0x100000` then zeros (mb-17c, slot index 7, `0x028EB6`). Why 1366: ceil(1024 × 4 / 3) is a guess.
+For 44.1 kHz files (no resampling) we take the same 1366 samples of the file; not captured.
+
+The official editor compresses the message for real (LZO1X): the silence fits one page, the
+impulse seven. The real IR was incompressible and went out as literals in 23 pages, which is what
+we always send: `mbIrUpload(slot, name, wav)` (core) rebuilds that capture frame for frame, and the
+data of the other two byte for byte (`matribox-ir-upload.test.ts`, with the two WAVs and their
+captured frames as fixtures; the real IR's check runs only where the owner's files are).
+
+**`matribox_load_ir`** (MCP, experimental until checked on the owner's unit): a WAV from
+`~/.pocket-master-editor/irs` (44.1 or 48 kHz, `.wav`, resolved inside that folder) into user IR
+slot 1..20, `confirm` repeating `IR<slot>`; the name defaults to the file name cut to 16
+characters. It reads the IR names first: a slot whose name is not the default `User IR n` holds an
+IR the unit cannot send back, so it is only overwritten with `replace: true`. It then sends the
+pages, waits for the flag-3 acknowledgement (status 1 = stored, anything else is reported) and
+reads the names again to check the slot took the name. The simulated unit acknowledges the same
+way and renames the slot.
 
 **Capture (clone), cmd 0x18, 8872 bytes:** u32 slot (9), u32 0, u32 byte sum of the `.clo`,
 20-byte name (`5 RECTIFIER`), then an 8840-byte `.clo`: the same `VTSI` container as the Pocket

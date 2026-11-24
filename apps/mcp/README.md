@@ -48,6 +48,9 @@ and macOS and Linux have one.
   in one write, as Sonicake's own app does (chain, parameters, knob,
   expression-pedal and footswitch assignments, volume and tempo), after a
   backup of that slot; our uncompressed write is not yet checked on a unit.
+  `matribox_load_ir` loads a WAV from `~/.pocket-master-editor/irs` into user
+  IR slot 1..20 (confirmed; an occupied slot only with `replace: true`; not
+  yet checked on a unit).
 
 Tested on firmware V1.3.3. Source, protocol notes and the web editor:
 <https://github.com/fgbona/OpenSonicX>.

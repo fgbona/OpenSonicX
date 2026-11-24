@@ -8,6 +8,14 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Matribox II Pro `matribox_load_ir` (experimental, not yet checked on the owner's unit): loads a
+  WAV (44.1 or 48 kHz) from `~/.pocket-master-editor/irs` into user IR slot 1..20, as the official
+  editor does. `confirm` repeats `IR<slot>`; a slot whose name is not the default `User IR n` is
+  only overwritten with `replace: true` (the unit cannot send an IR back). It waits for the unit's
+  flag-3 acknowledgement and reads the slot names back. The upload's checksum is decoded (byte sum
+  of slot, zero, name field and the first 1366 converted samples) from two more captures of WAVs
+  made for it; core gains `mbIrUploadData` and `mbIrUpload`, which rebuild the real IR's captured
+  upload frame for frame and the other two byte for byte. The simulated unit acknowledges uploads.
 - The web editor is an installable app (PWA) that works offline: a web app manifest (name,
   icons, maskable icon, dark theme colors, standalone window, scoped to the GitHub Pages base
   path) and a small hand-written service worker that precaches the whole static export (pages,
@@ -30,13 +38,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
   tempo. Whether it also stores the slot is not known yet, so the loaded preset is backed up first
   and only a save stores. Paths stay inside their folders. The Pocket Master's
   `list_preset_files` skips the Matribox folder. The tool contract only gains entries.
-- Matribox II Pro groundwork for loading user IRs (experimental, not exposed yet): the WAV ->
+- Matribox II Pro groundwork for loading user IRs (used by `matribox_load_ir`, above): the WAV ->
   IR conversion the official editor does (first channel, r8brain 1.6 resampling to 44.1 kHz,
   JUCE's 24-bit rounding, 1024 samples) reproduced sample for sample against a captured upload
   (`mbIrSamplesFromWav`, 44.1 and 48 kHz WAVs), and the IR upload's paged frames,
-  rebuilt frame for frame with `buildMbFrames`. One u32 of the IR message is still
-  undecoded, so no upload tool ships; the capture (clone) upload format is documented, but the
-  official NAM conversion differs from ours. Findings in docs/matribox.md.
+  rebuilt frame for frame with `buildMbFrames`. The capture (clone) upload format is
+  documented, but the official NAM conversion differs from ours. Findings in docs/matribox.md.
 - Matribox II Pro live controls (experimental, not yet checked on the owner's unit), decoded from
   new captures of the official editor (mb-01 patch volume, mb-09 footswitch A, mb-04 expression
   pedal): core builders `mbSetPatchVolume` (`03 00 05 01` + u32), `mbAssignFootswitch`

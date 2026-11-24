@@ -15,6 +15,7 @@ import {
 } from '@pocket-master/core';
 import { assignExpression, assignFootswitch, CC_NOTE, describeAssignments, setExpressionRange, setVolume } from './matribox-live.ts';
 import { MATRIBOX_DEVICE, readMatriboxBackup, readMatriboxPrst, writeMatriboxPrstFile } from './matribox-files.ts';
+import { prepareMatriboxIr, uploadMatriboxIr, type MatriboxIrOptions } from './matribox-ir.ts';
 import type { MatriboxConnection } from './matribox-link.ts';
 import {
   checkParam, describeValues, EXPERIMENTAL, findBlock, findModel, findModule, gear, knownModel, modelTitle, modelValues, planTone, type ParamWrite, type ToneBlock,
@@ -60,6 +61,8 @@ export interface MatriboxFolders {
   readonly backups: string;
   /** The Matribox's .prst files (export, import). */
   readonly presets: string;
+  /** WAV impulse responses that loadIr reads (shared with the Pocket Master). */
+  readonly irs: string;
 }
 
 /** The slot label `preset`, checked against `confirm`, and the preset name, before anything is sent. */
@@ -142,6 +145,12 @@ export class MatriboxSession {
 
   listIrs(): Promise<string> {
     return this.#use(async (unit) => parseMbIrNames(await unit.read(mbReadIrNames())).map((name, i) => `User IR ${i + 1}: ${name.trim()}`).join('\n'));
+  }
+
+  /** Loads a WAV from the irs folder into user IR `slot` (1..20); see matribox-ir.ts. */
+  async loadIr(options: MatriboxIrOptions): Promise<string> {
+    const prepared = await prepareMatriboxIr(this.#folders.irs, options); // checked before the unit is opened
+    return this.#use((unit) => uploadMatriboxIr(unit, options.slot, prepared, options.replace));
   }
 
   listCaptures(): Promise<string> {
