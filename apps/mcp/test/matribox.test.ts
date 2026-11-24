@@ -27,8 +27,14 @@ test('the link refuses a request that is not a read', async () => {
 });
 
 test('detects which supported pedals are connected from the MIDI port names', () => {
-  assert.deepEqual(detectPedals(['IAC Bus 1', 'Matribox II PRO']).map((p) => p.device), [MATRIBOX]);
-  assert.deepEqual(detectPedals(['Pocket Master', 'Matribox II PRO']).map((p) => p.device), [POCKET_MASTER, MATRIBOX]);
+  assert.deepEqual(
+    detectPedals(['IAC Bus 1', 'Matribox II PRO']).map((p) => p.device),
+    [MATRIBOX],
+  );
+  assert.deepEqual(
+    detectPedals(['Pocket Master', 'Matribox II PRO']).map((p) => p.device),
+    [POCKET_MASTER, MATRIBOX],
+  );
   assert.match(describePedals(['Matribox II PRO']), /Matribox II Pro on MIDI port "Matribox II PRO": use the matribox_ tools/);
   assert.match(describePedals(['IAC Bus 1']), /No supported pedal is connected \(MIDI ports: IAC Bus 1\)/);
 });
@@ -85,7 +91,11 @@ test('matribox_list_models gives the palette: models with origin and parameter r
 });
 
 test('matribox_list_models explains how to get the catalog when the official app is missing', async () => {
-  const { client } = await connected({ catalog: async () => { throw new Error('Matribox II PRO catalog not found at /x: install it'); } });
+  const { client } = await connected({
+    catalog: async () => {
+      throw new Error('Matribox II PRO catalog not found at /x: install it');
+    },
+  });
   const result = await client.callTool({ name: 'matribox_list_models', arguments: {} });
   assert.equal(result.isError, true);
   assert.match(text(result), /catalog not found/);

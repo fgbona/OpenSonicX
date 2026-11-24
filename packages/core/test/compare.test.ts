@@ -32,7 +32,5 @@ test('lists parameters, on/off, volume and order in signal-chain terms', () => {
 
 test('a different model is one line: its parameters are not comparable', () => {
   const butter = modelsFor('drv').find((m) => m.name === 'Butter OD')!;
-  assert.deepEqual(comparePresets(p08, edited({ kind: 'model', module: 2, code: butter.code })), [
-    { block: 'DRV', what: 'model', from: 'Scream', to: 'Butter OD' },
-  ]);
+  assert.deepEqual(comparePresets(p08, edited({ kind: 'model', module: 2, code: butter.code })), [{ block: 'DRV', what: 'model', from: 'Scream', to: 'Butter OD' }]);
 });

@@ -4,7 +4,7 @@ import { findPedal, MidiUnavailableError, openMidi, pedalPortsKey, webMidiPort }
 
 const port = (id: string, name: string, state = 'connected') => ({ id, name, state }) as MIDIPort;
 
-test('findPedal pairs one pedal\'s input and output, the Pocket Master first', () => {
+test("findPedal pairs one pedal's input and output, the Pocket Master first", () => {
   const inputs = [port('i0', 'UMC404HD 192k'), port('i1', 'Matribox II PRO'), port('i2', 'Pocket Master')];
   const outputs = [port('o0', 'UMC404HD 192k'), port('o1', 'Matribox II PRO'), port('o2', 'Pocket Master')];
   const both = findPedal(inputs, outputs);
@@ -40,7 +40,10 @@ test('webMidiPort sends to the output and delivers input messages until stopped'
   port.send(Uint8Array.of(0xf0, 2, 0xf7));
   port.listen(null);
   assert.deepEqual(got, [[0xf0, 1, 0xf7]]);
-  assert.deepEqual(sent.map((b) => [...b]), [[0xf0, 2, 0xf7]]);
+  assert.deepEqual(
+    sent.map((b) => [...b]),
+    [[0xf0, 2, 0xf7]],
+  );
   assert.equal(input.onmidimessage, null);
 });
 
@@ -50,7 +53,9 @@ async function refusedWith(error: unknown): Promise<unknown[][]> {
   const saved = { navigator: globalThis.navigator, window: (globalThis as { window?: unknown }).window, error: console.error };
   Object.defineProperty(globalThis, 'navigator', { value: { requestMIDIAccess: () => Promise.reject(error) }, configurable: true });
   (globalThis as { window?: unknown }).window = { isSecureContext: true };
-  console.error = (...args: unknown[]) => { logged.push(args); };
+  console.error = (...args: unknown[]) => {
+    logged.push(args);
+  };
   try {
     await assert.rejects(openMidi(), MidiUnavailableError);
   } finally {
@@ -61,7 +66,7 @@ async function refusedWith(error: unknown): Promise<unknown[][]> {
   return logged;
 }
 
-test('a refused MIDI permission is the person\'s choice: explained, not logged as an error', async () => {
+test("a refused MIDI permission is the person's choice: explained, not logged as an error", async () => {
   assert.deepEqual(await refusedWith(new DOMException('Permission denied.', 'NotAllowedError')), []);
 });
 

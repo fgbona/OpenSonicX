@@ -13,14 +13,15 @@ import { readCapture } from './capture.ts';
 
 function p08(): Preset {
   const r = new Reassembler();
-  const frames = readCapture('p08-capture.txt').filter((m) => m.dir === 'RX').slice(1);
+  const frames = readCapture('p08-capture.txt')
+    .filter((m) => m.dir === 'RX')
+    .slice(1);
   return decodePreset(frames.map((m) => r.feed(parseFrame(m.bytes), 0)).at(-1)!.payload);
 }
 const block = (p: Preset, key: string) => p.chain.find((b) => b.key === key)!;
 const param = (p: Preset, key: string, name: string) => block(p, key).params.find((x) => x.name === name)!;
 /** What the pedal holds: order, on/off, models, parameter values, amp mode. */
-const sound = (p: Preset) =>
-  JSON.stringify([p.ampMode, p.chain.map((b) => [b.module, b.on, b.code, b.params.map((x) => [x.name, x.value])])]);
+const sound = (p: Preset) => JSON.stringify([p.ampMode, p.chain.map((b) => [b.module, b.on, b.code, b.params.map((x) => [x.name, x.value])])]);
 const hex = (cmds: Uint8Array[]) => cmds.map(toHex);
 
 test('decoded params carry their slot (alg)', () => {
@@ -53,7 +54,10 @@ test('applyEdit on a model change loads the catalog defaults', () => {
 test('applyEdit reorders the chain', () => {
   const order = [2, 3, 4, 5, 0, 7, 8, 1, 6];
   const after = applyEdit(p08(), { kind: 'chain', order });
-  assert.deepEqual(after.chain.map((b) => b.module), order);
+  assert.deepEqual(
+    after.chain.map((b) => b.module),
+    order,
+  );
 });
 
 test('editToCommands builds the matching set commands', () => {

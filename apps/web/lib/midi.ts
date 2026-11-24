@@ -16,9 +16,7 @@ export async function openMidi(): Promise<MIDIAccess> {
     // A refusal is the person's choice (or the browser's setting), explained on the page; only
     // something unexpected is worth an error in the console.
     if (!(error instanceof DOMException && error.name === 'NotAllowedError')) console.error('requestMIDIAccess failed', error);
-    throw new MidiUnavailableError(
-      'MIDI access was blocked. Allow "MIDI devices" for this site in the browser settings, then try again.',
-    );
+    throw new MidiUnavailableError('MIDI access was blocked. Allow "MIDI devices" for this site in the browser settings, then try again.');
   }
 }
 
@@ -47,7 +45,11 @@ export function findPedal<I extends MIDIPort, O extends MIDIPort>(inputs: Iterab
 
 /** The plugged-in pedal ports as one string: it changes when a pedal is plugged in or out. */
 export function pedalPortsKey(ports: Iterable<MIDIPort>): string {
-  return [...ports].filter((p) => plugged(p) && pedalOfPort(p.name) !== null).map((p) => `${p.type}:${p.id}`).sort().join(',');
+  return [...ports]
+    .filter((p) => plugged(p) && pedalOfPort(p.name) !== null)
+    .map((p) => `${p.type}:${p.id}`)
+    .sort()
+    .join(',');
 }
 
 /** A Web MIDI input/output pair as the port the core link talks through. */

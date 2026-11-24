@@ -13,8 +13,13 @@ declare const __PRECACHE__: readonly string[];
 declare const __BASE_PATH__: string;
 
 // The few service-worker types used here (the project compiles against the DOM library).
-interface ExtendableEvent extends Event { waitUntil(p: Promise<unknown>): void }
-interface FetchEvent extends ExtendableEvent { readonly request: Request; respondWith(r: Promise<Response>): void }
+interface ExtendableEvent extends Event {
+  waitUntil(p: Promise<unknown>): void;
+}
+interface FetchEvent extends ExtendableEvent {
+  readonly request: Request;
+  respondWith(r: Promise<Response>): void;
+}
 interface WorkerScope {
   addEventListener(type: 'install' | 'activate', fn: (e: ExtendableEvent) => void): void;
   addEventListener(type: 'fetch', fn: (e: FetchEvent) => void): void;
@@ -33,7 +38,8 @@ sw.addEventListener('install', (event) => {
 
 sw.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys()
+    caches
+      .keys()
       .then((names) => Promise.all(names.filter((n) => isStaleCache(n, __CACHE_NAME__)).map((n) => caches.delete(n))))
       // The first install controls the open page at once, so it works offline without a reload.
       .then(() => sw.clients.claim()),
@@ -51,5 +57,10 @@ sw.addEventListener('fetch', (event) => {
   if (url.origin !== sw.location.origin) return;
   const key = cacheKeyFor(url.pathname, __BASE_PATH__, request.mode === 'navigate');
   if (!key || !PRECACHED.has(key)) return;
-  event.respondWith(caches.open(__CACHE_NAME__).then((cache) => cache.match(key)).then((hit) => hit ?? fetch(request)));
+  event.respondWith(
+    caches
+      .open(__CACHE_NAME__)
+      .then((cache) => cache.match(key))
+      .then((hit) => hit ?? fetch(request)),
+  );
 });

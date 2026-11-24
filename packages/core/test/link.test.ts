@@ -78,7 +78,6 @@ test('a notification between replies is logged but does not answer the query', a
   await assert.rejects(pending, LinkClosedError);
 });
 
-
 // --- live edit path -------------------------------------------------------
 import { setParam, setBlockOn, setAmpMode, selectModel, editKey } from '../src/index.ts';
 
@@ -156,7 +155,11 @@ test('a quick second amp model choice cannot drop the queued amp mode switch', (
 test('frames nobody waits for are reported as notifications', () => {
   const seen: string[] = [];
   const { port, receive } = fakePort();
-  const link = new PocketMasterLink(port, () => undefined, (fr) => seen.push(toHex(fr.payload)));
+  const link = new PocketMasterLink(
+    port,
+    () => undefined,
+    (fr) => seen.push(toHex(fr.payload)),
+  );
   receive(buildFrame([0x12, 0x43, 9, 0]));
   assert.deepEqual(seen, ['12 43 09 00']);
   link.close();
@@ -165,7 +168,11 @@ test('frames nobody waits for are reported as notifications', () => {
 test('a reply that answers a request is not reported as a notification', async () => {
   const seen: string[] = [];
   const { port, receive } = fakePort();
-  const link = new PocketMasterLink(port, () => undefined, (fr) => seen.push(toHex(fr.payload)));
+  const link = new PocketMasterLink(
+    port,
+    () => undefined,
+    (fr) => seen.push(toHex(fr.payload)),
+  );
   const pending = link.request(0x43);
   receive(buildFrame([0x12, 0x43, 7, 0]));
   await pending;
@@ -248,7 +255,10 @@ test('a preset operation waits until queued edits are written', async () => {
 
 test('a port that fails to send rejects the request with a readable error and leaves nothing pending', async () => {
   let sends = 0;
-  const { port } = fakePort(() => { sends++; throw new Error('port disconnected'); });
+  const { port } = fakePort(() => {
+    sends++;
+    throw new Error('port disconnected');
+  });
   const link = new PocketMasterLink(port, () => undefined);
   await assert.rejects(link.request(0x43), /Could not send to the pedal: port disconnected/);
   mock.timers.tick(10_000);
@@ -293,7 +303,9 @@ test('an upload sends each chunk after the previous one is acknowledged, and end
   const f = fakes();
   const blob = irRenameBlob(0, 'Holy'); // 22 bytes: two chunks
   let done = false;
-  const upload = f.link.upload(blob, UploadDomain.IR).then(() => { done = true; });
+  const upload = f.link.upload(blob, UploadDomain.IR).then(() => {
+    done = true;
+  });
   await flush();
   assert.equal(f.sent.length, 1);
   f.receive(uploadAck());

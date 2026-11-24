@@ -1,8 +1,19 @@
 'use client';
 
 import {
-  type Block, blockModelLabel, type Edit, encodeValue, groupModels, modelGuide, modelInfo, modelLabel, modelOf,
-  modelsFor, type ModelSpec, paramSpecFor, type Preset,
+  type Block,
+  blockModelLabel,
+  type Edit,
+  encodeValue,
+  groupModels,
+  modelGuide,
+  modelInfo,
+  modelLabel,
+  modelOf,
+  modelsFor,
+  type ModelSpec,
+  paramSpecFor,
+  type Preset,
 } from '@pocket-master/core';
 import { Knob } from './Knob';
 import { AmpTube } from './AmpTube';
@@ -41,7 +52,7 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
   };
   const modelGroups = (value: (m: ModelSpec) => string): PickerGroup[] => {
     const groups = groupModels(block.key, choices, lang);
-    return groups.map((g) => ({ name: groups.length === 1 ? null : g.name ?? t('block.otherModels'), options: g.models.map((m) => option(m, value(m))) }));
+    return groups.map((g) => ({ name: groups.length === 1 ? null : (g.name ?? t('block.otherModels')), options: g.models.map((m) => option(m, value(m))) }));
   };
   const model = modelOf(preset, block);
   const guide = model ? modelGuide(block.key, model.name) : undefined;
@@ -62,7 +73,9 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
         <ModuleIcon blockKey={block.key} size={36} />
         <span className="editor-label">{block.label}</span>
         {editable && block.key === 'amp' ? (
-          <ModelPicker ariaLabel={t('block.modelAria', { block: block.label })} value={modelValue(block.code, clone)}
+          <ModelPicker
+            ariaLabel={t('block.modelAria', { block: block.label })}
+            value={modelValue(block.code, clone)}
             onChange={(v) => {
               const choice = parseModelValue(v);
               if (choice) onEdit({ kind: 'model', module: block.module, code: choice.code, clone: choice.clone });
@@ -70,64 +83,117 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
             groups={[
               ...(clone && shown === block.model ? [{ name: null, options: [{ value: modelValue(block.code, true), name: t('block.captured', { model: block.model }), disabled: true }] }] : []),
               ...modelGroups((m) => modelValue(m.code, false)),
-              ...(profiles.length > 0 ? [{ name: t('block.profiles'), options: profiles.map((p) => ({ value: modelValue(p.code, true), name: p.name, detail: noteFor(notes, 'profile', p.slot - 1, p.name) ?? t('block.profileSlot', { n: p.slot }) })) }] : []),
-            ]} />
+              ...(profiles.length > 0
+                ? [
+                    {
+                      name: t('block.profiles'),
+                      options: profiles.map((p) => ({ value: modelValue(p.code, true), name: p.name, detail: noteFor(notes, 'profile', p.slot - 1, p.name) ?? t('block.profileSlot', { n: p.slot }) })),
+                    },
+                  ]
+                : []),
+            ]}
+          />
         ) : editable && choices.length > 0 ? (
-          <ModelPicker ariaLabel={t('block.modelAria', { block: block.label })} value={String(block.code)}
+          <ModelPicker
+            ariaLabel={t('block.modelAria', { block: block.label })}
+            value={String(block.code)}
             onChange={(v) => onEdit({ kind: 'model', module: block.module, code: Number(v) })}
-            groups={modelGroups((m) => String(m.code))} />
+            groups={modelGroups((m) => String(m.code))}
+          />
         ) : (
           <span className="editor-model editor-model-static">{shown}</span>
         )}
         <span className="editor-end">
-          <button type="button" role="switch" aria-checked={block.on} aria-label={t(block.on ? 'block.onAria' : 'block.offAria', { block: block.label })}
-            className={`switch${block.on ? ' switch-on' : ''}`} disabled={!editable} onClick={() => onEdit({ kind: 'on', module: block.module, on: !block.on })}>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={block.on}
+            aria-label={t(block.on ? 'block.onAria' : 'block.offAria', { block: block.label })}
+            className={`switch${block.on ? ' switch-on' : ''}`}
+            disabled={!editable}
+            onClick={() => onEdit({ kind: 'on', module: block.module, on: !block.on })}
+          >
             <span className="switch-knob" />
           </button>
         </span>
       </header>
       <div className={`editor-face face-${block.key}`} data-skin={skin ?? undefined}>
-      {block.key === 'amp' && <AmpDecor on={block.on} drive={gainOf(block)} tubeKey={block.code} tube={hasTube(skin)} />}
-      {block.params.length === 0 ? (
-        <p className="muted small">{t('block.noParams')}</p>
-      ) : (
-        <div className="editor-params">
-          {block.params.map((p) => {
-            const spec = paramSpecFor(preset, block, p.alg);
-            if (p.kind === 'number' && spec) {
-              return <Knob key={p.alg} label={p.name} value={p.value} min={p.min ?? 0} max={p.max ?? 100} step={spec.step ?? 1}
-                display={p.display} defaultValue={spec.default} disabled={!editable} onChange={(v) => send(p.alg, v)} />;
-            }
-            if (p.kind === 'switch') {
-              const on = p.value >= 0.5;
+        {block.key === 'amp' && <AmpDecor on={block.on} drive={gainOf(block)} tubeKey={block.code} tube={hasTube(skin)} />}
+        {block.params.length === 0 ? (
+          <p className="muted small">{t('block.noParams')}</p>
+        ) : (
+          <div className="editor-params">
+            {block.params.map((p) => {
+              const spec = paramSpecFor(preset, block, p.alg);
+              if (p.kind === 'number' && spec) {
+                return (
+                  <Knob
+                    key={p.alg}
+                    label={p.name}
+                    value={p.value}
+                    min={p.min ?? 0}
+                    max={p.max ?? 100}
+                    step={spec.step ?? 1}
+                    display={p.display}
+                    defaultValue={spec.default}
+                    disabled={!editable}
+                    onChange={(v) => send(p.alg, v)}
+                  />
+                );
+              }
+              if (p.kind === 'switch') {
+                const on = p.value >= 0.5;
+                return (
+                  <div key={p.alg} className="editor-toggle">
+                    <span className="knob-value" aria-hidden="true">
+                      {on ? t('block.on') : t('block.off')}
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={on}
+                      aria-label={p.name}
+                      className={`switch${on ? ' switch-on' : ''}`}
+                      disabled={!editable || !spec}
+                      onClick={() => send(p.alg, !on)}
+                    >
+                      <span className="switch-knob" />
+                    </button>
+                    <span className="knob-label">{p.name}</span>
+                  </div>
+                );
+              }
               return (
                 <div key={p.alg} className="editor-toggle">
-                  <span className="knob-value" aria-hidden="true">{on ? t('block.on') : t('block.off')}</span>
-                  <button type="button" role="switch" aria-checked={on} aria-label={p.name} className={`switch${on ? ' switch-on' : ''}`} disabled={!editable || !spec} onClick={() => send(p.alg, !on)}>
-                    <span className="switch-knob" />
-                  </button>
+                  <span className="knob-value" aria-hidden="true">
+                    {p.display}
+                  </span>
+                  <select className="param-select" aria-label={p.name} value={Math.round(p.value)} disabled={!editable || !spec} onChange={(e) => send(p.alg, Number(e.target.value))}>
+                    {spec?.options?.map((o, i) => (
+                      <option key={o} value={i}>
+                        {o}
+                      </option>
+                    ))}
+                  </select>
                   <span className="knob-label">{p.name}</span>
                 </div>
               );
-            }
+            })}
+          </div>
+        )}
+        {block.key === 'amp' && guide && info?.basedOn && <p className="amp-script">{t('editor.basedOn', { gear: guide.label[lang] })}</p>}
+        {(info?.basedOn || info?.about) &&
+          (() => {
+            // The AMP's faceplate already signs "Based on …"; the line below then only describes it.
+            const basedOn = block.key === 'amp' && guide ? undefined : info.basedOn;
             return (
-              <div key={p.alg} className="editor-toggle">
-                <span className="knob-value" aria-hidden="true">{p.display}</span>
-                <select className="param-select" aria-label={p.name} value={Math.round(p.value)} disabled={!editable || !spec} onChange={(e) => send(p.alg, Number(e.target.value))}>
-                  {spec?.options?.map((o, i) => <option key={o} value={i}>{o}</option>)}
-                </select>
-                <span className="knob-label">{p.name}</span>
-              </div>
+              <p className="editor-info">
+                {basedOn ? t('editor.basedOn', { gear: basedOn }) : ''}
+                {basedOn && info.about ? ' · ' : ''}
+                {lang === 'pt' && guide ? guide.aboutPt : info.about}
+              </p>
             );
-          })}
-        </div>
-      )}
-      {block.key === 'amp' && guide && info?.basedOn && <p className="amp-script">{t('editor.basedOn', { gear: guide.label[lang] })}</p>}
-      {(info?.basedOn || info?.about) && (() => {
-        // The AMP's faceplate already signs "Based on …"; the line below then only describes it.
-        const basedOn = block.key === 'amp' && guide ? undefined : info.basedOn;
-        return <p className="editor-info">{basedOn ? t('editor.basedOn', { gear: basedOn }) : ''}{basedOn && info.about ? ' · ' : ''}{lang === 'pt' && guide ? guide.aboutPt : info.about}</p>;
-      })()}
+          })()}
       </div>
     </section>
   );

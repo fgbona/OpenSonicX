@@ -25,11 +25,14 @@ export function quietMatribox(): FakeMatribox {
 }
 
 export const test = base.extend<{ unit: FakeMatribox }>({
-  unit: [async ({ page }, use) => {
-    const unit = quietMatribox();
-    await wireMidi(page, { 'Matribox II PRO': (bytes) => answer(unit, bytes) }, { plugged: ['Matribox II PRO'], denials: 0 });
-    await use(unit);
-  }, { auto: true }], // always: a page here must never reach the real Web MIDI
+  unit: [
+    async ({ page }, use) => {
+      const unit = quietMatribox();
+      await wireMidi(page, { 'Matribox II PRO': (bytes) => answer(unit, bytes) }, { plugged: ['Matribox II PRO'], denials: 0 });
+      await use(unit);
+    },
+    { auto: true },
+  ], // always: a page here must never reach the real Web MIDI
 });
 export { expect };
 

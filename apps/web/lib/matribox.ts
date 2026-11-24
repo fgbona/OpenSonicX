@@ -6,9 +6,27 @@
  * editor's reads are sent; never the unit's own notice messages. Nothing here touches React or the browser.
  */
 import {
-  checkMbPresetName, mbPresetLabel, mbReadCloneNames, mbReadCurrentPresetNumber, mbReadIrNames, mbReadPreset, mbReadLoadedIndex, mbReadPresetNames, mbReadSlot, mbSavePreset,
-  mbStoreSlot, parseMbCloneNames, parseMbCurrentPresetNumber, parseMbIrNames, parseMbPreset, parseMbPresetNames, toHex,
-  type MatriboxLink, type MbModel, type MbPreset, type MbPresetName,
+  checkMbPresetName,
+  mbPresetLabel,
+  mbReadCloneNames,
+  mbReadCurrentPresetNumber,
+  mbReadIrNames,
+  mbReadPreset,
+  mbReadLoadedIndex,
+  mbReadPresetNames,
+  mbReadSlot,
+  mbSavePreset,
+  mbStoreSlot,
+  parseMbCloneNames,
+  parseMbCurrentPresetNumber,
+  parseMbIrNames,
+  parseMbPreset,
+  parseMbPresetNames,
+  toHex,
+  type MatriboxLink,
+  type MbModel,
+  type MbPreset,
+  type MbPresetName,
 } from '@pocket-master/core';
 
 export interface MbLoaded {
@@ -80,10 +98,7 @@ async function saveLoaded(link: MatriboxLink, index: number, name: string, loade
  * into it whole, and a save sent only to rename it; that slot stays loaded. If that fails, the
  * edit buffer is handed to `keep` too, so the edits are not lost.
  */
-export async function saveToSlot(
-  link: MatriboxLink, index: number, name: string, keep: Keep,
-  now: () => string = () => new Date().toISOString(), checkMs: number = SAVE_CHECK_MS,
-): Promise<MbBackup> {
+export async function saveToSlot(link: MatriboxLink, index: number, name: string, keep: Keep, now: () => string = () => new Date().toISOString(), checkMs: number = SAVE_CHECK_MS): Promise<MbBackup> {
   checkMbPresetName(name);
   mbSavePreset(index, name); // checks the index before anything is sent
   const current = await mbReadLoadedIndex(link);

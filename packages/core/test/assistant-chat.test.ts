@@ -23,17 +23,38 @@ function fakeHost(options: { select?: boolean; save?: 'saved' | 'cancelled'; ref
       history.push(preset);
       preset = edits.reduce(applyEdit, preset);
     },
-    async undo() { calls.push('undo'); const last = history.pop(); if (!last) return false; preset = last; return true; },
-    async revert() { calls.push('revert'); preset = history[0] ?? preset; history.length = 0; },
-    async selectPreset(index) { calls.push(`select ${index}`); return options.select ?? true; },
-    async proposeSave(index, name) { calls.push(`propose ${index} ${name}`); return options.save ?? 'saved'; },
+    async undo() {
+      calls.push('undo');
+      const last = history.pop();
+      if (!last) return false;
+      preset = last;
+      return true;
+    },
+    async revert() {
+      calls.push('revert');
+      preset = history[0] ?? preset;
+      history.length = 0;
+    },
+    async selectPreset(index) {
+      calls.push(`select ${index}`);
+      return options.select ?? true;
+    },
+    async proposeSave(index, name) {
+      calls.push(`propose ${index} ${name}`);
+      return options.save ?? 'saved';
+    },
   };
   return { host, calls };
 }
 
 test('edit_preset applies every change at once and answers with the preset as it is now', async () => {
   const { host, calls } = fakeHost();
-  const r = await runChatTool(host, 'edit_preset', { changes: [{ kind: 'model', block: 'amp', model: 'Calif DualM' }, { kind: 'parameter', block: 'amp', parameter: 'gain', value: 70 }] });
+  const r = await runChatTool(host, 'edit_preset', {
+    changes: [
+      { kind: 'model', block: 'amp', model: 'Calif DualM' },
+      { kind: 'parameter', block: 'amp', parameter: 'gain', value: 70 },
+    ],
+  });
   assert.equal(r.ok, true);
   assert.deepEqual(calls, ['edits model,param']);
   assert.match(r.text, /AMP +on +Calif DualM: Gain 70/);
@@ -41,7 +62,12 @@ test('edit_preset applies every change at once and answers with the preset as it
 
 test('a bad change list sends nothing, and says what was wrong', async () => {
   const { host, calls } = fakeHost();
-  const r = await runChatTool(host, 'edit_preset', { changes: [{ kind: 'parameter', block: 'amp', parameter: 'gain', value: 70 }, { kind: 'model', block: 'amp', model: 'No Such Amp' }] });
+  const r = await runChatTool(host, 'edit_preset', {
+    changes: [
+      { kind: 'parameter', block: 'amp', parameter: 'gain', value: 70 },
+      { kind: 'model', block: 'amp', model: 'No Such Amp' },
+    ],
+  });
   assert.equal(r.ok, false);
   assert.match(r.text, /No Such Amp/i);
   assert.deepEqual(calls, []);
@@ -53,7 +79,7 @@ test('the editor refusing an edit (live edit off) comes back as a tool error', a
   assert.deepEqual(r, { ok: false, text: 'Error: Live edit is off: the person must turn it on.' });
 });
 
-test('save_preset only proposes: the editor\'s dialog decides', async () => {
+test("save_preset only proposes: the editor's dialog decides", async () => {
   const saved = fakeHost();
   assert.equal((await runChatTool(saved.host, 'save_preset', { slot: 'P45', name: 'BLACK ALB' })).ok, true);
   assert.deepEqual(saved.calls, ['propose 44 BLACK ALB']);
@@ -100,7 +126,7 @@ test('tools shared with the MCP server take the same parameters as its frozen co
   assert.equal(shape(CHAT_TOOLS.find((t) => t.name === 'save_preset')!.parameters as Schema), '{ slot: string, name: string }');
 });
 
-test('the first message carries the preset and every block\'s models, so a tone takes few requests', () => {
+test("the first message carries the preset and every block's models, so a tone takes few requests", () => {
   const text = chatContext(fakeHost().host);
   assert.match(text, /^Loaded preset:\nP08 "IRON-RHY"/);
   for (const label of ['NR', 'DRV', 'AMP', 'IR', 'RVB']) assert.match(text, new RegExp(`\\n${label} models:\\n`));
@@ -112,7 +138,12 @@ test('a preset loaded during a reply makes the change tools refuse, until the mo
   const guard = { index: 7 };
   const snap = host.snapshot;
   host.snapshot = () => ({ ...snap(), index: 9, name: 'THR-CLEAN' }); // the person loaded P10 meanwhile
-  for (const [tool, args] of [['edit_preset', { changes: [{ kind: 'volume', value: 50 }] }], ['undo_edit', {}], ['revert_preset', {}], ['save_preset', { slot: 'P45', name: 'X' }]] as const) {
+  for (const [tool, args] of [
+    ['edit_preset', { changes: [{ kind: 'volume', value: 50 }] }],
+    ['undo_edit', {}],
+    ['revert_preset', {}],
+    ['save_preset', { slot: 'P45', name: 'X' }],
+  ] as const) {
     const r = await runChatTool(host, tool, args, guard);
     assert.equal(r.ok, false, tool);
     assert.match(r.text, /preset changed to P10/);
@@ -137,8 +168,13 @@ function libraryHost() {
   const host: ToneHost = {
     ...base.host,
     savedTones: () => tones,
-    async loadSavedTone(name) { base.calls.push(`load ${name}`); return tones.some((t) => t.name.toLowerCase() === name.toLowerCase()); },
-    async keepTone(name, notes) { kept.push(`${name} / ${notes}`); },
+    async loadSavedTone(name) {
+      base.calls.push(`load ${name}`);
+      return tones.some((t) => t.name.toLowerCase() === name.toLowerCase());
+    },
+    async keepTone(name, notes) {
+      kept.push(`${name} / ${notes}`);
+    },
   };
   return { host, calls: base.calls, kept };
 }
@@ -168,7 +204,10 @@ test('loading or keeping a tone also stops when the person loaded another preset
   const { host } = libraryHost();
   const snap = host.snapshot;
   host.snapshot = () => ({ ...snap(), index: 9 });
-  for (const [tool, args] of [['load_saved_tone', { name: 'BLACK RHY' }], ['keep_tone', { name: 'X', notes: 'y' }]] as const) {
+  for (const [tool, args] of [
+    ['load_saved_tone', { name: 'BLACK RHY' }],
+    ['keep_tone', { name: 'X', notes: 'y' }],
+  ] as const) {
     assert.match((await runChatTool(host, tool, args, { index: 7 })).text, /preset changed to P10/, tool);
   }
 });
@@ -177,7 +216,12 @@ test('changing a block that stays off says it is not heard, so the model can tur
   const { host } = fakeHost();
   const off = await runChatTool(host, 'edit_preset', { changes: [{ kind: 'parameter', block: 'dly', parameter: 'mix', value: 30 }] });
   assert.match(off.text, /Note: DLY is off, so these changes are not heard\. Turn it on if it should be heard\./);
-  const on = await runChatTool(fakeHost().host, 'edit_preset', { changes: [{ kind: 'parameter', block: 'dly', parameter: 'mix', value: 30 }, { kind: 'block', block: 'dly', on: true }] });
+  const on = await runChatTool(fakeHost().host, 'edit_preset', {
+    changes: [
+      { kind: 'parameter', block: 'dly', parameter: 'mix', value: 30 },
+      { kind: 'block', block: 'dly', on: true },
+    ],
+  });
   assert.doesNotMatch(on.text, /Note:/);
 });
 

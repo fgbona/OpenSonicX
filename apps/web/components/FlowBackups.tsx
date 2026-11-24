@@ -9,7 +9,11 @@ export function FlowBackups({ backups, warning, onDownload }: { backups: readonl
   if (backups.length === 0) return null;
   return (
     <div className="flow-backups">
-      {warning && <p className="alert" role="alert">{te(warning)}</p>}
+      {warning && (
+        <p className="alert" role="alert">
+          {te(warning)}
+        </p>
+      )}
       <p className="muted small">{t('flow.note')}</p>
       <div className="flow-backup-buttons">
         {backups.map((b) => (

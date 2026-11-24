@@ -16,7 +16,12 @@ export interface Price {
 export type Prices = ReadonlyMap<string, Price>;
 
 /** "anthropic/claude-haiku-5.5" and "claude-haiku-5-5" both give "claudehaiku55". */
-const key = (id: string) => id.toLowerCase().replace(/:.*$/, '').replace(/^.*\//, '').replace(/[^a-z0-9]/g, '');
+const key = (id: string) =>
+  id
+    .toLowerCase()
+    .replace(/:.*$/, '')
+    .replace(/^.*\//, '')
+    .replace(/[^a-z0-9]/g, '');
 
 export function parsePrices(catalog: unknown): Prices {
   const prices = new Map<string, Price>();
@@ -50,9 +55,12 @@ let loading: Promise<Prices> | null = null;
 
 /** The catalog's prices, fetched once per page; empty when it cannot be read (no cost is shown then). */
 export function loadPrices(fetchFn: typeof fetch = fetch): Promise<Prices> {
-  loading ??= fetchFn(CATALOG).then((r) => (r.ok ? r.json() : null)).then(parsePrices).catch(() => {
-    loading = null; // try again next time
-    return new Map<string, Price>();
-  });
+  loading ??= fetchFn(CATALOG)
+    .then((r) => (r.ok ? r.json() : null))
+    .then(parsePrices)
+    .catch(() => {
+      loading = null; // try again next time
+      return new Map<string, Price>();
+    });
   return loading;
 }

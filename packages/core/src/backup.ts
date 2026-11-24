@@ -63,7 +63,11 @@ interface FlowOptions {
 }
 
 const backupFile = (kind: BackupFile['kind'], slots: SlotBackup[], now: () => Date): BackupFile => ({
-  format: 'pocket-master-backup', version: 1, kind, createdAt: now().toISOString(), slots,
+  format: 'pocket-master-backup',
+  version: 1,
+  kind,
+  createdAt: now().toISOString(),
+  slots,
 });
 
 async function readSlot(pedal: Pedal, index: number, name: string): Promise<SlotBackup> {
@@ -85,10 +89,10 @@ async function readSlot(pedal: Pedal, index: number, name: string): Promise<Slot
 /** Brings the edit buffer to `target` by diff and checks it took. */
 export async function applyPreset(pedal: Pedal, target: Preset): Promise<void> {
   const fresh = decodePreset(await pedal.readEditBuffer());
-  const { commands } = diffPresets(fresh, target).reduce(
-    (acc, e) => ({ state: applyEdit(acc.state, e), commands: [...acc.commands, ...editToCommands(acc.state, e)] }),
-    { state: fresh, commands: [] as Uint8Array[] },
-  );
+  const { commands } = diffPresets(fresh, target).reduce((acc, e) => ({ state: applyEdit(acc.state, e), commands: [...acc.commands, ...editToCommands(acc.state, e)] }), {
+    state: fresh,
+    commands: [] as Uint8Array[],
+  });
   await pedal.sendEdits(commands);
   const check = decodePreset(await pedal.readEditBuffer());
   if (diffPresets(check, target).length > 0) throw new Error('the pedal did not take every edit; nothing was saved');
@@ -125,10 +129,7 @@ async function restoreLoaded(pedal: Pedal, original: number, edited: Preset | nu
  * Not part of the save flow (the owner chose target-only backups); kept for a future
  * "back up all presets" action and for the MCP server.
  */
-export async function backupAllSlots(
-  pedal: Pedal,
-  options: FlowOptions & { edited: Preset | null },
-): Promise<BackupFile> {
+export async function backupAllSlots(pedal: Pedal, options: FlowOptions & { edited: Preset | null }): Promise<BackupFile> {
   const now = options.now ?? (() => new Date());
   const original = await pedal.readCurrentIndex();
   const names = await pedal.readNames();
@@ -240,11 +241,7 @@ async function saveEdited(pedal: Pedal, options: SaveOptions, original: number, 
  * Writes a backed-up slot back to its slot under its backed-up name. The slot's current content is
  * backed up first. Loads that slot, so unsaved edits on the loaded preset are discarded.
  */
-export async function restoreFromBackup(
-  pedal: Pedal,
-  slot: SlotBackup,
-  options: FlowOptions & { pause?: (ms: number) => Promise<void>; backup?: boolean },
-): Promise<SaveResult> {
+export async function restoreFromBackup(pedal: Pedal, slot: SlotBackup, options: FlowOptions & { pause?: (ms: number) => Promise<void>; backup?: boolean }): Promise<SaveResult> {
   // The editor restores without a backup (owner, 2026-11-22: a restore is a deliberate choice,
   // confirmed in its dialog); the MCP server, where an assistant restores, still asks for one.
   return restoreSlot(pedal, slot, options, options.backup === true);
@@ -267,11 +264,7 @@ async function restoreSlot(pedal: Pedal, slot: SlotBackup, options: FlowOptions 
  * Writes every slot of a backup file back to the pedal, each checked, then goes back to the
  * preset that was loaded. Unsaved edits on the loaded preset are lost: each restore loads its slot.
  */
-export async function restoreAllFromBackup(
-  pedal: Pedal,
-  file: BackupFile,
-  options: FlowOptions & { pause?: (ms: number) => Promise<void> },
-): Promise<{ restored: number }> {
+export async function restoreAllFromBackup(pedal: Pedal, file: BackupFile, options: FlowOptions & { pause?: (ms: number) => Promise<void> }): Promise<{ restored: number }> {
   const original = await pedal.readCurrentIndex();
   file.slots.forEach((slot) => requireKnownModels(decodePreset(fromHex(slot.payload)))); // refuse before anything changes
   const count = file.slots.length;

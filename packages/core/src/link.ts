@@ -46,8 +46,7 @@ const SESSION_TIMEOUT_MS = 1000;
 
 let nextLogId = 0; // module-wide so log keys stay unique across reconnects
 
-const sendError = (error: unknown) =>
-  new Error(`Could not send to the pedal: ${error instanceof Error ? error.message : String(error)}. Check the USB cable and that the pedal is on.`);
+const sendError = (error: unknown) => new Error(`Could not send to the pedal: ${error instanceof Error ? error.message : String(error)}. Check the USB cable and that the pedal is on.`);
 
 /** Thrown by a request that was pending, or started, after the link was closed. */
 export class LinkClosedError extends Error {
@@ -112,7 +111,10 @@ export class PocketMasterLink {
     // running (counted together, so a third query cannot slip in between two).
     const idle = this.#inFlight === 0;
     this.#inFlight += 1;
-    const start = () => this.#requestNow(kind, args).finally(() => { this.#inFlight -= 1; });
+    const start = () =>
+      this.#requestNow(kind, args).finally(() => {
+        this.#inFlight -= 1;
+      });
     const run = idle ? start() : this.#requests.then(start);
     this.#requests = run.catch(() => undefined); // a failed query never blocks the next one
     return run;
@@ -203,9 +205,7 @@ export class PocketMasterLink {
     const frame = await ack;
     if (this.#closed) throw new LinkClosedError();
     if (!frame) {
-      throw new Error(isSave
-        ? 'The pedal sent no acknowledge for the save; treat it as not saved.'
-        : 'The pedal sent no acknowledge for the preset selection.');
+      throw new Error(isSave ? 'The pedal sent no acknowledge for the save; treat it as not saved.' : 'The pedal sent no acknowledge for the preset selection.');
     }
     return decodeAck(frame.payload);
   }
@@ -238,10 +238,7 @@ export class PocketMasterLink {
       if (!ack) throw new Error(`The pedal sent no acknowledge for ${which}; the upload stopped and nothing was saved.`);
       if (!decodeAck(ack.payload)) throw new Error(`The pedal refused ${which}; the upload stopped and nothing was saved.`);
     }
-    const written = await this.#waitForFrame(
-      (f) => f.payload[0] === MessageType.GET && f.payload[1] === FLASH_WRITTEN && f.payload[2] === domain,
-      FLASH_WRITE_TIMEOUT_MS,
-    );
+    const written = await this.#waitForFrame((f) => f.payload[0] === MessageType.GET && f.payload[1] === FLASH_WRITTEN && f.payload[2] === domain, FLASH_WRITE_TIMEOUT_MS);
     if (this.#closed) throw new LinkClosedError();
     if (!written) {
       throw new Error('The pedal took the upload but did not write it to memory, so it is not saved. Switch the pedal off and on, then try again.');

@@ -11,7 +11,10 @@ const SKIPPED = [/^sw\.js$/, /^opengraph-image\./, /\.map$/, /(^|\/)\.DS_Store$/
 
 /** The URLs (under basePath) of the export's files (relative paths, '/'-separated) to precache, sorted. */
 export function precacheUrls(files: readonly string[], basePath: string): string[] {
-  return files.filter((f) => !SKIPPED.some((re) => re.test(f))).map((f) => `${basePath}/${f}`).sort();
+  return files
+    .filter((f) => !SKIPPED.some((re) => re.test(f)))
+    .map((f) => `${basePath}/${f}`)
+    .sort();
 }
 
 /**

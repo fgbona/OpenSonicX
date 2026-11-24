@@ -5,7 +5,10 @@ import { profileChoices, modelValue, parseModelValue } from '../lib/ampChoices.t
 const slots = ['Randall SA', null, null, null, null];
 
 test('only occupied captured-profile slots are offered, with their names', () => {
-  assert.deepEqual(profileChoices(slots).map((c) => [c.slot, c.name, c.code.toString(16)]), [[1, 'Randall SA', '7000000']]);
+  assert.deepEqual(
+    profileChoices(slots).map((c) => [c.slot, c.name, c.code.toString(16)]),
+    [[1, 'Randall SA', '7000000']],
+  );
   assert.deepEqual(profileChoices(null), []);
 });
 

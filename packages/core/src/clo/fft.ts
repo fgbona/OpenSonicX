@@ -32,8 +32,12 @@ export class Fft {
     for (let i = 0; i < n; i++) {
       const j = this.#rev[i]!;
       if (j > i) {
-        const tr = re[i]!; re[i] = re[j]!; re[j] = tr;
-        const ti = im[i]!; im[i] = im[j]!; im[j] = ti;
+        const tr = re[i]!;
+        re[i] = re[j]!;
+        re[j] = tr;
+        const ti = im[i]!;
+        im[i] = im[j]!;
+        im[j] = ti;
       }
     }
     const cos = this.#cos;
@@ -47,10 +51,12 @@ export class Fft {
         const wi = sin[j * step]!;
         for (let a = j; a < n; a += len) {
           const b = a + half;
-          const rb = re[b]!, ib = im[b]!;
+          const rb = re[b]!,
+            ib = im[b]!;
           const tr = wr * rb - wi * ib;
           const ti = wr * ib + wi * rb;
-          const ra = re[a]!, ia = im[a]!;
+          const ra = re[a]!,
+            ia = im[a]!;
           re[b] = ra - tr;
           im[b] = ia - ti;
           re[a] = ra + tr;
@@ -120,7 +126,10 @@ export function welchPairs(pairs: readonly (readonly [Float64Array, Float64Array
       fft().transform(xr, xi, false);
       fft().transform(yr, yi, false);
       for (let i = 0; i < BINS; i++) {
-        const axr = xr[i]!, axi = xi[i]!, ayr = yr[i]!, ayi = yi[i]!;
+        const axr = xr[i]!,
+          axi = xi[i]!,
+          ayr = yr[i]!,
+          ayi = yi[i]!;
         sxyRe[i]! += ayr * axr + ayi * axi;
         sxyIm[i]! += ayi * axr - ayr * axi;
         sxx[i]! += axr * axr + axi * axi;

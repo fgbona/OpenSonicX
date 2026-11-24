@@ -13,16 +13,32 @@ const VIDEO = mkdtempSync(join(tmpdir(), 'assistant-media-'));
 test.use({ channel: 'chrome', viewport: { width: 1280, height: 1250 }, deviceScaleFactor: 1, colorScheme: 'dark', video: { mode: 'on', size: { width: 1280, height: 1250 } } });
 test.setTimeout(120_000);
 
-const REPLY = 'Built it: Calif DualM (a Mesa Dual Rectifier) with gain 70 and a scooped middle, the Dual 4x12 cab and a little room reverb. Ask for more bass or less gain by ear, or "save it on P45".';
+const REPLY =
+  'Built it: Calif DualM (a Mesa Dual Rectifier) with gain 70 and a scooped middle, the Dual 4x12 cab and a little room reverb. Ask for more bass or less gain by ear, or "save it on P45".';
 
 test('assistant media', async ({ page, pedal }) => {
   mkdirSync(OUT, { recursive: true });
   const replies = [
-    { status: 'requires_action', steps: [{ type: 'function_call', id: 'c1', name: 'edit_preset', arguments: { changes: [
-      { kind: 'model', block: 'AMP', model: 'Calif DualM' }, { kind: 'parameter', block: 'AMP', parameter: 'Gain', value: 70 },
-      { kind: 'parameter', block: 'AMP', parameter: 'Middle', value: 35 }, { kind: 'model', block: 'IR', model: 'Dual 4x12' },
-      { kind: 'model', block: 'RVB', model: 'Room' }, { kind: 'block', block: 'RVB', on: true },
-    ] } }] },
+    {
+      status: 'requires_action',
+      steps: [
+        {
+          type: 'function_call',
+          id: 'c1',
+          name: 'edit_preset',
+          arguments: {
+            changes: [
+              { kind: 'model', block: 'AMP', model: 'Calif DualM' },
+              { kind: 'parameter', block: 'AMP', parameter: 'Gain', value: 70 },
+              { kind: 'parameter', block: 'AMP', parameter: 'Middle', value: 35 },
+              { kind: 'model', block: 'IR', model: 'Dual 4x12' },
+              { kind: 'model', block: 'RVB', model: 'Room' },
+              { kind: 'block', block: 'RVB', on: true },
+            ],
+          },
+        },
+      ],
+    },
     { status: 'completed', steps: [{ type: 'model_output', content: [{ type: 'text', text: REPLY }] }] },
   ];
   await page.route('https://generativelanguage.googleapis.com/**', async (route) => {
@@ -63,7 +79,20 @@ test('assistant media', async ({ page, pedal }) => {
   const palette = join(VIDEO, 'palette.png');
   const filters = `${crop},fps=12,scale=720:-1:flags=lanczos`;
   execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-sseof', `-${seconds.toFixed(1)}`, '-i', webm, '-vf', `${filters},palettegen=max_colors=128`, palette]);
-  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-sseof', `-${seconds.toFixed(1)}`, '-i', webm, '-i', palette, '-lavfi', `${filters}[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=4`, join(OUT, 'assistant.gif')]);
+  execFileSync('ffmpeg', [
+    '-y',
+    '-loglevel',
+    'error',
+    '-sseof',
+    `-${seconds.toFixed(1)}`,
+    '-i',
+    webm,
+    '-i',
+    palette,
+    '-lavfi',
+    `${filters}[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=4`,
+    join(OUT, 'assistant.gif'),
+  ]);
   rmSync(VIDEO, { recursive: true, force: true });
   console.log(readdirSync(OUT).filter((f) => f.startsWith('assistant')));
 });

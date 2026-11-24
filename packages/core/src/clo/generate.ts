@@ -28,7 +28,10 @@ export function referenceDiAt48(di44100: Float32Array): Float64Array {
 
 /** One probe pass: the capture's response to the DI scaled by `level`. */
 export function probeResponse(model: Wavenet, di48: Float64Array, level: number): Float64Array {
-  return runWavenet(Float64Array.from(di48, (v) => v * level), model);
+  return runWavenet(
+    Float64Array.from(di48, (v) => v * level),
+    model,
+  );
 }
 
 /** The fit and final assembly from every probe level's response. */

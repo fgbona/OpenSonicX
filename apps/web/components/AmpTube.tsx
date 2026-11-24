@@ -13,7 +13,9 @@ export function AmpTube({ on, drive }: { on: boolean; drive: number }) {
   return (
     <span className={`amp-tube${on ? ' is-on' : ''}`} style={{ '--tube-heat': heat } as CSSProperties} aria-hidden="true">
       <img className="amp-tube-cold" src={src} alt="" width={200} height={344} />
-      <span className="amp-tube-hot"><img src={src} alt="" width={200} height={344} /></span>
+      <span className="amp-tube-hot">
+        <img src={src} alt="" width={200} height={344} />
+      </span>
     </span>
   );
 }

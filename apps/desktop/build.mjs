@@ -5,7 +5,10 @@ import { cpSync, rmSync } from 'node:fs';
 import { build } from 'esbuild';
 
 execFileSync('npm', ['run', 'build', '-w', '@pocket-master/web'], {
-  cwd: '../..', stdio: 'inherit', shell: process.platform === 'win32', env: { ...process.env, NEXT_OUTPUT: 'export' },
+  cwd: '../..',
+  stdio: 'inherit',
+  shell: process.platform === 'win32',
+  env: { ...process.env, NEXT_OUTPUT: 'export' },
 });
 rmSync('web', { recursive: true, force: true });
 cpSync('../web/out', 'web', { recursive: true });

@@ -1,9 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mbReadPresetNames, mbRequest, parseMbPresetNames } from '../src/matribox/message.ts';
-import {
-  mbAddBlock, mbExpressionWrites, mbAssignFootswitch, mbSavePreset, mbSetBlockOn, mbSetExpressionMax, mbSetPatchVolume,
-} from '../src/matribox/write.ts';
+import { mbAddBlock, mbExpressionWrites, mbAssignFootswitch, mbSavePreset, mbSetBlockOn, mbSetExpressionMax, mbSetPatchVolume } from '../src/matribox/write.ts';
 import { MB_CC, mbControlChange } from '../src/matribox/cc.ts';
 import { mbAssignments } from '../src/matribox/assignments.ts';
 import { parseMbPreset } from '../src/matribox/preset.ts';

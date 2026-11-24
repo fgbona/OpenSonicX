@@ -30,42 +30,89 @@ export interface PaidProvider {
 
 export const PAID: readonly PaidProvider[] = [
   {
-    id: 'openrouter', name: 'OpenRouter', api: 'https://openrouter.ai/api/v1', keys: 'https://openrouter.ai/settings/keys',
-    limits: 'https://openrouter.ai/settings/keys', placeholder: 'sk-or-…',
+    id: 'openrouter',
+    name: 'OpenRouter',
+    api: 'https://openrouter.ai/api/v1',
+    keys: 'https://openrouter.ai/settings/keys',
+    limits: 'https://openrouter.ai/settings/keys',
+    placeholder: 'sk-or-…',
     prefer: [/^anthropic\/claude-.*haiku/, /^openai\/gpt-[\d.]+-mini$/, /^google\/gemini-[\d.]+-flash$/],
   },
   {
-    id: 'anthropic', name: 'Claude (Anthropic)', api: 'https://api.anthropic.com/v1', keys: 'https://console.anthropic.com/settings/keys',
-    limits: 'https://console.anthropic.com/settings/limits', placeholder: 'sk-ant-…', prefer: [/haiku/, /sonnet/], dialect: 'anthropic',
+    id: 'anthropic',
+    name: 'Claude (Anthropic)',
+    api: 'https://api.anthropic.com/v1',
+    keys: 'https://console.anthropic.com/settings/keys',
+    limits: 'https://console.anthropic.com/settings/limits',
+    placeholder: 'sk-ant-…',
+    prefer: [/haiku/, /sonnet/],
+    dialect: 'anthropic',
   },
   {
-    id: 'openai', name: 'OpenAI', api: 'https://api.openai.com/v1', keys: 'https://platform.openai.com/api-keys',
-    limits: 'https://platform.openai.com/settings/organization/limits', placeholder: 'sk-…',
+    id: 'openai',
+    name: 'OpenAI',
+    api: 'https://api.openai.com/v1',
+    keys: 'https://platform.openai.com/api-keys',
+    limits: 'https://platform.openai.com/settings/organization/limits',
+    placeholder: 'sk-…',
     prefer: [/^gpt-[\d.]+-mini$/, /^gpt-[\d.]+$/],
   },
   {
-    id: 'gemini-paid', name: 'Google Gemini', api: 'https://generativelanguage.googleapis.com/v1beta', keys: 'https://aistudio.google.com/apikey',
-    limits: 'https://aistudio.google.com/usage', placeholder: 'AIza…', prefer: [/^gemini-[\d.]+-pro$/, /^gemini-[\d.]+-flash$/], dialect: 'gemini', paidPlan: true,
+    id: 'gemini-paid',
+    name: 'Google Gemini',
+    api: 'https://generativelanguage.googleapis.com/v1beta',
+    keys: 'https://aistudio.google.com/apikey',
+    limits: 'https://aistudio.google.com/usage',
+    placeholder: 'AIza…',
+    prefer: [/^gemini-[\d.]+-pro$/, /^gemini-[\d.]+-flash$/],
+    dialect: 'gemini',
+    paidPlan: true,
   },
   {
-    id: 'groq-paid', name: 'Groq', api: 'https://api.groq.com/openai/v1', keys: 'https://console.groq.com/keys',
-    limits: 'https://console.groq.com/settings/billing', placeholder: 'gsk_…', prefer: [/gpt-oss-120b/, /llama-[\d.]+-70b/], paidPlan: true,
+    id: 'groq-paid',
+    name: 'Groq',
+    api: 'https://api.groq.com/openai/v1',
+    keys: 'https://console.groq.com/keys',
+    limits: 'https://console.groq.com/settings/billing',
+    placeholder: 'gsk_…',
+    prefer: [/gpt-oss-120b/, /llama-[\d.]+-70b/],
+    paidPlan: true,
   },
   {
-    id: 'xai', name: 'xAI (Grok)', api: 'https://api.x.ai/v1', keys: 'https://console.x.ai', limits: 'https://console.x.ai',
-    placeholder: 'xai-…', prefer: [/^grok-[\d.]+-fast/, /^grok-[\d.]+-mini/, /^grok-[\d.]+$/],
+    id: 'xai',
+    name: 'xAI (Grok)',
+    api: 'https://api.x.ai/v1',
+    keys: 'https://console.x.ai',
+    limits: 'https://console.x.ai',
+    placeholder: 'xai-…',
+    prefer: [/^grok-[\d.]+-fast/, /^grok-[\d.]+-mini/, /^grok-[\d.]+$/],
   },
   {
-    id: 'deepseek', name: 'DeepSeek', api: 'https://api.deepseek.com', keys: 'https://platform.deepseek.com/api_keys',
-    limits: 'https://platform.deepseek.com/usage', placeholder: 'sk-…', prefer: [/^deepseek-chat$/],
+    id: 'deepseek',
+    name: 'DeepSeek',
+    api: 'https://api.deepseek.com',
+    keys: 'https://platform.deepseek.com/api_keys',
+    limits: 'https://platform.deepseek.com/usage',
+    placeholder: 'sk-…',
+    prefer: [/^deepseek-chat$/],
   },
   {
-    id: 'mistral', name: 'Mistral', api: 'https://api.mistral.ai/v1', keys: 'https://console.mistral.ai/api-keys',
-    limits: 'https://console.mistral.ai/usage', placeholder: '…', prefer: [/^mistral-medium-latest$/, /^mistral-small-latest$/, /^mistral-large-latest$/],
+    id: 'mistral',
+    name: 'Mistral',
+    api: 'https://api.mistral.ai/v1',
+    keys: 'https://console.mistral.ai/api-keys',
+    limits: 'https://console.mistral.ai/usage',
+    placeholder: '…',
+    prefer: [/^mistral-medium-latest$/, /^mistral-small-latest$/, /^mistral-large-latest$/],
   },
   {
-    id: 'cerebras', name: 'Cerebras', api: 'https://api.cerebras.ai/v1', keys: 'https://cloud.cerebras.ai', limits: 'https://cloud.cerebras.ai',
-    placeholder: 'csk-…', prefer: [/gpt-oss-120b/, /llama/],
+    id: 'cerebras',
+    name: 'Cerebras',
+    api: 'https://api.cerebras.ai/v1',
+    keys: 'https://cloud.cerebras.ai',
+    limits: 'https://cloud.cerebras.ai',
+    placeholder: 'csk-…',
+    prefer: [/gpt-oss-120b/, /llama/],
   },
 ];
 
@@ -91,9 +138,7 @@ export function pickModel(provider: PaidProvider, ids: readonly string[]): strin
 
 /** The key's model ids from the provider's own list (which also checks the key). */
 export const listProviderModels = (provider: PaidProvider, key: string) =>
-  provider.dialect === 'anthropic' ? listClaudeModels(key)
-    : provider.dialect === 'gemini' ? listGeminiModels(key)
-      : listModels(provider.api, key);
+  provider.dialect === 'anthropic' ? listClaudeModels(key) : provider.dialect === 'gemini' ? listGeminiModels(key) : listModels(provider.api, key);
 
 /** How a message reaches a paid provider with the model the person picked: always the thorough request. */
 export function converseWith(provider: PaidProvider, model: string): Converse {

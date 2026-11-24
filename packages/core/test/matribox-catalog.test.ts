@@ -4,8 +4,7 @@ import { parseMbCatalog } from '../src/matribox/catalog.ts';
 
 // Synthetic: same shape as the official editor's alg_data.json, invented content. Numbers come
 // as strings there, so both forms are accepted.
-const widget = (name: string, ID: string, defaultValue: string, min = '0', max = '100', step = '1') =>
-  ({ name, ID, defaultValue, min, max, step, valueRange: `${min}-${max}`, widgetType: 0 });
+const widget = (name: string, ID: string, defaultValue: string, min = '0', max = '100', step = '1') => ({ name, ID, defaultValue, min, max, step, valueRange: `${min}-${max}`, widgetType: 0 });
 const SAMPLE = {
   Base: { Version: 'test' },
   Modules: [
@@ -13,7 +12,16 @@ const SAMPLE = {
       name: 'DRV',
       index: 0,
       alg: [
-        { fxid: 101, index: 0, name: 'Fuzzy Duck', type: 'Fuzz', origin: 'Imaginary Fuzz', style: 'Vintage', descriptionEN: 'A fuzz.', widget: [widget('Gain', '0', '50'), widget('Level', '1', '+3', '-12', '12', '0.5')] },
+        {
+          fxid: 101,
+          index: 0,
+          name: 'Fuzzy Duck',
+          type: 'Fuzz',
+          origin: 'Imaginary Fuzz',
+          style: 'Vintage',
+          descriptionEN: 'A fuzz.',
+          widget: [widget('Gain', '0', '50'), widget('Level', '1', '+3', '-12', '12', '0.5')],
+        },
         { fxid: 102, index: 1, name: 'Clean Boost', origin: 808, style: null, widget: [widget('Boost', '0', '10')] },
       ],
     },
@@ -23,7 +31,13 @@ const SAMPLE = {
 
 test('parses modules, models and numeric params', () => {
   const catalog = parseMbCatalog(SAMPLE);
-  assert.deepEqual(catalog.modules.map((m) => [m.name, m.index, m.models.length]), [['DRV', 0, 2], ['DLY', 1, 1]]);
+  assert.deepEqual(
+    catalog.modules.map((m) => [m.name, m.index, m.models.length]),
+    [
+      ['DRV', 0, 2],
+      ['DLY', 1, 1],
+    ],
+  );
   const fuzz = catalog.modules[0]?.models[0];
   assert.deepEqual(fuzz, {
     fxid: 101,

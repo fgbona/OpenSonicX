@@ -23,11 +23,17 @@ test('backups stored by 0.13 still load, and a new one is added next to them', (
   const items = browser();
   const old = loadBackups();
   assert.equal(old.length, 1);
-  assert.deepEqual(old[0]!.slots.map((s) => `${s.label} ${s.name}`), ['P08 IRON-LEAD']);
+  assert.deepEqual(
+    old[0]!.slots.map((s) => `${s.label} ${s.name}`),
+    ['P08 IRON-LEAD'],
+  );
 
   const added: BackupFile = { ...old[0]!, createdAt: '2026-11-22T10:00:00.000Z', slots: [{ ...old[0]!.slots[0]!, index: 1, label: 'P02', name: 'NEW' }] };
   assert.equal(storeBackup(old, added).stored, true);
-  assert.deepEqual(JSON.parse(items.get('pocket-master-editor.backups.v1')!).map((b: BackupFile) => b.slots[0]!.label), ['P02', 'P08']);
+  assert.deepEqual(
+    JSON.parse(items.get('pocket-master-editor.backups.v1')!).map((b: BackupFile) => b.slots[0]!.label),
+    ['P02', 'P08'],
+  );
 });
 
 test('slot comments stored by 0.13 survive writing a new one', () => {

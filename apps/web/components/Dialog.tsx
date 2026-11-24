@@ -43,7 +43,9 @@ export function Dialog({ open, title, onClose, locked = false, children }: Props
         if (!locked && e.target === ref.current && outside) onClose();
       }}
     >
-      <h2 className="sheet-title" id={titleId}>{title}</h2>
+      <h2 className="sheet-title" id={titleId}>
+        {title}
+      </h2>
       <div aria-live="polite">{children}</div>
     </dialog>
   );

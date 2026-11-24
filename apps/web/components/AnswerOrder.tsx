@@ -22,10 +22,16 @@ export function AnswerOrder({ order, name, onMove, rotate, onRotate }: Props) {
       <ol className="assistant-order">
         {order.map((m, i) => (
           <li key={m}>
-            <span>{i + 1}. {name(m)}</span>
+            <span>
+              {i + 1}. {name(m)}
+            </span>
             <span className="assistant-order-moves">
-              <button type="button" className="btn btn-small btn-icon" disabled={i === 0} onClick={() => onMove(m, -1)} aria-label={t('assistant.moveUp', { model: name(m) })}>↑</button>
-              <button type="button" className="btn btn-small btn-icon" disabled={i === order.length - 1} onClick={() => onMove(m, 1)} aria-label={t('assistant.moveDown', { model: name(m) })}>↓</button>
+              <button type="button" className="btn btn-small btn-icon" disabled={i === 0} onClick={() => onMove(m, -1)} aria-label={t('assistant.moveUp', { model: name(m) })}>
+                ↑
+              </button>
+              <button type="button" className="btn btn-small btn-icon" disabled={i === order.length - 1} onClick={() => onMove(m, 1)} aria-label={t('assistant.moveDown', { model: name(m) })}>
+                ↓
+              </button>
             </span>
           </li>
         ))}

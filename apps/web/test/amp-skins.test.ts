@@ -4,7 +4,12 @@ import { modelsFor } from '@pocket-master/core';
 import { ampSkin, hasTube } from '../lib/ampSkins.ts';
 
 test('every catalog amp model has a faceplate finish; profiles and unknown names keep the plain one', () => {
-  assert.deepEqual(modelsFor('amp').filter((m) => ampSkin(m.name) === null).map((m) => m.name), []);
+  assert.deepEqual(
+    modelsFor('amp')
+      .filter((m) => ampSkin(m.name) === null)
+      .map((m) => m.name),
+    [],
+  );
   assert.equal(ampSkin('Brit 800'), 'marshall');
   assert.equal(ampSkin('Calif DualM'), 'mesa');
   assert.equal(ampSkin('Randall SA'), null);

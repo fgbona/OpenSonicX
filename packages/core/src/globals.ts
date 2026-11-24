@@ -64,10 +64,7 @@ export type GlobalSetting = keyof typeof GLOBAL_SETTINGS;
 /** What an expression pedal can drive (register 0x17), by wire value. */
 export const EXP_TARGETS = ['VOL', 'FX1', 'DRV', 'AMP', 'IR', 'FX2', 'DLY', 'RVB'] as const;
 /** What an external footswitch can do (register 0x16), by wire value. */
-export const FS_TARGETS = [
-  'Preset-', 'Preset+', 'Tap Tempo', 'NR', 'FX1', 'DRV', 'AMP', 'IR', 'EQ', 'FX2', 'DLY', 'RVB',
-  'CTRL 1', 'CTRL 2', 'Drum', 'REC/Play', 'Loop Stop', 'Tuner',
-] as const;
+export const FS_TARGETS = ['Preset-', 'Preset+', 'Tap Tempo', 'NR', 'FX1', 'DRV', 'AMP', 'IR', 'EQ', 'FX2', 'DLY', 'RVB', 'CTRL 1', 'CTRL 2', 'Drum', 'REC/Play', 'Loop Stop', 'Tuner'] as const;
 
 const SET_GLOBAL = 0x11;
 const FACTORY_RESET = 0x3f;
@@ -153,14 +150,24 @@ export function decodeGlobals(payload: Uint8Array): GlobalSettings | null {
   const raw = (setting: GlobalSetting) => values.get(GLOBAL_SETTINGS[setting].address.join(':'));
   // Values are little-endian; every setting fits its first byte (master volume's record is 4 bytes).
   const byte = (setting: GlobalSetting) => raw(setting)?.[0] ?? null;
-  const level = (setting: GlobalSetting) => { const b = byte(setting); return b === null ? null : (b << 24) >> 24; };
+  const level = (setting: GlobalSetting) => {
+    const b = byte(setting);
+    return b === null ? null : (b << 24) >> 24;
+  };
   const masterVolume = byte('masterVolume');
   if (masterVolume === null) return null;
   return {
     masterVolume,
-    inputLevel: level('inputLevel'), fxRecLevel: level('fxRecLevel'), monitorLevel: level('monitorLevel'), btRecLevel: level('btRecLevel'),
-    backlight: byte('backlight'), mode: byte('mode'), bootProtection: byte('bootProtection'),
-    reamp: byte('reamp'), eco: byte('eco'), expFsType: byte('expFsType'),
+    inputLevel: level('inputLevel'),
+    fxRecLevel: level('fxRecLevel'),
+    monitorLevel: level('monitorLevel'),
+    btRecLevel: level('btRecLevel'),
+    backlight: byte('backlight'),
+    mode: byte('mode'),
+    bootProtection: byte('bootProtection'),
+    reamp: byte('reamp'),
+    eco: byte('eco'),
+    expFsType: byte('expFsType'),
     firmware: decodeFirmware(payload),
   };
 }

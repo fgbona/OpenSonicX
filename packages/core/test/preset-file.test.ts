@@ -54,7 +54,7 @@ test('parsePrstFile rejects files that are not .prst presets or are damaged', ()
   assert.throws(() => parsePrstFile(Uint8Array.from(good, (b, i) => (i >= 41 ? 0 : b))), /the \.prst file is damaged/);
 });
 
-test('loadIntoEditBuffer turns the edit buffer into the file\'s preset, checked, without saving', async () => {
+test("loadIntoEditBuffer turns the edit buffer into the file's preset, checked, without saving", async () => {
   const pedal = new FakePedal();
   const butter = modelsFor('drv').find((m) => m.name === 'Butter OD')!;
   const other = [
@@ -97,9 +97,10 @@ test('a version 1 file written by 0.13 still reads, with the same preset in it',
   assert.deepEqual(file, JSON.parse(V1));
   const preset = decodePreset(fromHex(file.payload));
   assert.equal(preset.volume, 65);
-  assert.deepEqual(preset.chain.map((b) => `${b.label} ${b.model}${b.on ? '' : ' (off)'}`), [
-    'NR Gate', 'FX1 Boost (off)', 'DRV Scream', 'AMP Brit 800', 'IR BritGN 4x12', 'EQ GT EQ 1', 'FX2 A-Chorus (off)', 'DLY Analog (off)', 'RVB Plate 2 (off)',
-  ]);
+  assert.deepEqual(
+    preset.chain.map((b) => `${b.label} ${b.model}${b.on ? '' : ' (off)'}`),
+    ['NR Gate', 'FX1 Boost (off)', 'DRV Scream', 'AMP Brit 800', 'IR BritGN 4x12', 'EQ GT EQ 1', 'FX2 A-Chorus (off)', 'DLY Analog (off)', 'RVB Plate 2 (off)'],
+  );
 });
 
 test('the writer still produces version 1 byte for byte', () => {

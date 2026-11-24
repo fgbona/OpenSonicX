@@ -22,18 +22,18 @@ export interface ModelChoice {
 
 const normalize = (text: string) => text.toLowerCase().replace(/[\s_-]+/g, '');
 
-const words = (text: string) => text.toLowerCase().split(/[^a-z0-9+]+/).filter(Boolean);
+const words = (text: string) =>
+  text
+    .toLowerCase()
+    .split(/[^a-z0-9+]+/)
+    .filter(Boolean);
 
 /**
  * The one choice whose name (or alias) equals `input`, else the one it is a unique prefix of,
  * else the one whose words (names or `also`, e.g. the gear a model is based on) contain every
  * word of `input`. Never guesses: no match or several matches throw an error listing them.
  */
-function pick<T>(
-  what: string,
-  input: string,
-  choices: readonly { names: readonly string[]; value: T; label: string; also?: string }[],
-): T {
+function pick<T>(what: string, input: string, choices: readonly { names: readonly string[]; value: T; label: string; also?: string }[]): T {
   const key = normalize(input);
   const wanted = words(input);
   const tiers = [
@@ -54,14 +54,22 @@ const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1
 
 /** A block of the preset by label ("AMP") or key ("amp"). */
 export function resolveBlock(preset: Preset, input: string): Block {
-  return pick('block', input, preset.chain.map((b) => ({ names: [b.label, b.key], value: b, label: b.label })));
+  return pick(
+    'block',
+    input,
+    preset.chain.map((b) => ({ names: [b.label, b.key], value: b, label: b.label })),
+  );
 }
 
 /** A parameter of the block's current model by name or unique prefix. */
 export function resolveParam(preset: Preset, block: Block, input: string): ParamSpec {
   const params = modelOf(preset, block)?.params ?? [];
   if (params.length === 0) throw new Error(`${block.label} has an unknown model (${block.model}); its parameters cannot be set by name`);
-  return pick('parameter', input, params.map((p) => ({ names: [p.name], value: p, label: p.name })));
+  return pick(
+    'parameter',
+    input,
+    params.map((p) => ({ names: [p.name], value: p, label: p.name })),
+  );
 }
 
 /** Every model a block can take: catalog names, user IRs by their file names, AMP adds loaded profiles. */

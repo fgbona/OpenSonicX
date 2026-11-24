@@ -22,10 +22,7 @@ test('MATRIBOX_CATALOG overrides the default path on every platform', () => {
 });
 
 test('default paths: the installed official app on macOS and Windows, none elsewhere', () => {
-  assert.equal(
-    matriboxCatalogPath({}, 'darwin'),
-    '/Applications/Matribox II PRO.app/Contents/Frameworks/App.framework/Resources/flutter_assets/assets/alg/alg_data.json',
-  );
+  assert.equal(matriboxCatalogPath({}, 'darwin'), '/Applications/Matribox II PRO.app/Contents/Frameworks/App.framework/Resources/flutter_assets/assets/alg/alg_data.json');
   assert.match(matriboxCatalogPath({ ProgramFiles: 'D:\\Apps' }, 'win32') ?? '', /^D:\\Apps\\Matribox II PRO\\data\\flutter_assets\\assets\\alg\\alg_data\.json$/);
   assert.match(matriboxCatalogPath({}, 'win32') ?? '', /^C:\\Program Files\\/);
   assert.equal(matriboxCatalogPath({}, 'linux'), null);

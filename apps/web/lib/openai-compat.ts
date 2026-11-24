@@ -75,10 +75,7 @@ export interface ChatEndpoint {
 /** Sends one message to an OpenAI-style provider, runs the tools it asks for, and returns its answer. */
 export async function converseChat(endpoint: ChatEndpoint, options: ConverseOptions): Promise<string> {
   const { key, agent, onRequest, onStep, onLimits, onUsage, fetchFn = fetch, now = () => new Date(), wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms)) } = options;
-  const messages: Message[] = [
-    { role: 'system', content: agent.instructions(options.thorough ?? false) },
-    ...options.turns.map((t): Message => ({ role: t.role, content: t.text })),
-  ];
+  const messages: Message[] = [{ role: 'system', content: agent.instructions(options.thorough ?? false) }, ...options.turns.map((t): Message => ({ role: t.role, content: t.text }))];
   const text = requestTexts(agent, options.turns, options.message, options.language, options.thorough);
   const asked = messages.push({ role: 'user', content: text.first }) - 1;
   const run = agent.runner();
@@ -86,16 +83,25 @@ export async function converseChat(endpoint: ChatEndpoint, options: ConverseOpti
   let waited = 0;
   for (let request = 0; request < MAX_REQUESTS; request++) {
     onRequest();
-    const r = await post(fetchFn, `${endpoint.api}/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...auth(key) },
-      body: JSON.stringify({ model: endpoint.model, messages, tools: tools(agent), ...(endpoint.cap ? { [endpoint.cap.field]: endpoint.cap.tokens } : {}), ...endpoint.extra }),
-    }, now);
+    const r = await post(
+      fetchFn,
+      `${endpoint.api}/chat/completions`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...auth(key) },
+        body: JSON.stringify({ model: endpoint.model, messages, tools: tools(agent), ...(endpoint.cap ? { [endpoint.cap.field]: endpoint.cap.tokens } : {}), ...endpoint.extra }),
+      },
+      now,
+    );
     // Readable only if the provider exposes them to the browser; otherwise the meter counts on its own.
     const remaining = Number(r.headers.get('x-ratelimit-remaining-requests') ?? Number.NaN);
     const limit = Number(r.headers.get('x-ratelimit-limit-requests') ?? Number.NaN);
     if (Number.isFinite(remaining) && Number.isFinite(limit)) onLimits?.(remaining, limit);
-    const body = (await r.json().catch(() => ({}))) as { error?: { message?: string; code?: string }; choices?: { message?: { content?: string | null; tool_calls?: ToolCall[] } }[]; usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number } };
+    const body = (await r.json().catch(() => ({}))) as {
+      error?: { message?: string; code?: string };
+      choices?: { message?: { content?: string | null; tool_calls?: ToolCall[] } }[];
+      usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number };
+    };
     if (body.usage) onUsage?.(body.usage.prompt_tokens ?? 0, body.usage.completion_tokens ?? 0, body.usage.cost);
     if (r.status === 429) {
       const t = now(); // one reading: two could straddle a millisecond and wait 6999 ms for a 7 s retry-after

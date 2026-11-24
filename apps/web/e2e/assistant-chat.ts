@@ -9,8 +9,7 @@ export async function openAssistantChat(page: Page, labels: { keyRegion: string;
     { status: 'requires_action', steps: [{ type: 'function_call', id: 'c1', name: 'edit_preset', arguments: { changes: [{ kind: 'model', block: 'AMP', model: 'Calif DualM' }] } }] },
     { status: 'completed', steps: [{ type: 'model_output', content: [{ type: 'text', text: reply }] }] },
   ];
-  await page.route('https://generativelanguage.googleapis.com/**', (route) =>
-    route.fulfill({ json: route.request().url().includes('/models') ? { models: [] } : replies.shift() }));
+  await page.route('https://generativelanguage.googleapis.com/**', (route) => route.fulfill({ json: route.request().url().includes('/models') ? { models: [] } : replies.shift() }));
   const panel = page.getByRole('region', { name: labels.panel });
   const setup = panel.getByRole('region', { name: labels.keyRegion });
   await setup.getByLabel(labels.keyLabel).fill('fake-gemini-key-e2e-0000');

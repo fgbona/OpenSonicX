@@ -25,9 +25,21 @@ function pedalPort(options: { commit?: boolean } = {}) {
     send: (bytes) => {
       const f = parseFrame(bytes);
       const [type, cmd] = f.payload;
-      if (type === 0x12 && cmd === 0x30) { log.push('session'); reply(buildFrame([0x12, 0x30, 0x01])); return; }
-      if (type === 0x12 && cmd === 0x20) { log.push('names'); reply(slotNamesReply(0x20, names)); return; }
-      if (type === 0x12 && cmd === 0x24) { log.push('profiles'); reply(slotNamesReply(0x24, profiles)); return; }
+      if (type === 0x12 && cmd === 0x30) {
+        log.push('session');
+        reply(buildFrame([0x12, 0x30, 0x01]));
+        return;
+      }
+      if (type === 0x12 && cmd === 0x20) {
+        log.push('names');
+        reply(slotNamesReply(0x20, names));
+        return;
+      }
+      if (type === 0x12 && cmd === 0x24) {
+        log.push('profiles');
+        reply(slotNamesReply(0x24, profiles));
+        return;
+      }
       log.push(`chunk ${f.index + 1}/${f.total}`);
       reply(buildFrame([0x14, 0x08, 0x00]));
       const blob = upload.feed(f, 0);
@@ -55,9 +67,20 @@ function wav(): Uint8Array {
   const buf = new Uint8Array(46);
   const v = new DataView(buf.buffer);
   const tag = (at: number, s: string) => [...s].forEach((c, i) => v.setUint8(at + i, c.charCodeAt(0)));
-  tag(0, 'RIFF'); v.setUint32(4, 38, true); tag(8, 'WAVE'); tag(12, 'fmt '); v.setUint32(16, 16, true);
-  v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 44100, true); v.setUint32(28, 88200, true);
-  v.setUint16(32, 2, true); v.setUint16(34, 16, true); tag(36, 'data'); v.setUint32(40, 2, true); v.setInt16(44, 12345, true);
+  tag(0, 'RIFF');
+  v.setUint32(4, 38, true);
+  tag(8, 'WAVE');
+  tag(12, 'fmt ');
+  v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true);
+  v.setUint16(22, 1, true);
+  v.setUint32(24, 44100, true);
+  v.setUint32(28, 88200, true);
+  v.setUint16(32, 2, true);
+  v.setUint16(34, 16, true);
+  tag(36, 'data');
+  v.setUint32(40, 2, true);
+  v.setInt16(44, 12345, true);
   return buf;
 }
 
@@ -101,7 +124,10 @@ test('renaming a user IR or a profile slot sends the short rename blob and check
   const profiles = await renameUserProfile(link, 0, 'Randall Lead');
   link.close();
   assert.equal(profiles[0]?.name, 'Randall Lead');
-  assert.deepEqual(pedal.log.filter((l) => l.startsWith('chunk')), ['chunk 1/2', 'chunk 2/2', 'chunk 1/2', 'chunk 2/2']);
+  assert.deepEqual(
+    pedal.log.filter((l) => l.startsWith('chunk')),
+    ['chunk 1/2', 'chunk 2/2', 'chunk 1/2', 'chunk 2/2'],
+  );
 });
 
 test('clearing a profile slot sends the official tool frame byte for byte (SonicMaster golden)', async () => {
@@ -109,7 +135,10 @@ test('clearing a profile slot sends the official tool frame byte for byte (Sonic
   const { profileClearBlob } = await import('../src/clo/codec.ts');
   const { irClearBlob } = await import('../src/ir-upload.ts');
   const { toHex } = await import('../src/hex.ts');
-  assert.deepEqual(chunkFrames(profileClearBlob(2)).map((f) => toHex(f).replace(/ /g, '')), ['F0040E00010000000601010207000200000000000FF7']);
+  assert.deepEqual(
+    chunkFrames(profileClearBlob(2)).map((f) => toHex(f).replace(/ /g, '')),
+    ['F0040E00010000000601010207000200000000000FF7'],
+  );
   assert.deepEqual(Array.from(irClearBlob(3)), [0x11, 0x23, 3, 0x00, 0x10, 0x0a]);
   assert.throws(() => irClearBlob(5), /slot/);
 });
@@ -123,5 +152,8 @@ test('clearing a user IR or a profile slot empties it and checks the pedal repor
   const profiles = await clearUserProfile(link, 0);
   link.close();
   assert.equal(profiles[0]?.empty, true);
-  assert.deepEqual(pedal.log.filter((l) => l.startsWith('chunk')), ['chunk 1/1', 'chunk 1/1']);
+  assert.deepEqual(
+    pedal.log.filter((l) => l.startsWith('chunk')),
+    ['chunk 1/1', 'chunk 1/1'],
+  );
 });

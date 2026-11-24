@@ -9,11 +9,23 @@ test('bleWire puts the BLE-MIDI header and timestamp before the SysEx, as SonicM
 test('the assembler drops BLE header and timestamp bytes and joins a SysEx split across notifications', () => {
   const a = new BleSysexAssembler();
   assert.deepEqual(a.feed(Uint8Array.of(0x80, 0x80, 0xf0, 0x01, 0x02)), []);
-  assert.deepEqual(a.feed(Uint8Array.of(0x81, 0x03, 0x84, 0xf7)).map((m) => [...m]), [[0xf0, 0x01, 0x02, 0x03, 0xf7]]);
+  assert.deepEqual(
+    a.feed(Uint8Array.of(0x81, 0x03, 0x84, 0xf7)).map((m) => [...m]),
+    [[0xf0, 0x01, 0x02, 0x03, 0xf7]],
+  );
   // two complete messages in one notification, and noise before the first F0
-  assert.deepEqual(a.feed(Uint8Array.of(0x80, 0x05, 0x80, 0xf0, 0x0a, 0xf7, 0x80, 0xf0, 0x0b, 0xf7)).map((m) => [...m]), [[0xf0, 0x0a, 0xf7], [0xf0, 0x0b, 0xf7]]);
+  assert.deepEqual(
+    a.feed(Uint8Array.of(0x80, 0x05, 0x80, 0xf0, 0x0a, 0xf7, 0x80, 0xf0, 0x0b, 0xf7)).map((m) => [...m]),
+    [
+      [0xf0, 0x0a, 0xf7],
+      [0xf0, 0x0b, 0xf7],
+    ],
+  );
   // a new F0 before an F7 starts over instead of gluing two messages
-  assert.deepEqual(a.feed(Uint8Array.of(0x80, 0x80, 0xf0, 0x01, 0x80, 0xf0, 0x02, 0xf7)).map((m) => [...m]), [[0xf0, 0x02, 0xf7]]);
+  assert.deepEqual(
+    a.feed(Uint8Array.of(0x80, 0x80, 0xf0, 0x01, 0x80, 0xf0, 0x02, 0xf7)).map((m) => [...m]),
+    [[0xf0, 0x02, 0xf7]],
+  );
 });
 
 test('bleMidiPort writes one frame at a time and reports a failed write', async () => {
@@ -26,12 +38,19 @@ test('bleMidiPort writes one frame at a time and reports a failed write', async 
     writeValueWithoutResponse: (v: Uint8Array) => {
       writes.push([...v]);
       calls++;
-      if (calls === 1) return new Promise<void>((r) => { release = r; });
+      if (calls === 1)
+        return new Promise<void>((r) => {
+          release = r;
+        });
       if (calls === 3) return Promise.reject(new Error('GATT gone'));
       return Promise.resolve();
     },
-    addEventListener: (_: string, l: typeof listener) => { listener = l; },
-    removeEventListener: () => { listener = null; },
+    addEventListener: (_: string, l: typeof listener) => {
+      listener = l;
+    },
+    removeEventListener: () => {
+      listener = null;
+    },
   };
   const port = bleMidiPort(characteristic as unknown as GattCharacteristic, (e) => errors.push(e));
   port.send(Uint8Array.of(0xf0, 1, 0xf7));

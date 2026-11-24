@@ -146,11 +146,17 @@ test('the name parsers reject tables of the wrong size', () => {
 
 test('parsers accept synthetic tables: a 17-byte name with no NUL keeps all 17 bytes', () => {
   const ir = new Uint8Array(500);
-  ir.set(Array.from('ABCDEFGHIJKLMNOPQ', (c) => c.charCodeAt(0)), 160);
+  ir.set(
+    Array.from('ABCDEFGHIJKLMNOPQ', (c) => c.charCodeAt(0)),
+    160,
+  );
   assert.equal(parseMbIrNames(ir)[0], 'ABCDEFGHIJKLMNOPQ');
   assert.equal(parseMbIrNames(ir)[1], '');
   const list = new Uint8Array(4 + 2 * 31);
   list.set([0x41, 0x00, 0x42], 4 + 2 * 4 + 17);
   list.set([0x50, 0x6f, 0x70], 4 + 2 * 21 + 10);
-  assert.deepEqual(parseMbPresetNames(list), [{ name: '', style: '' }, { name: 'A', style: 'Pop' }]);
+  assert.deepEqual(parseMbPresetNames(list), [
+    { name: '', style: '' },
+    { name: 'A', style: 'Pop' },
+  ]);
 });

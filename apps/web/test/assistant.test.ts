@@ -11,12 +11,17 @@ const later = (min: number) => new Date(now.getTime() + min * 60_000);
 /** Converse functions per model that answer or fail as scripted, recording who was asked. */
 function models(script: Record<string, (() => string) | Error>) {
   const asked: string[] = [];
-  const converse = Object.fromEntries(ROUTE.map((m) => [m, async () => {
-    asked.push(m);
-    const s = script[m];
-    if (s instanceof Error) throw s;
-    return s ? s() : `answer from ${m}`;
-  }])) as unknown as Record<AiModel, Converse>;
+  const converse = Object.fromEntries(
+    ROUTE.map((m) => [
+      m,
+      async () => {
+        asked.push(m);
+        const s = script[m];
+        if (s instanceof Error) throw s;
+        return s ? s() : `answer from ${m}`;
+      },
+    ]),
+  ) as unknown as Record<AiModel, Converse>;
   return { asked, converse };
 }
 
@@ -71,8 +76,14 @@ test('a quota that runs out after the sound changed stops instead of repeating t
       o.onStep?.('edit_preset', true, 'ok');
       throw new QuotaError(later(30));
     },
-    flash: async () => { asked.push('flash'); return 'from flash'; },
-    lite: async () => { asked.push('lite'); return 'from lite'; },
+    flash: async () => {
+      asked.push('flash');
+      return 'from flash';
+    },
+    lite: async () => {
+      asked.push('lite');
+      return 'from lite';
+    },
   } as unknown as Record<AiModel, Converse>;
   const seen: unknown[] = [];
   const e = await ask({ ...base, keys: { groq: 'g', gemini: 'k' }, cooldown: {}, converse, onCooldown: (c) => seen.push(c) }).catch((x) => x);
@@ -85,7 +96,11 @@ test('a quota that runs out after the sound changed stops instead of repeating t
 
 test('a read-only step before the quota ran out still hands the message on', async () => {
   const converse = {
-    groq: async (o: { onStep?: (t: string, ok: boolean, text: string) => void }) => { o.onStep?.('get_preset', true, 'P08'); o.onStep?.('edit_preset', false, 'Error'); throw new QuotaError(later(30)); },
+    groq: async (o: { onStep?: (t: string, ok: boolean, text: string) => void }) => {
+      o.onStep?.('get_preset', true, 'P08');
+      o.onStep?.('edit_preset', false, 'Error');
+      throw new QuotaError(later(30));
+    },
     flash: async () => 'from flash',
     lite: async () => 'from lite',
   } as unknown as Record<AiModel, Converse>;
@@ -103,9 +118,10 @@ test('a busy model hands the message on; when all are busy or used up, the error
 });
 
 test('a model request that never answers gives up and counts as busy', async () => {
-  const hanging = ((_url: string, init: RequestInit) => new Promise((_, reject) => {
-    init.signal!.addEventListener('abort', () => reject(init.signal!.reason));
-  })) as unknown as typeof fetch;
+  const hanging = ((_url: string, init: RequestInit) =>
+    new Promise((_, reject) => {
+      init.signal!.addEventListener('abort', () => reject(init.signal!.reason));
+    })) as unknown as typeof fetch;
   const e = await post(hanging, 'https://example.test', { method: 'POST' }, () => now, 20).catch((x) => x);
   assert.ok(e instanceof BusyError);
   assert.equal(e.retryAt.getTime(), now.getTime() + BUSY_WAIT_MS);
@@ -113,7 +129,10 @@ test('a model request that never answers gives up and counts as busy', async () 
 
 test('a model that gets busy after the sound changed stops and says the request is half done', async () => {
   const m = models({ flash: new BusyError(later(0.5)) });
-  const acting: Converse = async (o) => { o.onStep?.('edit_preset', true, 'ok'); throw new BusyError(later(0.5)); };
+  const acting: Converse = async (o) => {
+    o.onStep?.('edit_preset', true, 'ok');
+    throw new BusyError(later(0.5));
+  };
   const e = await ask({ ...base, keys: { gemini: 'k' }, cooldown: {}, converse: { ...m.converse, flash: acting } }).catch((x) => x);
   assert.ok(e instanceof BusyError);
   assert.equal(e.partial, true);

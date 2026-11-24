@@ -1,9 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import {
-  selectPreset, savePreset, encodeName, setPresetVolume, isPresetOperation, decodePresetNames, decodeAck, copyPreset, tunerMessage,
-} from '../src/slots.ts';
+import { selectPreset, savePreset, encodeName, setPresetVolume, isPresetOperation, decodePresetNames, decodeAck, copyPreset, tunerMessage } from '../src/slots.ts';
 import { isAllowedEdit, setParam } from '../src/commands.ts';
 import { buildFrame, parseFrame, expand, crc8 } from '../src/frame.ts';
 import { Reassembler } from '../src/reassembler.ts';
@@ -13,7 +11,11 @@ import { readCapture } from './capture.ts';
 
 type Lib = { presetCommands: Record<'user' | 'factory', Record<string, string>>; globalCommands: { presetVolume: Record<string, string> } };
 const lib = JSON.parse(readFileSync(new URL('./fixtures/pocketedit-commands.json', import.meta.url), 'utf8')) as Lib;
-const capture = (h: string) => h.toUpperCase().replace(/^8080/, '').replace(/(..)(?!$)/g, '$1 ');
+const capture = (h: string) =>
+  h
+    .toUpperCase()
+    .replace(/^8080/, '')
+    .replace(/(..)(?!$)/g, '$1 ');
 const indexOf = (label: string) => (label[0] === 'P' ? 0 : 50) + Number(label.slice(1)) - 1;
 
 test('selectPreset matches every captured preset selection', () => {
@@ -63,7 +65,9 @@ test('isPresetOperation accepts only selections and user-slot saves', () => {
 
 test('decodePresetNames reads the 100 names from the real reply', () => {
   const r = new Reassembler();
-  const rx = readCapture('names-capture.txt').filter((m) => m.dir === 'RX').slice(2);
+  const rx = readCapture('names-capture.txt')
+    .filter((m) => m.dir === 'RX')
+    .slice(2);
   const joined = rx.map((m) => r.feed(parseFrame(m.bytes), 0)).at(-1);
   assert.ok(joined);
   const names = decodePresetNames(joined.payload);
@@ -85,7 +89,7 @@ test('encodeName refuses leading or trailing spaces, which the pedal would not k
   assert.doesNotThrow(() => encodeName('My Lead'));
 });
 
-test('select and save match the real commands from the owner\'s save, and the real acknowledge is ok', () => {
+test("select and save match the real commands from the owner's save, and the real acknowledge is ok", () => {
   const c = readCapture('save-capture.txt');
   assert.equal(toHex(selectPreset(8)), toHex(c[0]!.bytes));
   assert.equal(toHex(savePreset(8, 'IRON-LEAD')), toHex(c[3]!.bytes));
@@ -94,7 +98,7 @@ test('select and save match the real commands from the owner\'s save, and the re
   assert.equal(decodeAck(parseFrame(c[6]!.bytes).payload), true);
 });
 
-test('copyPreset is 11 4B + destination u16 + source u16, as the owner\'s unit took it (P42 to P49)', () => {
+test("copyPreset is 11 4B + destination u16 + source u16, as the owner's unit took it (P42 to P49)", () => {
   assert.equal(toHex(parseFrame(copyPreset(48, 41)).payload), '11 4B 30 00 29 00');
   assert.equal(isPresetOperation(copyPreset(48, 41)), true);
   assert.equal(isPresetOperation(copyPreset(0, 75)), true, 'a factory preset can be the source');

@@ -8,12 +8,7 @@ import { precacheManifest } from '../scripts/precache-manifest.ts';
 
 test('every file of the export is precached under the base path, except the worker itself and link-preview images', () => {
   const files = ['index.html', '_next/static/chunks/a.js', 'sw.js', 'opengraph-image.jpg', 'convert-worker.js', 'x.js.map', 'icons/icon-192.png'];
-  assert.deepEqual(precacheUrls(files, '/OpenSonicX'), [
-    '/OpenSonicX/_next/static/chunks/a.js',
-    '/OpenSonicX/convert-worker.js',
-    '/OpenSonicX/icons/icon-192.png',
-    '/OpenSonicX/index.html',
-  ]);
+  assert.deepEqual(precacheUrls(files, '/OpenSonicX'), ['/OpenSonicX/_next/static/chunks/a.js', '/OpenSonicX/convert-worker.js', '/OpenSonicX/icons/icon-192.png', '/OpenSonicX/index.html']);
   assert.deepEqual(precacheUrls(['index.html'], ''), ['/index.html']);
 });
 

@@ -14,7 +14,20 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
-import { buildFrame, decodePresetNames, diffPresets, isReadOnly, MessageType, parsePresetLabel, PocketMasterLink, presetLabel, Query, readStoredPreset, toHex, USER_PRESETS } from '@pocket-master/core';
+import {
+  buildFrame,
+  decodePresetNames,
+  diffPresets,
+  isReadOnly,
+  MessageType,
+  parsePresetLabel,
+  PocketMasterLink,
+  presetLabel,
+  Query,
+  readStoredPreset,
+  toHex,
+  USER_PRESETS,
+} from '@pocket-master/core';
 
 const PORT_NAME = /pocket\s*master/i;
 const QUIET_MS = 3000;
@@ -55,10 +68,17 @@ async function main(args: string[]) {
     return i;
   };
   const lines: string[] = [];
-  const say = (line: string) => { console.log(line); lines.push(line); };
+  const say = (line: string) => {
+    console.log(line);
+    lines.push(line);
+  };
   const ask = async (question: string) => {
     const rl = createInterface({ input: process.stdin, output: process.stdout });
-    try { return (await rl.question(question)).trim(); } finally { rl.close(); }
+    try {
+      return (await rl.question(question)).trim();
+    } finally {
+      rl.close();
+    }
   };
   let receiver: ((bytes: Uint8Array) => void) | null = null;
   input.ignoreTypes(false, true, true);
@@ -81,7 +101,11 @@ async function main(args: string[]) {
   };
   const withLink = async <T>(work: (link: PocketMasterLink) => Promise<T>): Promise<T> => {
     const link = new PocketMasterLink({ send, listen: (r) => void (receiver = r) }, (e) => lines.push(`${e.dir} ${e.hex}${e.note ? `  (${e.note})` : ''}`));
-    try { return await work(link); } finally { link.close(); }
+    try {
+      return await work(link);
+    } finally {
+      link.close();
+    }
   };
   try {
     let stray = 0;
@@ -112,12 +136,17 @@ async function main(args: string[]) {
       }));
       const differences = diffPresets(after.destination.preset, before.source.preset);
       say(`${presetLabel(destination)} is now named "${after.names[destination]}" (source "${before.names[source]}")`);
-      say(differences.length === 0 ? `${presetLabel(destination)} holds the same preset as ${presetLabel(source)}: the copy works.` : `${presetLabel(destination)} DIFFERS from ${presetLabel(source)} in ${differences.length} place(s): ${differences.slice(0, 5).join('; ')}`);
+      say(
+        differences.length === 0
+          ? `${presetLabel(destination)} holds the same preset as ${presetLabel(source)}: the copy works.`
+          : `${presetLabel(destination)} DIFFERS from ${presetLabel(source)} in ${differences.length} place(s): ${differences.slice(0, 5).join('; ')}`,
+      );
     } else {
-      const tuner = async (when: string) => withLink(async (link) => {
-        const state = settingsRecords((await link.request(Query.GLOBALS)).payload).get('02 01') ?? 'missing';
-        say(`settings record 02 01 (tuner state per the guide) ${when}: ${state}`);
-      });
+      const tuner = async (when: string) =>
+        withLink(async (link) => {
+          const state = settingsRecords((await link.request(Query.GLOBALS)).payload).get('02 01') ?? 'missing';
+          say(`settings record 02 01 (tuner state per the guide) ${when}: ${state}`);
+        });
       await tuner('before');
       await write(TUNER_ON, 'tuner on (CC 58 = 127)');
       await tuner('after on');

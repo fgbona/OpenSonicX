@@ -19,10 +19,19 @@ const unwrap = (frames: readonly Uint8Array[]) => {
   assert.ok(joined);
   return unwrapMbMessage(joined);
 };
-const captured = (name: string) => unwrap(readFileSync(fixture(`${name}.upload.txt`), 'utf8').split('\n').filter((l) => l.startsWith('F0')).map(fromHex));
+const captured = (name: string) =>
+  unwrap(
+    readFileSync(fixture(`${name}.upload.txt`), 'utf8')
+      .split('\n')
+      .filter((l) => l.startsWith('F0'))
+      .map(fromHex),
+  );
 const u32At = (data: Uint8Array, at: number) => new DataView(data.buffer, data.byteOffset).getUint32(at, true);
 
-for (const [name, slot, checksum] of [['teste-silencio', 6, 1454], ['teste-impulso', 7, 167606]] as const) {
+for (const [name, slot, checksum] of [
+  ['teste-silencio', 6, 1454],
+  ['teste-impulso', 7, 167606],
+] as const) {
   test(`${name}: the data is the official editor's byte for byte (checksum ${checksum})`, () => {
     const want = captured(name);
     assert.equal(want.flag, 1);

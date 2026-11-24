@@ -18,7 +18,10 @@ test('a parameter is found by name and its value encoded', () => {
 test('a switch takes true/false or on/off, and refuses anything else', () => {
   const sw = p08.chain.flatMap((b) => b.params.filter((p) => p.kind === 'switch').map((p) => ({ b, p })))[0];
   if (!sw) return; // P08 has no switch parameter on its current models
-  assert.deepEqual(toEdit(p08, { kind: 'parameter', block: sw.b.label, parameter: sw.p.name, value: 'on' }, SLOTS), toEdit(p08, { kind: 'parameter', block: sw.b.label, parameter: sw.p.name, value: true }, SLOTS));
+  assert.deepEqual(
+    toEdit(p08, { kind: 'parameter', block: sw.b.label, parameter: sw.p.name, value: 'on' }, SLOTS),
+    toEdit(p08, { kind: 'parameter', block: sw.b.label, parameter: sw.p.name, value: true }, SLOTS),
+  );
   assert.throws(() => toEdit(p08, { kind: 'parameter', block: sw.b.label, parameter: sw.p.name, value: 'maybe' }, SLOTS), /is a switch/);
 });
 

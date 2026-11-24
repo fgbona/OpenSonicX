@@ -30,28 +30,42 @@ export function MatriboxControls({ preset, disabled, onVolume, onControl }: Prop
     <section className="panel mb-controls" aria-label={t('mb.controls')}>
       <div className="mb-controls-row">
         <label className="field mb-param">
-          <span>{t('mb.volume')} <span className="muted">{volume}</span></span>
+          <span>
+            {t('mb.volume')} <span className="muted">{volume}</span>
+          </span>
           <input type="range" min={0} max={100} step={1} value={volume} disabled={disabled} aria-label={t('mb.volume')} onChange={(e) => onVolume(Number(e.target.value))} />
         </label>
       </div>
       <div className="mb-controls-row">
         <label className="mb-switch">
-          <input type="checkbox" checked={tuner} onChange={(e) => {
-            setTuner(e.target.checked);
-            onControl(() => [mbControlChange(channel, MB_CC.tuner, mbSwitch(e.target.checked))]);
-          }} />
+          <input
+            type="checkbox"
+            checked={tuner}
+            onChange={(e) => {
+              setTuner(e.target.checked);
+              onControl(() => [mbControlChange(channel, MB_CC.tuner, mbSwitch(e.target.checked))]);
+            }}
+          />
           <span>{t('mb.tuner')}</span>
         </label>
-        <button type="button" className="btn btn-small" onClick={() => onControl(() => [mbControlChange(channel, MB_CC.tapTempo, 127)])}>{t('mb.tap')}</button>
+        <button type="button" className="btn btn-small" onClick={() => onControl(() => [mbControlChange(channel, MB_CC.tapTempo, 127)])}>
+          {t('mb.tap')}
+        </button>
         <label className="mb-switch">
           <span>{t('mb.bpm')}</span>
           <input className="mb-number" type="number" min={MB_BPM_MIN} max={MB_BPM_MAX} step={1} value={bpm} onChange={(e) => setBpm(Number(e.target.value))} />
         </label>
-        <button type="button" className="btn btn-small" disabled={!bpmOk} onClick={() => onControl(() => mbBpmControlChanges(channel, bpm))}>{t('mb.setBpm')}</button>
+        <button type="button" className="btn btn-small" disabled={!bpmOk} onClick={() => onControl(() => mbBpmControlChanges(channel, bpm))}>
+          {t('mb.setBpm')}
+        </button>
         <label className="mb-switch">
           <span>{t('mb.channel')}</span>
           <select value={channel} onChange={(e) => setChannel(Number(e.target.value))}>
-            {CHANNELS.map((c) => <option key={c} value={c}>{c}</option>)}
+            {CHANNELS.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
           </select>
         </label>
       </div>

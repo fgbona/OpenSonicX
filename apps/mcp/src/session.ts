@@ -5,11 +5,48 @@ import { describeGlobals, globalWrites, type GlobalChanges } from './globals.ts'
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import {
-  formatModels, formatPreset, toEdit, type Change,
-  applyEdit, applyPreset, downloadModel, IR_SLOTS, irSamplesFromWav, irUploadBlob, listModels, parseNam, pollDeviceToken, profileUploadBlob, searchTones, startDeviceLogin, decodePreset, editToCommands, fromHex, loadIntoEditBuffer,
-  parseBackupFile, parsePresetFile, parsePresetLabel, parsePrstFile, presetFile, presetLabel,
-  backupAllSlots, backupStoredSlot, resolveBlock, restoreFromBackup, saveToSlot, USER_PRESETS,
-  type BackupFile, type CloArrays, type GlobalSettings, type DeviceLogin, type Edit, type Tokens, type Pedal, type Preset, type PresetFile, type SlotNames,
+  formatModels,
+  formatPreset,
+  toEdit,
+  type Change,
+  applyEdit,
+  applyPreset,
+  downloadModel,
+  IR_SLOTS,
+  irSamplesFromWav,
+  irUploadBlob,
+  listModels,
+  parseNam,
+  pollDeviceToken,
+  profileUploadBlob,
+  searchTones,
+  startDeviceLogin,
+  decodePreset,
+  editToCommands,
+  fromHex,
+  loadIntoEditBuffer,
+  parseBackupFile,
+  parsePresetFile,
+  parsePresetLabel,
+  parsePrstFile,
+  presetFile,
+  presetLabel,
+  backupAllSlots,
+  backupStoredSlot,
+  resolveBlock,
+  restoreFromBackup,
+  saveToSlot,
+  USER_PRESETS,
+  type BackupFile,
+  type CloArrays,
+  type GlobalSettings,
+  type DeviceLogin,
+  type Edit,
+  type Tokens,
+  type Pedal,
+  type Preset,
+  type PresetFile,
+  type SlotNames,
 } from '@pocket-master/core';
 
 export type { Change } from '@pocket-master/core';
@@ -198,8 +235,7 @@ export class Session {
     const label = presetLabel(target);
     requireConfirm(options.confirm, label);
     return this.#use(async (io) => {
-      const { paths } = await this.#keepingBackups((onBackup) =>
-        saveToSlot(io, { target, name: options.name, backup: options.backup !== false, edited: null, onBackup }));
+      const { paths } = await this.#keepingBackups((onBackup) => saveToSlot(io, { target, name: options.name, backup: options.backup !== false, edited: null, onBackup }));
       const note = paths.map((path) => `\nBackup of the old ${label}: ${path}`).join('');
       return `Saved ${label} "${options.name}".${note}\n\n${await this.#describe(io)}`;
     });
@@ -317,14 +353,16 @@ export class Session {
   async listPresetFiles(): Promise<string> {
     const folder = this.#folders.presets;
     const names = (await readdir(folder, { recursive: true }).catch(() => [] as string[])).filter((f) => isPresetFileName(f) && !MATRIBOX_FOLDER.test(f)).sort();
-    const lines = await Promise.all(names.map(async (file) => {
-      try {
-        const preset = await readPresetFile(join(folder, file));
-        return `- ${file}: "${preset.name}"${preset.notes ? ` — ${preset.notes}` : ''} (${preset.createdAt.slice(0, 10)})`;
-      } catch {
-        return `- ${file}: not a readable preset file`;
-      }
-    }));
+    const lines = await Promise.all(
+      names.map(async (file) => {
+        try {
+          const preset = await readPresetFile(join(folder, file));
+          return `- ${file}: "${preset.name}"${preset.notes ? ` — ${preset.notes}` : ''} (${preset.createdAt.slice(0, 10)})`;
+        } catch {
+          return `- ${file}: not a readable preset file`;
+        }
+      }),
+    );
     return lines.length > 0 ? `Preset files in ${folder}:\n${lines.join('\n')}` : `No preset files yet in ${folder}.`;
   }
 
@@ -367,10 +405,13 @@ export class Session {
     const clientId = await store.clientId();
     const start = await api.startDeviceLogin(clientId);
     const text = `Open ${start.verificationUriComplete} (or ${start.verificationUri} and enter the code ${start.userCode}) to sign in to TONE3000; the code works for ${Math.round(start.expiresIn / 60)} minutes. Then use search_tone3000.`;
-    const done = api.pollDeviceToken({ clientId, start })
+    const done = api
+      .pollDeviceToken({ clientId, start })
       .then((tokens) => store.save(tokens))
       .catch((error) => console.error('[pocket-master-mcp] TONE3000 sign-in:', error))
-      .finally(() => { this.#login = null; });
+      .finally(() => {
+        this.#login = null;
+      });
     this.#login = { text, done };
     return text;
   }
@@ -459,7 +500,8 @@ export class Session {
     const { kind, slot } = options;
     if (!Number.isInteger(slot) || slot < 1 || slot > 5) throw new Error('slot must be 1..5');
     const name = options.name.trim();
-    if (kind === 'ir') irUploadBlob(slot - 1, name, new Int32Array(512)); // checks the name
+    if (kind === 'ir')
+      irUploadBlob(slot - 1, name, new Int32Array(512)); // checks the name
     else profileUploadBlob(slot - 1, name, { arrayA: new Float32Array(128), arrayB: new Float32Array(2048), gains: [1, 1, 1, 1] });
     return this.#use(async (io) => {
       const before = (await this.#slots(io))[kind === 'ir' ? 'irNames' : 'profileNames']?.[slot - 1] ?? null;
@@ -517,11 +559,15 @@ export function inside(folder: string, file: string): string {
 function defaultName(file: string, max: number, fallback: string): string {
   const base = file.split(/[\\/]/).pop() ?? file;
   const stem = base.replace(/\.(wav|nam|json)$/i, '');
-  return stem.replace(/[^\x20-\x7e]/g, '_').slice(0, max).trim() || fallback;
+  return (
+    stem
+      .replace(/[^\x20-\x7e]/g, '_')
+      .slice(0, max)
+      .trim() || fallback
+  );
 }
 
 const PROFILE_SLOTS = 5;
 const PROFILE_NAME = 15;
 
 const safe = (name: string) => name.replace(/[^A-Za-z0-9_-]+/g, '_') || 'preset';
-

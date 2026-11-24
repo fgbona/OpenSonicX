@@ -9,7 +9,9 @@ export function shape(s: Schema): string {
   if (s.enum) return s.enum.map((v) => JSON.stringify(v)).join(' | ');
   if (s.type === 'array') return `${shape(s.items ?? {})}[]`;
   if (s.properties) {
-    return `{ ${Object.entries(s.properties).map(([k, v]) => `${k}${s.required?.includes(k) ? '' : '?'}: ${shape(v)}`).join(', ')} }`;
+    return `{ ${Object.entries(s.properties)
+      .map(([k, v]) => `${k}${s.required?.includes(k) ? '' : '?'}: ${shape(v)}`)
+      .join(', ')} }`;
   }
   return [s.type ?? 'any'].flat().join(' | ');
 }

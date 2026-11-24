@@ -20,21 +20,37 @@ export function PaidProviders({ entries, onChange }: Props) {
 
   return (
     <section className="assistant-provider" aria-label={t('assistant.paidTitle')}>
-      <h3>{t('assistant.paidTitle')}<InfoTip text={t('assistant.paidInfo')} /></h3>
+      <h3>
+        {t('assistant.paidTitle')}
+        <InfoTip text={t('assistant.paidInfo')} />
+      </h3>
       <p className="muted small">{t('assistant.paidHint')}</p>
       {entries.map((e) => (
         <PaidRow key={e.id} entry={e} onModel={(model) => replace({ ...e, model })} onRemove={() => onChange(entries.filter((x) => x.id !== e.id))} />
       ))}
       {adding ? (
-        <AddPaid provider={adding} onCancel={() => setAdding(null)} onAdded={(entry) => { setAdding(null); onChange([...entries, entry]); }} />
-      ) : available.length > 0 && (
-        <label className="field">
-          <span>{t('assistant.addPaid')}</span>
-          <select value="" onChange={(e) => setAdding(paidById(e.target.value) ?? null)}>
-            <option value="">{t('assistant.choosePaid')}</option>
-            {available.map((p) => <option key={p.id} value={p.id}>{paidName(p, t('assistant.paidTag'))}</option>)}
-          </select>
-        </label>
+        <AddPaid
+          provider={adding}
+          onCancel={() => setAdding(null)}
+          onAdded={(entry) => {
+            setAdding(null);
+            onChange([...entries, entry]);
+          }}
+        />
+      ) : (
+        available.length > 0 && (
+          <label className="field">
+            <span>{t('assistant.addPaid')}</span>
+            <select value="" onChange={(e) => setAdding(paidById(e.target.value) ?? null)}>
+              <option value="">{t('assistant.choosePaid')}</option>
+              {available.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {paidName(p, t('assistant.paidTag'))}
+                </option>
+              ))}
+            </select>
+          </label>
+        )
       )}
     </section>
   );
@@ -51,21 +67,35 @@ function PaidRow({ entry, onModel, onRemove }: { entry: PaidEntry; onModel: (mod
     void listProviderModels(provider, entry.key).then((ids) => {
       if (live && typeof ids !== 'string') setModels(Array.from(new Set([entry.model, ...chatModels(ids)])).sort());
     });
-    return () => { live = false; };
+    return () => {
+      live = false;
+    };
   }, [provider, entry.key, entry.model]);
   return (
     <div className="assistant-paid" role="group" aria-label={name}>
       <p className="assistant-saved">
-        <span><strong>{name}</strong> · {t('assistant.keySaved', { key: maskKey(entry.key) })}</span>
-        <button type="button" className="btn btn-small" onClick={onRemove}>{t('assistant.removeKey')}</button>
+        <span>
+          <strong>{name}</strong> · {t('assistant.keySaved', { key: maskKey(entry.key) })}
+        </span>
+        <button type="button" className="btn btn-small" onClick={onRemove}>
+          {t('assistant.removeKey')}
+        </button>
       </p>
       <label className="field">
         <span>{t('assistant.model')}</span>
         <select value={entry.model} onChange={(e) => onModel(e.target.value)}>
-          {models.map((m) => <option key={m} value={m}>{m}</option>)}
+          {models.map((m) => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
         </select>
       </label>
-      <p className="muted small"><a href={provider.limits} target="_blank" rel="noreferrer">{t('assistant.setLimit')}</a></p>
+      <p className="muted small">
+        <a href={provider.limits} target="_blank" rel="noreferrer">
+          {t('assistant.setLimit')}
+        </a>
+      </p>
     </div>
   );
 }
@@ -87,8 +117,19 @@ function AddPaid({ provider, onCancel, onAdded }: { provider: PaidProvider; onCa
     onAdded({ id: provider.id, key: candidate, model });
   };
   return (
-    <form className="assistant-key" aria-label={name} onSubmit={(e) => { e.preventDefault(); void add(); }}>
-      <p className="small"><a href={provider.keys} target="_blank" rel="noreferrer">{t('assistant.openKeys', { provider: name })}</a></p>
+    <form
+      className="assistant-key"
+      aria-label={name}
+      onSubmit={(e) => {
+        e.preventDefault();
+        void add();
+      }}
+    >
+      <p className="small">
+        <a href={provider.keys} target="_blank" rel="noreferrer">
+          {t('assistant.openKeys', { provider: name })}
+        </a>
+      </p>
       <label className="field">
         <span>{t('assistant.paidKeyLabel', { provider: name })}</span>
         <input type="password" value={key} onChange={(e) => setKey(e.target.value)} autoComplete="off" spellCheck={false} placeholder={provider.placeholder} />
@@ -96,10 +137,24 @@ function AddPaid({ provider, onCancel, onAdded }: { provider: PaidProvider; onCa
       <button type="submit" className="btn btn-primary" disabled={!key.trim() || status === 'testing'}>
         {status === 'testing' ? t('assistant.testing') : t('assistant.saveKey')}
       </button>
-      <button type="button" className="btn" onClick={onCancel}>{t('action.cancel')}</button>
-      {status === 'invalid' && <p className="alert" role="alert">{t('assistant.keyInvalid', { provider: name })}</p>}
-      {status === 'unavailable' && <p className="alert" role="alert">{t('assistant.keyUnavailable', { provider: name })}</p>}
-      {status === 'noModels' && <p className="alert" role="alert">{t('assistant.noModels')}</p>}
+      <button type="button" className="btn" onClick={onCancel}>
+        {t('action.cancel')}
+      </button>
+      {status === 'invalid' && (
+        <p className="alert" role="alert">
+          {t('assistant.keyInvalid', { provider: name })}
+        </p>
+      )}
+      {status === 'unavailable' && (
+        <p className="alert" role="alert">
+          {t('assistant.keyUnavailable', { provider: name })}
+        </p>
+      )}
+      {status === 'noModels' && (
+        <p className="alert" role="alert">
+          {t('assistant.noModels')}
+        </p>
+      )}
     </form>
   );
 }

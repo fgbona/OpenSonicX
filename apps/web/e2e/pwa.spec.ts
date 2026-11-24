@@ -54,14 +54,25 @@ test('opens offline after the first visit, from a cache of the app files only', 
   // The NAM converter's worker starts offline too.
   expect(await page.evaluate(async () => (await fetch('/OpenSonicX/convert-worker.js')).ok)).toBe(true);
   // Anything outside the app still goes to the (here absent) network.
-  expect(await page.evaluate(() => fetch('https://api.tone3000.com/').then(() => 'online', () => 'offline'))).toBe('offline');
+  expect(
+    await page.evaluate(() =>
+      fetch('https://api.tone3000.com/').then(
+        () => 'online',
+        () => 'offline',
+      ),
+    ),
+  ).toBe('offline');
 });
 
 test('a new release waits for the reload button instead of reloading by itself', async ({ page }) => {
   await openInstalled(page);
-  await page.evaluate(() => { (window as unknown as { unsaved: boolean }).unsaved = true; });
+  await page.evaluate(() => {
+    (window as unknown as { unsaved: boolean }).unsaved = true;
+  });
   await page.request.post('/__release');
-  await page.evaluate(async () => { await (await navigator.serviceWorker.getRegistration())?.update(); });
+  await page.evaluate(async () => {
+    await (await navigator.serviceWorker.getRegistration())?.update();
+  });
 
   const prompt = page.getByRole('status').filter({ hasText: 'A new version of the editor is ready.' });
   await expect(prompt).toBeVisible();

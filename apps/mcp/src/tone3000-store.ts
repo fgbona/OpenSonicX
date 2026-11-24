@@ -20,12 +20,7 @@ export interface Tone3000Store {
  */
 const BUNDLED_CLIENT_ID: string = process.env.BUNDLED_TONE3000_CLIENT_ID ?? '';
 
-export function fileTone3000Store(
-  home: string,
-  fetch: typeof globalThis.fetch = globalThis.fetch,
-  now: () => number = Date.now,
-  bundledClientId: string = BUNDLED_CLIENT_ID,
-): Tone3000Store {
+export function fileTone3000Store(home: string, fetch: typeof globalThis.fetch = globalThis.fetch, now: () => number = Date.now, bundledClientId: string = BUNDLED_CLIENT_ID): Tone3000Store {
   const tokenPath = join(home, 'tone3000-token.json');
   const save = async (tokens: Tokens) => {
     await mkdir(home, { recursive: true });
@@ -37,11 +32,18 @@ export function fileTone3000Store(
     if (fromEnv) return fromEnv;
     const text = await readFile(join(home, 'tone3000.env'), 'utf8').catch(() => '');
     // Like sourcing the file in a shell: the last assignment wins; the '...' placeholder is skipped.
-    const value = text.split(/\r?\n/)
-      .filter((l) => l.startsWith('TONE3000_CLIENT_ID='))
-      .map((l) => l.slice('TONE3000_CLIENT_ID='.length).trim().replace(/^['"]|['"]$/g, ''))
-      .filter((v) => v && v !== '...')
-      .at(-1) ?? '';
+    const value =
+      text
+        .split(/\r?\n/)
+        .filter((l) => l.startsWith('TONE3000_CLIENT_ID='))
+        .map((l) =>
+          l
+            .slice('TONE3000_CLIENT_ID='.length)
+            .trim()
+            .replace(/^['"]|['"]$/g, ''),
+        )
+        .filter((v) => v && v !== '...')
+        .at(-1) ?? '';
     if (!value && bundledClientId) return bundledClientId;
     if (!value) {
       throw new Error(`no TONE3000 key: put TONE3000_CLIENT_ID=<publishable key> in ${join(home, 'tone3000.env')} (from tone3000.com/settings)`);

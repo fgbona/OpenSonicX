@@ -48,15 +48,23 @@ export function SysexLog({ log, onClear }: { log: readonly LogEntry[]; onClear: 
   return (
     <section className="log" aria-label={t('log.title')}>
       <header className="log-head">
-        <h2>{t('log.title')} <span className="muted">{log.length}</span></h2>
+        <h2>
+          {t('log.title')} <span className="muted">{log.length}</span>
+        </h2>
         <div className="log-actions">
-          <button className="btn btn-small" onClick={copy} disabled={log.length === 0}>{copied ? t('log.copied') : t('log.copy')}</button>
-          <button className="btn btn-small" onClick={onClear} disabled={log.length === 0}>{t('log.clear')}</button>
+          <button className="btn btn-small" onClick={copy} disabled={log.length === 0}>
+            {copied ? t('log.copied') : t('log.copy')}
+          </button>
+          <button className="btn btn-small" onClick={onClear} disabled={log.length === 0}>
+            {t('log.clear')}
+          </button>
         </div>
       </header>
       <div ref={body} className="log-body" role="log" aria-live="off">
         {log.length === 0 && <p className="muted small log-empty">{t('log.empty')}</p>}
-        {log.map((e) => <LogLine key={e.id} entry={e} />)}
+        {log.map((e) => (
+          <LogLine key={e.id} entry={e} />
+        ))}
       </div>
     </section>
   );

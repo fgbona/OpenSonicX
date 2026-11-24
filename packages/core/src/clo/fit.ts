@@ -86,7 +86,9 @@ export function fitNl(vs: readonly Float64Array[], ts: readonly Float64Array[]):
       let num = 0;
       let den = 0;
       for (let li = 0; li < xsl.length; li++) {
-        const xs = xsl[li]!, ys = ysl[li]!, w = wl[li]!;
+        const xs = xsl[li]!,
+          ys = ysl[li]!,
+          w = wl[li]!;
         for (let s = 0; s < xs.length; s++) {
           const e = 1 - Math.exp(Math.max(-r * xs[s]!, -60));
           num += w * ys[s]! * e;
@@ -98,7 +100,9 @@ export function fitNl(vs: readonly Float64Array[], ts: readonly Float64Array[]):
       if (c <= 0) continue;
       let resid = 0;
       for (let li = 0; li < xsl.length; li++) {
-        const xs = xsl[li]!, ys = ysl[li]!, w = wl[li]!;
+        const xs = xsl[li]!,
+          ys = ysl[li]!,
+          w = wl[li]!;
         let se = 0;
         for (let s = 0; s < xs.length; s++) {
           const d = ys[s]! - c * (1 - Math.exp(Math.max(-r * xs[s]!, -60)));
@@ -161,7 +165,8 @@ export function bulkLag(di: Float64Array, resps: readonly Float64Array[]): numbe
     re.set(resp.subarray(start, start + LAG_WIN));
     lagFft.transform(re, im, false);
     for (let i = 0; i < LAG_FFT_SIZE; i++) {
-      const rr = re[i]!, ri = im[i]!;
+      const rr = re[i]!,
+        ri = im[i]!;
       re[i] = rr * diRe[i]! + ri * diIm[i]!;
       im[i] = ri * diRe[i]! - rr * diIm[i]!;
     }
@@ -222,7 +227,10 @@ export function fitWhMultilevel(di48: Float64Array, responses: ReadonlyMap<numbe
     const ts = ysFit.map((y) => deconv(y, b48, 3e-3));
     gains = fitNl(vs, ts);
     const us = vs.map((v) => nlFwd(v, gains));
-    hB = welchPairs(us.map((u, i) => [u, ysFit[i]!] as const), 1e-5);
+    hB = welchPairs(
+      us.map((u, i) => [u, ysFit[i]!] as const),
+      1e-5,
+    );
     b48 = firify(hB, ARRAY_B_LEN);
   }
   return { a48, b48: minphaseFir(hB, ARRAY_B_LEN), gains, lag };

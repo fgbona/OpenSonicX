@@ -1,20 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import {
-  MB_PROBE,
-  MB_READ,
-  MB_REPLY,
-  MB_WRITE,
-  MB_HOST_PAGE_SIZE,
-  buildMbFrame,
-  buildMbFrames,
-  float32LE,
-  joinMbPages,
-  mbChecksum,
-  parseMbFrame,
-  readFloat32LE,
-} from '../src/matribox/frame.ts';
+import { MB_PROBE, MB_READ, MB_REPLY, MB_WRITE, MB_HOST_PAGE_SIZE, buildMbFrame, buildMbFrames, float32LE, joinMbPages, mbChecksum, parseMbFrame, readFloat32LE } from '../src/matribox/frame.ts';
 import { fromHex, toHex } from '../src/hex.ts';
 
 const lines = readFileSync(new URL('./fixtures/matribox-capture.txt', import.meta.url), 'utf8').split('\n');
@@ -136,7 +123,10 @@ test('buildMbFrames pages a long host message like the official editor', () => {
   assert.equal(toHex(frames[22] as Uint8Array), toHex(PAGED));
   const pages = frames.map(parseMbFrame);
   assert.ok(pages.every((p) => p.checksumOk && p.total === 4157));
-  assert.deepEqual(pages.slice(0, -1).map((p) => p.payload.length), new Array(22).fill(MB_HOST_PAGE_SIZE));
+  assert.deepEqual(
+    pages.slice(0, -1).map((p) => p.payload.length),
+    new Array(22).fill(MB_HOST_PAGE_SIZE),
+  );
   assert.deepEqual(joinMbPages(pages), payload);
 });
 
@@ -155,11 +145,20 @@ test('buildMbFrames pages a long host message like the official editor: 183 byte
   const payload = Array.from({ length: 481 }, (_, i) => (i * 7) & 0xff);
   const pages = buildMbFrames(MB_WRITE, payload);
   assert.equal(MB_HOST_PAGE_SIZE, 183);
-  assert.deepEqual(pages.map((p) => p.length), [380, 380, 244]);
-  assert.deepEqual(pages.map((p) => toHex(p.subarray(8, 13))), IMPORT_HEADS.map((h) => h.slice(-14)));
+  assert.deepEqual(
+    pages.map((p) => p.length),
+    [380, 380, 244],
+  );
+  assert.deepEqual(
+    pages.map((p) => toHex(p.subarray(8, 13))),
+    IMPORT_HEADS.map((h) => h.slice(-14)),
+  );
   const parsed = pages.map(parseMbFrame);
   assert.ok(parsed.every((p) => p.checksumOk === true));
-  assert.deepEqual(parsed.map((p) => p.offset), [0, 183, 366]);
+  assert.deepEqual(
+    parsed.map((p) => p.offset),
+    [0, 183, 366],
+  );
   assert.deepEqual(joinMbPages(parsed), Uint8Array.from(payload));
 });
 

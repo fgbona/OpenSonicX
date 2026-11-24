@@ -7,7 +7,10 @@ import { toHex } from '../src/hex.ts';
 import { readCapture } from './capture.ts';
 
 const capture = readCapture('p08-capture.txt');
-const dumpFrames = capture.filter((m) => m.dir === 'RX').slice(1).map((m) => parseFrame(m.bytes));
+const dumpFrames = capture
+  .filter((m) => m.dir === 'RX')
+  .slice(1)
+  .map((m) => parseFrame(m.bytes));
 
 test('capture holds 26 dump packets', () => {
   assert.equal(dumpFrames.length, 26);

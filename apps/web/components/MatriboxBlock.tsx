@@ -10,16 +10,23 @@ const round = (n: number) => String(Number(n.toFixed(2)));
 /** A model picker grouped by module; its value is "moduleIndex:fxid". */
 export function MatriboxModelSelect(props: { catalog: MbCatalog; label: string; value: string; disabled: boolean; onChange: (moduleIndex: number, fxid: number) => void }) {
   return (
-    <select aria-label={props.label} value={props.value} disabled={props.disabled}
+    <select
+      aria-label={props.label}
+      value={props.value}
+      disabled={props.disabled}
       onChange={(e) => {
         const [moduleIndex, fxid] = e.target.value.split(':').map(Number);
         if (moduleIndex !== undefined && fxid !== undefined && e.target.value) props.onChange(moduleIndex, fxid);
-      }}>
+      }}
+    >
       <option value="">{props.label}</option>
       {props.catalog.modules.map((m) => (
         <optgroup key={m.index} label={m.name}>
           {m.models.map((model) => (
-            <option key={model.fxid} value={`${m.index}:${model.fxid}`}>{model.name}{gearOf(model) ? ` · ${gearOf(model)}` : ''}</option>
+            <option key={model.fxid} value={`${m.index}:${model.fxid}`}>
+              {model.name}
+              {gearOf(model) ? ` · ${gearOf(model)}` : ''}
+            </option>
           ))}
         </optgroup>
       ))}
@@ -52,9 +59,19 @@ export function MatriboxBlock({ block, chainLength, catalog, userSlot, disabled,
     <li className={`panel mb-block${block.on ? '' : ' block-off'}`} aria-label={`${block.position}. ${block.module} ${title}`}>
       <div className="panel-head">
         <div>
-          <h3 className="mb-block-title"><span className="chain-label">{block.position}. {block.module}</span> {title}{userSlot ? ` "${userSlot}"` : ''}</h3>
+          <h3 className="mb-block-title">
+            <span className="chain-label">
+              {block.position}. {block.module}
+            </span>{' '}
+            {title}
+            {userSlot ? ` "${userSlot}"` : ''}
+          </h3>
           {gear && <p className="muted small">{t('mb.basedOn', { gear })}</p>}
-          {!block.model && <p className="muted small">fxid {fxidHex(block.fxid)} · slot {block.slot + 1}</p>}
+          {!block.model && (
+            <p className="muted small">
+              fxid {fxidHex(block.fxid)} · slot {block.slot + 1}
+            </p>
+          )}
         </div>
         <label className="mb-switch">
           <input type="checkbox" checked={block.on} disabled={disabled} onChange={(e) => onOn(block.slot, e.target.checked)} />
@@ -70,21 +87,26 @@ export function MatriboxBlock({ block, chainLength, catalog, userSlot, disabled,
             };
             return (
               <label key={p.id} className="field mb-param">
-                <span>{p.name} <span className="muted">{round(p.value)}</span></span>
-                <input type="range" min={p.min} max={p.max} step={step} value={p.value} disabled={disabled} aria-label={`${block.module} ${p.name}`}
-                  onChange={(e) => set(Number(e.target.value))} />
+                <span>
+                  {p.name} <span className="muted">{round(p.value)}</span>
+                </span>
+                <input type="range" min={p.min} max={p.max} step={step} value={p.value} disabled={disabled} aria-label={`${block.module} ${p.name}`} onChange={(e) => set(Number(e.target.value))} />
               </label>
             );
           })}
         </div>
       )}
       <div className="mb-block-actions">
-        {catalog && (
-          <MatriboxModelSelect catalog={catalog} label={t('mb.changeModel')} value="" disabled={disabled} onChange={(m, fxid) => onModel(block.slot, m, fxid)} />
-        )}
-        <button type="button" className="btn btn-small" disabled={disabled || at === 0} onClick={() => onMove(at, at - 1)} aria-label={t('mb.moveUp', { n: block.position })}>↑</button>
-        <button type="button" className="btn btn-small" disabled={disabled || at >= chainLength - 1} onClick={() => onMove(at, at + 1)} aria-label={t('mb.moveDown', { n: block.position })}>↓</button>
-        <button type="button" className="btn btn-small btn-danger" disabled={disabled} onClick={() => onRemove(at)}>{t('mb.remove')}</button>
+        {catalog && <MatriboxModelSelect catalog={catalog} label={t('mb.changeModel')} value="" disabled={disabled} onChange={(m, fxid) => onModel(block.slot, m, fxid)} />}
+        <button type="button" className="btn btn-small" disabled={disabled || at === 0} onClick={() => onMove(at, at - 1)} aria-label={t('mb.moveUp', { n: block.position })}>
+          ↑
+        </button>
+        <button type="button" className="btn btn-small" disabled={disabled || at >= chainLength - 1} onClick={() => onMove(at, at + 1)} aria-label={t('mb.moveDown', { n: block.position })}>
+          ↓
+        </button>
+        <button type="button" className="btn btn-small btn-danger" disabled={disabled} onClick={() => onRemove(at)}>
+          {t('mb.remove')}
+        </button>
       </div>
     </li>
   );

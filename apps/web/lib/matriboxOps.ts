@@ -11,10 +11,14 @@ type ChainOp = Exclude<MbOp, { kind: 'param' | 'on' }>;
 
 function chainFrame(op: ChainOp, slotAt: (position: number) => number): Uint8Array {
   switch (op.kind) {
-    case 'model': return mbChangeModel(slotAt(op.position), op.moduleIndex, op.fxid);
-    case 'add': return mbAddBlock(op.position, op.moduleIndex, op.fxid);
-    case 'remove': return mbRemoveBlock(op.position);
-    case 'move': return mbMoveBlock(op.from, op.to);
+    case 'model':
+      return mbChangeModel(slotAt(op.position), op.moduleIndex, op.fxid);
+    case 'add':
+      return mbAddBlock(op.position, op.moduleIndex, op.fxid);
+    case 'remove':
+      return mbRemoveBlock(op.position);
+    case 'move':
+      return mbMoveBlock(op.from, op.to);
   }
 }
 

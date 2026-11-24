@@ -33,7 +33,9 @@ export function PresetFiles({ connected, current, busy, error, pending, onPick, 
   const { t, te } = useI18n();
   const label = (d: Difference) => (d.what === 'param' ? d.name : t(DIFF_KEY[d.what]));
   const [done, setDone] = useState(false);
-  useEffect(() => { if (pending) setDone(false); }, [pending]);
+  useEffect(() => {
+    if (pending) setDone(false);
+  }, [pending]);
   const disabled = !connected || busy !== null;
 
   const pick = async (input: HTMLInputElement) => {
@@ -50,7 +52,9 @@ export function PresetFiles({ connected, current, busy, error, pending, onPick, 
   const name = pending?.name || t('presetFile.unnamed');
   return (
     <div className="preset-files">
-      <button type="button" className="btn btn-small" onClick={onExport} disabled={disabled}>{t('presetFile.export')}</button>
+      <button type="button" className="btn btn-small" onClick={onExport} disabled={disabled}>
+        {t('presetFile.export')}
+      </button>
       <label className={`btn btn-small file-button${disabled ? ' is-disabled' : ''}`} aria-disabled={disabled}>
         {t('presetFile.import')}
         <input type="file" title="" accept={PRESET_FILE_ACCEPT} disabled={disabled} onChange={(e) => void pick(e.currentTarget)} />
@@ -61,19 +65,36 @@ export function PresetFiles({ connected, current, busy, error, pending, onPick, 
         ) : done ? (
           <>
             <p>{t('presetFile.done', { name })}</p>
-            <div className="sheet-actions"><button className="btn btn-primary" onClick={() => onPick(null)}>{t('action.done')}</button></div>
+            <div className="sheet-actions">
+              <button className="btn btn-primary" onClick={() => onPick(null)}>
+                {t('action.done')}
+              </button>
+            </div>
           </>
         ) : (
           <>
             <div className="sheet-note">
-              <p><strong>{t('presetFile.confirm', { name })}</strong></p>
+              <p>
+                <strong>{t('presetFile.confirm', { name })}</strong>
+              </p>
               <p>{t('presetFile.note')}</p>
             </div>
             {current && pending && <Changes differences={comparePresets(current, decodePreset(fromHex(pending.payload)))} label={label} />}
-            {error && <p className="alert" role="alert">{te(error)}</p>}
+            {error && (
+              <p className="alert" role="alert">
+                {te(error)}
+              </p>
+            )}
             <div className="sheet-actions">
-              <button className="btn" onClick={() => onPick(null)}>{t('action.cancel')}</button>
-              <button className="btn btn-primary" onClick={async () => { if (pending && (await onImport(pending))) setDone(true); }}>
+              <button className="btn" onClick={() => onPick(null)}>
+                {t('action.cancel')}
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={async () => {
+                  if (pending && (await onImport(pending))) setDone(true);
+                }}
+              >
                 {t('presetFile.submit')}
               </button>
             </div>
@@ -100,8 +121,13 @@ export function Changes({ differences, label, title }: { differences: readonly D
           {differences.map((d, i) => (
             <li key={i}>
               {/* A parameter row is the pedal's own data (block, model, parameter name). */}
-              <span className={d.what === 'param' ? 'changes-param' : undefined}>{'block' in d ? <strong>{d.block} </strong> : null}{label(d)}</span>
-              <span className="changes-values">{d.from} → {d.to}</span>
+              <span className={d.what === 'param' ? 'changes-param' : undefined}>
+                {'block' in d ? <strong>{d.block} </strong> : null}
+                {label(d)}
+              </span>
+              <span className="changes-values">
+                {d.from} → {d.to}
+              </span>
             </li>
           ))}
         </ul>

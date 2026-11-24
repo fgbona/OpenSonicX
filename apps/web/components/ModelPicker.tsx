@@ -81,8 +81,12 @@ export function ModelPicker({ groups, value, onChange, ariaLabel }: Props) {
       ArrowUp: () => move(-1),
       Home: () => setActive(options[0]?.value ?? null),
       End: () => setActive(options.at(-1)?.value ?? null),
-      Enter: () => { if (active) choose(active); },
-      ' ': () => { if (active) choose(active); },
+      Enter: () => {
+        if (active) choose(active);
+      },
+      ' ': () => {
+        if (active) choose(active);
+      },
       Escape: () => close(),
     };
     if (e.key === 'Tab') return close(false);
@@ -120,18 +124,14 @@ export function ModelPicker({ groups, value, onChange, ariaLabel }: Props) {
         {current?.detail && <span className="picker-detail">{current.detail}</span>}
       </button>
       {open && (
-        <div
-          ref={listRef}
-          className="picker-list"
-          role="listbox"
-          tabIndex={-1}
-          aria-label={ariaLabel}
-          aria-activedescendant={active ? optionId(active) : undefined}
-          onKeyDown={onKey}
-        >
+        <div ref={listRef} className="picker-list" role="listbox" tabIndex={-1} aria-label={ariaLabel} aria-activedescendant={active ? optionId(active) : undefined} onKeyDown={onKey}>
           {groups.map((group, gi) => (
             <div key={group.name ?? `group-${gi}`} className="picker-group" role="group" aria-label={group.name ?? undefined}>
-              {group.name && <div className="picker-heading" aria-hidden="true">{group.name}</div>}
+              {group.name && (
+                <div className="picker-heading" aria-hidden="true">
+                  {group.name}
+                </div>
+              )}
               {group.options.map((o) => (
                 <div
                   key={o.value}
@@ -140,10 +140,16 @@ export function ModelPicker({ groups, value, onChange, ariaLabel }: Props) {
                   aria-selected={o.value === value}
                   aria-disabled={o.disabled || undefined}
                   className={`picker-option${o.value === active ? ' is-active' : ''}${o.disabled ? ' is-disabled' : ''}`}
-                  onPointerEnter={() => { if (!o.disabled) setActive(o.value); }}
-                  onClick={() => { if (!o.disabled) choose(o.value); }}
+                  onPointerEnter={() => {
+                    if (!o.disabled) setActive(o.value);
+                  }}
+                  onClick={() => {
+                    if (!o.disabled) choose(o.value);
+                  }}
                 >
-                  <span className="picker-check" aria-hidden="true">{o.value === value ? '✓' : ''}</span>
+                  <span className="picker-check" aria-hidden="true">
+                    {o.value === value ? '✓' : ''}
+                  </span>
                   <span className="picker-name">{o.name}</span>
                   <span className="picker-detail">{o.detail ?? ''}</span>
                 </div>

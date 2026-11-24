@@ -12,7 +12,20 @@
  */
 import { readFileSync } from 'node:fs';
 import {
-  expand, fromHex, joinMbPages, MB_IR_SLOTS, MB_PAGE_SIZE, MB_READ, MB_WRITE, mbReadIrNames, mbReadPreset, mbReadPresetNames, parseMbFrame, toHex, unwrapMbMessage, wrapMbMessage,
+  expand,
+  fromHex,
+  joinMbPages,
+  MB_IR_SLOTS,
+  MB_PAGE_SIZE,
+  MB_READ,
+  MB_WRITE,
+  mbReadIrNames,
+  mbReadPreset,
+  mbReadPresetNames,
+  parseMbFrame,
+  toHex,
+  unwrapMbMessage,
+  wrapMbMessage,
 } from '@pocket-master/core';
 
 const fixture = (name: string) => readFileSync(new URL(`../../../packages/core/test/fixtures/${name}`, import.meta.url), 'utf8').split('\n');
@@ -40,7 +53,10 @@ function capturedReplies(): Map<string, Uint8Array[]> {
     if (line.startsWith('>>') && next.startsWith('<<')) replies.set(line.slice(3), replyFrames(fromHex(next.slice(3))));
   });
   // The 2-page reply to the current-preset read (argument 0x42), exactly as the unit sent it.
-  replies.set(key(mbReadPreset(0x42)), CAPTURE.filter((l) => l.startsWith('<<')).map((l) => fromHex(l.slice(3))));
+  replies.set(
+    key(mbReadPreset(0x42)),
+    CAPTURE.filter((l) => l.startsWith('<<')).map((l) => fromHex(l.slice(3))),
+  );
   return replies;
 }
 
@@ -144,7 +160,7 @@ export class FakeMatribox {
       if (this.echoes) this.#reply(replyFrames(wrapMbMessage(message.flag, message.cmd, notice ?? message.data)));
       return;
     }
-    const reply = frame.type === MB_READ ? this.#read(message.flag, message.cmd, message.data) ?? this.#replies.get(request) : undefined;
+    const reply = frame.type === MB_READ ? (this.#read(message.flag, message.cmd, message.data) ?? this.#replies.get(request)) : undefined;
     if (reply) this.#reply(reply); // the unit stays silent on what it does not know
   }
 
@@ -174,7 +190,7 @@ export class FakeMatribox {
     const slot = u32(data, 0);
     if (data.length !== 4128 || slot >= MB_IR_SLOTS) throw new Error('fake Matribox: bad IR upload');
     this.irUploads.push(data);
-    const name = Uint8Array.from({ length: 17 }, (_, i) => (i < 16 ? data[12 + i] as number : 0));
+    const name = Uint8Array.from({ length: 17 }, (_, i) => (i < 16 ? (data[12 + i] as number) : 0));
     if (this.irStatus === 1) this.#irNames = patched(this.#irNames, MB_IR_SLOTS * 8 + slot * 17, name);
     if (this.echoes) this.#reply(replyFrames(wrapMbMessage(3, 0x14, [slot, 0, 0, 0, this.irStatus, 0, 0, 0, 0, 0, 0, 0])));
   }

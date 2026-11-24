@@ -144,7 +144,10 @@ test('undo and redo step through live edits, a knob turn counting as one step', 
 test('importing a preset file first shows what it changes from the loaded preset', async ({ page, pedal }) => {
   await connect(page, pedal);
   await pickAmp(page, 'Calif DualM');
-  await page.getByText('Import preset').locator('input[type=file]').setInputFiles(new URL('../../../packages/core/test/fixtures/preset-files/v1-iron-lead.json', import.meta.url).pathname);
+  await page
+    .getByText('Import preset')
+    .locator('input[type=file]')
+    .setInputFiles(new URL('../../../packages/core/test/fixtures/preset-files/v1-iron-lead.json', import.meta.url).pathname);
   const dialog = page.getByRole('dialog', { name: 'Import a preset' });
   const changes = dialog.getByRole('region', { name: 'What changes from the loaded preset' });
   await expect(changes.getByRole('listitem').filter({ hasText: 'AMP Model' })).toContainText('Calif DualM → Brit 800');
@@ -245,7 +248,7 @@ test('a preset is copied over another slot without loading either, checked on th
   await expect(page.getByRole('heading', { name: /P09\s*IRON-LEAD/ })).toBeVisible();
 });
 
-test('the tuner button turns the pedal\'s tuner on and off', async ({ page, pedal }) => {
+test("the tuner button turns the pedal's tuner on and off", async ({ page, pedal }) => {
   await connect(page, pedal);
   const tuner = page.getByRole('button', { name: 'Tuner' });
   await tuner.click();

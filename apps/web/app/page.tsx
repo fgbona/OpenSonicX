@@ -60,23 +60,27 @@ export default function EditorPage() {
   const [proposal, setProposal] = useState<{ target: number; name: string; resolve: (r: 'saved' | 'cancelled') => void } | null>(null);
   const savedRef = useRef(false);
   const { assistantBase, loadPresetNow, loadNames: readNames } = pm;
-  const toneHost = useMemo<ToneHost>(() => ({
-    ...assistantBase,
-    selectPreset: async (index) => {
-      if (assistantBase.snapshot().modified) {
-        const discard = await new Promise<boolean>((resolve) => setAssistantLoad({ index, resolve }));
-        if (!discard) return false;
-      }
-      if (!(await loadPresetNow(index))) throw new Error(`The pedal did not load ${presetLabel(index)}.`);
-      return true;
-    },
-    proposeSave: (target, name) => new Promise((resolve) => {
-      savedRef.current = false;
-      setProposal({ target, name, resolve });
-      setSaveOpen(true);
-      void readNames();
+  const toneHost = useMemo<ToneHost>(
+    () => ({
+      ...assistantBase,
+      selectPreset: async (index) => {
+        if (assistantBase.snapshot().modified) {
+          const discard = await new Promise<boolean>((resolve) => setAssistantLoad({ index, resolve }));
+          if (!discard) return false;
+        }
+        if (!(await loadPresetNow(index))) throw new Error(`The pedal did not load ${presetLabel(index)}.`);
+        return true;
+      },
+      proposeSave: (target, name) =>
+        new Promise((resolve) => {
+          savedRef.current = false;
+          setProposal({ target, name, resolve });
+          setSaveOpen(true);
+          void readNames();
+        }),
     }),
-  }), [assistantBase, loadPresetNow, readNames]);
+    [assistantBase, loadPresetNow, readNames],
+  );
   const toneAgent = useMemo(() => pocketMasterAgent(toneHost), [toneHost]);
   const closeSave = () => {
     setSaveOpen(false);
@@ -134,102 +138,173 @@ export default function EditorPage() {
         onTuner={pm.setTuner}
         busy={pm.busy !== null}
         canSave={pm.preset !== null}
-        onSettings={() => { pm.clearError(); setSettingsOpen(true); }}
+        onSettings={() => {
+          pm.clearError();
+          setSettingsOpen(true);
+        }}
         onBluetooth={pm.connectBle}
         matribox={matribox !== null}
       />
-      <SettingsDialog open={settingsOpen} firmware={pm.firmware} onClose={() => setSettingsOpen(false)} exclusive={pm.exclusive} writeGlobal={pm.writeGlobal}
-        busy={pm.busy !== null} error={pm.error} factoryReset={pm.factoryReset} onReset={pm.reconnect} />
+      <SettingsDialog
+        open={settingsOpen}
+        firmware={pm.firmware}
+        onClose={() => setSettingsOpen(false)}
+        exclusive={pm.exclusive}
+        writeGlobal={pm.writeGlobal}
+        busy={pm.busy !== null}
+        error={pm.error}
+        factoryReset={pm.factoryReset}
+        onReset={pm.reconnect}
+      />
       {matribox ? (
         <>
-          {pm.error && <p className="alert" role="alert">{te(pm.error)}</p>}
+          {pm.error && (
+            <p className="alert" role="alert">
+              {te(pm.error)}
+            </p>
+          )}
           <MatriboxEditor port={matribox} desktop={desktop} />
         </>
       ) : (
-      <div className={connected ? 'layout' : 'layout layout-single'}>
-      {connected && (
-        <PresetSidebar names={pm.names} current={pm.presetIndex} modified={pm.modified} disabled={pm.busy !== null} onReadNames={() => void pm.loadNames()} onLoad={pm.loadPreset} />
-      )}
-      <main className="main">
-        {pm.error && <p className="alert" role="alert">{te(pm.error)}</p>}
-        {connected && pm.firmware && pm.firmware !== TESTED_FIRMWARE && (
-          <p className="notice" role="status">{t('firmware.untested', { firmware: pm.firmware, tested: TESTED_FIRMWARE })}</p>
-        )}
-        {pm.preset && (
-          <PresetFiles
-            connected={connected}
-            current={pm.preset}
-            busy={pm.busy}
-            error={pm.error}
-            pending={importing}
-            onPick={setImporting}
-            onExport={pm.exportPreset}
-            onImport={importPreset}
-            onError={pm.showError}
-          />
-        )}
-        {pm.preset ? (
-          <ChainView preset={pm.preset} presetIndex={pm.presetIndex} presetName={pm.presetIndex !== null ? (pm.names?.[pm.presetIndex] ?? null) : null}
-            editable={pm.busy === null} modified={pm.modified} onEdit={pm.edit} irNames={pm.irNames} profileNames={pm.profileNames} />
-        ) : (
-          <section className="empty">
-            <h1>{t('empty.title')}</h1>
-            <p className="muted">{t('empty.subtitle')}</p>
-            <ol className="steps">{(desktop ? DESKTOP_STEPS : STEPS).map((s) => <li key={s}>{t(s)}</li>)}</ol>
-            <p className="muted small">{t(desktop ? 'empty.desktopNote' : 'empty.browsers')}</p>
-            <p className="muted small">{t('empty.firmware')}</p>
-          </section>
-        )}
-        {connected && (
-          <>
-            {pm.preset && <AssistantPanel agent={toneAgent} />}
-            <Tone3000Panel connected={connected} busy={pm.busy !== null} irNames={pm.irNames} profileNames={pm.profileNames} exclusive={pm.exclusive} error={pm.error} />
-            <SlotsPanel connected={connected} busy={pm.busy !== null} irNames={pm.irNames} profileNames={pm.profileNames} exclusive={pm.exclusive} error={pm.error} />
-          </>
-        )}
-        {connected && <PresetLibrary disabled={pm.busy !== null || !pm.preset} onLoad={(file) => { pm.clearError(); setImporting(file); }} />}
-        <BackupsPanel
-          backups={pm.backups}
-          connected={connected}
-          busy={pm.busy}
-          error={pm.error}
-          flowBackups={pm.flowBackups}
-          storageWarning={pm.storageWarning}
-          onDownload={pm.downloadBackup}
-          onImport={pm.importBackup}
-          onDelete={pm.deleteBackup}
-          onPreset={(file) => { pm.clearError(); setImporting(file); }}
-          onRestore={pm.restore}
-          onBackupAll={pm.backupAll}
-          onRestoreAll={pm.restoreAll}
-        />
-        {showLog && <SysexLog log={pm.log} onClear={pm.clearLog} />}
-        <p className="page-tools"><button type="button" className="btn-link" onClick={toggleLog}>{t(showLog ? 'log.hide' : 'log.show')}</button></p>
-        <Dialog open={assistantLoad !== null} title={t('presets.unsavedTitle')} onClose={() => { assistantLoad?.resolve(false); setAssistantLoad(null); }}>
-          <p>{t('presets.unsaved', { current: pm.presetIndex === null ? '' : presetLabel(pm.presetIndex), next: assistantLoad ? presetLabel(assistantLoad.index) : '' })}</p>
-          <div className="sheet-actions">
-            <button className="btn" onClick={() => { assistantLoad?.resolve(false); setAssistantLoad(null); }}>{t('action.cancel')}</button>
-            <button className="btn btn-danger" onClick={() => { assistantLoad?.resolve(true); setAssistantLoad(null); }}>{t('presets.discard')}</button>
-          </div>
-        </Dialog>
-        <CopyDialog open={copyOpen} presetIndex={pm.presetIndex} names={pm.names} busy={pm.busy} error={pm.error}
-          onCopy={pm.copyPreset} onClose={() => setCopyOpen(false)} />
-        <SaveDialog
-          open={saveOpen}
-          presetIndex={pm.presetIndex}
-          names={pm.names}
-          busy={pm.busy}
-          error={pm.error}
-          flowBackups={pm.flowBackups}
-          storageWarning={pm.storageWarning}
-          onDownload={pm.downloadBackup}
-          onSave={pm.save}
-          onClose={closeSave}
-          proposal={proposal}
-          onSaved={() => { savedRef.current = true; }}
-        />
-      </main>
-      </div>
+        <div className={connected ? 'layout' : 'layout layout-single'}>
+          {connected && <PresetSidebar names={pm.names} current={pm.presetIndex} modified={pm.modified} disabled={pm.busy !== null} onReadNames={() => void pm.loadNames()} onLoad={pm.loadPreset} />}
+          <main className="main">
+            {pm.error && (
+              <p className="alert" role="alert">
+                {te(pm.error)}
+              </p>
+            )}
+            {connected && pm.firmware && pm.firmware !== TESTED_FIRMWARE && (
+              <p className="notice" role="status">
+                {t('firmware.untested', { firmware: pm.firmware, tested: TESTED_FIRMWARE })}
+              </p>
+            )}
+            {pm.preset && (
+              <PresetFiles
+                connected={connected}
+                current={pm.preset}
+                busy={pm.busy}
+                error={pm.error}
+                pending={importing}
+                onPick={setImporting}
+                onExport={pm.exportPreset}
+                onImport={importPreset}
+                onError={pm.showError}
+              />
+            )}
+            {pm.preset ? (
+              <ChainView
+                preset={pm.preset}
+                presetIndex={pm.presetIndex}
+                presetName={pm.presetIndex !== null ? (pm.names?.[pm.presetIndex] ?? null) : null}
+                editable={pm.busy === null}
+                modified={pm.modified}
+                onEdit={pm.edit}
+                irNames={pm.irNames}
+                profileNames={pm.profileNames}
+              />
+            ) : (
+              <section className="empty">
+                <h1>{t('empty.title')}</h1>
+                <p className="muted">{t('empty.subtitle')}</p>
+                <ol className="steps">
+                  {(desktop ? DESKTOP_STEPS : STEPS).map((s) => (
+                    <li key={s}>{t(s)}</li>
+                  ))}
+                </ol>
+                <p className="muted small">{t(desktop ? 'empty.desktopNote' : 'empty.browsers')}</p>
+                <p className="muted small">{t('empty.firmware')}</p>
+              </section>
+            )}
+            {connected && (
+              <>
+                {pm.preset && <AssistantPanel agent={toneAgent} />}
+                <Tone3000Panel connected={connected} busy={pm.busy !== null} irNames={pm.irNames} profileNames={pm.profileNames} exclusive={pm.exclusive} error={pm.error} />
+                <SlotsPanel connected={connected} busy={pm.busy !== null} irNames={pm.irNames} profileNames={pm.profileNames} exclusive={pm.exclusive} error={pm.error} />
+              </>
+            )}
+            {connected && (
+              <PresetLibrary
+                disabled={pm.busy !== null || !pm.preset}
+                onLoad={(file) => {
+                  pm.clearError();
+                  setImporting(file);
+                }}
+              />
+            )}
+            <BackupsPanel
+              backups={pm.backups}
+              connected={connected}
+              busy={pm.busy}
+              error={pm.error}
+              flowBackups={pm.flowBackups}
+              storageWarning={pm.storageWarning}
+              onDownload={pm.downloadBackup}
+              onImport={pm.importBackup}
+              onDelete={pm.deleteBackup}
+              onPreset={(file) => {
+                pm.clearError();
+                setImporting(file);
+              }}
+              onRestore={pm.restore}
+              onBackupAll={pm.backupAll}
+              onRestoreAll={pm.restoreAll}
+            />
+            {showLog && <SysexLog log={pm.log} onClear={pm.clearLog} />}
+            <p className="page-tools">
+              <button type="button" className="btn-link" onClick={toggleLog}>
+                {t(showLog ? 'log.hide' : 'log.show')}
+              </button>
+            </p>
+            <Dialog
+              open={assistantLoad !== null}
+              title={t('presets.unsavedTitle')}
+              onClose={() => {
+                assistantLoad?.resolve(false);
+                setAssistantLoad(null);
+              }}
+            >
+              <p>{t('presets.unsaved', { current: pm.presetIndex === null ? '' : presetLabel(pm.presetIndex), next: assistantLoad ? presetLabel(assistantLoad.index) : '' })}</p>
+              <div className="sheet-actions">
+                <button
+                  className="btn"
+                  onClick={() => {
+                    assistantLoad?.resolve(false);
+                    setAssistantLoad(null);
+                  }}
+                >
+                  {t('action.cancel')}
+                </button>
+                <button
+                  className="btn btn-danger"
+                  onClick={() => {
+                    assistantLoad?.resolve(true);
+                    setAssistantLoad(null);
+                  }}
+                >
+                  {t('presets.discard')}
+                </button>
+              </div>
+            </Dialog>
+            <CopyDialog open={copyOpen} presetIndex={pm.presetIndex} names={pm.names} busy={pm.busy} error={pm.error} onCopy={pm.copyPreset} onClose={() => setCopyOpen(false)} />
+            <SaveDialog
+              open={saveOpen}
+              presetIndex={pm.presetIndex}
+              names={pm.names}
+              busy={pm.busy}
+              error={pm.error}
+              flowBackups={pm.flowBackups}
+              storageWarning={pm.storageWarning}
+              onDownload={pm.downloadBackup}
+              onSave={pm.save}
+              onClose={closeSave}
+              proposal={proposal}
+              onSaved={() => {
+                savedRef.current = true;
+              }}
+            />
+          </main>
+        </div>
       )}
     </>
   );

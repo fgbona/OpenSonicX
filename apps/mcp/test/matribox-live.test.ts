@@ -57,7 +57,7 @@ test('the assignment tools refuse bad input before writing anything', async () =
   assert.equal(writes(fake), 0);
 });
 
-test('the CC tools send the manual\'s Control Changes on the given channel and expect no answer', async () => {
+test("the CC tools send the manual's Control Changes on the given channel and expect no answer", async () => {
   const { client, fake } = await connected();
   assert.match(await call(client, 'matribox_tuner', { on: true }), /^Tuner on \(CC 58 = 127, MIDI channel 1\)\.$/m);
   await call(client, 'matribox_tap_tempo', { channel: 3 });
@@ -74,7 +74,11 @@ test('the CC tools send the manual\'s Control Changes on the given channel and e
 
 test('the CC tools refuse a missing or out-of-range value', async () => {
   const { client, fake } = await connected();
-  for (const [tool, args] of [['matribox_looper', { action: 'record_volume' }], ['matribox_drum', { action: 'rhythm', value: 100 }], ['matribox_set_bpm', { bpm: 39 }]] as const) {
+  for (const [tool, args] of [
+    ['matribox_looper', { action: 'record_volume' }],
+    ['matribox_drum', { action: 'rhythm', value: 100 }],
+    ['matribox_set_bpm', { bpm: 39 }],
+  ] as const) {
     const result = await client.callTool({ name: tool, arguments: args });
     assert.equal(result.isError, true, `${tool} ${JSON.stringify(args)}`);
   }

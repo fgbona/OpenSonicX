@@ -68,7 +68,9 @@ export function Knob({ label, value, min, max, step = 1, display, defaultValue, 
   const [dx, dy] = polar(angle);
   return (
     <div className={`knob${disabled ? ' is-disabled' : ''}`}>
-      <span className="knob-value" aria-hidden="true">{display}</span>
+      <span className="knob-value" aria-hidden="true">
+        {display}
+      </span>
       <div
         ref={ref}
         className="knob-dial"
@@ -92,9 +94,15 @@ export function Knob({ label, value, min, max, step = 1, display, defaultValue, 
           const range = e.shiftKey ? DRAG_RANGE * 5 : DRAG_RANGE;
           set(d.value + ((d.y - e.clientY) / range) * span);
         }}
-        onPointerUp={() => { drag.current = null; }}
-        onPointerCancel={() => { drag.current = null; }}
-        onDoubleClick={() => { if (!disabled && defaultValue !== undefined) set(defaultValue); }}
+        onPointerUp={() => {
+          drag.current = null;
+        }}
+        onPointerCancel={() => {
+          drag.current = null;
+        }}
+        onDoubleClick={() => {
+          if (!disabled && defaultValue !== undefined) set(defaultValue);
+        }}
         onKeyDown={(e) => {
           if (disabled) return;
           const big = Math.max(step, span / 10);
@@ -113,7 +121,9 @@ export function Knob({ label, value, min, max, step = 1, display, defaultValue, 
           <line x1={round(C + (dx - C) * 0.42)} y1={round(C + (dy - C) * 0.42)} x2={round(C + (dx - C) * 0.68)} y2={round(C + (dy - C) * 0.68)} className="knob-pointer" />
         </svg>
       </div>
-      <span className="knob-label" id={id}>{label}</span>
+      <span className="knob-label" id={id}>
+        {label}
+      </span>
     </div>
   );
 }

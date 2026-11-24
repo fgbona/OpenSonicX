@@ -6,7 +6,10 @@ import { nodeConverter } from '../src/convert.ts';
 
 const fixtures = new URL('../../../packages/core/test/fixtures/clo/', import.meta.url);
 
-test('the parallel Node converter gives the same arrays as SonicMaster on the synthetic DI', { timeout: 120_000, skip: process.env.SKIP_CLO_PARITY ? 'converter unchanged (runs in the Converter parity workflow)' : false }, async () => {
+test('the parallel Node converter gives the same arrays as SonicMaster on the synthetic DI', {
+  timeout: 120_000,
+  skip: process.env.SKIP_CLO_PARITY ? 'converter unchanged (runs in the Converter parity workflow)' : false,
+}, async () => {
   const convert = nodeConverter('/nonexistent', async () => syntheticDi());
   const progress: number[] = [];
   const got = await convert(readFileSync(new URL('ref_input.nam', fixtures), 'utf8'), (done) => progress.push(done));
@@ -20,7 +23,10 @@ test('the parallel Node converter gives the same arrays as SonicMaster on the sy
 
 test('an unsupported capture is refused before anything is downloaded', async () => {
   let loaded = false;
-  const convert = nodeConverter('/nonexistent', async () => { loaded = true; return syntheticDi(); });
+  const convert = nodeConverter('/nonexistent', async () => {
+    loaded = true;
+    return syntheticDi();
+  });
   await assert.rejects(convert(JSON.stringify({ architecture: 'LSTM', config: {}, weights: [] })), /only WaveNet/);
   assert.equal(loaded, false);
 });

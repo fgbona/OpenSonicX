@@ -194,11 +194,7 @@ function expressionEnd(op: number, what: string, entry: number, value: number): 
  * the assignment goes with the full range and the ends that differ follow as min/max writes.
  */
 export function mbExpressionWrites(a: MbExpressionAssignment): Uint8Array[] {
-  return [
-    mbAssignExpression({ ...a, min: 0, max: 100 }),
-    ...(a.min !== 0 ? [mbSetExpressionMin(a.entry, a.min)] : []),
-    ...(a.max !== 100 ? [mbSetExpressionMax(a.entry, a.max)] : []),
-  ];
+  return [mbAssignExpression({ ...a, min: 0, max: 100 }), ...(a.min !== 0 ? [mbSetExpressionMin(a.entry, a.min)] : []), ...(a.max !== 100 ? [mbSetExpressionMax(a.entry, a.max)] : [])];
 }
 
 export const mbSetExpressionMin = (entry: number, value: number): Uint8Array => expressionEnd(0x03, 'expression min', entry, value);

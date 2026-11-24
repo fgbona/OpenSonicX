@@ -8,7 +8,10 @@ import { fromHex, MB_BACKUP_ALL_FORMAT, parseMatriboxPrst, parseMbPreset, toHex 
 import { call, connected, text } from './matribox-helpers.ts';
 
 const readJson = (path: string) => JSON.parse(readFileSync(path, 'utf8'));
-const backupsOf = (folder: string, label: string) => readdirSync(folder).filter((f) => f.endsWith(`-matribox-${label}.json`)).map((f) => readJson(join(folder, f)));
+const backupsOf = (folder: string, label: string) =>
+  readdirSync(folder)
+    .filter((f) => f.endsWith(`-matribox-${label}.json`))
+    .map((f) => readJson(join(folder, f)));
 
 test('saving to another slot backs up what that slot stores, keeps the edits and loads the slot', async () => {
   const { client, fake, backups } = await connected();
@@ -25,7 +28,10 @@ test('saving to another slot backs up what that slot stores, keeps the edits and
   const stored = parseMbPreset(fake.stored(76)!);
   assert.equal(stored.name, 'Hot Drive');
   assert.equal(stored.chain[1]?.values[0], 66, 'the unsaved edits were stored');
-  assert.deepEqual(stored.chain.map((b) => b.fxid), edited.chain.map((b) => b.fxid));
+  assert.deepEqual(
+    stored.chain.map((b) => b.fxid),
+    edited.chain.map((b) => b.fxid),
+  );
   const [first, second] = backupsOf(backups, '20A').sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   assert.equal(first.name, '', 'the first save backed up the empty 20A, not the loaded preset');
   assert.equal(second.name, 'Echo Only', 'what 20A stored, not the edit buffer');
@@ -40,7 +46,7 @@ test('saving over the loaded slot keeps the edits: its backup is the edit buffer
   assert.equal(backup.source, 'edit-buffer');
 });
 
-test('a failed save to another slot keeps the loaded preset\'s edits in a backup file', async () => {
+test("a failed save to another slot keeps the loaded preset's edits in a backup file", async () => {
   const { client, fake, backups } = await connected();
   await call(client, 'matribox_set_param', { block: 'DRV', parameter: 'Gain', value: 66 });
   fake.dropsPresetWriteTo = 76;
@@ -76,7 +82,11 @@ test('matribox_backup_all_presets writes all 240 slots, each read once loaded, t
   assert.equal(file.presets[1].name, '', '1B as stored, not the loaded preset');
   assert.equal(file.presets[66].name, 'Drive AD');
   assert.equal(fake.current, 0x42);
-  for (const [args, message] of [[{ file: '../x.json' }, /must be inside/], [{ file: 'x.prst' }, /\.json/], [{ file: 'all.json' }, /already exists/]] as const) {
+  for (const [args, message] of [
+    [{ file: '../x.json' }, /must be inside/],
+    [{ file: 'x.prst' }, /\.json/],
+    [{ file: 'all.json' }, /already exists/],
+  ] as const) {
     const result = await client.callTool({ name: 'matribox_backup_all_presets', arguments: args });
     assert.equal(result.isError, true, JSON.stringify(args));
     assert.match(text(result), message);
@@ -87,8 +97,16 @@ test('matribox_restore_all_presets needs confirm ALL, backs everything up first 
   const { client, fake, backups } = await connected();
   const drive = toHex(fake.editBuffer).replaceAll(' ', '');
   mkdirSync(backups, { recursive: true });
-  const file = { format: MB_BACKUP_ALL_FORMAT, version: 1, device: 'Sonicake Matribox II Pro', createdAt: '2026-11-24T12:00:00.000Z',
-    presets: [{ index: 0, label: '1A', name: 'Drive AD', preset: drive }, { index: 1, label: '1B', name: 'Drive AD', preset: drive }] };
+  const file = {
+    format: MB_BACKUP_ALL_FORMAT,
+    version: 1,
+    device: 'Sonicake Matribox II Pro',
+    createdAt: '2026-11-24T12:00:00.000Z',
+    presets: [
+      { index: 0, label: '1A', name: 'Drive AD', preset: drive },
+      { index: 1, label: '1B', name: 'Drive AD', preset: drive },
+    ],
+  };
   writeFileSync(join(backups, 'two.json'), JSON.stringify(file));
   const wrong = await client.callTool({ name: 'matribox_restore_all_presets', arguments: { file: 'two.json', confirm: '1A' } });
   assert.equal(wrong.isError, true);
@@ -98,7 +116,10 @@ test('matribox_restore_all_presets needs confirm ALL, backs everything up first 
   const out = await call(client, 'matribox_restore_all_presets', { file: 'two.json', confirm: 'all' });
   assert.match(out, /^Restored 2 presets: 1A, 1B\.$/m);
   assert.match(out, /^Backup of all 240 presets before the restore: .*-matribox-all\.json$/m);
-  assert.deepEqual(fake.presetWrites.map((w) => w[0]), [0, 1]);
+  assert.deepEqual(
+    fake.presetWrites.map((w) => w[0]),
+    [0, 1],
+  );
   assert.equal(parseMbPreset(fake.stored(1)!).name, 'Drive AD');
   assert.equal(fake.current, 0x42);
 

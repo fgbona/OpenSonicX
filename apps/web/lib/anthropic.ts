@@ -17,10 +17,7 @@ const headers = (key: string) => ({
   'anthropic-dangerous-direct-browser-access': 'true',
 });
 
-type Block =
-  | { type: 'text'; text: string }
-  | { type: 'tool_use'; id: string; name: string; input: unknown }
-  | { type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean };
+type Block = { type: 'text'; text: string } | { type: 'tool_use'; id: string; name: string; input: unknown } | { type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean };
 type Message = { role: 'user' | 'assistant'; content: string | Block[] };
 type ApiError = { error?: { type?: string; message?: string } };
 
@@ -48,11 +45,16 @@ export async function converseClaude(model: string, options: ConverseOptions): P
   const run = agent.runner();
   for (let request = 0; request < MAX_REQUESTS; request++) {
     onRequest();
-    const r = await post(fetchFn, `${API}/messages`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers(key) },
-      body: JSON.stringify({ model, max_tokens: MAX_TOKENS, system: agent.instructions(options.thorough ?? false), tools: tools(agent), messages }),
-    }, now);
+    const r = await post(
+      fetchFn,
+      `${API}/messages`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers(key) },
+        body: JSON.stringify({ model, max_tokens: MAX_TOKENS, system: agent.instructions(options.thorough ?? false), tools: tools(agent), messages }),
+      },
+      now,
+    );
     const body = (await r.json().catch(() => ({}))) as ApiError & { content?: Block[]; usage?: { input_tokens?: number; output_tokens?: number } };
     if (body.usage) onUsage?.(body.usage.input_tokens ?? 0, body.usage.output_tokens ?? 0);
     if (r.status === 429) {
@@ -66,7 +68,12 @@ export async function converseClaude(model: string, options: ConverseOptions): P
     if (!Array.isArray(content)) throw new Error('Claude sent no answer this editor understands. Try again in a moment.');
     messages[asked] = { role: 'user', content: text.later }; // answered once: the model list is not sent again
     const calls = content.filter((b): b is Extract<Block, { type: 'tool_use' }> => b.type === 'tool_use');
-    if (calls.length === 0) return content.filter((b): b is Extract<Block, { type: 'text' }> => b.type === 'text').map((b) => b.text).join('\n').trim();
+    if (calls.length === 0)
+      return content
+        .filter((b): b is Extract<Block, { type: 'text' }> => b.type === 'text')
+        .map((b) => b.text)
+        .join('\n')
+        .trim();
     messages.push({ role: 'assistant', content });
     const results: Block[] = [];
     for (const c of calls) {

@@ -19,7 +19,11 @@ export function precacheManifest(dir: string, basePath: string, version: string)
   const urls = precacheUrls(filesUnder(dir), basePath);
   const digest = createHash('sha256');
   for (const url of urls) {
-    digest.update(url).update('\0').update(readFileSync(join(dir, url.slice(basePath.length + 1)))).update('\0');
+    digest
+      .update(url)
+      .update('\0')
+      .update(readFileSync(join(dir, url.slice(basePath.length + 1))))
+      .update('\0');
   }
   return { cacheName: `${CACHE_PREFIX}${version}-${digest.digest('hex').slice(0, 10)}`, urls };
 }

@@ -24,7 +24,10 @@ test('fits the screen, with the preset list folded away until asked for', async 
 
 test('the chain is reordered with the arrows, since touch has no drag and drop', async ({ page, pedal }) => {
   await connect(page, pedal);
-  const later = page.getByRole('list', { name: /chain/i }).getByRole('button', { name: /^Move .+ later$/ }).first();
+  const later = page
+    .getByRole('list', { name: /chain/i })
+    .getByRole('button', { name: /^Move .+ later$/ })
+    .first();
   await expect(later).toBeVisible();
   await later.tap();
   await expect.poll(() => pedal.pedal.received).toContain('edit 44');
@@ -37,12 +40,15 @@ test('the chain strip scrolls sideways under the finger: blocks are not draggabl
   for (const unit of await units.all()) await expect(unit).toHaveAttribute('draggable', 'false');
   const strip = page.locator('.tiles');
   await expect(strip).toHaveCSS('touch-action', 'pan-x');
-  const scrolled = await strip.evaluate((el) => { el.scrollLeft = el.scrollWidth; return el.scrollLeft; });
+  const scrolled = await strip.evaluate((el) => {
+    el.scrollLeft = el.scrollWidth;
+    return el.scrollLeft;
+  });
   expect(scrolled).toBeGreaterThan(0);
   await expect(units.last()).toBeInViewport();
 });
 
-test('the chain\'s › and ‹ buttons page through the blocks off screen', async ({ page, pedal }) => {
+test("the chain's › and ‹ buttons page through the blocks off screen", async ({ page, pedal }) => {
   await connect(page, pedal);
   const later = page.getByRole('button', { name: 'Show later blocks' });
   await expect(page.getByRole('button', { name: 'Show earlier blocks' })).toHaveCount(0);
@@ -61,7 +67,7 @@ for (const theme of ['dark', 'light'] as const) {
   test(`the model menu opens as a sheet inside the screen (${theme} theme)`, async ({ page, pedal }) => {
     await connect(page, pedal);
     if (theme === 'light') await page.getByRole('button', { name: 'Switch to light theme' }).tap();
-      await page.locator('section.block-amp .picker-button').tap();
+    await page.locator('section.block-amp .picker-button').tap();
     const list = page.locator('.picker-list');
     const box = (await list.boundingBox())!;
     const screen = page.viewportSize()!;
@@ -80,11 +86,19 @@ test('the tone assistant fits a phone: key setup, chat, what changed, and the in
   await connect(page, pedal);
   const panel = page.getByRole('region', { name: 'Tone assistant' });
   expect(await sideways(page)).toBeLessThanOrEqual(0);
-  await openAssistantChat(page, { panel: 'Tone assistant', keyRegion: 'Google Gemini key', keyLabel: 'Gemini API key', save: 'Save key', input: 'Message to the tone assistant', send: 'Send' },
-    'Built it: Calif DualM (a Mesa Dual Rectifier) with the Dual 4x12 cab and a little room reverb.');
+  await openAssistantChat(
+    page,
+    { panel: 'Tone assistant', keyRegion: 'Google Gemini key', keyLabel: 'Gemini API key', save: 'Save key', input: 'Message to the tone assistant', send: 'Send' },
+    'Built it: Calif DualM (a Mesa Dual Rectifier) with the Dual 4x12 cab and a little room reverb.',
+  );
   expect(await sideways(page)).toBeLessThanOrEqual(0);
   const screen = page.viewportSize()!;
-  for (const control of [panel.getByRole('textbox', { name: 'Message to the tone assistant' }), panel.getByRole('button', { name: 'Send' }), panel.getByRole('button', { name: 'Keys' }), panel.getByRole('button', { name: 'New conversation' })]) {
+  for (const control of [
+    panel.getByRole('textbox', { name: 'Message to the tone assistant' }),
+    panel.getByRole('button', { name: 'Send' }),
+    panel.getByRole('button', { name: 'Keys' }),
+    panel.getByRole('button', { name: 'New conversation' }),
+  ]) {
     await control.scrollIntoViewIfNeeded();
     const box = (await control.boundingBox())!;
     expect(box.x).toBeGreaterThanOrEqual(0);

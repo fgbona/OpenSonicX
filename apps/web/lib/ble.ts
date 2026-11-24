@@ -68,10 +68,12 @@ export function bleMidiPort(characteristic: GattCharacteristic, onError: (error:
   return {
     send: (bytes) => {
       const wire = bleWire(bytes);
-      queue = queue.then(() => characteristic.writeValueWithoutResponse(wire)).catch((error: unknown) => {
-        console.error('Bluetooth write failed', error);
-        onError(error);
-      });
+      queue = queue
+        .then(() => characteristic.writeValueWithoutResponse(wire))
+        .catch((error: unknown) => {
+          console.error('Bluetooth write failed', error);
+          onError(error);
+        });
     },
     listen: (receiver) => {
       if (handler) characteristic.removeEventListener('characteristicvaluechanged', handler);

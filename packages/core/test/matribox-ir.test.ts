@@ -36,19 +36,36 @@ function wav(rate: number, bits: 16 | 24 | 32, frames: readonly (readonly number
   return buf;
 }
 
-const hash = (s: Int32Array) => createHash('sha256').update(new Uint8Array(s.buffer, s.byteOffset, s.byteLength)).digest('hex');
+const hash = (s: Int32Array) =>
+  createHash('sha256')
+    .update(new Uint8Array(s.buffer, s.byteOffset, s.byteLength))
+    .digest('hex');
 
 test('a 44.1 kHz IR is kept sample for sample, through the official tool float -> int24 rounding', () => {
   const s = [0, 1, 4194303, 4194304, 4194305, 8388607, -1, -8388608];
-  const out = mbIrSamplesFromWav(wav(44100, 24, s.map((x) => [x])));
+  const out = mbIrSamplesFromWav(
+    wav(
+      44100,
+      24,
+      s.map((x) => [x]),
+    ),
+  );
   assert.equal(out.length, MB_IR_TAPS);
   // round(x * (2^31 - 1)) >> 8 in doubles, ties to even: some large positive samples lose one LSB
   assert.deepEqual([...out.subarray(0, 8)], [0, 1, 4194303, 4194304, 4194305, 8388606, -1, -8388608]);
-  assert.ok(out.subarray(8).every((x) => x === 0), 'a short IR is padded with silence');
+  assert.ok(
+    out.subarray(8).every((x) => x === 0),
+    'a short IR is padded with silence',
+  );
 });
 
 test('only the first channel is used, like the official tool', () => {
-  const out = mbIrSamplesFromWav(wav(44100, 16, [[1000, -5000], [2000, 7000]]));
+  const out = mbIrSamplesFromWav(
+    wav(44100, 16, [
+      [1000, -5000],
+      [2000, 7000],
+    ]),
+  );
   assert.deepEqual([...out.subarray(0, 3)], [1000 * 256, 2000 * 256, 0]);
 });
 
@@ -62,8 +79,17 @@ test('48 kHz goes through the r8brain 1.6 resampler (regression pin; byte-exact 
   const out = mbIrSamplesFromWav(wav(48000, 24, impulse));
   assert.deepEqual([...out.subarray(0, 4)], [7219234, 253119, -94148, 133697]); // the low-pass kernel, centred on the impulse
   assert.equal(hash(out), IMPULSE_HASH);
-  const dc = mbIrSamplesFromWav(wav(48000, 24, Array.from({ length: 4000 }, () => [4000000])));
-  assert.ok(dc.subarray(500, 1000).every((x) => Math.abs(x - 4000000) <= 1), 'unity gain once the step has rung out');
+  const dc = mbIrSamplesFromWav(
+    wav(
+      48000,
+      24,
+      Array.from({ length: 4000 }, () => [4000000]),
+    ),
+  );
+  assert.ok(
+    dc.subarray(500, 1000).every((x) => Math.abs(x - 4000000) <= 1),
+    'unity gain once the step has rung out',
+  );
 });
 
 test('rates other than 44.1 and 48 kHz, and non-WAV input, are refused', () => {

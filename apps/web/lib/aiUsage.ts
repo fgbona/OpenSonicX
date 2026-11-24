@@ -22,8 +22,11 @@ export function pacificDay(now: Date): string {
 
 /** Minutes the Pacific clock is behind UTC at an instant (480 in winter, 420 in summer). */
 function pacificOffset(at: Date): number {
-  const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: ZONE, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' })
-    .formatToParts(at).map((x) => [x.type, Number(x.value)]));
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', { timeZone: ZONE, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' })
+      .formatToParts(at)
+      .map((x) => [x.type, Number(x.value)]),
+  );
   return Math.round((at.getTime() - Date.UTC(p.year!, p.month! - 1, p.day!, p.hour!, p.minute!)) / 60_000);
 }
 
@@ -50,8 +53,7 @@ export function parseUsage(raw: string | null): Usage {
   try {
     const value: unknown = JSON.parse(raw ?? '{}');
     if (!value || typeof value !== 'object') return {};
-    return Object.fromEntries(Object.entries(value).filter(([k, v]) =>
-      (k === 'groq' || k === 'flash' || k === 'lite') && typeof v?.day === 'string' && Number.isInteger(v?.count))) as Usage;
+    return Object.fromEntries(Object.entries(value).filter(([k, v]) => (k === 'groq' || k === 'flash' || k === 'lite') && typeof v?.day === 'string' && Number.isInteger(v?.count))) as Usage;
   } catch {
     return {};
   }
@@ -84,5 +86,12 @@ export function recordRequest(model: AiModel): void {
 }
 
 export function useAiUsage(): Usage {
-  return useSyncExternalStore((l) => { listeners.add(l); return () => listeners.delete(l); }, current, () => EMPTY);
+  return useSyncExternalStore(
+    (l) => {
+      listeners.add(l);
+      return () => listeners.delete(l);
+    },
+    current,
+    () => EMPTY,
+  );
 }

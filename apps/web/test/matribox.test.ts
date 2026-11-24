@@ -29,7 +29,13 @@ test('readLoaded follows the edits of the loaded preset', async () => {
 test('saveToSlot keeps a backup of the slot first, then saves and checks the slot by reading it back', async () => {
   const fake = new FakeMatribox();
   const kept: string[] = [];
-  const backup = await saveToSlot(unitLink(fake), 5, 'My Tone', (b) => void kept.push(b.label), () => '2026-11-24T10:00:00.000Z');
+  const backup = await saveToSlot(
+    unitLink(fake),
+    5,
+    'My Tone',
+    (b) => void kept.push(b.label),
+    () => '2026-11-24T10:00:00.000Z',
+  );
   assert.deepEqual(kept, ['2B']);
   assert.equal(backup.index, 5);
   assert.equal(parseMbPreset(fake.stored(5)!).name, 'My Tone');
@@ -39,7 +45,17 @@ test('saveToSlot reports a save the unit dropped, after keeping the backup', asy
   const fake = new FakeMatribox();
   fake.dropsSaves = true;
   const kept: string[] = [];
-  await assert.rejects(saveToSlot(unitLink(fake), 5, 'My Tone', (b) => void kept.push(b.label), () => 'now', 0), /2B does not hold "My Tone"/);
+  await assert.rejects(
+    saveToSlot(
+      unitLink(fake),
+      5,
+      'My Tone',
+      (b) => void kept.push(b.label),
+      () => 'now',
+      0,
+    ),
+    /2B does not hold "My Tone"/,
+  );
   assert.deepEqual(kept, ['2B', '17C'], 'the backup of 2B, then the loaded preset with its edits');
 });
 
@@ -50,8 +66,19 @@ test('saveToSlot to another slot backs up what that slot stores, writes the edit
   await link.write(mbSetBlockOn(0, true));
   const edited = parseMbPreset(fake.editBuffer);
   const kept: MbBackup[] = [];
-  await saveToSlot(link, 5, 'My Tone', (b) => void kept.push(b), () => 'now', 0);
-  assert.deepEqual(kept.map((b) => [b.label, b.name, b.source]), [['2B', '', 'slot']], 'the empty 2B, not the loaded "Drive AD"');
+  await saveToSlot(
+    link,
+    5,
+    'My Tone',
+    (b) => void kept.push(b),
+    () => 'now',
+    0,
+  );
+  assert.deepEqual(
+    kept.map((b) => [b.label, b.name, b.source]),
+    [['2B', '', 'slot']],
+    'the empty 2B, not the loaded "Drive AD"',
+  );
   assert.equal(fake.current, 5);
   assert.equal(fake.presetWrites.length, 1);
   const stored = parseMbPreset(fake.stored(5)!);
@@ -61,15 +88,28 @@ test('saveToSlot to another slot backs up what that slot stores, writes the edit
 test('saveToSlot over the loaded slot saves it with cmd 05; its backup is the edit buffer, marked so', async () => {
   const fake = new FakeMatribox();
   const kept: MbBackup[] = [];
-  await saveToSlot(unitLink(fake), 66, 'Same Slot', (b) => void kept.push(b), () => 'now', 0);
-  assert.deepEqual(kept.map((b) => [b.label, b.source]), [['17C', 'edit-buffer']]);
+  await saveToSlot(
+    unitLink(fake),
+    66,
+    'Same Slot',
+    (b) => void kept.push(b),
+    () => 'now',
+    0,
+  );
+  assert.deepEqual(
+    kept.map((b) => [b.label, b.source]),
+    [['17C', 'edit-buffer']],
+  );
   assert.equal(fake.presetWrites.length, 0);
   assert.equal(parseMbPreset(fake.stored(66)!).name, 'Same Slot');
 });
 
 test('saveToSlot refuses a bad name before anything is sent', async () => {
   const fake = new FakeMatribox();
-  await assert.rejects(saveToSlot(unitLink(fake), 5, 'é'.repeat(3), () => undefined), /printable ASCII/);
+  await assert.rejects(
+    saveToSlot(unitLink(fake), 5, 'é'.repeat(3), () => undefined),
+    /printable ASCII/,
+  );
   assert.equal(fake.received.length, 0);
 });
 
@@ -96,8 +136,13 @@ test('backups are the MCP server format and the newest 20 are kept', () => {
 test('the queue runs calls one at a time and goes on after a failure', async () => {
   const run = serialQueue();
   const order: number[] = [];
-  const slow = run(async () => { await new Promise((r) => setTimeout(r, 20)); order.push(1); });
-  const failing = run(async () => { throw new Error('boom'); });
+  const slow = run(async () => {
+    await new Promise((r) => setTimeout(r, 20));
+    order.push(1);
+  });
+  const failing = run(async () => {
+    throw new Error('boom');
+  });
   const fast = run(async () => void order.push(2));
   await slow;
   await assert.rejects(failing, /boom/);

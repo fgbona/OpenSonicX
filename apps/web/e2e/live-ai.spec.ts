@@ -27,6 +27,9 @@ for (const p of PROVIDERS) {
     console.log(`\n${p.name} answered:\n${await panel.locator('.assistant-message').last().innerText()}\n`);
     await expect(panel.locator('.assistant-message.is-error')).toHaveCount(0);
     await expect(panel.getByText(p.via)).toBeVisible();
-    expect(pedal.pedal.received.some((r) => r.startsWith('edit')), 'the assistant changed the sound').toBe(true);
+    expect(
+      pedal.pedal.received.some((r) => r.startsWith('edit')),
+      'the assistant changed the sound',
+    ).toBe(true);
   });
 }

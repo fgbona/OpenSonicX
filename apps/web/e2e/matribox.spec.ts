@@ -42,7 +42,10 @@ test('with the picked catalog: models, gear, live parameters, on/off and chain e
   await page.getByRole('button', { name: 'Move block 7 earlier in the chain' }).click();
   await expect(page.getByText('Chain: DYN → DRV → AMP → CAB → RVB → DLY → VOL')).toBeVisible();
 
-  await page.getByRole('listitem', { name: /^1\. DYN/ }).getByRole('button', { name: 'Remove' }).click();
+  await page
+    .getByRole('listitem', { name: /^1\. DYN/ })
+    .getByRole('button', { name: 'Remove' })
+    .click();
   await expect(page.getByText('Chain: DRV → AMP → CAB → RVB → DLY → VOL')).toBeVisible();
   expect(loaded(unit).chain.map((b) => b.moduleIndex)).toEqual([3, 4, 5, 10, 9, 15]);
 });
@@ -68,7 +71,11 @@ test('patch volume, footswitch and expression assignments reach the unit; tuner 
   await page.getByRole('combobox', { name: 'Parameter of expression entry 4' }).selectOption({ label: 'Tone' });
   await page.getByRole('spinbutton', { name: 'Minimum of expression entry 4' }).fill('10');
   await page.getByRole('spinbutton', { name: 'Maximum of expression entry 4' }).fill('90');
-  await page.getByRole('listitem').filter({ has: page.getByRole('combobox', { name: 'Block of expression entry 4' }) }).getByRole('button', { name: 'Apply' }).click();
+  await page
+    .getByRole('listitem')
+    .filter({ has: page.getByRole('combobox', { name: 'Block of expression entry 4' }) })
+    .getByRole('button', { name: 'Apply' })
+    .click();
   await expect.poll(() => assigned().expression[3]).toEqual({ entry: 3, slot: 0, paramId: 1, min: 10, max: 90 });
 
   await page.getByRole('checkbox', { name: 'Tuner' }).check();
@@ -89,7 +96,10 @@ test('the catalog stays in this browser across visits', async ({ page }) => {
 
 test('loading a preset asks first over live edits', async ({ page, unit }) => {
   await connectMatribox(page);
-  await page.getByRole('listitem', { name: /^2\. module 3/ }).getByRole('checkbox').check();
+  await page
+    .getByRole('listitem', { name: /^2\. module 3/ })
+    .getByRole('checkbox')
+    .check();
   await page.getByRole('button', { name: /Load 1A/ }).click();
   await page.getByRole('button', { name: 'Discard and load' }).click();
   await expect.poll(() => unit.current).toBe(0);
@@ -135,8 +145,16 @@ test('back up all presets: every slot read once loaded, one file downloaded, the
 test('restore all asks for an explicit confirmation, backs everything up first and writes each preset', async ({ page, unit }) => {
   await connectMatribox(page);
   const drive = toHex(unit.editBuffer).replaceAll(' ', '');
-  const file = { format: 'opensonicx-matribox-backup', version: 1, device: 'Sonicake Matribox II Pro', createdAt: '2026-11-24T12:00:00.000Z',
-    presets: [{ index: 0, label: '1A', name: 'Drive AD', preset: drive }, { index: 1, label: '1B', name: 'Drive AD', preset: drive }] };
+  const file = {
+    format: 'opensonicx-matribox-backup',
+    version: 1,
+    device: 'Sonicake Matribox II Pro',
+    createdAt: '2026-11-24T12:00:00.000Z',
+    presets: [
+      { index: 0, label: '1A', name: 'Drive AD', preset: drive },
+      { index: 1, label: '1B', name: 'Drive AD', preset: drive },
+    ],
+  };
   await page.getByLabel('Choose a backup-all file').setInputFiles({ name: 'all.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
   const dialog = page.getByRole('dialog', { name: 'Restore 2 presets' });
   await expect(dialog.getByText('This overwrites 2 of the 240 presets on the Matribox')).toBeVisible();
@@ -160,7 +178,8 @@ test('restore all refuses a file that is not a backup-all file', async ({ page }
 });
 
 test('no WCAG A/AA violations in the Matribox editor, without and with the catalog', async ({ page }) => {
-  const violations = async () => (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
+  const violations = async () =>
+    (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
   await connectMatribox(page);
   expect(await violations()).toEqual([]);
   await pickCatalog(page);

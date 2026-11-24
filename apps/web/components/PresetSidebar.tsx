@@ -26,7 +26,8 @@ export function PresetSidebar({ names, current, modified, disabled, onReadNames,
   const [open, setOpen] = useState(false);
   const shown = useMemo(() => {
     const f = filter.trim().toLowerCase();
-    return (names ?? []).map((name, i) => ({ i, name, label: presetLabel(i) }))
+    return (names ?? [])
+      .map((name, i) => ({ i, name, label: presetLabel(i) }))
       .filter((p) => (bank === 'user' ? p.i < USER_PRESETS : p.i >= USER_PRESETS))
       .filter((p) => !f || p.name.toLowerCase().includes(f) || p.label.toLowerCase().includes(f));
   }, [names, filter, bank]);
@@ -41,7 +42,10 @@ export function PresetSidebar({ names, current, modified, disabled, onReadNames,
   return (
     <aside className={`sidebar${open ? ' is-open' : ''}`} aria-label={t('presets.title')}>
       <button type="button" className="sidebar-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span>{t('presets.title')}{current !== null ? ` · ${presetLabel(current)} ${names?.[current] ?? ''}` : ''}</span>
+        <span>
+          {t('presets.title')}
+          {current !== null ? ` · ${presetLabel(current)} ${names?.[current] ?? ''}` : ''}
+        </span>
       </button>
       <div className="segmented sidebar-banks" role="tablist">
         {(['factory', 'user'] as const).map((b) => (
@@ -52,13 +56,21 @@ export function PresetSidebar({ names, current, modified, disabled, onReadNames,
       </div>
       <input className="sidebar-search" type="search" value={filter} placeholder={t('presets.filter')} aria-label={t('presets.filter')} onChange={(e) => setFilter(e.target.value)} />
       {!names ? (
-        <button type="button" className="btn btn-small" disabled={disabled} onClick={onReadNames}>{t('presets.read')}</button>
+        <button type="button" className="btn btn-small" disabled={disabled} onClick={onReadNames}>
+          {t('presets.read')}
+        </button>
       ) : (
         <ul className="sidebar-list">
           {shown.map((p) => (
             <li key={p.i}>
-              <button type="button" className={`sidebar-item${p.i === current ? ' is-current' : ''}`} disabled={disabled}
-                aria-current={p.i === current ? 'true' : undefined} aria-label={t('presets.loadAria', { label: p.label, name: p.name })} onClick={() => choose(p.i)}>
+              <button
+                type="button"
+                className={`sidebar-item${p.i === current ? ' is-current' : ''}`}
+                disabled={disabled}
+                aria-current={p.i === current ? 'true' : undefined}
+                aria-label={t('presets.loadAria', { label: p.label, name: p.name })}
+                onClick={() => choose(p.i)}
+              >
                 <span className="sidebar-badge">{p.label}</span>
                 <span className="sidebar-name">{p.name}</span>
               </button>
@@ -69,8 +81,18 @@ export function PresetSidebar({ names, current, modified, disabled, onReadNames,
       <Dialog open={pending !== null} title={t('presets.unsavedTitle')} onClose={() => setPending(null)}>
         <p>{t('presets.unsaved', { current: current === null ? '' : presetLabel(current), next: pending === null ? '' : presetLabel(pending) })}</p>
         <div className="sheet-actions">
-          <button className="btn" onClick={() => setPending(null)}>{t('action.cancel')}</button>
-          <button className="btn btn-danger" onClick={() => { if (pending !== null) onLoad(pending); setPending(null); }}>{t('presets.discard')}</button>
+          <button className="btn" onClick={() => setPending(null)}>
+            {t('action.cancel')}
+          </button>
+          <button
+            className="btn btn-danger"
+            onClick={() => {
+              if (pending !== null) onLoad(pending);
+              setPending(null);
+            }}
+          >
+            {t('presets.discard')}
+          </button>
         </div>
       </Dialog>
     </aside>

@@ -32,35 +32,44 @@ export function useMatriboxHistory(mb: Matribox) {
   useEffect(() => commit(EMPTY_HISTORY), [current, commit]);
 
   /** Sends `target`'s chain; the preset as the unit has it, null when the editor refused (its error shows). */
-  const send = useCallback(async (target: readonly MbChainBlock[]): Promise<MbPreset | null> => {
-    const now = presetRef.current;
-    if (!now) return null;
-    const preset = await apply(transition(catalogRef.current ?? { modules: [] }, now.chain, target));
-    if (preset) presetRef.current = preset;
-    return preset;
-  }, [apply]);
+  const send = useCallback(
+    async (target: readonly MbChainBlock[]): Promise<MbPreset | null> => {
+      const now = presetRef.current;
+      if (!now) return null;
+      const preset = await apply(transition(catalogRef.current ?? { modules: [] }, now.chain, target));
+      if (preset) presetRef.current = preset;
+      return preset;
+    },
+    [apply],
+  );
 
   /** One Undo or Redo at a time: a key held down must not read the history before the last step is kept. */
   const stepping = useRef(false);
-  const step = useCallback(async (back: boolean): Promise<boolean> => {
-    const now = presetRef.current;
-    const moved = now && !stepping.current ? (back ? undoStep : redoStep)(historyRef.current, now) : null;
-    if (!moved) return false;
-    stepping.current = true;
-    try {
-      if (!(await send(moved.target.chain))) return false;
-      commit(moved.history);
-      return true;
-    } finally {
-      stepping.current = false;
-    }
-  }, [send, commit]);
+  const step = useCallback(
+    async (back: boolean): Promise<boolean> => {
+      const now = presetRef.current;
+      const moved = now && !stepping.current ? (back ? undoStep : redoStep)(historyRef.current, now) : null;
+      if (!moved) return false;
+      stepping.current = true;
+      try {
+        if (!(await send(moved.target.chain))) return false;
+        commit(moved.history);
+        return true;
+      } finally {
+        stepping.current = false;
+      }
+    },
+    [send, commit],
+  );
 
   /** Runs a chain edit and records it once the unit took it. */
-  const recorded = useCallback(async (act: () => Promise<boolean>, key: string | null = null) => {
-    const before = presetRef.current;
-    if (before && (await act())) push(before, key);
-  }, [push]);
+  const recorded = useCallback(
+    async (act: () => Promise<boolean>, key: string | null = null) => {
+      const before = presetRef.current;
+      if (before && (await act())) push(before, key);
+    },
+    [push],
+  );
 
   return {
     canUndo: history.past.length > 0,

@@ -10,7 +10,8 @@ const WHOLE = /in one write: chain, parameters, knob, expression-pedal and foots
 /** The preset body (sections, no u32 number), as hex: everything a whole-preset write carries. */
 const body = (preset: Uint8Array) => toHex(preset.subarray(4));
 /** Chain edits and per-parameter writes (flag 1) the simulated unit received: a whole-preset import sends none. */
-const liveWrites = (fake: { received: string[] }) => fake.received.map((hex) => parseMbFrame(fromHex(hex))).filter((f) => f.type === MB_WRITE && f.offset === 0 && f.payload.length === f.total && f.payload[0] === 1).length;
+const liveWrites = (fake: { received: string[] }) =>
+  fake.received.map((hex) => parseMbFrame(fromHex(hex))).filter((f) => f.type === MB_WRITE && f.offset === 0 && f.payload.length === f.total && f.payload[0] === 1).length;
 const writes = (fake: { received: string[] }) => fake.received.filter((hex) => parseMbFrame(fromHex(hex)).type === MB_WRITE).length;
 
 /** Chain as (module, fxid, on) in signal order, and each block's values the catalog names (all 15 when unknown). */
@@ -87,7 +88,10 @@ test('matribox_import_preset stores a .prst whole in the confirmed slot with one
   assert.deepEqual(sound(parseMbPreset(fake.stored(76) as Uint8Array)), sound(file));
   assert.equal(parseMbPreset(fake.stored(76) as Uint8Array).name, 'Drive AD');
   // What 20A stored before (the echo tone) was backed up first.
-  const backup = readdirSync(backups).filter((f) => f.endsWith('-matribox-20A.json')).map((f) => JSON.parse(readFileSync(join(backups, f), 'utf8'))).find((b) => b.name === 'Echo Only');
+  const backup = readdirSync(backups)
+    .filter((f) => f.endsWith('-matribox-20A.json'))
+    .map((f) => JSON.parse(readFileSync(join(backups, f), 'utf8')))
+    .find((b) => b.name === 'Echo Only');
   assert.ok(backup && out.includes('-matribox-20A'), 'backup of 20A');
 });
 
@@ -124,7 +128,12 @@ test('matribox_import_preset refuses files outside its folder, missing files and
   const { client, fake, presets } = await connected();
   await call(client, 'matribox_export_preset', { file: 'x.prst' });
   writeFileSync(join(presets, 'junk.prst'), 'not a preset');
-  const cases: [string, RegExp][] = [['../../b/x.prst', /must be inside/], ['missing.prst', /ENOENT|no such file/i], ['junk.prst', /\.prst/], ['x.json', /\.prst/]];
+  const cases: [string, RegExp][] = [
+    ['../../b/x.prst', /must be inside/],
+    ['missing.prst', /ENOENT|no such file/i],
+    ['junk.prst', /\.prst/],
+    ['x.json', /\.prst/],
+  ];
   for (const [file, message] of cases) {
     const result = await client.callTool({ name: 'matribox_import_preset', arguments: { file, preset: '20A', confirm: '20A' } });
     assert.equal(result.isError, true, file);
@@ -166,14 +175,17 @@ test('matribox_restore_backup refuses a file that is not a Matribox backup', asy
   mkdirSync(backups, { recursive: true });
   writeFileSync(join(backups, 'pm.json'), JSON.stringify({ slot: 'P01' }));
   writeFileSync(join(backups, 'bad-label.json'), JSON.stringify({ device: 'Sonicake Matribox II Pro', label: '1A', index: 5, name: 'x', preset: '00' }));
-  for (const [file, message] of [['pm.json', /not a Matribox backup/], ['bad-label.json', /label/]] as const) {
+  for (const [file, message] of [
+    ['pm.json', /not a Matribox backup/],
+    ['bad-label.json', /label/],
+  ] as const) {
     const result = await client.callTool({ name: 'matribox_restore_backup', arguments: { file: basename(file), confirm: '1A' } });
     assert.equal(result.isError, true, file);
     assert.match(text(result), message);
   }
 });
 
-test('export, import and save work without the official app\'s catalog (blocks shown by module number)', async () => {
+test("export, import and save work without the official app's catalog (blocks shown by module number)", async () => {
   const { client, fake } = await connected({ catalog: () => Promise.reject(new Error('no catalog installed')) });
   await call(client, 'matribox_export_preset', { file: 'drive.prst' });
   const out = await call(client, 'matribox_import_preset', { file: 'drive.prst', preset: '20A', confirm: '20A' });

@@ -74,7 +74,11 @@ export function SaveDialog({ open, presetIndex, names, busy, error: saveError, f
         <>
           <p>{t('save.done', vars)}</p>
           <FlowBackups backups={flowBackups} warning={storageWarning} onDownload={onDownload} />
-          <div className="sheet-actions"><button className="btn btn-primary" onClick={onClose}>{t('action.done')}</button></div>
+          <div className="sheet-actions">
+            <button className="btn btn-primary" onClick={onClose}>
+              {t('action.done')}
+            </button>
+          </div>
         </>
       ) : (
         <form
@@ -90,13 +94,20 @@ export function SaveDialog({ open, presetIndex, names, busy, error: saveError, f
         >
           <label className="field">
             <span>{t('save.slot')}</span>
-            <select value={target} onChange={(e) => {
-              const index = Number(e.target.value);
-              setTarget(index);
-              setName(slotName(names, index));
-            }}>
+            <select
+              value={target}
+              onChange={(e) => {
+                const index = Number(e.target.value);
+                setTarget(index);
+                setName(slotName(names, index));
+              }}
+            >
               {Array.from({ length: USER_PRESETS }, (_, i) => (
-                <option key={i} value={i}>{presetLabel(i)}{names?.[i] ? ` · ${names[i]}` : ''}{i === presetIndex ? ` ${t('save.loaded')}` : ''}</option>
+                <option key={i} value={i}>
+                  {presetLabel(i)}
+                  {names?.[i] ? ` · ${names[i]}` : ''}
+                  {i === presetIndex ? ` ${t('save.loaded')}` : ''}
+                </option>
               ))}
             </select>
           </label>
@@ -104,15 +115,29 @@ export function SaveDialog({ open, presetIndex, names, busy, error: saveError, f
             <span>{t('save.name')}</span>
             <input value={name} maxLength={NAME_LENGTH} onChange={(e) => setName(e.target.value)} aria-invalid={invalid} aria-describedby="save-name-error" autoComplete="off" spellCheck={false} />
           </label>
-          {invalid && name.length > 0 && <p className="field-error" id="save-name-error">{t('save.nameRule')}</p>}
-          {saveError && <p className="alert" role="alert">{te(saveError)}</p>}
+          {invalid && name.length > 0 && (
+            <p className="field-error" id="save-name-error">
+              {t('save.nameRule')}
+            </p>
+          )}
+          {saveError && (
+            <p className="alert" role="alert">
+              {te(saveError)}
+            </p>
+          )}
           {saveError && flowBackups.length > 0 && <FlowBackups backups={flowBackups} warning={storageWarning} onDownload={onDownload} />}
           <div className="sheet-note">
-            <p><strong>{current ? t('save.overwriteNamed', { slot: label, name: current }) : t('save.overwrite', vars)}</strong></p>
+            <p>
+              <strong>{current ? t('save.overwriteNamed', { slot: label, name: current }) : t('save.overwrite', vars)}</strong>
+            </p>
           </div>
           <div className="sheet-actions">
-            <button type="button" className="btn" onClick={onClose}>{t('action.cancel')}</button>
-            <button type="submit" className="btn btn-danger" disabled={invalid}>{t('save.submit', vars)}</button>
+            <button type="button" className="btn" onClick={onClose}>
+              {t('action.cancel')}
+            </button>
+            <button type="submit" className="btn btn-danger" disabled={invalid}>
+              {t('save.submit', vars)}
+            </button>
           </div>
         </form>
       )}

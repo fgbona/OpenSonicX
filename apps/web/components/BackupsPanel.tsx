@@ -67,11 +67,13 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
       onImport(backup);
       // The list may already hold it (same file): say what came in and open it, ready to restore.
       setOpened(`${backup.kind}-${backup.createdAt}`);
-      setNote(t('backups.imported', {
-        what: backup.kind === 'session' ? t('backups.all') : `${backup.slots[0]?.label} “${backup.slots[0]?.name}”`,
-        count: backup.slots.length,
-        when: when(backup.createdAt, lang),
-      }));
+      setNote(
+        t('backups.imported', {
+          what: backup.kind === 'session' ? t('backups.all') : `${backup.slots[0]?.label} “${backup.slots[0]?.name}”`,
+          count: backup.slots.length,
+          when: when(backup.createdAt, lang),
+        }),
+      );
       return;
     } catch (e) {
       // An exported preset is the likeliest wrong file: open it where it belongs.
@@ -86,9 +88,13 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
   return (
     <section className="panel" aria-label={t('backups.title')}>
       <header className="panel-head">
-        <h2>{t('backups.title')} <span className="muted">{backups.length}</span></h2>
+        <h2>
+          {t('backups.title')} <span className="muted">{backups.length}</span>
+        </h2>
         <div className="backup-actions">
-          <button type="button" className="btn btn-small btn-primary" disabled={!connected || busy !== null} onClick={() => void onBackupAll()}>{t('backups.backupAll')}</button>
+          <button type="button" className="btn btn-small btn-primary" disabled={!connected || busy !== null} onClick={() => void onBackupAll()}>
+            {t('backups.backupAll')}
+          </button>
           <label className="btn btn-small file-button">
             {t('backups.import')}
             <input type="file" title="" accept={PRESET_FILE_ACCEPT} onChange={(e) => void importFile(e.currentTarget)} />
@@ -96,30 +102,57 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
         </div>
       </header>
       {note && <p className="notice small">{note}</p>}
-      {importError && <p className="alert" role="alert">{te(importError)}</p>}
+      {importError && (
+        <p className="alert" role="alert">
+          {te(importError)}
+        </p>
+      )}
       {backups.length === 0 ? (
         <p className="muted small panel-empty">{t('backups.empty')}</p>
       ) : (
         <ul className="backups">
           {backups.map((b) => {
             const id = `${b.kind}-${b.createdAt}`;
-            const restoreSlot = (slot: SlotBackup) => { setDone(false); setPending(slot); };
+            const restoreSlot = (slot: SlotBackup) => {
+              setDone(false);
+              setPending(slot);
+            };
             return (
               <li key={id} className={`backup${opened === id ? ' is-new' : ''}`}>
                 {/* The actions are on the card itself; only the slot list folds away. */}
                 <div className="backup-head">
                   <div className="backup-title">
                     <strong>{b.kind === 'session' ? t('backups.all') : `${b.slots[0]?.label} “${b.slots[0]?.name}”`}</strong>
-                    <span className="muted small">{when(b.createdAt, lang)} · {b.slots.length === 1 ? t('backups.oneSlot') : t('backups.slots', { count: b.slots.length })}</span>
+                    <span className="muted small">
+                      {when(b.createdAt, lang)} · {b.slots.length === 1 ? t('backups.oneSlot') : t('backups.slots', { count: b.slots.length })}
+                    </span>
                   </div>
                   <div className="backup-actions">
                     {b.slots.length > 1 ? (
-                      <button type="button" className="btn btn-small btn-primary" disabled={!connected || busy !== null} onClick={() => { setDoneAll(false); setPendingAll(b); }}>{t('backups.restoreAll')}</button>
-                    ) : b.slots[0] && (
-                      <button type="button" className="btn btn-small btn-primary" disabled={!connected || busy !== null} onClick={() => restoreSlot(b.slots[0]!)}>{t('backups.restoreTo', { slot: b.slots[0].label })}</button>
+                      <button
+                        type="button"
+                        className="btn btn-small btn-primary"
+                        disabled={!connected || busy !== null}
+                        onClick={() => {
+                          setDoneAll(false);
+                          setPendingAll(b);
+                        }}
+                      >
+                        {t('backups.restoreAll')}
+                      </button>
+                    ) : (
+                      b.slots[0] && (
+                        <button type="button" className="btn btn-small btn-primary" disabled={!connected || busy !== null} onClick={() => restoreSlot(b.slots[0]!)}>
+                          {t('backups.restoreTo', { slot: b.slots[0].label })}
+                        </button>
+                      )
                     )}
-                    <button type="button" className="btn btn-small" onClick={() => onDownload(b)}>{t('backups.download')}</button>
-                    <button type="button" className="btn btn-small" disabled={busy !== null} onClick={() => setDeleting(b)}>{t('backups.delete')}</button>
+                    <button type="button" className="btn btn-small" onClick={() => onDownload(b)}>
+                      {t('backups.download')}
+                    </button>
+                    <button type="button" className="btn btn-small" disabled={busy !== null} onClick={() => setDeleting(b)}>
+                      {t('backups.delete')}
+                    </button>
                   </div>
                 </div>
                 {b.slots.length > 1 && (
@@ -128,7 +161,9 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
                     <ul className="backup-slots">
                       {b.slots.map((s) => (
                         <li key={s.index}>
-                          <span>{s.label} · {s.name || t('backups.unnamed')}</span>
+                          <span>
+                            {s.label} · {s.name || t('backups.unnamed')}
+                          </span>
                           <button type="button" className="btn btn-small" disabled={!connected || busy !== null} onClick={() => restoreSlot(s)}>
                             {t('backups.restoreTo', { slot: s.label })}
                           </button>
@@ -145,11 +180,25 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
       <Dialog open={deleting !== null} title={t('backups.deleteTitle')} onClose={() => setDeleting(null)}>
         {deleting && (
           <>
-            <p>{t('backups.deleteNote', { what: deleting.kind === 'session' ? t('backups.all') : `${deleting.slots[0]?.label} “${deleting.slots[0]?.name}”`, when: when(deleting.createdAt, lang) })}</p>
+            <p>
+              {t('backups.deleteNote', { what: deleting.kind === 'session' ? t('backups.all') : `${deleting.slots[0]?.label} “${deleting.slots[0]?.name}”`, when: when(deleting.createdAt, lang) })}
+            </p>
             <div className="sheet-actions">
-              <button className="btn" onClick={() => onDownload(deleting)}>{t('backups.download')}</button>
-              <button className="btn" onClick={() => setDeleting(null)}>{t('action.cancel')}</button>
-              <button className="btn btn-danger" onClick={() => { onDelete(deleting); setDeleting(null); }}>{t('backups.delete')}</button>
+              <button className="btn" onClick={() => onDownload(deleting)}>
+                {t('backups.download')}
+              </button>
+              <button className="btn" onClick={() => setDeleting(null)}>
+                {t('action.cancel')}
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={() => {
+                  onDelete(deleting);
+                  setDeleting(null);
+                }}
+              >
+                {t('backups.delete')}
+              </button>
             </div>
           </>
         )}
@@ -163,15 +212,34 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
         ) : doneAll ? (
           <>
             <p>{t('restoreAll.done', { count: pendingAll?.slots.length ?? 0 })}</p>
-            <div className="sheet-actions"><button className="btn btn-primary" onClick={() => setPendingAll(null)}>{t('action.done')}</button></div>
+            <div className="sheet-actions">
+              <button className="btn btn-primary" onClick={() => setPendingAll(null)}>
+                {t('action.done')}
+              </button>
+            </div>
           </>
         ) : pendingAll ? (
           <>
-            <div className="sheet-note"><p>{t('restoreAll.note')}</p></div>
-            {error && <p className="alert" role="alert">{te(error)}</p>}
+            <div className="sheet-note">
+              <p>{t('restoreAll.note')}</p>
+            </div>
+            {error && (
+              <p className="alert" role="alert">
+                {te(error)}
+              </p>
+            )}
             <div className="sheet-actions">
-              <button className="btn" onClick={() => setPendingAll(null)}>{t('action.cancel')}</button>
-              <button className="btn btn-danger" onClick={async () => { if (await onRestoreAll(pendingAll)) setDoneAll(true); }}>{t('restoreAll.submit')}</button>
+              <button className="btn" onClick={() => setPendingAll(null)}>
+                {t('action.cancel')}
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={async () => {
+                  if (await onRestoreAll(pendingAll)) setDoneAll(true);
+                }}
+              >
+                {t('restoreAll.submit')}
+              </button>
             </div>
           </>
         ) : null}
@@ -182,19 +250,38 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
         ) : done ? (
           <>
             <p>{t('restore.done', { slot: pending?.label ?? '', name: pending?.name ?? '' })}</p>
-            <div className="sheet-actions"><button className="btn btn-primary" onClick={() => setPending(null)}>{t('action.done')}</button></div>
+            <div className="sheet-actions">
+              <button className="btn btn-primary" onClick={() => setPending(null)}>
+                {t('action.done')}
+              </button>
+            </div>
           </>
         ) : pending ? (
           <>
             <div className="sheet-note">
-              <p><strong>{t('restore.overwrite', { slot: pending.label, name: pending.name })}</strong></p>
+              <p>
+                <strong>{t('restore.overwrite', { slot: pending.label, name: pending.name })}</strong>
+              </p>
               <p>{t('restore.note', { slot: pending.label })}</p>
             </div>
-            {error && <p className="alert" role="alert">{te(error)}</p>}
+            {error && (
+              <p className="alert" role="alert">
+                {te(error)}
+              </p>
+            )}
             {error && flowBackups.length > 0 && <FlowBackups backups={flowBackups} warning={storageWarning} onDownload={onDownload} />}
             <div className="sheet-actions">
-              <button className="btn" onClick={() => setPending(null)}>{t('action.cancel')}</button>
-              <button className="btn btn-danger" onClick={async () => { if (await onRestore(pending)) setDone(true); }}>{t('restore.submit')}</button>
+              <button className="btn" onClick={() => setPending(null)}>
+                {t('action.cancel')}
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={async () => {
+                  if (await onRestore(pending)) setDone(true);
+                }}
+              >
+                {t('restore.submit')}
+              </button>
             </div>
           </>
         ) : null}

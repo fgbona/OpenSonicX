@@ -13,5 +13,4 @@ export interface Environment {
  * Whether the page registers the offline service worker (scripts/build-sw.ts). Never in the
  * desktop app: it already ships the files, and its app:// scheme allows no service worker.
  */
-export const shouldRegister = ({ production, supported, userAgent, protocol }: Environment) =>
-  production && supported && !isDesktopAgent(userAgent) && (protocol === 'https:' || protocol === 'http:');
+export const shouldRegister = ({ production, supported, userAgent, protocol }: Environment) => production && supported && !isDesktopAgent(userAgent) && (protocol === 'https:' || protocol === 'http:');

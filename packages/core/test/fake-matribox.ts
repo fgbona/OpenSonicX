@@ -9,9 +9,7 @@
  * Never a real device.
  */
 import { readFileSync } from 'node:fs';
-import {
-  expand, fromHex, joinMbPages, MB_PAGE_SIZE, MB_READ, MB_WRITE, mbReadPreset, mbReadPresetNames, parseMbFrame, toHex, unwrapMbMessage, wrapMbMessage,
-} from '../src/index.ts';
+import { expand, fromHex, joinMbPages, MB_PAGE_SIZE, MB_READ, MB_WRITE, mbReadPreset, mbReadPresetNames, parseMbFrame, toHex, unwrapMbMessage, wrapMbMessage } from '../src/index.ts';
 
 const fixture = (name: string) => readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8').split('\n');
 const key = (bytes: Uint8Array) => toHex(bytes).replaceAll(' ', '').toLowerCase();
@@ -38,7 +36,10 @@ function capturedReplies(): Map<string, Uint8Array[]> {
     if (line.startsWith('>>') && next.startsWith('<<')) replies.set(line.slice(3), replyFrames(fromHex(next.slice(3))));
   });
   // The 2-page reply to the current-preset read (argument 0x42), exactly as the unit sent it.
-  replies.set(key(mbReadPreset(0x42)), CAPTURE.filter((l) => l.startsWith('<<')).map((l) => fromHex(l.slice(3))));
+  replies.set(
+    key(mbReadPreset(0x42)),
+    CAPTURE.filter((l) => l.startsWith('<<')).map((l) => fromHex(l.slice(3))),
+  );
   return replies;
 }
 
@@ -132,7 +133,7 @@ export class FakeMatribox {
       if (this.echoes) this.#reply(replyFrames(wrapMbMessage(message.flag, message.cmd, notice ?? message.data)));
       return;
     }
-    const reply = frame.type === MB_READ ? this.#read(message.flag, message.cmd, message.data) ?? this.#replies.get(request) : undefined;
+    const reply = frame.type === MB_READ ? (this.#read(message.flag, message.cmd, message.data) ?? this.#replies.get(request)) : undefined;
     if (reply) this.#reply(reply); // the unit stays silent on what it does not know
   }
 

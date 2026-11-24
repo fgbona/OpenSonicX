@@ -84,16 +84,29 @@ export function InstallDialog({ sources, irNames, profileNames, exclusive, error
     }
   };
 
-  const stageText = stage === 'probe' ? t('install.stageProbe', probe)
-    : stage === 'load' ? t('install.stageLoad') : stage === 'download' ? t('install.stageDownload')
-      : stage === 'fit' ? t('install.stageFit') : stage === 'upload' ? t('install.stageUpload') : '';
+  const stageText =
+    stage === 'probe'
+      ? t('install.stageProbe', probe)
+      : stage === 'load'
+        ? t('install.stageLoad')
+        : stage === 'download'
+          ? t('install.stageDownload')
+          : stage === 'fit'
+            ? t('install.stageFit')
+            : stage === 'upload'
+              ? t('install.stageUpload')
+              : '';
 
   return (
     <Dialog open={sources !== null} title={t('install.title')} onClose={onClose} locked={running}>
       {!source ? null : stage === 'done' ? (
         <>
           <p>{t(source.kind === 'ir' ? 'install.doneIr' : 'install.doneProfile', { name: written?.name ?? name.trim(), n: written?.slot ?? slot })}</p>
-          <div className="sheet-actions"><button className="btn btn-primary" onClick={onClose}>{t('action.done')}</button></div>
+          <div className="sheet-actions">
+            <button className="btn btn-primary" onClick={onClose}>
+              {t('action.done')}
+            </button>
+          </div>
         </>
       ) : (
         <>
@@ -101,15 +114,28 @@ export function InstallDialog({ sources, irNames, profileNames, exclusive, error
             <label className="field">
               {t('install.model')}
               <select value={pick} disabled={running} onChange={(e) => setPick(Number(e.target.value))}>
-                {sources.map((s, i) => <option key={i} value={i}>{s.label}</option>)}
+                {sources.map((s, i) => (
+                  <option key={i} value={i}>
+                    {s.label}
+                  </option>
+                ))}
               </select>
             </label>
           )}
           <label className="field">
             {t(source.kind === 'ir' ? 'install.slotIr' : 'install.slotProfile')}
-            <select value={slot} disabled={running} onChange={(e) => { setSlot(Number(e.target.value)); setReplace(false); }}>
+            <select
+              value={slot}
+              disabled={running}
+              onChange={(e) => {
+                setSlot(Number(e.target.value));
+                setReplace(false);
+              }}
+            >
               {Array.from({ length: 5 }, (_, i) => (
-                <option key={i} value={i + 1}>{t('install.slotOption', { n: i + 1, name: names?.[i] ?? t('install.empty') })}</option>
+                <option key={i} value={i + 1}>
+                  {t('install.slotOption', { n: i + 1, name: names?.[i] ?? t('install.empty') })}
+                </option>
               ))}
             </select>
           </label>
@@ -124,11 +150,23 @@ export function InstallDialog({ sources, irNames, profileNames, exclusive, error
             </label>
           )}
           {source.kind === 'profile' && <p className="muted small">{t('install.slowNote')}</p>}
-          {running && <p className="install-stage" role="status"><span className="spinner" aria-hidden="true" /> {stageText}</p>}
-          {(failure ?? (attempted && stage === 'idle' ? error : null)) && <p className="alert" role="alert">{te(failure ?? error ?? '')}</p>}
+          {running && (
+            <p className="install-stage" role="status">
+              <span className="spinner" aria-hidden="true" /> {stageText}
+            </p>
+          )}
+          {(failure ?? (attempted && stage === 'idle' ? error : null)) && (
+            <p className="alert" role="alert">
+              {te(failure ?? error ?? '')}
+            </p>
+          )}
           <div className="sheet-actions">
-            <button className="btn" onClick={onClose} disabled={running}>{t('action.cancel')}</button>
-            <button className={`btn ${occupied ? 'btn-danger' : 'btn-primary'}`} onClick={() => void run()} disabled={!canInstall}>{t('install.submit')}</button>
+            <button className="btn" onClick={onClose} disabled={running}>
+              {t('action.cancel')}
+            </button>
+            <button className={`btn ${occupied ? 'btn-danger' : 'btn-primary'}`} onClick={() => void run()} disabled={!canInstall}>
+              {t('install.submit')}
+            </button>
           </div>
         </>
       )}
