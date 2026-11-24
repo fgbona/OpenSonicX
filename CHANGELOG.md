@@ -6,6 +6,16 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-24
+
+First stable release, now **OpenSonicX**. The Pocket Master editor is validated end to end on
+the owner's pedal, on desktop and on an Android tablet (USB and Bluetooth). The Sonicake
+Matribox II Pro arrives as the second pedal, experimental: the MCP server reads and edits it
+(every write checked on the owner's unit) and the web and desktop editors open it. The editor
+connects by itself when the page opens or the pedal is plugged in, and the desktop app is
+renamed OpenSonicX (it updates in place and keeps its data). The MCP tool contract is frozen
+for 1.x.
+
 ### Added
 
 - Groundwork for a second device, the Sonicake Matribox II Pro (no UI or MCP tools yet): the
@@ -1228,7 +1238,8 @@ Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/OpenSonicX/compare/v0.17.1...HEAD
+[Unreleased]: https://github.com/fgbona/OpenSonicX/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/fgbona/OpenSonicX/compare/v0.17.1...v1.0.0
 [0.17.1]: https://github.com/fgbona/OpenSonicX/compare/v0.17.0...v0.17.1
 [0.17.0]: https://github.com/fgbona/OpenSonicX/compare/v0.16.1...v0.17.0
 [0.16.1]: https://github.com/fgbona/OpenSonicX/compare/v0.16.0...v0.16.1
