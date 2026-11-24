@@ -82,7 +82,7 @@ export function fitNl(vs: readonly Float64Array[], ts: readonly Float64Array[]):
     let bestR = 1;
     const n = 80;
     for (let kk = 0; kk < n; kk++) {
-      const r = rMin * Math.pow(rMax / rMin, kk / (n - 1));
+      const r = rMin * (rMax / rMin) ** (kk / (n - 1));
       let num = 0;
       let den = 0;
       for (let li = 0; li < xsl.length; li++) {

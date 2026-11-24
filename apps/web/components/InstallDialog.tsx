@@ -52,7 +52,7 @@ export function InstallDialog({ sources, irNames, profileNames, exclusive, error
     if (!source) return;
     setName(slotName(source.name, source.kind));
     const known = namesRef.current;
-    const firstEmpty = known ? known.findIndex((n) => n === null) : -1;
+    const firstEmpty = known ? known.indexOf(null) : -1;
     setSlot(firstEmpty >= 0 ? firstEmpty + 1 : 1);
     setReplace(false);
   }, [source]);
@@ -103,7 +103,7 @@ export function InstallDialog({ sources, irNames, profileNames, exclusive, error
         <>
           <p>{t(source.kind === 'ir' ? 'install.doneIr' : 'install.doneProfile', { name: written?.name ?? name.trim(), n: written?.slot ?? slot })}</p>
           <div className="sheet-actions">
-            <button className="btn btn-primary" onClick={onClose}>
+            <button type="button" className="btn btn-primary" onClick={onClose}>
               {t('action.done')}
             </button>
           </div>
@@ -161,10 +161,10 @@ export function InstallDialog({ sources, irNames, profileNames, exclusive, error
             </p>
           )}
           <div className="sheet-actions">
-            <button className="btn" onClick={onClose} disabled={running}>
+            <button type="button" className="btn" onClick={onClose} disabled={running}>
               {t('action.cancel')}
             </button>
-            <button className={`btn ${occupied ? 'btn-danger' : 'btn-primary'}`} onClick={() => void run()} disabled={!canInstall}>
+            <button type="button" className={`btn ${occupied ? 'btn-danger' : 'btn-primary'}`} onClick={() => void run()} disabled={!canInstall}>
               {t('install.submit')}
             </button>
           </div>

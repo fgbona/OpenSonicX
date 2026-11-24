@@ -66,7 +66,7 @@ export function MatriboxSaveDialog({ open, current, names, loadedName, busy, err
           <p>{t('mb.saved', { slot: label, name })}</p>
           {backupOffer}
           <div className="sheet-actions">
-            <button className="btn btn-primary" onClick={onClose}>
+            <button type="button" className="btn btn-primary" onClick={onClose}>
               {t('action.done')}
             </button>
           </div>

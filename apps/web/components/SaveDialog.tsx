@@ -48,6 +48,7 @@ export function SaveDialog({ open, presetIndex, names, busy, error: saveError, f
   // Only an opening: a save to another slot loads that slot, and must not wipe the "Saved" step.
   const initialRef = useRef(initial);
   initialRef.current = initial;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only an opening resets the form; names changing after a save must not (see above)
   useEffect(() => {
     if (!open) return;
     const start = proposal?.target ?? initialRef.current;
@@ -75,7 +76,7 @@ export function SaveDialog({ open, presetIndex, names, busy, error: saveError, f
           <p>{t('save.done', vars)}</p>
           <FlowBackups backups={flowBackups} warning={storageWarning} onDownload={onDownload} />
           <div className="sheet-actions">
-            <button className="btn btn-primary" onClick={onClose}>
+            <button type="button" className="btn btn-primary" onClick={onClose}>
               {t('action.done')}
             </button>
           </div>

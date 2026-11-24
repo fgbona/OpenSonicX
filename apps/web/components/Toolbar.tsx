@@ -82,7 +82,7 @@ export function Toolbar(p: Props) {
           <>
             {bluetoothButton}
             {p.midiRefused && (
-              <button className="btn btn-primary" onClick={p.onEnable} disabled={p.status === 'requesting'}>
+              <button type="button" className="btn btn-primary" onClick={p.onEnable} disabled={p.status === 'requesting'}>
                 {t('action.enable')}
               </button>
             )}
@@ -101,19 +101,19 @@ export function Toolbar(p: Props) {
                 <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />
               </svg>
             </button>
-            <button className="btn" onClick={p.onRevert} disabled={!p.modified}>
+            <button type="button" className="btn" onClick={p.onRevert} disabled={!p.modified}>
               {t('action.revert')}
             </button>
-            <button className="btn" onClick={p.onSave} disabled={p.busy || !p.canSave}>
+            <button type="button" className="btn" onClick={p.onSave} disabled={p.busy || !p.canSave}>
               {t('action.save')}
             </button>
-            <button className="btn" onClick={p.onCopy} disabled={p.busy}>
+            <button type="button" className="btn" onClick={p.onCopy} disabled={p.busy}>
               {t('action.copy')}
             </button>
             <button type="button" className={`btn${p.tuner ? ' btn-primary' : ''}`} aria-pressed={p.tuner} onClick={() => p.onTuner(!p.tuner)} disabled={p.busy}>
               {t('action.tuner')}
             </button>
-            <button className="btn btn-primary" onClick={p.onRead} disabled={p.status === 'reading' || p.busy}>
+            <button type="button" className="btn btn-primary" onClick={p.onRead} disabled={p.status === 'reading' || p.busy}>
               {t('action.read')}
             </button>
             <button type="button" className="btn btn-icon" onClick={p.onSettings} disabled={p.busy} aria-label={t('settings.open')} title={t('settings.open')}>

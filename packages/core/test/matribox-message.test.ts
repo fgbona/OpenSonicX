@@ -22,7 +22,7 @@ const lines = readFileSync(new URL('./fixtures/matribox-reads.txt', import.meta.
 const REQUESTS = lines.filter((l) => l.startsWith('>>')).map((l) => fromHex(l.slice(3)));
 /** The reply payload that follows a request in the fixture (joined pages). */
 const replyTo = (request: Uint8Array): Uint8Array => {
-  const at = lines.findIndex((l) => l === `>> ${Buffer.from(request).toString('hex')}`);
+  const at = lines.indexOf(`>> ${Buffer.from(request).toString('hex')}`);
   const next = lines[at + 1] ?? '';
   assert.ok(at >= 0 && next.startsWith('<<'), 'reply kept in the fixture');
   return fromHex(next.slice(3));

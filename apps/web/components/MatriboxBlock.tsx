@@ -1,6 +1,6 @@
 'use client';
 
-import { type MbCatalog, type MbResolvedBlock } from '@pocket-master/core';
+import type { MbCatalog, MbResolvedBlock } from '@pocket-master/core';
 import { gearOf } from '@/lib/matribox';
 import { useI18n } from './I18n';
 

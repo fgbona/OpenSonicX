@@ -22,6 +22,7 @@ export function Dialog({ open, title, onClose, locked = false, children }: Props
     if (!open && el.open) el.close();
   }, [open]);
   return (
+    // biome-ignore lint/a11y/useKeyWithClickEvents: the click is the pointer-only "click outside"; the keyboard closes with Escape (onCancel)
     <dialog
       ref={ref}
       className="sheet"

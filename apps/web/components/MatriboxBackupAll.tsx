@@ -90,10 +90,10 @@ export function MatriboxBackupAll({ mb, loaded }: Props) {
       <Dialog open={asking} title={t('mb.backupAll')} onClose={() => setAsking(false)}>
         <p>{t('mb.allEdited', { slot: loaded })}</p>
         <div className="sheet-actions">
-          <button className="btn" onClick={() => setAsking(false)}>
+          <button type="button" className="btn" onClick={() => setAsking(false)}>
             {t('action.cancel')}
           </button>
-          <button className="btn btn-danger" onClick={() => void backup()}>
+          <button type="button" className="btn btn-danger" onClick={() => void backup()}>
             {t('mb.backupAllAnyway')}
           </button>
         </div>
@@ -109,7 +109,7 @@ export function MatriboxBackupAll({ mb, loaded }: Props) {
           <>
             <p>{t('mb.restoreAllDone', { count })}</p>
             <div className="sheet-actions">
-              <button className="btn btn-primary" onClick={() => setPending(null)}>
+              <button type="button" className="btn btn-primary" onClick={() => setPending(null)}>
                 {t('action.done')}
               </button>
             </div>

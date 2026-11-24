@@ -71,11 +71,12 @@ export function ModelPicker({ groups, value, onChange, ariaLabel }: Props) {
 
   const move = (delta: number) => {
     const i = options.findIndex((o) => o.value === active);
-    const next = options[Math.min(options.length - 1, Math.max(0, (i < 0 ? 0 : i) + delta))];
+    const next = options[Math.min(options.length - 1, Math.max(0, Math.max(i, 0) + delta))];
     if (next) setActive(next.value);
   };
 
   const onKey = (e: KeyboardEvent) => {
+    // biome-ignore-start lint/correctness/noComponentHookFactories: these are key names (KeyboardEvent.key), not components
     const keys: Record<string, () => void> = {
       ArrowDown: () => move(1),
       ArrowUp: () => move(-1),
@@ -89,6 +90,7 @@ export function ModelPicker({ groups, value, onChange, ariaLabel }: Props) {
       },
       Escape: () => close(),
     };
+    // biome-ignore-end lint/correctness/noComponentHookFactories: these are key names (KeyboardEvent.key), not components
     if (e.key === 'Tab') return close(false);
     const action = keys[e.key];
     if (action) {
@@ -133,6 +135,8 @@ export function ModelPicker({ groups, value, onChange, ariaLabel }: Props) {
                 </div>
               )}
               {group.options.map((o) => (
+                // biome-ignore lint/a11y/useFocusableInteractive: focus stays on the listbox, which points at the option with aria-activedescendant
+                // biome-ignore lint/a11y/useKeyWithClickEvents: the listbox handles the keys (onKeyDown above)
                 <div
                   key={o.value}
                   id={optionId(o.value)}

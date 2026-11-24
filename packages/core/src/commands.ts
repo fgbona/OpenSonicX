@@ -113,7 +113,7 @@ export function encodeValue(spec: ParamSpec, input: number | boolean | string): 
   const step = spec.step ?? 1;
   const value = Number(input);
   if (!Number.isFinite(value) || value < min || value > max) {
-    throw new Error(`${spec.name} must be ${min}..${max}${spec.unit ? ' ' + spec.unit : ''}, got ${input}`);
+    throw new Error(`${spec.name} must be ${min}..${max}${spec.unit ? ` ${spec.unit}` : ''}, got ${input}`);
   }
   const digits = Number.isInteger(step) ? 0 : (String(step).split('.')[1]?.length ?? 0);
   return Number((min + Math.round((value - min) / step) * step).toFixed(digits));

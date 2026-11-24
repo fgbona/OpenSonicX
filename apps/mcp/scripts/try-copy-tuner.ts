@@ -100,7 +100,15 @@ async function main(args: string[]) {
     say(`${note}: ${replies.length} message(s) back${replies.length ? ` (${replies.map(toHex).join(' | ')})` : ''}`);
   };
   const withLink = async <T>(work: (link: PocketMasterLink) => Promise<T>): Promise<T> => {
-    const link = new PocketMasterLink({ send, listen: (r) => void (receiver = r) }, (e) => lines.push(`${e.dir} ${e.hex}${e.note ? `  (${e.note})` : ''}`));
+    const link = new PocketMasterLink(
+      {
+        send,
+        listen: (r) => {
+          receiver = r;
+        },
+      },
+      (e) => lines.push(`${e.dir} ${e.hex}${e.note ? `  (${e.note})` : ''}`),
+    );
     try {
       return await work(link);
     } finally {

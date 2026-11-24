@@ -267,6 +267,7 @@ export default function EditorPage() {
               <p>{t('presets.unsaved', { current: pm.presetIndex === null ? '' : presetLabel(pm.presetIndex), next: assistantLoad ? presetLabel(assistantLoad.index) : '' })}</p>
               <div className="sheet-actions">
                 <button
+                  type="button"
                   className="btn"
                   onClick={() => {
                     assistantLoad?.resolve(false);
@@ -276,6 +277,7 @@ export default function EditorPage() {
                   {t('action.cancel')}
                 </button>
                 <button
+                  type="button"
                   className="btn btn-danger"
                   onClick={() => {
                     assistantLoad?.resolve(true);

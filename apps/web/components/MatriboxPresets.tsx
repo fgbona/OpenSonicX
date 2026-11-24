@@ -51,10 +51,11 @@ export function MatriboxPresets({ names, current, edited, onLoad }: Props) {
       <Dialog open={pending !== null} title={t('presets.unsavedTitle')} onClose={() => setPending(null)}>
         <p>{t('presets.unsaved', { current: mbPresetLabel(current), next: pending === null ? '' : mbPresetLabel(pending) })}</p>
         <div className="sheet-actions">
-          <button className="btn" onClick={() => setPending(null)}>
+          <button type="button" className="btn" onClick={() => setPending(null)}>
             {t('action.cancel')}
           </button>
           <button
+            type="button"
             className="btn btn-danger"
             onClick={() => {
               if (pending !== null) onLoad(pending);

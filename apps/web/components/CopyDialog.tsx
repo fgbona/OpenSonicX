@@ -44,7 +44,7 @@ export function CopyDialog({ open, presetIndex, names, busy, error, onCopy, onCl
         <>
           <p>{t('copy.done', vars)}</p>
           <div className="sheet-actions">
-            <button className="btn btn-primary" onClick={onClose}>
+            <button type="button" className="btn btn-primary" onClick={onClose}>
               {t('action.done')}
             </button>
           </div>

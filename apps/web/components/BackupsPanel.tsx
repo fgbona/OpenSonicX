@@ -184,13 +184,14 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
               {t('backups.deleteNote', { what: deleting.kind === 'session' ? t('backups.all') : `${deleting.slots[0]?.label} “${deleting.slots[0]?.name}”`, when: when(deleting.createdAt, lang) })}
             </p>
             <div className="sheet-actions">
-              <button className="btn" onClick={() => onDownload(deleting)}>
+              <button type="button" className="btn" onClick={() => onDownload(deleting)}>
                 {t('backups.download')}
               </button>
-              <button className="btn" onClick={() => setDeleting(null)}>
+              <button type="button" className="btn" onClick={() => setDeleting(null)}>
                 {t('action.cancel')}
               </button>
               <button
+                type="button"
                 className="btn btn-danger"
                 onClick={() => {
                   onDelete(deleting);
@@ -213,7 +214,7 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
           <>
             <p>{t('restoreAll.done', { count: pendingAll?.slots.length ?? 0 })}</p>
             <div className="sheet-actions">
-              <button className="btn btn-primary" onClick={() => setPendingAll(null)}>
+              <button type="button" className="btn btn-primary" onClick={() => setPendingAll(null)}>
                 {t('action.done')}
               </button>
             </div>
@@ -229,10 +230,11 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
               </p>
             )}
             <div className="sheet-actions">
-              <button className="btn" onClick={() => setPendingAll(null)}>
+              <button type="button" className="btn" onClick={() => setPendingAll(null)}>
                 {t('action.cancel')}
               </button>
               <button
+                type="button"
                 className="btn btn-danger"
                 onClick={async () => {
                   if (await onRestoreAll(pendingAll)) setDoneAll(true);
@@ -251,7 +253,7 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
           <>
             <p>{t('restore.done', { slot: pending?.label ?? '', name: pending?.name ?? '' })}</p>
             <div className="sheet-actions">
-              <button className="btn btn-primary" onClick={() => setPending(null)}>
+              <button type="button" className="btn btn-primary" onClick={() => setPending(null)}>
                 {t('action.done')}
               </button>
             </div>
@@ -271,10 +273,11 @@ export function BackupsPanel({ backups, connected, busy, error, flowBackups, sto
             )}
             {error && flowBackups.length > 0 && <FlowBackups backups={flowBackups} warning={storageWarning} onDownload={onDownload} />}
             <div className="sheet-actions">
-              <button className="btn" onClick={() => setPending(null)}>
+              <button type="button" className="btn" onClick={() => setPending(null)}>
                 {t('action.cancel')}
               </button>
               <button
+                type="button"
                 className="btn btn-danger"
                 onClick={async () => {
                   if (await onRestore(pending)) setDone(true);

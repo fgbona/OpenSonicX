@@ -5,6 +5,7 @@ export function chainUnits(order: readonly number[]): number[][] {
   validateChain(order);
   return order.reduce<number[][]>((units, m) => {
     if (FIXED_GROUP.includes(m) && m !== FIXED_GROUP[0]) return units; // added with DRV
+    // biome-ignore lint/performance/noAccumulatingSpread: a chain has nine blocks at most, and the result must be a new array
     return [...units, m === FIXED_GROUP[0] ? [...FIXED_GROUP] : [m]];
   }, []);
 }

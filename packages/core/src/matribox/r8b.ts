@@ -13,7 +13,7 @@
  * filter parameters were read off the official tool's binary (symbol names and constants); the
  * output matches the official upload of a 48 kHz IR sample for sample (docs/matribox.md).
  */
-const PI = 3.14159265358979324;
+const PI = Math.PI;
 const ATTEN = 180.15;
 const TRANS_BAND = 2.0;
 const KAISER_BETA = 125.0;
@@ -36,7 +36,7 @@ const ATTEN_CORRS = [
 ] as const;
 
 const sqr = (x: number) => x * x;
-const pows = (v: number, p: number) => (v < 0 ? -Math.pow(-v, p) : Math.pow(v, p));
+const pows = (v: number, p: number) => (v < 0 ? -((-v) ** p) : v ** p);
 
 /** sin(ph), sin(ph + si), … by the recurrence r8brain uses (CSineGen). */
 function sineGen(si: number, ph: number): () => number {

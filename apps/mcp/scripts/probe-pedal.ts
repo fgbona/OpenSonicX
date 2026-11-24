@@ -81,7 +81,15 @@ async function main(scan: boolean) {
     say(`Quiet port check: ${stray} unsolicited message(s) in ${QUIET_MS / 1000} s${stray ? ' - close other editors (SonicMaster, browser tabs) and run again' : ''}`);
     if (stray) return;
 
-    const link = new PocketMasterLink({ send, listen: (r) => void (receiver = r) }, (e) => lines.push(`${e.dir} ${e.hex}${e.note ? `  (${e.note})` : ''}`));
+    const link = new PocketMasterLink(
+      {
+        send,
+        listen: (r) => {
+          receiver = r;
+        },
+      },
+      (e) => lines.push(`${e.dir} ${e.hex}${e.note ? `  (${e.note})` : ''}`),
+    );
     for (const [name, kind] of Object.entries(Query)) {
       if (kind === Query.STORED_PRESET) continue; // needs an index: checked below
       try {

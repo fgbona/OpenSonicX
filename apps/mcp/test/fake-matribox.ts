@@ -254,7 +254,7 @@ export class FakeMatribox {
       return this.#setChain(chain, slot);
     }
     if (from === NONE) {
-      const slot = chain.types.findIndex((t) => t === NONE);
+      const slot = chain.types.indexOf(NONE);
       if (slot < 0 || to > chain.order.length) throw new Error('fake Matribox: no room for a block');
       put(slot, type, u32(data, 7));
       chain.on[slot] = 1;
@@ -271,6 +271,7 @@ export class FakeMatribox {
     return this.#setChain(chain, NONE);
   }
 
+  // biome-ignore lint/suspicious/noConfusingVoidType: most writes answer nothing; only some return the reply to send
   #apply(cmd: number, data: Uint8Array): Uint8Array | void {
     const head = hexOf(data.subarray(0, 4));
     const edit = (section: keyof typeof BODY_AT, at: number, bytes: ArrayLike<number>) => {

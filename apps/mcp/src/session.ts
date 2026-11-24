@@ -41,7 +41,6 @@ import {
   type CloArrays,
   type GlobalSettings,
   type DeviceLogin,
-  type Edit,
   type Tokens,
   type Pedal,
   type Preset,

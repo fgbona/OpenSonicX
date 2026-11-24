@@ -2,13 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { fromHex, MB_WRITE, toHex, parseMatriboxPrst, parseMbFrame, parseMbPreset, type MbPreset } from '@pocket-master/core';
+import { fromHex, MB_WRITE, parseMatriboxPrst, parseMbFrame, parseMbPreset, type MbPreset } from '@pocket-master/core';
 import { call, CATALOG, connected, text } from './matribox-helpers.ts';
 
 const UNCHECKED = /Experimental: .*not yet checked on the owner's unit/;
 const WHOLE = /in one write: chain, parameters, knob, expression-pedal and footswitch assignments, volume and tempo/;
-/** The preset body (sections, no u32 number), as hex: everything a whole-preset write carries. */
-const body = (preset: Uint8Array) => toHex(preset.subarray(4));
 /** Chain edits and per-parameter writes (flag 1) the simulated unit received: a whole-preset import sends none. */
 const liveWrites = (fake: { received: string[] }) =>
   fake.received.map((hex) => parseMbFrame(fromHex(hex))).filter((f) => f.type === MB_WRITE && f.offset === 0 && f.payload.length === f.total && f.payload[0] === 1).length;

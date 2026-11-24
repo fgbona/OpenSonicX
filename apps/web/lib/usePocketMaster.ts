@@ -325,6 +325,7 @@ export function usePocketMaster() {
   const ready = () => {
     if (busyRef.current) throw new Error('The editor is busy (saving or loading); try again in a moment.');
   };
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ready only reads busyRef, so the copy from any render gives the same answer
   const assistantBase = useMemo(
     () => ({
       snapshot: () => {

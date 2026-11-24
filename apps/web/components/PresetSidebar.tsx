@@ -81,10 +81,11 @@ export function PresetSidebar({ names, current, modified, disabled, onReadNames,
       <Dialog open={pending !== null} title={t('presets.unsavedTitle')} onClose={() => setPending(null)}>
         <p>{t('presets.unsaved', { current: current === null ? '' : presetLabel(current), next: pending === null ? '' : presetLabel(pending) })}</p>
         <div className="sheet-actions">
-          <button className="btn" onClick={() => setPending(null)}>
+          <button type="button" className="btn" onClick={() => setPending(null)}>
             {t('action.cancel')}
           </button>
           <button
+            type="button"
             className="btn btn-danger"
             onClick={() => {
               if (pending !== null) onLoad(pending);

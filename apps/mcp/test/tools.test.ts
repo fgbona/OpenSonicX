@@ -102,7 +102,7 @@ test('the server lists every tool, marking reads read-only and slot writes destr
   for (const name of ['get_preset', 'list_presets', 'list_models', 'backup_all_presets']) assert.equal(byName[name]!.annotations?.readOnlyHint, true, name);
   for (const name of ['save_preset', 'restore_backup', 'load_ir', 'matribox_load_ir', 'load_nam', 'install_tone', 'copy_preset', 'delete_slot'])
     assert.equal(byName[name]!.annotations?.destructiveHint, true, name);
-  assert.equal(byName['edit_preset']!.annotations?.destructiveHint, false);
+  assert.equal(byName.edit_preset!.annotations?.destructiveHint, false);
 });
 
 test('get_preset returns the preset as text', async () => {

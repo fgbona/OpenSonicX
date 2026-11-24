@@ -1,6 +1,5 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildFrame } from '../src/frame.ts';
 import { toHex } from '../src/hex.ts';
 import { fromHex } from '../src/hex.ts';
 import { decodeFirmware, decodeGlobals, factoryReset, setExpFsTarget, setGlobal, TESTED_FIRMWARE } from '../src/globals.ts';

@@ -7,7 +7,12 @@ import { PocketMasterLink, LinkClosedError, type LogEntry, type MidiPort } from 
 /** A port that records what is sent and lets a test deliver incoming bytes. */
 function fakePort(send: (b: Uint8Array) => void = () => undefined) {
   const state = { receiver: null as ((bytes: Uint8Array) => void) | null };
-  const port: MidiPort = { send, listen: (r) => void (state.receiver = r) };
+  const port: MidiPort = {
+    send,
+    listen: (r) => {
+      state.receiver = r;
+    },
+  };
   return { port, state, receive: (bytes: Uint8Array) => state.receiver?.(bytes) };
 }
 function fakes() {
@@ -193,7 +198,10 @@ test('presetOperation refuses anything but a selection or a user-slot save', asy
 test('a selection waits for its own acknowledge, so it cannot be mistaken for the save one', async () => {
   const f = fakes();
   let done = false;
-  const select = f.link.presetOperation(selectPreset(2)).then((ok) => ((done = true), ok));
+  const select = f.link.presetOperation(selectPreset(2)).then((ok) => {
+    done = true;
+    return ok;
+  });
   await flush();
   assert.equal(done, false, 'still waiting for 14 08 00');
   f.receive(buildFrame([0x14, 0x08, 0x00])); // the real pedal acknowledges every selection

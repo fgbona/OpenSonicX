@@ -66,7 +66,7 @@ export function PresetFiles({ connected, current, busy, error, pending, onPick, 
           <>
             <p>{t('presetFile.done', { name })}</p>
             <div className="sheet-actions">
-              <button className="btn btn-primary" onClick={() => onPick(null)}>
+              <button type="button" className="btn btn-primary" onClick={() => onPick(null)}>
                 {t('action.done')}
               </button>
             </div>
@@ -86,10 +86,11 @@ export function PresetFiles({ connected, current, busy, error, pending, onPick, 
               </p>
             )}
             <div className="sheet-actions">
-              <button className="btn" onClick={() => onPick(null)}>
+              <button type="button" className="btn" onClick={() => onPick(null)}>
                 {t('action.cancel')}
               </button>
               <button
+                type="button"
                 className="btn btn-primary"
                 onClick={async () => {
                   if (pending && (await onImport(pending))) setDone(true);

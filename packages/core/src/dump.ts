@@ -60,10 +60,10 @@ export function decodePreset(payload: Uint8Array): Preset {
   if (payload[0] !== MessageType.GET || payload[1] !== Query.EDIT_BUFFER || payload.length < 6) {
     throw new Error('not an edit-buffer dump (expected payload 12 41 …)');
   }
-  const { tags, groups } = readDump(payload);
+  const { tags } = readDump(payload);
   const missing = REQUIRED.filter((t) => !tags.has(t));
   if (missing.length > 0) {
-    throw new Error(`edit-buffer dump is missing records ${missing.map((t) => '0x' + t.toString(16)).join(', ')}`);
+    throw new Error(`edit-buffer dump is missing records ${missing.map((t) => `0x${t.toString(16)}`).join(', ')}`);
   }
   // Only records that are present are size-checked; whether one is mandatory is REQUIRED's job (volume is optional).
   for (const [tag, size] of MIN_SIZE) {

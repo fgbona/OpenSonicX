@@ -135,10 +135,10 @@ export function SlotsPanel({ connected, busy, irNames, profileNames, exclusive, 
               </p>
             )}
             <div className="sheet-actions">
-              <button className="btn" onClick={() => setRenaming(null)} disabled={busy}>
+              <button type="button" className="btn" onClick={() => setRenaming(null)} disabled={busy}>
                 {t('action.cancel')}
               </button>
-              <button className="btn btn-primary" onClick={() => void rename()} disabled={busy || renaming.name.trim() === ''}>
+              <button type="button" className="btn btn-primary" onClick={() => void rename()} disabled={busy || renaming.name.trim() === ''}>
                 {t('slots.renameSubmit')}
               </button>
             </div>
@@ -155,10 +155,10 @@ export function SlotsPanel({ connected, busy, irNames, profileNames, exclusive, 
               </p>
             )}
             <div className="sheet-actions">
-              <button className="btn" onClick={() => setDeleting(null)} disabled={busy}>
+              <button type="button" className="btn" onClick={() => setDeleting(null)} disabled={busy}>
                 {t('action.cancel')}
               </button>
-              <button className="btn btn-danger" onClick={() => void remove()} disabled={busy}>
+              <button type="button" className="btn btn-danger" onClick={() => void remove()} disabled={busy}>
                 {t('slots.deleteSubmit')}
               </button>
             </div>

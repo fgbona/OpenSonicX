@@ -30,6 +30,7 @@ export function SysexLog({ log, onClear }: { log: readonly LogEntry[]; onClear: 
   const [copied, setCopied] = useState(false);
 
   // Keep the newest line in view without scrolling the page itself.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: log.length is the trigger (scroll on every new line)
   useEffect(() => {
     const el = body.current;
     if (el) el.scrollTop = el.scrollHeight;
@@ -52,10 +53,10 @@ export function SysexLog({ log, onClear }: { log: readonly LogEntry[]; onClear: 
           {t('log.title')} <span className="muted">{log.length}</span>
         </h2>
         <div className="log-actions">
-          <button className="btn btn-small" onClick={copy} disabled={log.length === 0}>
+          <button type="button" className="btn btn-small" onClick={copy} disabled={log.length === 0}>
             {copied ? t('log.copied') : t('log.copy')}
           </button>
-          <button className="btn btn-small" onClick={onClear} disabled={log.length === 0}>
+          <button type="button" className="btn btn-small" onClick={onClear} disabled={log.length === 0}>
             {t('log.clear')}
           </button>
         </div>

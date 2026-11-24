@@ -10,7 +10,7 @@ const models = Object.entries(catalog.models)
 test('every catalog model has a plain-language label in both languages and a Portuguese description', () => {
   const missing = models.filter(({ key, name }) => {
     const guide = modelGuide(key, name);
-    return !guide || !guide.label.en || !guide.label.pt || !guide.aboutPt || !(guide.group in GROUPS);
+    return !guide?.label.en || !guide.label.pt || !guide.aboutPt || !(guide.group in GROUPS);
   });
   assert.deepEqual(missing, []);
 });

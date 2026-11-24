@@ -29,6 +29,7 @@ export function useMatriboxHistory(mb: Matribox) {
 
   // Another preset loaded: the steps were edits of the one before.
   const current = mb.unit?.current;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: current is the trigger (another preset loaded)
   useEffect(() => commit(EMPTY_HISTORY), [current, commit]);
 
   /** Sends `target`'s chain; the preset as the unit has it, null when the editor refused (its error shows). */

@@ -17,7 +17,7 @@ const NAMES: Readonly<Record<number, string>> = {
 
 /** Short human label for one SysEx message, for logs. */
 export function describeMessage(sysex: Uint8Array): string {
-  let frame;
+  let frame: ReturnType<typeof parseFrame>;
   try {
     frame = parseFrame(sysex);
   } catch {

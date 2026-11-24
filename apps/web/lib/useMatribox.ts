@@ -56,6 +56,7 @@ export function useMatribox(port: MidiPort | null, desktop: boolean) {
   const [state, setState] = useState<MatriboxState>(INITIAL);
   const patch = useCallback((p: Partial<MatriboxState>) => setState((s) => ({ ...s, ...p })), []);
   const link = useMemo<MatriboxLink | null>(() => (port ? matriboxLink(port) : null), [port]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: link is the trigger (every link gets its own queue)
   const queue = useMemo(serialQueue, [link]);
   /** Latest value per parameter not sent yet: a knob drag sends only the newest value. */
   const pending = useRef(new Map<string, { slot: number; id: number; value: number }>());

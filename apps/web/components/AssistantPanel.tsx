@@ -211,6 +211,7 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
     setRemember(loadRemember());
   }, []);
   const list = useRef<HTMLOListElement>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: messages and working are the triggers (scroll when the conversation changes)
   useEffect(() => {
     // Scroll the conversation to the start of the last question, so a long answer is read from the top.
     const ol = list.current;
@@ -287,7 +288,7 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
           const u = used[model] ?? { input: 0, output: 0 };
           used[model] = { input: u.input + input, output: u.output + output, ...(cost !== undefined || u.cost !== undefined ? { cost: (u.cost ?? 0) + (cost ?? 0) } : {}) };
         },
-        onStep: (tool, ok, text) => {
+        onStep: (tool, ok) => {
           if (tool === 'save_preset') proposed = true;
           if (tool === 'select_preset' && ok) loaded = true;
         },

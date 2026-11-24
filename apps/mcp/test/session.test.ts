@@ -234,7 +234,7 @@ test('export writes the edit buffer to a preset file and never overwrites one', 
 });
 
 test('import loads a preset file into the edit buffer without saving it', async () => {
-  const { session, fake, dir } = setup();
+  const { session, fake } = setup();
   const file = 'p08.json';
   await session.exportPreset(file);
   await session.select('P03');

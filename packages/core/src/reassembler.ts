@@ -37,6 +37,9 @@ export class Reassembler {
 function join(total: number, parts: ReadonlyMap<number, Frame>): Frame {
   const ordered = Array.from({ length: total }, (_, i) => parts.get(i) as Frame);
   const payload = new Uint8Array(ordered.reduce((n, f) => n + f.payload.length, 0));
-  ordered.reduce((offset, f) => (payload.set(f.payload, offset), offset + f.payload.length), 0);
+  ordered.reduce((offset, f) => {
+    payload.set(f.payload, offset);
+    return offset + f.payload.length;
+  }, 0);
   return { total: 1, index: 0, payload, crcOk: ordered.every((f) => f.crcOk) };
 }

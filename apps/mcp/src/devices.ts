@@ -91,5 +91,11 @@ export async function openPedalPorts(device: PedalDevice): Promise<MidiPorts> {
     close();
     throw error;
   }
-  return { send: (bytes) => output.sendMessage(Buffer.from(bytes)), listen: (r) => void (receiver = r), close };
+  return {
+    send: (bytes) => output.sendMessage(Buffer.from(bytes)),
+    listen: (r) => {
+      receiver = r;
+    },
+    close,
+  };
 }

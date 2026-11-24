@@ -21,7 +21,9 @@ function pedalPort(options: { commit?: boolean } = {}) {
   let receiver: ((bytes: Uint8Array) => void) | null = null;
   const reply = (bytes: Uint8Array) => queueMicrotask(() => receiver?.(bytes));
   const port: MidiPort = {
-    listen: (r) => void (receiver = r),
+    listen: (r) => {
+      receiver = r;
+    },
     send: (bytes) => {
       const f = parseFrame(bytes);
       const [type, cmd] = f.payload;
