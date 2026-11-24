@@ -6,6 +6,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-11-23
+
+Polish before 1.0: the README states every feature, no stray "No file chosen" tip, and the MCP
+server's `delete_slot` confirms like every other tool that writes.
+
 ### Changed
 
 - MCP server: `delete_slot` is confirmed with the slot's label (`"IR3"`, `"PROFILE2"`), like
@@ -1142,7 +1147,8 @@ Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/OpenSonicX/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/fgbona/OpenSonicX/compare/v0.17.1...HEAD
+[0.17.1]: https://github.com/fgbona/OpenSonicX/compare/v0.17.0...v0.17.1
 [0.17.0]: https://github.com/fgbona/OpenSonicX/compare/v0.16.1...v0.17.0
 [0.16.1]: https://github.com/fgbona/OpenSonicX/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/fgbona/OpenSonicX/compare/v0.15.1...v0.16.0
