@@ -37,6 +37,21 @@ and the project uses [Semantic Versioning](https://semver.org/).
   rebuilt frame for frame with `buildMbFrames`. One u32 of the IR message is still
   undecoded, so no upload tool ships; the capture (clone) upload format is documented, but the
   official NAM conversion differs from ours. Findings in docs/matribox.md.
+- Matribox II Pro live controls (experimental, not yet checked on the owner's unit), decoded from
+  new captures of the official editor (mb-01 patch volume, mb-09 footswitch A, mb-04 expression
+  pedal): core builders `mbSetPatchVolume` (`03 00 05 01` + u32), `mbAssignFootswitch`
+  (`01 00 08 01` + switch + slot + 1/0), `mbAssignExpression` (`02 00 07 01` + entry + slot +
+  param + 0 + f32 min + f32 max) and `mbSetExpressionMin`/`Max` (`03`/`04 00 07 01`), each
+  byte-exact with the captured host frames; `mbAssignments` reads volume, tempo, footswitch rows
+  and expression entries from a preset. The manual's MIDI Control Change table is restated in
+  core (`MB_CC`, `mbControlChange`, `mbBpmControlChanges`) and the links gain `control()` (one
+  CC, no answer expected). New MCP tools: `matribox_get_assignments`, `matribox_set_volume`,
+  `matribox_assign_footswitch`, `matribox_assign_expression`, `matribox_set_expression_range`
+  (assignments are read back after the write), `matribox_tuner`, `matribox_tap_tempo`,
+  `matribox_set_bpm`, `matribox_looper`, `matribox_drum`, `matribox_ctrl`,
+  `matribox_quick_knob`. The Matribox editor gains a patch volume slider, a footswitch grid, the
+  expression entries and a tuner / tap tempo / BPM row, in English and Portuguese. The tool
+  contract only gains entries.
 
 ### Changed
 
