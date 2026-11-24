@@ -281,7 +281,9 @@ The write tools (experimental: every answer says so until the owner validates th
 Each write waits for the unit's echo of it (same flag, cmd and data; 3 s). Tests run against a
 simulated unit that applies the writes to an in-memory preset and echoes them.
 
-Live controls (experimental, **not yet checked on the owner's unit**; see "Live controls" and
+Live controls (experimental, **checked on the owner's unit, 2026-11-24**: volume, footswitch
+rows A–D and assignment, expression assignment and range, tuner, BPM, tap tempo, looper and drum
+CCs; CTRL 1–4 and the quick-knob CCs were not tried; see "Live controls" and
 "MIDI Control Change"):
 
 - `matribox_get_assignments`: the loaded preset's patch volume, tempo, footswitch A–D blocks and
@@ -293,7 +295,8 @@ Live controls (experimental, **not yet checked on the owner's unit**; see "Live 
   `matribox_drum`, `matribox_ctrl` (1..4), `matribox_quick_knob` (1..3): Control Changes on
   `channel` (default 1). Nothing comes back, so the answer says to check on the unit.
 
-Whole presets (experimental, **not yet checked on the owner's unit**; see "Whole-preset write"):
+Whole presets (experimental, **checked on the owner's unit, 2026-11-24**: export, import into
+57D, backup all (240 in 1 min 30 s) and a restore of three slots; see "Whole-preset write"):
 
 - `matribox_export_preset`: the loaded preset (unsaved edits included) or a slot, written as a
   `.prst` in `~/.pocket-master-editor/presets/matribox`. Sends only reads; never replaces a file.
@@ -351,8 +354,8 @@ first; then for each preset select its index, write it whole (`mbWritePreset`) a
 then the original index is selected again. Both lose the loaded preset's unsaved edits (the
 editor asks first when there are any). Before a restore, all 240 presets are backed up (MCP: a new
 file in the backups folder; editor: downloaded), unless that is turned off. The preset names
-come with the whole-preset write (section 1); whether the unit's preset list shows them without a
-save is still to be checked on the unit.
+come with the whole-preset write (section 1); the unit's preset list shows them without a save
+(checked on the owner's unit: a restored slot took its name back).
 
 ## Whole-preset write
 
@@ -387,7 +390,8 @@ server treats it as destructive, like a save: `matribox_import_preset` and
 `matribox_restore_backup` need the slot and `confirm` with its label, back that slot up, load it
 (select), write it, read it back (sections 2, 3, 4, 5, 7 and 9 must match), and send a save only
 when the name given differs from the preset's. Our write is the official app's data uncompressed
-(7 pages instead of 3); it is still to be checked on the unit.
+(7 pages instead of 3); the unit takes it (checked on the owner's unit: an import into 57D was
+stored and read back).
 
 `writeMatriboxPrst` (core) is the inverse of `parseMatriboxPrst`: `mbPresetBody`, a literal-only
 LZO1X stream, a JSON byte array, base64. Whether the official editor opens a `.prst` written this

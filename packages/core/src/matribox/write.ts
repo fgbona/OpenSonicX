@@ -126,7 +126,7 @@ export function mbWritePreset(index: number, preset: MbPreset): Uint8Array[] {
 
 /** Footswitches A..D (A = 0). Section 8 has a fifth row, not known yet (CTRL?): not offered. */
 export const MB_FOOTSWITCHES = 4;
-/** Expression-pedal entries in section 7 (likely EXP 1 mode A 0..2, mode B 3..5, EXP 2 6..8; not confirmed). */
+/** Expression-pedal entries in section 7 (EXP 1 mode A 0..2, mode B 3..5, EXP 2 6..8: the unit addresses them as group and position). */
 export const MB_EXP_ENTRIES = 9;
 const PERCENT = 100;
 

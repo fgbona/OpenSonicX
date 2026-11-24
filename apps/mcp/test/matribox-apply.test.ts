@@ -5,7 +5,7 @@ import { basename, join } from 'node:path';
 import { fromHex, MB_WRITE, parseMatriboxPrst, parseMbFrame, parseMbPreset, type MbPreset } from '@pocket-master/core';
 import { call, CATALOG, connected, text } from './matribox-helpers.ts';
 
-const UNCHECKED = /Experimental: .*not yet checked on the owner's unit/;
+const UNCHECKED = /Experimental: .*checked on one unit so far/;
 const WHOLE = /in one write: chain, parameters, knob, expression-pedal and footswitch assignments, volume and tempo/;
 /** Chain edits and per-parameter writes (flag 1) the simulated unit received: a whole-preset import sends none. */
 const liveWrites = (fake: { received: string[] }) =>

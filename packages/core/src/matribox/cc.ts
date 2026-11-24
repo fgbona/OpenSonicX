@@ -2,7 +2,8 @@
  * Matribox II Pro MIDI Control Change numbers, restated from the "MIDI Control Information List" of
  * Sonicake's manual (firmware V1.2.2). Plain 3-byte Control Change messages on the unit's MIDI
  * channel (global setting: Omni or 1..16; its "MIDI In Source" must include USB) over the same USB
- * MIDI port as the SysEx. The unit sends no answer to them. Not yet tried on the owner's unit.
+ * MIDI port as the SysEx. The unit sends no answer to them. Tried on the owner's unit
+ * (2026-11-24): tuner, BPM, tap tempo, looper and drum machine; CTRL and quick knobs not yet.
  *
  * Switches read 0..63 as off (stop, post) and 64..127 as on (play, pre); the rest act on any value.
  */

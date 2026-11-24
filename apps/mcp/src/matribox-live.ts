@@ -29,7 +29,7 @@ const SWITCHES = 'ABCD';
 const round = (n: number) => String(Number(n.toFixed(2)));
 const experimental = (lines: readonly string[]) => [...lines, 'The change is live in the loaded preset; nothing is stored until matribox_save_preset.', EXPERIMENTAL].join('\n');
 export const CC_NOTE =
-  'Sent as MIDI Control Change; the unit sends no answer, so check it on the unit. It needs the unit\'s MIDI channel (global settings; Omni takes any) and "MIDI In Source" including USB. Experimental: not yet tried on the owner\'s unit.';
+  'Sent as MIDI Control Change; the unit sends no answer, so check it on the unit. It needs the unit\'s MIDI channel (global settings; Omni takes any) and "MIDI In Source" including USB. Experimental: tried on one unit so far.';
 
 async function readLoaded(unit: MatriboxConnection): Promise<MbPreset> {
   const current = parseMbCurrentPresetNumber(await unit.read(mbReadCurrentPresetNumber()));
@@ -111,6 +111,6 @@ export function describeAssignments(label: number, preset: MbResolvedPreset, raw
     `${mbPresetLabel(label)} "${preset.name}": patch volume ${a.volume}, tempo ${a.tempo} BPM, EXP 1 mode ${a.expressionMode === 1 ? 'B' : 'A'}`,
     ...switches,
     ...(entries.length ? entries : ['Expression: no entry used']),
-    `Footswitches ${SWITCHES.slice(0, MB_FOOTSWITCHES).split('').join(', ')} as stomp-mode rows (section 8). Expression entries 1-3 are likely EXP 1 mode A, 4-6 mode B, 7-9 EXP 2 (not confirmed).`,
+    `Footswitches ${SWITCHES.slice(0, MB_FOOTSWITCHES).split('').join(', ')} as stomp-mode rows (section 8). Expression entries 1-3 are EXP 1 mode A, 4-6 mode B, 7-9 EXP 2.`,
   ].join('\n');
 }

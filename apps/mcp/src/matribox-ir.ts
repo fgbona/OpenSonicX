@@ -11,7 +11,7 @@ import type { MatriboxConnection } from './matribox-link.ts';
 import { inside } from './session.ts';
 
 export const MB_IR_UNCHECKED =
-  "Experimental: the IR upload is rebuilt byte for byte from the official editor's uploads, but not yet sent to a unit by us. Check the slot with matribox_list_irs and by ear.";
+  "Experimental: the IR upload is rebuilt byte for byte from the official editor's uploads, and checked on one unit so far. Check the slot with matribox_list_irs and by ear.";
 const NAME_MAX = 16;
 const STORED = 1;
 

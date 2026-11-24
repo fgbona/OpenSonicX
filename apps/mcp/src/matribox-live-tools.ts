@@ -12,18 +12,13 @@ type Run = (tool: string, run: () => Promise<string>) => Promise<{ content: { ty
 
 const READ = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
 const LIVE = { readOnlyHint: false, destructiveHint: false, openWorldHint: false } as const;
-const EXPERIMENTAL = "Experimental: decoded from the official editor's traffic and the manual, not yet checked on the owner's unit.";
+const EXPERIMENTAL = "Experimental: decoded from the official editor's traffic and the manual, checked on one unit so far.";
 const live = (what: string) => `Matribox II Pro: ${what} The change is live in the loaded preset; nothing is stored until matribox_save_preset (loading another preset discards it). ${EXPERIMENTAL}`;
 const cc = (what: string) =>
   `Matribox II Pro: ${what} Sent as a MIDI Control Change (from the manual); the unit sends no answer, and it acts only when its MIDI channel matches (or is Omni) and its "MIDI In Source" includes USB. ${EXPERIMENTAL}`;
 const block = z.string().describe('Block of the loaded preset: its 1-based position in the chain ("2") or its module name ("DRV") when the chain has only one');
 const channel = z.number().int().min(1).max(16).optional().describe("The unit's MIDI channel (global settings), 1..16; default 1 (Omni also takes it)");
-const entry = z
-  .number()
-  .int()
-  .min(1)
-  .max(9)
-  .describe('Expression entry 1..9: likely 1-3 = EXP 1 mode A (heel-toe), 4-6 = EXP 1 mode B (after the toe switch), 7-9 = EXP 2 (not confirmed); 1 is the usual volume entry');
+const entry = z.number().int().min(1).max(9).describe('Expression entry 1..9: 1-3 = EXP 1 mode A (heel-toe), 4-6 = EXP 1 mode B (after the toe switch), 7-9 = EXP 2; 1 is the usual volume entry');
 const percent = z.number().min(0).max(100);
 
 const LOOPER = {
