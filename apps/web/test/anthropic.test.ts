@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { decodePreset, applyEdit, type Edit, type Preset, type ToneHost } from '@pocket-master/core';
+import { pocketMasterAgent } from '../lib/pocketAgent.ts';
 import { realP08 } from '../../../packages/core/test/fake-pedal.ts';
 import { converseClaude, listClaudeModels } from '../lib/anthropic.ts';
 import { BusyError, KeyError, QuotaError } from '../lib/assistant.ts';
@@ -32,7 +33,7 @@ function scripted(...replies: { status?: number; body: unknown; headers?: Record
 
 const toolUse = (name: string, input: unknown, id = 'tu_1') => ({ body: { stop_reason: 'tool_use', content: [{ type: 'text', text: 'Setting it up.' }, { type: 'tool_use', id, name, input }] } });
 const say = (text: string) => ({ body: { stop_reason: 'end_turn', content: [{ type: 'text', text }] } });
-const options = (h: ToneHost, fetchFn: typeof fetch) => ({ key: KEY, model: 'anthropic' as const, turns: [], message: 'black album', host: h, fetchFn, onRequest: () => {} });
+const options = (h: ToneHost, fetchFn: typeof fetch) => ({ key: KEY, model: 'anthropic' as const, turns: [], message: 'black album', agent: pocketMasterAgent(h), fetchFn, onRequest: () => {} });
 
 test('a tone through Claude: tool use, then the answer; the key only in x-api-key, with the browser header', async () => {
   const { h, edits } = host();

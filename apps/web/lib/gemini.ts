@@ -3,8 +3,7 @@
  * (no server in between). Uses the Interactions API in stateless mode (store: false): Google keeps
  * none of the conversation between requests. Tool calls run in the editor through runChatTool.
  */
-import { CHAT_TOOLS, runChatTool, type ChatGuard } from '@pocket-master/core';
-import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, RegionError, QuotaError, instructions, requestTexts, toToolSchema, type ConverseOptions } from './assistant.ts';
+import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, RegionError, QuotaError, requestTexts, toToolSchema, type ConverseOptions, type ToneAgent } from './assistant.ts';
 import { nextReset } from './aiUsage.ts';
 
 /** Gemini models and their free daily requests (AI Studio, 2026-11). Check aistudio.google.com/rate-limit when they change. */
@@ -18,7 +17,7 @@ const API = 'https://generativelanguage.googleapis.com/v1beta';
 /** A step of the conversation, as the Interactions API sends and takes it. */
 type Step = { readonly type: string; readonly [field: string]: unknown };
 
-const TOOLS = CHAT_TOOLS.map((t) => ({ type: 'function', name: t.name, description: t.description, parameters: toToolSchema(t.parameters) }));
+const tools = (agent: ToneAgent) => agent.tools.map((t) => ({ type: 'function', name: t.name, description: t.description, parameters: toToolSchema(t.parameters) }));
 
 type ApiError = { error?: { status?: string; message?: string; details?: { '@type'?: string; reason?: string; retryDelay?: string; violations?: { quotaId?: string }[] }[] } };
 
@@ -78,22 +77,22 @@ export const converseGemini = (options: ConverseOptions): Promise<string> =>
 
 /** Sends one message to a Gemini model by id (a paid key's choice included), runs the tools, and returns the answer. */
 export async function converseGeminiModel(modelId: string, options: ConverseOptions): Promise<string> {
-  const { key, host, onRequest, onStep, onUsage, fetchFn = fetch, now = () => new Date() } = options;
+  const { key, agent, onRequest, onStep, onUsage, fetchFn = fetch, now = () => new Date() } = options;
   const model = { id: modelId };
   const input: Step[] = [
     ...options.turns.map((t): Step => (t.role === 'user'
       ? { type: 'user_input', content: t.text }
       : { type: 'model_output', content: [{ type: 'text', text: t.text }] })),
   ];
-  const text = requestTexts(host, options.turns, options.message, options.language, options.thorough);
+  const text = requestTexts(agent, options.turns, options.message, options.language, options.thorough);
   const asked = input.push({ type: 'user_input', content: text.first }) - 1;
-  const guard: ChatGuard = { index: host.snapshot().index };
+  const run = agent.runner();
   for (let request = 0; request < MAX_REQUESTS; request++) {
     onRequest();
     const r = await post(fetchFn, `${API}/interactions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify({ model: model.id, store: false, system_instruction: instructions(options.thorough), tools: TOOLS, input }),
+      body: JSON.stringify({ model: model.id, store: false, system_instruction: agent.instructions(options.thorough ?? false), tools: tools(agent), input }),
     }, now);
     const body = (await r.json().catch(() => ({}))) as ApiError & { steps?: Step[]; usage?: { total_input_tokens?: number; total_output_tokens?: number; input_tokens?: number; output_tokens?: number } };
     if (body.usage) onUsage?.(body.usage.total_input_tokens ?? body.usage.input_tokens ?? 0, body.usage.total_output_tokens ?? body.usage.output_tokens ?? 0);
@@ -109,7 +108,7 @@ export async function converseGeminiModel(modelId: string, options: ConverseOpti
         .map((c) => c.text ?? '').join('').trim();
     }
     for (const c of calls) {
-      const result = await runChatTool(host, String(c.name), c.arguments, guard);
+      const result = await run(String(c.name), c.arguments);
       onStep?.(String(c.name), result.ok, result.text);
       input.push({ type: 'function_result', name: c.name, call_id: c.id, is_error: !result.ok, result: [{ type: 'text', text: result.text }] });
     }

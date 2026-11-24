@@ -11,6 +11,7 @@ import { PresetLibrary } from '@/components/PresetLibrary';
 import { addToLibrary } from '@/lib/presetLibrary';
 import { PEDAL_NAMES, presetLabel, TESTED_FIRMWARE, type PresetFile, type ToneHost } from '@pocket-master/core';
 import { AssistantPanel } from '@/components/AssistantPanel';
+import { pocketMasterAgent } from '@/lib/pocketAgent';
 import { Dialog } from '@/components/Dialog';
 import { PresetSidebar } from '@/components/PresetSidebar';
 import { SlotsPanel } from '@/components/SlotsPanel';
@@ -75,6 +76,7 @@ export default function EditorPage() {
       void readNames();
     }),
   }), [assistantBase, loadPresetNow, readNames]);
+  const toneAgent = useMemo(() => pocketMasterAgent(toneHost), [toneHost]);
   const closeSave = () => {
     setSaveOpen(false);
     proposal?.resolve(savedRef.current ? 'saved' : 'cancelled');
@@ -193,7 +195,7 @@ export default function EditorPage() {
         )}
         {connected && (
           <>
-            {pm.preset && <AssistantPanel host={toneHost} />}
+            {pm.preset && <AssistantPanel agent={toneAgent} />}
             <Tone3000Panel connected={connected} busy={pm.busy !== null} irNames={pm.irNames} profileNames={pm.profileNames} exclusive={pm.exclusive} error={pm.error} />
             <SlotsPanel connected={connected} busy={pm.busy !== null} irNames={pm.irNames} profileNames={pm.profileNames} exclusive={pm.exclusive} error={pm.error} />
           </>
