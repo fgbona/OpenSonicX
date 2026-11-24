@@ -271,7 +271,9 @@ Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
   footswitch assignments, volume and tempo); that write is decoded from the official app's
   traffic and not yet checked on the unit. The model list comes from Sonicake's official
   Matribox II PRO app, which must be installed (or set `MATRIBOX_CATALOG` to its `alg_data.json`).
-  See [docs/matribox.md](docs/matribox.md).
+  Loading your own IRs and captures into the Matribox is not available yet: the WAV conversion
+  and the transport match the official editor byte for byte, one field of the IR message is still
+  unknown. See [docs/matribox.md](docs/matribox.md).
 
 ## Protocol
 

@@ -259,7 +259,9 @@ Ferramentas: `get_preset`, `list_presets`, `list_models`, `edit_preset`, `select
   pedal de expressão e dos footswitches, volume e andamento); essa escrita foi decodificada do
   tráfego do app oficial e ainda não foi conferida na pedaleira. A lista de modelos vem do app oficial Matribox
   II PRO da Sonicake, que precisa estar instalado (ou defina `MATRIBOX_CATALOG` com o caminho do
-  `alg_data.json`). Veja [docs/matribox.md](docs/matribox.md).
+  `alg_data.json`). Carregar IRs e capturas suas na Matribox ainda não está disponível: a
+  conversão do WAV e o envio já batem byte a byte com o editor oficial, falta decifrar um campo da
+  mensagem de IR. Veja [docs/matribox.md](docs/matribox.md).
 
 ## Protocolo
 

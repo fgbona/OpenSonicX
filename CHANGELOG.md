@@ -30,6 +30,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
   tempo. Whether it also stores the slot is not known yet, so the loaded preset is backed up first
   and only a save stores. Paths stay inside their folders. The Pocket Master's
   `list_preset_files` skips the Matribox folder. The tool contract only gains entries.
+- Matribox II Pro groundwork for loading user IRs (experimental, not exposed yet): the WAV ->
+  IR conversion the official editor does (first channel, r8brain 1.6 resampling to 44.1 kHz,
+  JUCE's 24-bit rounding, 1024 samples) reproduced sample for sample against a captured upload
+  (`mbIrSamplesFromWav`, 44.1 and 48 kHz WAVs), and the IR upload's paged frames,
+  rebuilt frame for frame with `buildMbFrames`. One u32 of the IR message is still
+  undecoded, so no upload tool ships; the capture (clone) upload format is documented, but the
+  official NAM conversion differs from ours. Findings in docs/matribox.md.
 
 ### Changed
 

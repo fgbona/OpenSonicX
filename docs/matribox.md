@@ -34,12 +34,13 @@ F0 21 25 4D 50 00 00 <ck> <type> <len lo> <len hi> <off lo> <off hi> <data nibbl
 - **Checksum (host frames):** `sum(frame[13 : len-1]) & 0x7F`, the data nibbles only, up to (not
   including) `F7`. It matches all 38 single-page host frames captured (11 reads, 27 writes; their
   bytes 10-12 are 0, so the first reading, from byte 10, matched them too) and the three pages of
-  the official editor's whole-preset write (capture mb-20), whose length and offset bytes are not
-  summed. The unit's replies use another rule, not decoded yet: we keep their checksum and do not
-  check it.
-- **Host pages:** the whole-preset write is the only host message longer than one frame: pages of
-  **183** decoded bytes (380-byte frames), each with the total length and its own offset, like
-  the unit's 185-byte reply pages. `buildMbFrames` (core) pages a host message that way.
+  the official editor's whole-preset write (capture mb-20) and the 69 pages of the IR and capture
+  uploads (mb-17, mb-19), whose length and offset bytes are not summed. The unit's replies use
+  another rule, not decoded yet: we keep their checksum and do not check it.
+- **Host pages:** the whole-preset write and the IR and capture uploads are the host messages
+  longer than one frame: pages of **183** decoded bytes (380-byte frames), each with the total
+  length and its own offset, like the unit's 185-byte reply pages. `buildMbFrames` (core) pages a
+  host message that way (it rebuilds the 23 pages of the IR upload byte for byte).
 - **Pages:** a long reply comes as 384-byte frames, 185 decoded bytes each, every page carrying
   the same total length and its own offset (0, 185, 370, …). Verified on every reply captured:
   e.g. the reply to the `1D 11 10` read is 17 pages, total 2972 bytes (`1C 17` = 28 + 23 × 128),
@@ -321,6 +322,60 @@ loaded preset back (sections 2, 3, 4, 5, 7 and 9 must match), and stores only wi
 `writeMatriboxPrst` (core) is the inverse of `parseMatriboxPrst`: `mbPresetBody`, a literal-only
 LZO1X stream, a JSON byte array, base64. Whether the official editor opens a `.prst` written this
 way is still to be checked.
+
+## User IR and capture uploads (research)
+
+Captured from the official editor (captures 17 and 19, with the uploaded files at hand). Both are
+flag-1 messages in paged write frames; the unit acknowledges with flag 3, the same cmd and
+`u32 slot, u32 1, u32 0`, and the editor then reads the name table again. An empty slot is the one
+whose name is still the default (`User IR 7`, `Clone 6`, …); the table's 8 bytes per slot are zero
+for every slot, used or not.
+
+**User IR, cmd 0x14, 4128 bytes:**
+
+| Offset | Size | Meaning |
+|--------|------|---------|
+| 0      | 4    | Slot, 0-based (5 = the 6th) |
+| 4      | 4    | 0 |
+| 8      | 4    | `0x000A7CD2` in the capture: **not decoded** (see below) |
+| 12     | 20   | Name, the file name cut to 16 characters, NUL padded |
+| 32     | 4096 | 1024 samples, int32 LE in the int24 range, 44.1 kHz |
+
+The samples are the WAV converted the way the official tool's native helper (`getNormalWav`) does
+it, now reproduced sample for sample (`mbIrSamplesFromWav()`, checked against the capture by
+`matribox-ir-capture.test.ts`, which runs only where the capture is):
+
+1. JUCE reads the WAV's **first channel** as floats (an int24 sample becomes `s / 2^23`).
+2. r8brain-free-src **1.6** `CDSPResampler24` resamples it to 44.1 kHz: 2x upsampling through a
+   Kaiser-windowed linear-phase low-pass (transition band 2 %, 180.15 dB), then the 24-tap,
+   673-position fractional-delay interpolator (`packages/core/src/matribox/r8b.ts`). The version
+   and parameters come from the binary's symbol names and constants: `CDSPFracDelayFilterBank<24,
+   673, 3, 8>`, `getInLenBeforeOutStart` and the 34/45 % intermediate bands exist only in 1.2-1.6,
+   the `(filter, up, down, latency, bool)` convolver only from 1.6.
+3. JUCE writes a 24-bit WAV (`Temporary.wav`): `round(f * (2^31 - 1)) >> 8`, ties to even.
+4. The first 1024 samples are sent; there is no normalisation, fade or window.
+
+No other rate was captured: 44.1 kHz files pass through unchanged (r8brain skips equal rates) and
+every other rate is refused for now.
+
+The u32 at offset 8 is the open question. For the capture upload the same field is the byte sum
+of the data after the name (verified exactly), but for the IR the byte sum of the 4096 sample
+bytes is 513 854, not 687 314. Ruled out: sums of the samples as int32, int24, int16, float32 or
+float64 (scaled by 2^-23 .. 2^8), over any prefix of the full 88 201-sample converted IR, over the
+source WAV (data, file, first 1024 samples, first 4096 bytes), 8/16/32-bit word sums of every
+region of the message, and the same modulo 2^16..2^24. **Without it no IR upload is shipped.** A
+second capture would settle it: upload a WAV whose content is easy to sum, e.g. a 48 kHz, 24-bit
+mono file holding a single sample `0x100000` followed by silence, then one of all zeros.
+
+**Capture (clone), cmd 0x18, 8872 bytes:** u32 slot (9), u32 0, u32 byte sum of the `.clo`,
+20-byte name (`5 RECTIFIER`), then an 8840-byte `.clo`: the same `VTSI` container as the Pocket
+Master's (`packages/core/src/clo/codec.ts`; header and biquad identical). The official editor
+compresses this message for real (LZO1X, 8377 bytes on the wire for 8880); the IR upload happens
+to be all literals, like what we send. Not shipped: the `.clo` the official converter made from
+`5 RECTIFIER.nam` is not what our converter (SonicMaster's port) makes from the same file and
+reference DI: 1136 of 8840 bytes equal, gains `0.0858 / 0.0863 / 747.0 / 753.1` against our
+`0.165 / 0.166 / 1124 / 1020`, arrayA and arrayB off by up to 0.73 and 0.39. The official
+conversion is native code (`namConvertClo` in `HTUSBTools.dylib`), not ported.
 
 ## Writes
 
