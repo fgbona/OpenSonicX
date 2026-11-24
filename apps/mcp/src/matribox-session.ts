@@ -9,13 +9,13 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   checkMbPresetName, mbPresetLabel, mbReadCloneNames, mbReadCurrentPresetNumber, mbReadIrNames, mbReadPreset, mbReadPresetNames,
-  mbAddBlock, mbChangeModel, mbRemoveBlock, mbSavePreset, mbSelectPreset, mbSetBlockOn, mbSetParam, parseMbPresetLabel, toHex,
+  MB_SLOTS, mbAddBlock, mbChangeModel, mbMoveBlock, mbRemoveBlock, mbSavePreset, mbSelectPreset, mbSetBlockOn, mbSetParam, parseMbPresetLabel, toHex,
   parseMbCloneNames, parseMbCurrentPresetNumber, parseMbIrNames, parseMbPreset, parseMbPresetNames, resolveMbPreset,
   type MbCatalog, type MbModel, type MbModule, type MbPreset, type MbResolvedBlock, type MbResolvedPreset,
 } from '@pocket-master/core';
 import type { MatriboxConnection } from './matribox-link.ts';
 import {
-  checkParam, describeValues, EXPERIMENTAL, findBlock, findModel, gear, knownModel, modelTitle, modelValues, planTone, type ParamWrite, type ToneBlock,
+  checkParam, describeValues, EXPERIMENTAL, findBlock, findModel, findModule, gear, knownModel, modelTitle, modelValues, planTone, type ParamWrite, type ToneBlock,
 } from './matribox-edit.ts';
 
 /** Reads of the slot after a save before giving up, and the pause between them. */
@@ -179,10 +179,52 @@ export class MatriboxSession {
       const { catalog, preset } = await this.#loaded(unit);
       const block = findBlock(preset, options.block);
       const { module, model } = findModel(catalog, options.model);
-      await unit.write(mbChangeModel(block.position - 1, module.index, model.fxid));
+      await unit.write(mbChangeModel(block.slot, module.index, model.fxid));
       const now = findBlock((await this.#loaded(unit)).preset, String(block.position));
       const values = now.params.map((p) => `${p.name} ${round(p.value)}`).join(', ');
       return experimental([`${module.name}: ${block.model?.name ?? 'unknown model'} → ${modelTitle(model)}${values ? `: ${values}` : ''}`]);
+    });
+  }
+
+  /** Inserts a block at 1-based `position` (default: the end), then writes its parameters by the slot the unit picked. */
+  addBlock(options: ToneBlock & { position?: number }): Promise<string> {
+    return this.#catalogOnce().then((catalog) => {
+      const { module, model } = findModel(catalog, options.model, findModule(catalog, options.module));
+      const values = modelValues(model, 0, options.params); // checked before the unit is opened
+      return this.#use(async (unit) => {
+        const count = (await this.#loaded(unit)).preset.chain.length;
+        if (count >= MB_SLOTS) throw new Error(`The chain is full (${MB_SLOTS} blocks): remove one first.`);
+        const position = options.position ?? count + 1;
+        if (!Number.isInteger(position) || position < 1 || position > count + 1) throw new Error(`position must be 1..${count + 1}, got ${position}`);
+        await unit.write(mbAddBlock(position - 1, module.index, model.fxid));
+        const slot = (await this.#loaded(unit)).preset.chain[position - 1]?.slot;
+        if (slot === undefined) throw new Error(`Matribox II PRO did not add the block at ${position}`);
+        const on = options.on ?? true;
+        await MatriboxSession.#writeAll(unit, [...MatriboxSession.#paramFrames(modelValues(model, slot, options.params)), ...(on ? [] : [mbSetBlockOn(slot, false)])]);
+        return experimental([`Added ${module.name} ${modelTitle(model)} at ${position}${on ? '' : ' (off)'}${values.length ? `: ${describeValues(model, values)}` : ''}`]);
+      });
+    });
+  }
+
+  removeBlock(options: { block: string }): Promise<string> {
+    return this.#use(async (unit) => {
+      const block = findBlock((await this.#loaded(unit)).preset, options.block);
+      await unit.write(mbRemoveBlock(block.position - 1));
+      return experimental([`Removed ${block.module} ${block.model?.name ?? 'unknown model'} from ${block.position}.`]);
+    });
+  }
+
+  /** Moves a block to 1-based position `to` in the chain. */
+  moveBlock(options: { block: string; to: number }): Promise<string> {
+    return this.#use(async (unit) => {
+      const { preset } = await this.#loaded(unit);
+      const block = findBlock(preset, options.block);
+      const count = preset.chain.length;
+      if (!Number.isInteger(options.to) || options.to < 1 || options.to > count) throw new Error(`to must be 1..${count}, got ${options.to}`);
+      const what = `${block.module} ${block.model?.name ?? 'unknown model'}`;
+      if (options.to === block.position) return experimental([`${what} is already at ${block.position}.`]);
+      await unit.write(mbMoveBlock(block.position - 1, options.to - 1));
+      return experimental([`Moved ${what} from ${block.position} to ${options.to}.`]);
     });
   }
 

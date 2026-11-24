@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { fromHex, MB_WRITE, parseMbFrame, parseMbPreset, unwrapMbMessage } from '@pocket-master/core';
 import { call, connected, text } from './matribox-helpers.ts';
 
-const WRITE_TOOLS = ['matribox_set_param', 'matribox_set_module_on', 'matribox_select_preset', 'matribox_set_model', 'matribox_build_tone', 'matribox_save_preset'];
+const WRITE_TOOLS = ['matribox_set_param', 'matribox_set_module_on', 'matribox_select_preset', 'matribox_set_model', 'matribox_add_block', 'matribox_remove_block', 'matribox_move_block', 'matribox_build_tone', 'matribox_save_preset'];
 const EXPERIMENTAL = /Experimental: .*validated on one unit only/;
 /** How many write frames the simulated unit received. */
 const writes = (fake: { received: string[] }) => fake.received.filter((hex) => parseMbFrame(fromHex(hex)).type === MB_WRITE).length;
@@ -110,10 +110,10 @@ const chainEdits = (fake: { received: string[] }) => fake.received
   .filter((d) => d[1] === 0x00 && d[2] === 0x04 && d[3] === 0x01 && (d[0] === 1 || d[0] === 2))
   .map((d) => (d[0] === 2 ? [2, d[4]] : [1, d[4], d[5]]));
 
-test('the chain tools send the official editor\'s chain edits: change model by position, remove from the end, add in order', async () => {
+test('the chain tools send the official editor\'s chain edits: change model by slot, remove from the end, add in order', async () => {
   const { client, fake } = await connected();
   await call(client, 'matribox_set_model', { block: 'DRV', model: 'Fake Fuzz' });
-  assert.deepEqual(chainEdits(fake), [[2, 1]]);
+  assert.deepEqual(chainEdits(fake), [[2, 0]]);
   await call(client, 'matribox_build_tone', { blocks: [{ module: 'DRV', model: 'Fake Drive' }, { module: 'AMP', model: 'Fake Plexi' }] });
   assert.deepEqual(chainEdits(fake).slice(1), [[1, 5, 0xff], [1, 4, 0xff], [1, 3, 0xff], [1, 2, 0xff], [1, 1, 0xff], [1, 0, 0xff], [1, 0xff, 0], [1, 0xff, 1]]);
 });
@@ -174,4 +174,50 @@ test('a write the unit does not echo fails with a clear error', async () => {
   const result = await client.callTool({ name: 'matribox_set_module_on', arguments: { block: 'DRV', on: true } });
   assert.equal(result.isError, true);
   assert.match(text(result), /did not confirm the write/);
+});
+
+test('matribox_add_block inserts a block at a position, with its parameters', async () => {
+  const { client, fake } = await connected();
+  const out = await call(client, 'matribox_add_block', { module: 'DLY', model: 'Fake Echo', position: 3, params: { Time: 300 } });
+  assert.match(out, /^Added DLY Fake Echo \(based on Imaginary Tape Echo\) at 3: Mix 0, Time 300$/m);
+  assert.match(out, EXPERIMENTAL);
+  assert.deepEqual(chainEdits(fake), [[1, 0xff, 2]]);
+  const preset = await call(client, 'matribox_get_preset');
+  assert.match(preset, /^Chain: DYN → DRV → DLY → AMP → CAB → RVB → VOL$/m);
+  assert.match(preset, /^3\. DLY {2}on {3}Fake Echo .*: Mix 0 \[0\.\.100\], Time 300 \[20\.\.2000\]$/m);
+  await call(client, 'matribox_add_block', { module: 'RVB', model: 'Fake Hall' });
+  assert.match(await call(client, 'matribox_get_preset'), /^Chain: DYN → DRV → DLY → AMP → CAB → RVB → VOL → RVB$/m);
+});
+
+test('matribox_remove_block and matribox_move_block edit the chain by position', async () => {
+  const { client, fake } = await connected();
+  assert.match(await call(client, 'matribox_move_block', { block: 'DRV', to: 1 }), /^Moved DRV Fake Drive from 2 to 1\.$/m);
+  assert.match(await call(client, 'matribox_get_preset'), /^Chain: DRV → DYN → AMP → CAB → RVB → VOL$/m);
+  assert.match(await call(client, 'matribox_remove_block', { block: 'RVB' }), /^Removed RVB Fake Hall from 5\.$/m);
+  assert.match(await call(client, 'matribox_get_preset'), /^Chain: DRV → DYN → AMP → CAB → VOL$/m);
+  assert.deepEqual(chainEdits(fake), [[1, 1, 0], [1, 4, 0xff]]);
+});
+
+test('the block tools refuse what the chain cannot take, sending nothing', async () => {
+  const { client, fake } = await connected();
+  const cases: [string, Record<string, unknown>, RegExp][] = [
+    ['matribox_add_block', { module: 'DLY', model: 'Fake Echo', position: 9 }, /position must be 1\.\.7/],
+    ['matribox_add_block', { module: 'DLY', model: 'Fake Echo', params: { Time: 1 } }, /Time must be 20\.\.2000/],
+    ['matribox_move_block', { block: 'DRV', to: 7 }, /to must be 1\.\.6/],
+    ['matribox_remove_block', { block: 'XYZ' }, /No block "XYZ"/],
+  ];
+  for (const [name, args, message] of cases) {
+    const result = await client.callTool({ name, arguments: args });
+    assert.equal(result.isError, true, name);
+    assert.match(text(result), message);
+  }
+  assert.equal(writes(fake), 0);
+});
+
+test('matribox_set_model names the block\'s storage slot, not its chain position', async () => {
+  const { client, fake } = await connected();
+  const out = await call(client, 'matribox_set_model', { block: 'DRV', model: 'Fake Fuzz' }); // DRV: position 2, slot 0
+  assert.deepEqual(chainEdits(fake), [[2, 0]]);
+  assert.match(out, /^DRV: Fake Drive → Fake Fuzz/m);
+  assert.match(await call(client, 'matribox_get_preset'), /^1\. DYN .*Fake Gate.*\n2\. DRV {2}off {2}Fake Fuzz /m);
 });
