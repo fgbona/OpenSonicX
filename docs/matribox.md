@@ -138,8 +138,8 @@ a body that starts `00 00 <id> 01`. Ids and body sizes are fixed: 0 (11), 1 (105
 
 A slot is a storage slot, not a chain position (live edits address the slot). Values at positions
 the slot's model does not use are left over from earlier models: only the model's widget IDs are read.
-Sections 0, 3 and 9 are constant; 2, 7 and 8 (likely quick-knob, expression pedal and footswitch
-assignments) and the rest of 1 and 5 are not decoded yet.
+Sections 0, 3 and 9 are constant; 2, 7 and 8 hold the knob, expression pedal and footswitch
+assignments, partly decoded: see [Unknown sections](#unknown-sections).
 
 `parseMbPreset` (core) takes either size and returns a frozen preset: number (null for a `.prst`),
 name, style, chain (slot, module index, fxid, on, the 15 values) and every section raw, for a later
@@ -147,6 +147,89 @@ writer. `parseMatriboxPrst(text)` reads a `.prst`. `resolveMbPreset(preset, cata
 modules, models (with the gear they are based on) and parameters with their ranges; an fxid the
 catalog does not know is kept and shown as unknown. `mbPresetLabel(i)` gives the label the unit
 shows: four presets per bank, `1A`..`60D` (the official editor selected 60D with index 239).
+
+## Unknown sections
+
+What we could decode of the rest, offline, from 27 presets (22 `.prst` files and 5 reads from the
+owner's unit: "Drive AD" twice, "Cry&Cry", "TESTE OSX" twice) and the unit's side of the captures: captures 1 to 4 (see Writes) and the **hardware capture** (unit side only, the owner pressing the footswitches and turning the knobs on the unit; kept outside the repository).
+Offsets are in the section **body** (its `00 00 id 01` head included), as in the table above.
+Confidence: **high** = matches every sample and a capture shows it working; **medium** = fits every
+sample, one capture or a clear pattern; **low** = a guess that fits. [docs/matribox-captures.md](matribox-captures.md)
+lists the captures that would settle each open point.
+
+### Section 2 (10 bytes): the three knob assignments
+
+| Offset | Type | Meaning | Evidence | Confidence |
+|--------|------|---------|----------|------------|
+| 4, 5 | u8 × 2 | Slot that knob 1 and knob 2 edit, `FF` = none | Hardware capture: on "Cry&Cry" (`04 01`), turning the knobs on the unit sent set-param messages for slot 4 and slot 1 | High |
+| 6 | u8 | Knob 3's target: `0D` in all 27 presets (not a slot; 0..11 are) | Constant. In the hardware capture, knob 3 sent `03 00 05 01` + u32 (below), not a slot's set-param | Medium |
+| 7, 8 | u8 × 2 | Parameter (catalog widget ID) of knob 1 and knob 2 | "Cry&Cry" `00 01`: DYN Threshold, WAH Q, the IDs the knob turns carried. "Drive AD": DRV Gain, AMP Gain. Rig presets: Volume of both drives | High |
+| 9 | u8 | Knob 3's parameter: `00` everywhere | Constant | Low |
+
+So the table is three `(slot, param)` pairs stored as `[slot1 slot2 slot3][param1 param2 param3]`.
+Slot numbers must be remapped when slots are renumbered.
+
+### Section 7 (95 bytes): expression pedal assignments
+
+| Offset | Type | Meaning | Evidence | Confidence |
+|--------|------|---------|----------|------------|
+| 4 | u8 | Which EXP 1 mode is active: 0 = A (volume), 1 = B (wah) | 1 in "Cry&Cry", the only sample with its wah on; 0 in the 26 others (wah off or no wah) | Medium |
+| 5..13 | u8 × 9 | Target slot of entries 0..8, `FF` = none | Entry 0 is the VOL slot ("Drive AD", "Cry&Cry", 5 rig presets), entry 3 the WAH slot (every preset with a wah) | High (slots), medium (grouping) |
+| 14..22 | u8 × 9 | Target parameter (widget ID) of each entry | "Cry&Cry" entry 3 = WAH Position (ID 3); the `.prst` files use ID 0 | Medium |
+| 23..58 | f32 × 9 | Minimum of each entry: 0 in every sample | Constant | Medium (layout), low (units: % or real?) |
+| 59..94 | f32 × 9 | Maximum of each entry: 100.0 in every sample | Constant | Medium (layout), low (units) |
+
+Reading of the 9 entries (low): three targets per controller, entries 0..2 = EXP 1 mode A (heel-toe
+volume), 3..5 = EXP 1 mode B (wah, switched by the toe switch), 6..8 = EXP 2 (an external pedal on
+the EXP/CTRL jack). Only entries 0 and 3 were ever used in our samples.
+
+### Section 8 (69 bytes): footswitch assignments
+
+| Offset | Type | Meaning | Evidence | Confidence |
+|--------|------|---------|----------|------------|
+| 4..8 | 5 bytes | Junk: differs between two reads of the same unchanged preset; zero in one `.prst` that the editor imports | Two "Drive AD" reads, two "TESTE OSX" reads | High (that it is junk) |
+| 9 + row × 12 + slot | u8 | 1 = switch `row` (0..4) toggles `slot` | Hardware capture: pressing the footswitches on "Cry&Cry" flipped slots 0, 4, 3, 5 in turn (bulk on/off notices, below), the slots its rows 0..4 name. The rig presets map the same musical layout onto different slots | High (row = switch, column = slot) |
+
+Which physical switch each row is, is not known (low): five rows for four switches A–D, so row 4 may
+be the CTRL/external switch. Rows 3 and 4 are identical in 21 of the 24 presets that assign switches.
+
+### Rest of sections 1, 5 and 9; sections 0 and 3
+
+| Section, offset | Type | Meaning | Evidence | Confidence |
+|-----------------|------|---------|----------|------------|
+| 1, 4..7 | 4 bytes | Junk (two reads of the same preset differ) | Device reads | High |
+| 1, 24..94 | f32 noise | Junk: tiny floats (pairs of equal values), zero or -0.0 in files | Two reads of "TESTE OSX": noise, then all zero | High |
+| 5, 736 | u16 | Patch volume, 0..100: 45..90 per preset (45, 50, 60, 63, 70, 90 seen) | Varies per preset; not captured being edited | Medium |
+| 5, 738 | u16 | Tempo (BPM): 120 in all 27 presets | Constant | Low |
+| 5, 740 | u16 | 0 in all 27 presets (tempo source or tap mode?) | Constant | Low |
+| 0, 4..10 | 7 bytes | `04 03 0C 01 05 01 0F`, constant (format version?) | 27 presets | Low |
+| 3, 4..14 | 11 bytes | `01 02 03 04 00 00 00 00 07 00 05`, constant (switch functions?) | 27 presets | Low |
+| 9, 4..11 | f32 + 4 bytes | `00 00 80 3F` (1.0) then `C8 00 00 30` (200 …), constant | 27 presets | Low |
+
+### The unit's own messages (unsolicited)
+
+All are flag 1, cmd `10` or `11`, and the official editor never sends them. From the hardware capture and
+captures 1 to 4.
+
+| Data | Meaning | Evidence | Confidence |
+|------|---------|----------|------------|
+| `01 00 05 01` + u32 slot + u32 param + f32 | A knob turned on the unit: same shape as the host's set param | Hardware capture: knob 1 and 2 turns hit the slot and parameter section 2 names | High |
+| `03 00 05 01` + u32 value | Knob 3 turned: values 42, 82, 83, 52, 53 (0..100). Probably the patch volume (section 2 target `0D`, section 5 at 736) | Hardware capture | Medium (knob 3), low (patch volume) |
+| `07 00 05 01` + 12 × u8 | Every slot's on/off (section 5 at 724) after a footswitch press | Hardware capture: one bit changes per press, matching section 8 | High |
+| `08 00 05 01` + 18 bytes `07 FF FF 00 FF FF 00 00 \| 00 00 C8 42 \| 00 × 8` | Unknown (holds f32 100.0; expression pedal or toe switch?) | Once, hardware capture | Low |
+| `01 00 0A 01` + u32 index | Preset changed on the unit | Hardware capture | High |
+| `04 00 04 01` + 156 bytes | The assignment tables after a chain edit: section 2 bytes 4..9 or 4..8, section 7 from 5 or 4, section 8 rows (from 9): 6 + 90 + 60 or 5 + 91 + 60 bytes. Sent before the chain notice on add, remove and change model, not on a move | Captures 2, 3, 4: always the empty tables of an empty preset, so the one-byte ambiguity stays | High (content), medium (which byte is left out) |
+| cmd `11`, `00 08 00 00` + u32 | "Preset edited" flag: 1 after an edit, 0 after a save | 1 after edits (hardware capture, capture 2); 0 sent 60 ms after the save in capture 1 (so a save does get this one notice); the editor reads it on connect (flag-1 `11` read) | Medium |
+| cmd `11`, `00 52 00 00` + u32 | Unknown flag, toggled 1, 0, 1 within 4 s while nothing else was sent | Capture 2 (unit side only) | Low |
+
+### Other connect reads (flag 0, no argument)
+
+| cmd | Size | What we see | Confidence |
+|-----|------|-------------|------------|
+| `11` | 52 | Bytes, small values (`02`, `01`, `32` = 50, `0C` = 12, `FF FF`): global settings? | Low |
+| `13` | 10 | `00 00 07 00 00 00 3C 00 00 5D` | Unknown |
+| `16` | 124 | 31 float32: 1, 80, 0.71, then groups of (on, frequency, Q, gain) such as (1, 250 Hz, 1, -1), (1, 5000 Hz, 1, 1), (0, 20000 Hz, 0.71, 0): a global EQ? | Low |
+| `16` (flag 1, `01 00 00 16`) | 8 | `00 00 00 00 01 00 00 00` | Unknown |
 
 ## MCP tools
 
@@ -217,8 +300,9 @@ Builders in `packages/core/src/matribox/write.ts`; tests compare them with the c
   tables). Both are the unit's, never sent by the host: an earlier reading of capture 2 took them
   for writes, and the unit ignores them (checked on the owner's unit, 2026-11-24).
 - **Save** stores the loaded preset (edits included) in the slot and gives it the name; the loaded
-  preset takes the name too. The unit sends **no answer**, so we check a save by reading the slot
-  back: its name in the preset list, its chain (sec4) and its parameters (sec5). Checked on the
+  preset takes the name too. The unit sends **no answer** (no echo; only the "preset edited" flag notice going to 0,
+  see [the unit's own messages](#the-units-own-messages-unsolicited)), so we check a save by
+  reading the slot back: its name in the preset list, its chain (sec4) and its parameters (sec5). Checked on the
   owner's unit (59D, 2026-11-24). Reading the loaded preset's own number returns the edit buffer, so
   the backup taken before saving over the loaded slot holds the edits, not what was stored.
 
