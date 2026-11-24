@@ -129,6 +129,18 @@ Todo menu mostra o nome que a pedaleira usa ao lado do que ele é, agrupado por 
   editor não as oferece (neste firmware um footswitch liga e desliga um bloco pela configuração
   Function 1/2 da própria pedaleira).
 
+## Instalar como app
+
+O editor web pode ser instalado como um app e depois abre sem internet, por exemplo num tablet
+Android na pedaleira. No Chrome do Android, abra https://fgbona.github.io/OpenSonicX/ e escolha
+*menu (⋮) > Instalar app* (ou *Adicionar à tela inicial*); no computador, o ícone de instalar à
+direita da barra de endereço. Ele abre em janela própria, USB e Bluetooth funcionam como no
+navegador, e os arquivos do editor ficam guardados no aparelho depois da primeira visita. O
+TONE3000, o assistente de IA e a primeira conversão de NAM continuam precisando de rede, e os
+seus dados (backups, chaves, configurações) ficam no armazenamento do navegador como antes.
+Quando sai uma versão nova, o editor avisa e só recarrega quando você escolhe *Recarregar*
+(senão, na próxima vez que abrir).
+
 ## Organização do repositório
 
 | Caminho | O que é |

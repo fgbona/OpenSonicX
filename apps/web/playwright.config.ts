@@ -6,6 +6,8 @@ const PORT = Number(process.env.E2E_PORT ?? 3100);
 /** End-to-end tests of the editor against a simulated pedal (e2e/fixtures.ts); no hardware. */
 export default defineConfig({
   testDir: 'e2e',
+  // The offline app runs against the static export: playwright.pwa.config.ts.
+  testIgnore: 'pwa.spec.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
