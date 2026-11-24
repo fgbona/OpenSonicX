@@ -6,6 +6,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Builds and tests run through Turborepo (`turbo`, local cache only): `npm test`,
+  `npm run typecheck` and `npm run build` skip workspaces whose inputs did not change, locally
+  and in CI (the cache is kept between CI runs with `actions/cache`). Releases always rebuild
+  everything. See CONTRIBUTING.md.
+
 ### Fixed
 
 - A refused MIDI permission is no longer logged as an error in the browser console: it is the

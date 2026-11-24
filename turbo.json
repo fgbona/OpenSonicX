@@ -1,0 +1,42 @@
+{
+  "$schema": "./node_modules/turbo/schema.json",
+  "globalDependencies": ["tsconfig.base.json"],
+  "globalPassThroughEnv": ["CI", "NEXT_TELEMETRY_DISABLED"],
+  "tasks": {
+    // No package has a "transit" script: it only links each package's hash to its dependencies'
+    // sources, so test and typecheck rerun when packages/core changes yet run in parallel.
+    "transit": {
+      "dependsOn": ["^transit"]
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "env": ["NEXT_PUBLIC_*", "NEXT_OUTPUT", "NEXT_BASE_PATH", "SITE_URL", "TONE3000_CLIENT_ID"],
+      "outputs": [".next/**", "!.next/cache/**", "out/**", "dist/**", "public/convert-worker.js"]
+    },
+    // build.mjs runs the web build itself (as a static export), so the web sources are inputs,
+    // and it waits for @pocket-master/web#build so the two never write apps/web/.next at once.
+    "@pocket-master/desktop#build": {
+      "dependsOn": ["@pocket-master/web#build"],
+      "env": ["NEXT_PUBLIC_*", "NEXT_BASE_PATH", "SITE_URL"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/apps/web/**",
+        "!$TURBO_ROOT$/apps/web/.next/**",
+        "!$TURBO_ROOT$/apps/web/out/**",
+        "!$TURBO_ROOT$/apps/web/node_modules/**",
+        "!$TURBO_ROOT$/apps/web/test-results/**",
+        "!$TURBO_ROOT$/apps/web/public/convert-worker.js",
+        "$TURBO_ROOT$/packages/core/src/**"
+      ],
+      "outputs": ["dist/**", "web/**"]
+    },
+    "test": {
+      "dependsOn": ["transit"],
+      "env": ["SKIP_CLO_PARITY"],
+      "passThroughEnv": ["UPDATE_MCP_CONTRACT"]
+    },
+    "typecheck": {
+      "dependsOn": ["transit"]
+    }
+  }
+}

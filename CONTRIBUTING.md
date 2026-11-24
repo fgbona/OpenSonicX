@@ -26,6 +26,25 @@ npm run dev        # http://localhost:3000
 npm run e2e        # the editor in Chrome against a simulated pedal (Playwright)
 ```
 
+`npm test`, `npm run typecheck` and `npm run build` run through
+[Turborepo](https://turborepo.dev): every workspace runs in parallel, and one whose files (or
+the files of `packages/core`, which they all use) did not change since the last run is replayed
+from the local cache in `.turbo/` instead of run again. Nothing is uploaded: there is no remote
+cache. Useful variants:
+
+```sh
+npx turbo run test --filter=@pocket-master/core   # one workspace
+npx turbo run build --force                        # ignore the cache
+npx turbo run build --filter=@pocket-master/desktop  # desktop main process + static web export
+npx turbo telemetry disable                        # turn off Turborepo's anonymous telemetry
+```
+
+Per-workspace commands (`npm test -w apps/mcp`, `npm run dev`, `npm run e2e`) still work as
+before and do not use the cache. Environment variables that change a build output
+(`NEXT_PUBLIC_*`, `NEXT_OUTPUT`, `NEXT_BASE_PATH`, `SITE_URL`, `TONE3000_CLIENT_ID`) are part of
+the cache key; when you add a new one, list it in `turbo.json`, or Turborepo will not pass it to
+the task.
+
 The end-to-end tests (`apps/web/e2e`) run the real connect, read, live edit,
 revert, save and comment flows. The page's Web MIDI is replaced by a fake
 "Pocket Master" port wired to the core tests' `FakePedal`, so no hardware is
