@@ -188,38 +188,41 @@ simulated unit that applies the writes to an in-memory preset and echoes them.
 
 ## Writes
 
-Every write is a flag-1 message in a type `12` frame, its data a literal-only LZO1X stream, and the
-unit echoes it back as a type `00` message (it may compress the echo). The data, from captures 1
-(host frames) and 2 (the official editor editing the empty preset 60D; only the unit's echoes were
-recorded). Builders in `packages/core/src/matribox/write.ts`; tests compare them with both captures
-(`packages/core/test/fixtures/matribox-writes.txt`).
+Every write is a flag-1 message in a type `12` frame, its data a literal-only LZO1X stream. The
+unit echoes set param, on/off, select and save back as a type `00` message (it may compress the
+echo); it answers a chain edit with its **chain notice** instead (below). Host frames from captures
+1, 3 and 4 (MIDI Monitor spying on output to the unit); capture 2 recorded only the unit's side.
+Builders in `packages/core/src/matribox/write.ts`; tests compare them with the captured frames
+(`packages/core/test/fixtures/matribox-chain-edits.txt`, `matribox-writes.txt`).
 
 | Write | cmd | Data | Evidence |
 |-------|-----|------|----------|
-| Set param | 10 | `01 00 05 01` + u32 slot + u32 param ID + f32 value | Host frames, byte-exact |
-| On/off | 10 | `02 00 05 01` + u32 slot + u32 0/1 | Host frames, byte-exact |
-| Select | 10 | `01 00 0A 01` + u32 index (60D = 239) | Host frames, byte-exact |
-| Chain | 10 | `00 00 04 01` + sec4 from byte 4 (order, module per slot, u32 fxid per slot) + 12 on/off bytes + 1 byte | Echoes: add, change model, add a slot, reorder, remove |
-| Assignments | 10 | `04 00 04 01` + 156 bytes (below) | Echoes, empty preset only |
+| Set param | 10 | `01 00 05 01` + u32 slot + u32 param ID + f32 value | Host frames, byte-exact; owner's unit ✓ |
+| On/off | 10 | `02 00 05 01` + u32 slot + u32 0/1 | Host frames, byte-exact; owner's unit ✓ |
+| Select | 10 | `01 00 0A 01` + u32 index (60D = 239) | Host frames, byte-exact; owner's unit ✓ |
+| Add block | 10 | `01 00 04 01` + `FF` + u8 position + u8 module + u32 fxid | Host frame (capture 4); owner's unit ✓ |
+| Move block | 10 | `01 00 04 01` + u8 from + u8 to + `FF` + `FF FF FF FF` | Host frame (capture 4) |
+| Remove block | 10 | `01 00 04 01` + u8 position + `FF` + `00` + `00 00 00 00` | Host frame (capture 4); owner's unit ✓ |
+| Change model | 10 | `02 00 04 01` + u8 position + u8 module + u32 fxid | Host frames (capture 3); owner's unit ✓ |
 | Save | 05 | u32 index + 17-byte name (NUL-padded) | One echo (60D), one host frame |
 
 - Set param and on/off address the **storage slot**, not the chain position (capture 2: the delay
-  was slot 1 while first in the chain).
-- The chain message's last byte was the slot added, changed or removed, and `FF` for a reorder; we
-  send the changed slot for a model swap and `FF` for a whole new chain. Meaning not confirmed.
-- **Assignments**: sent before every chain change but the reorder. Our reading (hypothesis): sec2
-  from byte 4 (6 bytes), sec7 from byte 5 (90) and sec8 from byte 9 (60), the tables that name
-  slots (quick knobs?, expression pedal, footswitches). Only the empty preset's tables were seen;
-  sec2[9] and sec7[4] are 0 in all 22 samples, so the split could be one byte off. A model swap
-  resends the loaded preset's tables; a new chain sends empty ones.
+  was slot 1 while first in the chain). Add, move and remove take **chain positions** (0-based):
+  "from" `FF` adds, "to" `FF` removes. The unit picks the storage slot of an added block.
+- Change model: the position and the slot were both 0 in the capture, so which one it takes is not
+  settled yet. The unit loads the new model's defaults by itself (checked on the owner's unit).
+- **Chain notice**: after a chain edit the unit sends `00 00 04 01` + sec4 from byte 4 (order,
+  module per slot, u32 fxid per slot) + 12 on/off bytes + 1 byte (the slot touched, `FF` for a
+  move), often after a 160-byte `04 00 04 01 …` message (likely the expression-pedal and footswitch
+  tables). Both are the unit's, never sent by the host: an earlier reading of capture 2 took them
+  for writes, and the unit ignores them (checked on the owner's unit, 2026-11-24).
 - **Save** is the least verified: capture 1 also has a cmd `05` with index 0x43 and that preset's
   own name, sent before a select. Gated behind `confirm` and a backup.
 
-Open questions for the hardware test: does the unit accept our frames as it accepts the editor's
-(the echo says so); does the unit load the new model's defaults itself on a chain change; what the
-chain message's last byte means; the assignment split; whether cmd `05` saves; whether reading the
-loaded preset's number returns the edit buffer or the stored slot (it decides whether the backup
-taken before saving over the loaded slot holds the stored preset or the edits).
+Open questions for the hardware test: move on the unit; whether change model takes
+the position or the slot; whether cmd `05` saves; whether reading the loaded preset's number
+returns the edit buffer or the stored slot (it decides whether the backup taken before saving over
+the loaded slot holds the stored preset or the edits).
 
 ## Phases
 

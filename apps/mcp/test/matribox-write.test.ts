@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fromHex, MB_WRITE, parseMbFrame, parseMbPreset } from '@pocket-master/core';
+import { fromHex, MB_WRITE, parseMbFrame, parseMbPreset, unwrapMbMessage } from '@pocket-master/core';
 import { call, connected, text } from './matribox-helpers.ts';
 
 const WRITE_TOOLS = ['matribox_set_param', 'matribox_set_module_on', 'matribox_select_preset', 'matribox_set_model', 'matribox_build_tone', 'matribox_save_preset'];
@@ -68,7 +68,7 @@ test('matribox_select_preset loads a preset by label', async () => {
   assert.match(text(bad), /1A\.\.60D/);
 });
 
-test('matribox_set_model swaps the model in a block and writes the new model\'s defaults', async () => {
+test('matribox_set_model swaps the model with one chain edit and shows the values the unit loaded', async () => {
   const { client } = await connected();
   const out = await call(client, 'matribox_set_model', { block: 'DRV', model: 'fake fuzz' });
   assert.match(out, /^DRV: Fake Drive → Fake Fuzz \(based on Imaginary Fuzz Face\): Fuzz 0, Level 0$/m);
@@ -98,8 +98,24 @@ test('matribox_build_tone builds a whole chain in one call, with defaults for pa
   assert.match(preset, /^Chain: DRV → AMP → DLY$/m);
   assert.match(preset, /^2\. AMP {2}on {3}Fake Plexi .*: Gain 55 \[0\.\.100\], Master 40 \[0\.\.100\]$/m);
   assert.match(preset, /^3\. DLY {2}off {2}Fake Echo .*: Mix 0 \[0\.\.100\], Time 400 \[20\.\.2000\]$/m);
-  // assignments + chain + one write per parameter (3 + 2 + 2)
-  assert.equal(writes(fake), 9);
+  // remove the 6 old blocks, add 3, then every parameter (3 + 2 + 2) and on/off of each new block
+  assert.equal(writes(fake), 6 + 3 + 7 + 3);
+});
+
+/** The chain edits the simulated unit received, as [op, from, to] (op 1 = add/move/remove, 2 = change model). */
+const chainEdits = (fake: { received: string[] }) => fake.received
+  .map((hex) => parseMbFrame(fromHex(hex)))
+  .filter((f) => f.type === MB_WRITE)
+  .map((f) => unwrapMbMessage(f.payload).data)
+  .filter((d) => d[1] === 0x00 && d[2] === 0x04 && d[3] === 0x01 && (d[0] === 1 || d[0] === 2))
+  .map((d) => (d[0] === 2 ? [2, d[4]] : [1, d[4], d[5]]));
+
+test('the chain tools send the official editor\'s chain edits: change model by position, remove from the end, add in order', async () => {
+  const { client, fake } = await connected();
+  await call(client, 'matribox_set_model', { block: 'DRV', model: 'Fake Fuzz' });
+  assert.deepEqual(chainEdits(fake), [[2, 1]]);
+  await call(client, 'matribox_build_tone', { blocks: [{ module: 'DRV', model: 'Fake Drive' }, { module: 'AMP', model: 'Fake Plexi' }] });
+  assert.deepEqual(chainEdits(fake).slice(1), [[1, 5, 0xff], [1, 4, 0xff], [1, 3, 0xff], [1, 2, 0xff], [1, 1, 0xff], [1, 0, 0xff], [1, 0xff, 0], [1, 0xff, 1]]);
 });
 
 test('matribox_build_tone validates everything before sending anything', async () => {

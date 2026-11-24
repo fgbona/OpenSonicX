@@ -1,7 +1,8 @@
 /**
  * A simulated Matribox II Pro: answers the read requests with the replies captured from the owner's
  * unit (packages/core/test/fixtures), paged as the unit pages them, and applies the write frames to
- * an in-memory edit buffer the way docs/matribox.md describes, echoing each write as the unit does.
+ * an in-memory edit buffer the way docs/matribox.md describes, echoing each write as the unit does
+ * (a chain edit is answered with the chain notice instead, like the unit).
  * Never a real device.
  */
 import { readFileSync } from 'node:fs';
@@ -45,6 +46,15 @@ const dataOf = (frames: readonly Uint8Array[]) => unwrapMbMessage(joinMbPages(fr
 const BODY_AT = { 1: 31, 2: 144, 4: 185, 5: 269, 7: 1019, 8: 1122 } as const;
 /** Preset list layout: 4 bytes, 240 u32, then the 17-byte names. */
 const NAMES_AT = 4 + 240 * 4;
+const SLOTS = 12;
+
+interface FakeChain {
+  order: number[];
+  types: number[];
+  fxids: number[];
+  on: number[];
+}
+const NONE = 0xff;
 
 /** A copy of `data` with `bytes` written at `at`. */
 function patched(data: Uint8Array, at: number, bytes: ArrayLike<number>): Uint8Array {
@@ -92,8 +102,8 @@ export class FakeMatribox {
     const frame = parseMbFrame(bytes);
     const message = unwrapMbMessage(frame.payload);
     if (frame.type === MB_WRITE) {
-      this.#apply(message.cmd, message.data);
-      if (this.echoes) this.#reply(replyFrames(wrapMbMessage(message.flag, message.cmd, message.data)));
+      const notice = this.#apply(message.cmd, message.data);
+      if (this.echoes) this.#reply(replyFrames(wrapMbMessage(message.flag, message.cmd, notice ?? message.data)));
       return;
     }
     const reply = frame.type === MB_READ ? this.#read(message.flag, message.cmd, message.data) ?? this.#replies.get(request) : undefined;
@@ -122,7 +132,59 @@ export class FakeMatribox {
     return null;
   }
 
-  #apply(cmd: number, data: Uint8Array): void {
+  /** The loaded preset's chain: slots in signal order, module index and fxid per slot, on/off per slot. */
+  #chain(): FakeChain {
+    const e = this.#edit;
+    const at = BODY_AT[4];
+    return {
+      order: [...e.subarray(at + 4, at + 16)].filter((s) => s !== NONE),
+      types: [...e.subarray(at + 16, at + 28)],
+      fxids: Array.from({ length: SLOTS }, (_, s) => u32(e, at + 28 + s * 4)),
+      on: [...e.subarray(BODY_AT[5] + 724, BODY_AT[5] + 736)],
+    };
+  }
+
+  /** Writes `chain` back and returns the unit's chain notice: 00 00 04 01 + sec4 from byte 4 + on/off + focus. */
+  #setChain(chain: FakeChain, focus: number): Uint8Array {
+    const order = Array.from({ length: SLOTS }, (_, i) => chain.order[i] ?? NONE);
+    const sec4 = [...order, ...chain.types, ...chain.fxids.flatMap((f) => [f & 0xff, (f >>> 8) & 0xff, (f >>> 16) & 0xff, f >>> 24])];
+    this.#edit = patched(patched(this.#edit, BODY_AT[4] + 4, sec4), BODY_AT[5] + 724, chain.on);
+    return Uint8Array.from([0x00, 0x00, 0x04, 0x01, ...sec4, ...chain.on, focus]);
+  }
+
+  /** A chain edit; a new model's parameters start at 0 here (the unit loads the model's defaults). */
+  #editChain(data: Uint8Array): Uint8Array {
+    const chain = this.#chain();
+    const put = (slot: number, type: number, fxid: number) => {
+      chain.types[slot] = type;
+      chain.fxids[slot] = fxid;
+      this.#edit = patched(this.#edit, BODY_AT[5] + 4 + slot * 60, new Uint8Array(60));
+    };
+    const [op, from, to, type] = [data[0], data[4] as number, data[5] as number, data[6] as number];
+    if (op === 0x02) {
+      const slot = chain.order[from] as number;
+      put(slot, data[5] as number, u32(data, 6));
+      return this.#setChain(chain, slot);
+    }
+    if (from === NONE) {
+      const slot = chain.types.findIndex((t) => t === NONE);
+      if (slot < 0 || to > chain.order.length) throw new Error('fake Matribox: no room for a block');
+      put(slot, type, u32(data, 7));
+      chain.on[slot] = 1;
+      chain.order.splice(to, 0, slot);
+      return this.#setChain(chain, slot);
+    }
+    const [slot] = chain.order.splice(from, 1) as [number];
+    if (to === NONE) {
+      put(slot, NONE, 0);
+      chain.on[slot] = 0;
+      return this.#setChain(chain, slot);
+    }
+    chain.order.splice(to, 0, slot);
+    return this.#setChain(chain, NONE);
+  }
+
+  #apply(cmd: number, data: Uint8Array): Uint8Array | void {
     const head = hexOf(data.subarray(0, 4));
     const edit = (section: keyof typeof BODY_AT, at: number, bytes: ArrayLike<number>) => {
       this.#edit = patched(this.#edit, BODY_AT[section] + at, bytes);
@@ -131,15 +193,7 @@ export class FakeMatribox {
     if (cmd !== 0x10) throw new Error(`fake Matribox: unknown write cmd ${cmd}`);
     if (head === '01000501') return edit(5, 4 + u32(data, 4) * 60 + u32(data, 8) * 4, data.subarray(12, 16));
     if (head === '02000501') return edit(5, 724 + u32(data, 4), [u32(data, 8)]);
-    if (head === '00000401') {
-      edit(4, 4, data.subarray(4, 76));
-      return edit(5, 724, data.subarray(76, 88));
-    }
-    if (head === '04000401') {
-      edit(2, 4, data.subarray(4, 10));
-      edit(7, 5, data.subarray(10, 100));
-      return edit(8, 9, data.subarray(100, 160));
-    }
+    if (head === '01000401' || head === '02000401') return this.#editChain(data);
     if (head === '01000a01') {
       this.#current = u32(data, 4);
       this.#edit = this.#stored.get(this.#current) ?? this.#blank;

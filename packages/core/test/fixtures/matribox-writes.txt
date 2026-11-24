@@ -1,5 +1,7 @@
 # Sonicake Matribox II Pro, owner's unit, capture 2 (2026-11-24): the official editor editing the empty
-# preset 60D (index 0xEF). Only the unit's echoes were recorded; each repeats a host write. One message
+# preset 60D (index 0xEF). Only the unit's side was recorded. 'assignments' and 'chain-*' are the unit's
+# own notices after a chain edit, not host writes (captures 3 and 4: matribox-chain-edits.txt); the rest
+# echo a host write. One message
 # per line, in the order sent: '<name> <flag> <cmd hex> <decompressed data hex>'. Notifications left out.
 select-60D 1 10 01000a01ef000000
 assignments 1 10 04000401ffff0d000000ffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c8420000c8420000c8420000c8420000c8420000c8420000c8420000c8420000c842000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
