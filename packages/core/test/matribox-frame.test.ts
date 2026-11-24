@@ -6,9 +6,9 @@ import {
   MB_READ,
   MB_REPLY,
   MB_WRITE,
+  MB_HOST_PAGE_SIZE,
   buildMbFrame,
   buildMbFrames,
-  MB_HOST_PAGE_SIZE,
   float32LE,
   joinMbPages,
   mbChecksum,
@@ -113,6 +113,31 @@ test('joinMbPages rejects pages of different replies or overlapping pages', () =
   const [a, b] = REPLY_PAGES.map(parseMbFrame) as [ReturnType<typeof parseMbFrame>, ReturnType<typeof parseMbFrame>];
   assert.throws(() => joinMbPages([a, { ...b, total: 999 }]), /different/);
   assert.throws(() => joinMbPages([a, a]), /overlap/);
+});
+
+const PAGED = fromHex(readFileSync(new URL('./fixtures/matribox-paged-write.txt', import.meta.url), 'utf8').split('\n')[1] as string);
+
+test('a captured host page: checksum over the data nibbles only, 183-byte pages', () => {
+  const page = parseMbFrame(PAGED);
+  assert.equal(page.type, MB_WRITE);
+  assert.equal(page.total, 4157);
+  assert.equal(page.offset, 22 * MB_HOST_PAGE_SIZE);
+  assert.equal(page.payload.length, 4157 - 22 * MB_HOST_PAGE_SIZE);
+  assert.equal(page.checksumOk, true);
+  assert.equal(mbChecksum(PAGED.subarray(13, -1)), PAGED[7]);
+});
+
+test('buildMbFrames pages a long host message like the official editor', () => {
+  const tail = parseMbFrame(PAGED).payload;
+  const payload = Uint8Array.from({ length: 4157 }, (_, i) => (i * 7) & 0xff);
+  payload.set(tail, 4157 - tail.length);
+  const frames = buildMbFrames(MB_WRITE, payload);
+  assert.equal(frames.length, 23);
+  assert.equal(toHex(frames[22] as Uint8Array), toHex(PAGED));
+  const pages = frames.map(parseMbFrame);
+  assert.ok(pages.every((p) => p.checksumOk && p.total === 4157));
+  assert.deepEqual(pages.slice(0, -1).map((p) => p.payload.length), new Array(22).fill(MB_HOST_PAGE_SIZE));
+  assert.deepEqual(joinMbPages(pages), payload);
 });
 
 test('float32 little-endian helpers round-trip a knob value', () => {

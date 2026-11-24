@@ -97,7 +97,11 @@ export function irSamplesFromWav(bytes: Uint8Array): Int32Array {
   });
 }
 
-function parseWav(bytes: Uint8Array): { rate: number; mono: number[] } {
+/**
+ * The WAV's rate and one track in [-1, 1): every channel averaged, or only `channel` when given
+ * (the Matribox's official tool reads the first channel alone).
+ */
+export function parseWav(bytes: Uint8Array, channel?: number): { rate: number; mono: number[] } {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const tag = (at: number) => String.fromCharCode(...bytes.subarray(at, at + 4));
   if (bytes.length < 12 || tag(0) !== 'RIFF' || tag(8) !== 'WAVE') throw new Error('not a WAV file');
@@ -136,7 +140,9 @@ function parseWav(bytes: Uint8Array): { rate: number; mono: number[] } {
     }
     return format === 3 ? view.getFloat32(p, true) : view.getInt32(p, true) / 2147483648;
   };
+  if (channel !== undefined && !(Number.isInteger(channel) && channel >= 0 && channel < channels)) throw new Error(`the WAV has no channel ${channel}`);
   const mono = Array.from({ length: frames }, (_, f) => {
+    if (channel !== undefined) return sample(data!.at + f * frameBytes + channel * bytesPer);
     let sum = 0;
     for (let c = 0; c < channels; c++) sum += sample(data!.at + f * frameBytes + c * bytesPer);
     return sum / channels;
