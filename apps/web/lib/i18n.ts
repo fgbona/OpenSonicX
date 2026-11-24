@@ -19,7 +19,6 @@ export function detectLang(languages: readonly string[]): Lang {
 
 /** The editor's own English messages, by exact text or by prefix with the rest as {reason}. */
 const EXACT: ReadonlyArray<[string, MessageKey]> = [
-  [en['error.choosePorts'], 'error.choosePorts'],
   [en['error.noWebMidi'], 'error.noWebMidi'],
   [en['error.insecure'], 'error.insecure'],
   [en['error.blocked'], 'error.blocked'],

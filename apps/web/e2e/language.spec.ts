@@ -32,13 +32,14 @@ async function expectPortuguese(page: Page, where: string) {
   expect(found, `English left on the page (${where})`).toEqual([]);
 }
 
+test.use({ plugged: [] });
+
 test('the whole editor speaks Portuguese', async ({ page, pedal }) => {
   await page.goto('/');
   await expect(page.locator('html')).toHaveAttribute('lang', 'pt-BR');
   await expectPortuguese(page, 'before connecting');
 
-  await page.getByRole('button', { name: pt['action.enable'] }).click();
-  await page.getByRole('button', { name: pt['action.connect'], exact: true }).click();
+  await page.evaluate(() => window.__midi.plug('Pocket Master'));
   await expect(page.getByRole('heading', { name: new RegExp(`P09\\s*${pedal.pedal.names[8]}`) })).toBeVisible();
   await page.getByRole('button', { name: pt['log.show'] }).click();
   await expectPortuguese(page, 'connected, with the SysEx log');

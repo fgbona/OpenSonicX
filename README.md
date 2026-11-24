@@ -1,8 +1,8 @@
 # OpenSonicX
 
 Free, open-source tools for Sonicake guitar pedals. Today: the **Pocket Master Editor**, for
-the **Sonicake Pocket Master** multi-effects pedal, over USB MIDI or Bluetooth. No driver: open
-the page in Chrome, Edge or Opera, plug the pedal in, and read your preset.
+the **Sonicake Pocket Master** multi-effects pedal, over USB MIDI or Bluetooth. No driver and no Connect button: open
+the page in Chrome, Edge or Opera and plug the pedal in; the editor finds it and loads its presets.
 The **Sonicake Matribox II Pro** is supported too, experimentally: the same page recognises it
 by its USB MIDI port and opens its own editor ([docs/matribox.md](docs/matribox.md)).
 
@@ -50,7 +50,11 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
 
 ## What it does today
 
-- Lists MIDI ports and connects to the Pocket Master.
+- Finds the plugged-in pedal by itself, like the official app: on load (the browser asks for MIDI
+  access the first time only), when it is plugged in later, and again after it is unplugged or
+  power-cycled, without a reload. With both pedals plugged in, the Pocket Master is opened first;
+  an open connection is kept until its pedal is unplugged, then the other one is opened.
+  Bluetooth (Pocket Master) has its own button: the browser needs that click.
 - Reads the edit buffer and shows the signal chain with every parameter.
 - Live edit (always on once connected): parameters, block on/off, model per block and
   chain order, sent to the pedal's edit buffer as you move the controls.
@@ -91,7 +95,7 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
   protection, backlight.
 - A SysEx log (hidden by default; *Show the SysEx log* at the bottom of the page)
   with every message sent and received, in hex, with a label.
-- **Matribox II Pro (experimental):** Connect recognises it by its MIDI port and shows its own
+- **Matribox II Pro (experimental):** the editor recognises it by its MIDI port and shows its own
   editor: the 240 presets (1A..60D) with a filter, the loaded preset's chain with each model and
   the gear it is based on, live on/off, parameters (within each model's range) and models, add,
   move and remove blocks, and Save to a slot with an explicit confirmation and a backup of the

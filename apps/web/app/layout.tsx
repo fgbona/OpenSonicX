@@ -12,9 +12,8 @@ const DESCRIPTION = 'Free editor for the Sonicake Pocket Master, over USB or Blu
 export const metadata: Metadata = {
   // Link previews need absolute URLs: the Pages workflow sets SITE_URL (the origin; Next adds the basePath).
   metadataBase: process.env.SITE_URL ? new URL(process.env.SITE_URL) : undefined,
-  title: 'Pocket Master Editor',
   description: DESCRIPTION,
-  openGraph: { title: 'Pocket Master Editor', description: DESCRIPTION, type: 'website' },
+  openGraph: { title: 'OpenSonicX', description: DESCRIPTION, type: 'website' },
   twitter: { card: 'summary_large_image' },
 };
 

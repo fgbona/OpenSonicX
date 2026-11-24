@@ -10,6 +10,7 @@ import electronUpdater from 'electron-updater';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { appBundle, canReplace, pickZip, prepare, startSwap } from './mac-update.ts';
+import { grantsWithoutPrompt } from './permissions.ts';
 import { resolveAppFile } from './serve.ts';
 import { CATALOG_URL_PATH, matriboxCatalogPath } from './matribox-catalog.ts';
 
@@ -33,7 +34,7 @@ const text = {
 function createWindow(): void {
   const win = new BrowserWindow({
     width: 1400, height: 900, minWidth: 360, minHeight: 600,
-    title: 'Pocket Master Editor',
+    title: 'OpenSonicX', // the page then names the connected pedal
     webPreferences: { contextIsolation: true, sandbox: true },
   });
   // Links (tone3000.com, release pages) open in the browser; the window stays on the editor.
@@ -111,9 +112,9 @@ void app.whenReady().then(() => {
     }
     return net.fetch(pathToFileURL(resolveAppFile(root, request.url)).toString());
   });
-  const midiOnly = (origin: string, permission: string) => origin.startsWith(ORIGIN) && (permission === 'midi' || permission === 'midiSysex');
-  session.defaultSession.setPermissionRequestHandler((_wc, permission, done, details) => done(midiOnly(details.requestingUrl, permission)));
-  session.defaultSession.setPermissionCheckHandler((_wc, permission, origin) => midiOnly(origin, permission));
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, done, details) => done(grantsWithoutPrompt(details.requestingUrl, permission)));
+  // The check answers navigator.permissions.query too: "granted" lets the page open the pedal on load.
+  session.defaultSession.setPermissionCheckHandler((_wc, permission, origin) => grantsWithoutPrompt(origin, permission));
   createWindow();
   if (app.isPackaged) checkForUpdates();
 });

@@ -9,7 +9,7 @@ import { SettingsDialog } from '@/components/SettingsDialog';
 import { PresetFiles } from '@/components/PresetFiles';
 import { PresetLibrary } from '@/components/PresetLibrary';
 import { addToLibrary } from '@/lib/presetLibrary';
-import { presetLabel, TESTED_FIRMWARE, type PresetFile, type ToneHost } from '@pocket-master/core';
+import { PEDAL_NAMES, presetLabel, TESTED_FIRMWARE, type PresetFile, type ToneHost } from '@pocket-master/core';
 import { AssistantPanel } from '@/components/AssistantPanel';
 import { Dialog } from '@/components/Dialog';
 import { PresetSidebar } from '@/components/PresetSidebar';
@@ -22,10 +22,11 @@ import { useI18n } from '@/components/I18n';
 import { useIsDesktop } from '@/lib/desktop';
 import { MatriboxEditor } from '@/components/MatriboxEditor';
 
-const STEPS = ['empty.step1', 'empty.step2', 'empty.step3'] as const;
+const STEPS = ['empty.step1', 'empty.step2'] as const;
 const LOG_KEY = 'pocket-master-editor.showLog';
-// The desktop app grants MIDI itself and has no browser to pick.
-const DESKTOP_STEPS = ['empty.step1', 'empty.desktopStep2'] as const;
+// The desktop app grants MIDI itself: there is no permission to give.
+const DESKTOP_STEPS = ['empty.step1'] as const;
+const APP_NAME = 'OpenSonicX';
 
 export default function EditorPage() {
   const pm = usePocketMaster();
@@ -106,6 +107,8 @@ export default function EditorPage() {
   // The Matribox II Pro has its own editor; everything below is the Pocket Master's.
   const matribox = linked && pm.pedal === 'matribox' ? pm.matribox : null;
   const connected = linked && !matribox;
+  // The window (and the desktop app's title bar) names the connected pedal.
+  const pedalName = linked && pm.pedal ? PEDAL_NAMES[pm.pedal] : null;
   // The sidebar lists every preset: read the names once the pedal is connected.
   const { names, loadNames } = pm;
   useEffect(() => {
@@ -113,18 +116,14 @@ export default function EditorPage() {
   }, [connected, names, loadNames]);
   return (
     <>
+      {/* React puts it in the head; layout.tsx sets no title of its own, so this one wins. */}
+      <title>{pedalName ? `${APP_NAME} · ${pedalName}` : APP_NAME}</title>
       <Toolbar
         status={pm.status}
         transport={pm.transport}
-        inputs={pm.inputs}
-        outputs={pm.outputs}
-        inputId={pm.inputId}
-        outputId={pm.outputId}
-        onSelectInput={pm.selectInput}
-        onSelectOutput={pm.selectOutput}
-        onEnable={pm.enable}
-        onConnect={pm.connect}
-        onDisconnect={pm.disconnect}
+        pedal={pm.pedal}
+        midiRefused={pm.midiRefused}
+        onEnable={() => void pm.enable()}
         onRead={pm.read}
         modified={pm.modified}
         onRevert={pm.revert}
@@ -151,7 +150,7 @@ export default function EditorPage() {
         matribox={matribox !== null}
       />
       <SettingsDialog open={settingsOpen} firmware={pm.firmware} onClose={() => setSettingsOpen(false)} exclusive={pm.exclusive} writeGlobal={pm.writeGlobal}
-        busy={pm.busy !== null} error={pm.error} factoryReset={pm.factoryReset} onReset={pm.disconnect} />
+        busy={pm.busy !== null} error={pm.error} factoryReset={pm.factoryReset} onReset={pm.reconnect} />
       {matribox ? (
         <>
           {pm.error && <p className="alert" role="alert">{te(pm.error)}</p>}

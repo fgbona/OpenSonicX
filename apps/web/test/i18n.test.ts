@@ -29,10 +29,10 @@ test('detectLang picks Portuguese for any pt locale and English otherwise', () =
 });
 
 test('translateError maps the editor\'s own messages and keeps protocol errors as they are', () => {
-  assert.equal(translateError('pt', 'Choose an input and an output port first.'), 'Escolha uma porta de entrada e uma de saída primeiro.');
+  assert.equal(translateError('pt', 'MIDI access was blocked. Allow "MIDI devices" for this site in the browser settings, then try again.'), 'O acesso MIDI foi bloqueado. Permita "Dispositivos MIDI" para este site nas configurações do navegador e tente de novo.');
   assert.equal(translateError('pt', 'Could not open the ports: busy'), 'Não foi possível abrir as portas: busy');
   assert.equal(translateError('pt', 'record 0x3003 is too short'), 'record 0x3003 is too short');
-  assert.equal(translateError('en', 'Choose an input and an output port first.'), 'Choose an input and an output port first.');
+  assert.equal(translateError('en', 'Could not open the ports: busy'), 'Could not open the ports: busy');
 });
 
 test('progressText translates the save steps', () => {

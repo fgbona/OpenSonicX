@@ -1,6 +1,4 @@
-import { pedalOfPort, type MidiPort } from '@pocket-master/core';
-
-const PORT_HINT = /pocket\s*master/i;
+import { PEDAL_PRIORITY, pedalOfPort, type MidiPort, type PedalKind } from '@pocket-master/core';
 
 export class MidiUnavailableError extends Error {}
 
@@ -22,13 +20,32 @@ export async function openMidi(): Promise<MIDIAccess> {
   }
 }
 
-export function pickPocketMaster<T extends MIDIPort>(ports: readonly T[]): T | undefined {
-  return ports.find((p) => PORT_HINT.test(p.name ?? ''));
+export interface FoundPedal<I extends MIDIPort, O extends MIDIPort> {
+  readonly kind: PedalKind;
+  readonly input: I;
+  readonly output: O;
 }
 
-/** A supported pedal's port, the Pocket Master's first; never another device. */
-export function pickPedal<T extends MIDIPort>(ports: readonly T[]): T | undefined {
-  return pickPocketMaster(ports) ?? ports.find((p) => pedalOfPort(p.name) !== null);
+const plugged = (p: MIDIPort) => p.state === 'connected';
+
+/**
+ * The plugged-in pedal to open: the first in PEDAL_PRIORITY with both its input and its output
+ * present; never another device, whose port would get a pedal's SysEx.
+ */
+export function findPedal<I extends MIDIPort, O extends MIDIPort>(inputs: Iterable<I>, outputs: Iterable<O>): FoundPedal<I, O> | null {
+  const ins = [...inputs].filter(plugged);
+  const outs = [...outputs].filter(plugged);
+  for (const kind of PEDAL_PRIORITY) {
+    const input = ins.find((p) => pedalOfPort(p.name) === kind);
+    const output = outs.find((p) => pedalOfPort(p.name) === kind);
+    if (input && output) return { kind, input, output };
+  }
+  return null;
+}
+
+/** The plugged-in pedal ports as one string: it changes when a pedal is plugged in or out. */
+export function pedalPortsKey(ports: Iterable<MIDIPort>): string {
+  return [...ports].filter((p) => plugged(p) && pedalOfPort(p.name) !== null).map((p) => `${p.type}:${p.id}`).sort().join(',');
 }
 
 /** A Web MIDI input/output pair as the port the core link talks through. */

@@ -6,10 +6,10 @@
 import { test as base, expect, type Page } from '@playwright/test';
 import { FakeMatribox } from '../../../packages/core/test/fake-matribox.ts';
 import { FAKE_ALG_DATA } from '../../../packages/core/test/matribox-fake-catalog.ts';
-import { installFakeMidi } from './fixtures.ts';
+import { wireMidi } from './fixtures.ts';
 
 /** The frames the simulated unit answers one frame from the editor with. */
-async function answer(unit: FakeMatribox, bytes: Uint8Array): Promise<Uint8Array[]> {
+export async function answer(unit: FakeMatribox, bytes: Uint8Array): Promise<Uint8Array[]> {
   const out: Uint8Array[] = [];
   unit.listen((frame) => void out.push(frame));
   unit.send(bytes);
@@ -17,12 +17,17 @@ async function answer(unit: FakeMatribox, bytes: Uint8Array): Promise<Uint8Array
   return out;
 }
 
+/** A simulated unit that answers quietly (the link skips notifications; keep the e2e traffic small). */
+export function quietMatribox(): FakeMatribox {
+  const unit = new FakeMatribox();
+  unit.noise = [];
+  return unit;
+}
+
 export const test = base.extend<{ unit: FakeMatribox }>({
   unit: [async ({ page }, use) => {
-    const unit = new FakeMatribox();
-    unit.noise = []; // the link skips notifications (core tests); keep the e2e traffic small
-    await page.exposeFunction('__pedalSend', async (bytes: number[]) => (await answer(unit, Uint8Array.from(bytes))).map((f) => Array.from(f)));
-    await page.addInitScript(installFakeMidi, 'Matribox II PRO');
+    const unit = quietMatribox();
+    await wireMidi(page, { 'Matribox II PRO': (bytes) => answer(unit, bytes) }, { plugged: ['Matribox II PRO'], denials: 0 });
     await use(unit);
   }, { auto: true }], // always: a page here must never reach the real Web MIDI
 });
@@ -30,12 +35,13 @@ export { expect };
 
 export const CATALOG_FILE = { name: 'alg_data.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(FAKE_ALG_DATA)) };
 
-/** Opens the editor and connects to the simulated Matribox; returns once its loaded preset shows. */
+/** The heading of the preset the simulated Matribox has loaded. */
+export const loadedMatribox = (page: Page) => page.getByRole('heading', { name: '17C Drive AD' });
+
+/** Opens the editor, which finds the plugged-in Matribox by itself; returns once its loaded preset shows. */
 export async function connectMatribox(page: Page) {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Enable MIDI' }).click();
-  await page.getByRole('button', { name: 'Connect', exact: true }).click();
-  await expect(page.getByRole('heading', { name: '17C Drive AD' })).toBeVisible();
+  await expect(loadedMatribox(page)).toBeVisible();
 }
 
 export async function pickCatalog(page: Page) {

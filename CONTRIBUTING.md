@@ -29,7 +29,9 @@ npm run e2e        # the editor in Chrome against a simulated pedal (Playwright)
 The end-to-end tests (`apps/web/e2e`) run the real connect, read, live edit,
 revert, save and comment flows. The page's Web MIDI is replaced by a fake
 "Pocket Master" port wired to the core tests' `FakePedal`, so no hardware is
-needed. Run `npx playwright install chromium` once first.
+needed; every test page gets the fake, and `window.__midi.plug(name)` / `unplug(name)` simulate
+hot-plugging. Run `npx playwright install chromium` once first. The tests start (or reuse) a dev
+server on port 3100; set `E2E_PORT` when another server already listens there.
 
 - Write the failing test first, then the code.
 - `packages/core` must stay free of browser and Node-only APIs so the web app

@@ -47,7 +47,7 @@ const SESSION_TIMEOUT_MS = 1000;
 let nextLogId = 0; // module-wide so log keys stay unique across reconnects
 
 const sendError = (error: unknown) =>
-  new Error(`Could not send to the pedal: ${error instanceof Error ? error.message : String(error)}. Check the USB cable, then Connect again.`);
+  new Error(`Could not send to the pedal: ${error instanceof Error ? error.message : String(error)}. Check the USB cable and that the pedal is on.`);
 
 /** Thrown by a request that was pending, or started, after the link was closed. */
 export class LinkClosedError extends Error {
