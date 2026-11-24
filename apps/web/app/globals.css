@@ -400,7 +400,19 @@ button, select { font: inherit; color: inherit; }
 .fields { display: flex; gap: 18px; align-items: flex-end; }
 
 /* Signal chain as pedals */
-.tiles { list-style: none; margin: 0 0 20px; padding: 4px 2px; display: flex; gap: 10px; overflow-x: auto; scrollbar-width: thin; }
+.tiles-wrap { position: relative; margin: 0 0 20px; }
+.tiles { list-style: none; margin: 0; padding: 4px 2px 8px; display: flex; gap: 10px; overflow-x: auto; scrollbar-width: auto; }
+/* A scrollbar a mouse can grab (thin ones are a few pixels tall on Android). */
+.tiles::-webkit-scrollbar { height: 12px; }
+.tiles::-webkit-scrollbar-thumb { background: var(--fill-strong); border-radius: 6px; }
+.tiles-page {
+  position: absolute; top: 50%; z-index: 2; width: 36px; height: 36px; margin-top: -18px; border-radius: 50%;
+  border: 1px solid var(--separator); background: var(--surface); color: var(--label); box-shadow: var(--shadow);
+  font-size: 1.3rem; line-height: 1; cursor: pointer;
+}
+.tiles-page-start { left: -6px; }
+.tiles-page-end { right: -6px; }
+.tile { -webkit-user-select: none; user-select: none; }
 .tile-unit { position: relative; display: flex; gap: 8px; flex: none; border-radius: 16px; transition: transform 150ms ease-out, opacity 150ms; }
 .tile-group { padding: 6px; border: 1.5px dashed var(--separator); }
 .tile-unit + .tile-unit::before { content: '›'; position: absolute; left: -9px; top: 42%; color: var(--label-3); font-size: 0.9rem; }
