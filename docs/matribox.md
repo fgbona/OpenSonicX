@@ -787,7 +787,7 @@ Schema of `models.json` (version 1):
           "fxid": 50331648,          // model id the unit reads and writes
           "index": 0,                // position in the module's list
           "type": "OD",              // our category, groups the model menus ("" when none)
-          "basedOn": "…",            // the real gear it models, one line, no trademark signs ("" when none)
+          "basedOn": "…",            // the real gear, plain text on one line ("" for originals)
           "params": [                // by id
             {
               "id": 0,               // parameter slot (index of the preset's 15 values)

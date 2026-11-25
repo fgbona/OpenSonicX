@@ -37,6 +37,9 @@ for (const [locale, lang, basedOn] of [
       expect(await page.content()).not.toMatch(/alg_data/);
       // The selected AMP: our name, "Based on" the gear, and the description in the UI's language.
       const amp = page.locator('section.editor');
+      // The header pairs our name with the plain gear, as the menu's two columns do.
+      await expect(amp.locator('.picker-button .picker-name')).toHaveText(MODELS.amp.name);
+      await expect(amp.locator('.picker-button .picker-detail')).toHaveText(MODELS.amp.basedOn);
       await expect(amp.getByText(`${basedOn} ${MODELS.amp.basedOn}`)).toBeVisible();
       await expect(amp.locator('.editor-info')).toHaveText(MODELS.amp.description[lang]);
       await expect(amp.locator('.editor-info')).not.toHaveText(MODELS.amp.description[lang === 'en' ? 'pt' : 'en']);

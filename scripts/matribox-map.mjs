@@ -21,7 +21,7 @@
  *             "fxid": 50331648,          // model id the unit reads and writes
  *             "index": 0,                // position in the module's list
  *             "type": "OD",              // our category, groups the model menus ("" when none)
- *             "basedOn": "…",            // the real gear it models, one line, no trademark signs ("" when none)
+ *             "basedOn": "…",            // the real gear, plain text on one line ("" for originals), see gear()
  *             "params": [                // by id
  *               {
  *                 "id": 0,               // parameter slot (index of the preset's 15 values)
@@ -64,6 +64,20 @@ const clean = (value) =>
     .replace(/\s+\)/g, ')')
     .trim();
 
+/**
+ * The real gear a model is based on, as plain text: no trademark signs or "*", without the other
+ * maker's product names ("Ampero Name: …", "XTOMP/Ampero Name: …"), on one line. None ('') for
+ * the source's own algorithms ("Original…") and for a bare number (cabinets).
+ */
+export function gear(value) {
+  const text = String(value ?? '')
+    .replace(TRADEMARK_SIGNS, '')
+    .replace(/\*/g, '')
+    .split(/(?:XTOMP\/)?Ampero Name:/i)[0];
+  const line = clean(text.replace(/\s*\n\s*/g, ' '));
+  return /[a-z]/i.test(line) && !/^original\b/i.test(line) ? line : '';
+}
+
 /** Cabinet sizes as " 4 x 12”" become 4x12"; "/" means none. */
 const category = (value) => {
   const text = clean(value)
@@ -104,14 +118,13 @@ function param(widget, path) {
 }
 
 function model(alg, path) {
-  const basedOn = clean(alg.origin);
+  const basedOn = gear(alg.origin);
   const params = (alg.widget ?? []).map((w, i) => param(w, `${path}.widget[${i}]`)).sort((a, b) => a.id - b.id);
   return {
     fxid: integer(alg.fxid, `${path}.fxid`),
     index: integer(alg.index, `${path}.index`),
     type: category(alg.type),
-    // Only real gear: a bare number (cabinets) or the source's own "Original…" algorithms are none.
-    basedOn: /[a-z]/i.test(basedOn) && !/^original\b/i.test(basedOn) ? basedOn : '',
+    basedOn,
     params,
   };
 }

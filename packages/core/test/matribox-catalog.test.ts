@@ -11,6 +11,7 @@ const TEXT = JSON.parse(read('model-text.json')) as Record<string, { name: strin
 interface Generator {
   buildMap(source: unknown): unknown;
   assertClean(value: unknown): void;
+  gear(origin: unknown): string;
   ALLOWED_KEYS: readonly string[];
 }
 // A non-literal specifier: the script is plain JS, with no types to resolve.
@@ -129,7 +130,7 @@ const SOURCE = {
           index: 0,
           name: 'Invented 2',
           type: 'Delay',
-          origin: 'Imaginary\u00ae Echo\u2122\nAlias: Other',
+          origin: 'Imaginary\u00ae Echo\u2122\nAmpero Name: Other',
           widget: [widget('Mode', '1', '0', { min: '0', max: '2', valueRange: 'A, B, C', widgetType: 2 }), widget('Time', '0', '50')],
         },
       ],
@@ -163,6 +164,26 @@ test('the generator keeps only our fields, in our order, and cleans the text', a
       },
     ],
   });
+});
+
+test("the gear text is clean: no signs or *, no other maker's names, nothing for originals or numbers, one line", async () => {
+  const { gear } = await generator();
+  assert.equal(gear('Imaginary\u00ae Drive\u2122 *'), 'Imaginary Drive');
+  assert.equal(gear('Imaginary Gate\nAmpero Name: Other Gate'), 'Imaginary Gate');
+  assert.equal(gear('Imaginary Bass OD\nXTOMP/Ampero Name: Other OD'), 'Imaginary Bass OD');
+  assert.equal(gear('Imaginary Amp (lead ch)\nAmpero name: Other'), 'Imaginary Amp (lead ch)');
+  assert.equal(gear('Imaginary Amp Ampero Name: Other'), 'Imaginary Amp');
+  assert.equal(gear('Original: Ampero 4-step filter'), '');
+  assert.equal(gear('Original'), '');
+  assert.equal(gear('55'), '');
+  assert.equal(gear(null), '');
+  assert.equal(gear('  Imaginary  Twin\n Normal CH  '), 'Imaginary Twin Normal CH');
+});
+
+test('models.json basedOn follows the same rules', () => {
+  for (const m of MAP.modules) {
+    for (const a of m.models) assert.doesNotMatch(a.basedOn, /^original|ampero|\*|\n|^\s|\s$/i, `${m.module}:${a.fxid}`);
+  }
 });
 
 test('the generator refuses any field outside the schema, trademark signs and malformed input', async () => {

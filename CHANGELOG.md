@@ -69,7 +69,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
   category, the real gear each model is based on without trademark signs, and per parameter its control
   name, id, range, step, default and the labels of a switch or list) and `model-text.json` (our
   own short model names and descriptions in English and Portuguese). `scripts/matribox-map.mjs`
-  writes `models.json` from a local copy of the official editor's file and refuses to emit its
+  writes `models.json` from a local copy of the official editor's file (the gear as plain text on
+  one line, without other makers' product names; none for the source's own algorithms) and
+  refuses to emit its
   descriptions, parameter help, notes, legal notice block or display names; the schema is in the
   script and in docs/matribox.md. Each model shows our name with "Based on …" / "Baseado em …"
   next to it, and its description in the language of the UI (block panel, assistant); the model
