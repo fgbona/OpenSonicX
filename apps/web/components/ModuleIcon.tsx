@@ -111,10 +111,73 @@ const ICONS: Record<string, React.ReactNode> = {
   ),
 };
 
+/** A box with an arrow leaving it, entering it, or both: the effects loop. */
+function Loop({ send, ret }: { send: boolean; ret: boolean }) {
+  return (
+    <>
+      <rect x="6" y="14" width="16" height="20" rx="3" {...BODY} />
+      {send && <path d={ret ? 'M22 19h18m-5-4 5 4-5 4' : 'M22 24h18m-5-5 5 5-5 5'} {...STROKE} />}
+      {ret && <path d={send ? 'M42 29H24m5-4-5 4 5 4' : 'M42 24H24m5-5-5 5 5 5'} {...STROKE} />}
+    </>
+  );
+}
+
+/** The Matribox II Pro's modules that the Pocket Master has no block for; the others share its drawings. */
+const MATRIBOX_ICONS: Record<string, React.ReactNode> = {
+  // dynamics: a stompbox with a compressor's knee
+  dyn: (
+    <Stomp knobs={2}>
+      <path d="M15 27l7-7h11" {...STROKE} />
+    </Stomp>
+  ),
+  // pitch and frequency: a stompbox with an arrow up and one down
+  freq: (
+    <Stomp knobs={1}>
+      <path d="M19 27v-8m-3 3 3-3 3 3M29 19v8m-3-3 3 3 3-3" {...STROKE} />
+    </Stomp>
+  ),
+  // wah: a rocker pedal seen from the side
+  wah: (
+    <>
+      <path d="M7 35h34v6H7z" {...BODY} />
+      <path d="M8 31 37 14l3 6-29 15z" {...BODY} />
+      <circle cx="26" cy="31" r="2" fill="currentColor" />
+    </>
+  ),
+  mod: ICONS.fx1,
+  // cabinet: one large speaker
+  cab: (
+    <>
+      <rect x="7" y="7" width="34" height="34" rx="3" {...BODY} />
+      <circle cx="24" cy="24" r="11" {...STROKE} />
+      <circle cx="24" cy="24" r="3.5" {...STROKE} />
+    </>
+  ),
+  // capture of an amp: an amp head and its copy behind it
+  clone: (
+    <>
+      <path d="M12 13V9h29v19h-4" {...STROKE} opacity={0.6} />
+      <rect x="6" y="16" width="30" height="22" rx="3" {...BODY} />
+      <path d="M11 24c2.5-4 5-4 7.5 0s5 4 7.5 0 3.5-3 5-1" {...STROKE} />
+      <path d="M11 32h20" {...STROKE} strokeWidth={1.2} />
+    </>
+  ),
+  fxloop: <Loop send ret />,
+  fxsnd: <Loop send ret={false} />,
+  fxrtn: <Loop send={false} ret />,
+  // volume: a ramp
+  vol: (
+    <>
+      <path d="M7 38h34V12z" {...BODY} />
+      <path d="M18 38v-8M28 38V22" {...STROKE} strokeWidth={1.2} />
+    </>
+  ),
+};
+
 export function ModuleIcon({ blockKey, size = 40 }: { blockKey: string; size?: number }) {
   return (
     <svg className="module-icon" width={size} height={size} viewBox="0 0 48 48" aria-hidden="true" focusable="false">
-      {ICONS[blockKey] ?? <rect x="10" y="10" width="28" height="28" rx="4" {...BODY} />}
+      {ICONS[blockKey] ?? MATRIBOX_ICONS[blockKey] ?? <rect x="10" y="10" width="28" height="28" rx="4" {...BODY} />}
     </svg>
   );
 }
