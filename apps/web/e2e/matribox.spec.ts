@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { readFileSync } from 'node:fs';
 import { MB_CATALOG, mbAssignments, parseMbPreset, toHex } from '@pocket-master/core';
 import { measure } from './contrast.ts';
-import { blockPanel, connectMatribox, expect, expectChain, MODELS, optionName, test, turnKnob } from './matribox-fixtures.ts';
+import { blockPanel, connectMatribox, expect, expectChain, MODELS, optionName, settled, test, turnKnob } from './matribox-fixtures.ts';
 
 const loaded = (unit: { editBuffer: Uint8Array }) => parseMbPreset(unit.editBuffer);
 
@@ -289,11 +289,12 @@ test('restore all refuses a file that is not a backup-all file', async ({ page }
 });
 
 for (const theme of ['dark', 'light'] as const) {
-  test(`no WCAG A/AA violations in the Matribox editor (${theme} theme)`, async ({ page }) => {
+  test(`no WCAG A/AA violations in the Matribox editor (${theme} theme)`, async ({ page, unit }) => {
     test.setTimeout(120_000); // seven axe passes over the whole page
     const violations = async () =>
       (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
     await connectMatribox(page);
+    await settled(unit); // the buttons fade back in (opacity) once the connect reads are done
     if (theme === 'light') await page.getByRole('button', { name: 'Switch to light theme' }).click();
     expect(await violations()).toEqual([]);
     await page.getByText('Expression pedal').click();
@@ -325,9 +326,10 @@ for (const theme of ['dark', 'light'] as const) {
   });
 
   // axe leaves text over gradients and the amp's faceplate unmeasured; those are measured from pixels.
-  test(`text over gradients is readable in the Matribox editor (${theme} theme)`, async ({ page }) => {
+  test(`text over gradients is readable in the Matribox editor (${theme} theme)`, async ({ page, unit }) => {
     test.setTimeout(180_000);
     await connectMatribox(page);
+    await settled(unit); // the buttons fade back in (opacity) once the connect reads are done
     if (theme === 'light') await page.getByRole('button', { name: 'Switch to light theme' }).click();
     const failures: string[] = [];
     for (const position of [3, 2]) {
