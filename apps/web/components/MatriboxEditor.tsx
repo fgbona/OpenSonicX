@@ -1,18 +1,21 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
-import { MB_SLOTS, mbPresetLabel, resolveMbPreset, type MidiPort } from '@pocket-master/core';
-import { downloadJson } from '@/lib/backupStore';
-import { mbBackupFileName } from '@/lib/matriboxBackups';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { mbAssignments, mbPresetLabel, resolveMbPreset, type MbResolvedBlock, type MidiPort } from '@pocket-master/core';
+import { mbLookKey } from '@/lib/matriboxLook';
 import { useMatribox } from '@/lib/useMatribox';
 import { useMatriboxHistory } from '@/lib/useMatriboxHistory';
 import { useUndoKeys } from '@/lib/useUndoKeys';
 import { MatriboxAssistant } from './MatriboxAssistant';
-import { MatriboxBlock, MatriboxModelSelect } from './MatriboxBlock';
-import { MatriboxAssignments } from './MatriboxAssignments';
 import { MatriboxBackupAll } from './MatriboxBackupAll';
+import { MatriboxBackups } from './MatriboxBackups';
+import { MatriboxBlockPanel } from './MatriboxBlockPanel';
 import { MatriboxCatalog } from './MatriboxCatalog';
+import { MatriboxChain } from './MatriboxChain';
 import { MatriboxControls } from './MatriboxControls';
+import { MatriboxExpression } from './MatriboxExpression';
+import { MatriboxFootswitches } from './MatriboxFootswitches';
+import { MatriboxHeader } from './MatriboxHeader';
 import { MatriboxPresetFile } from './MatriboxPresetFile';
 import { MatriboxPresets } from './MatriboxPresets';
 import { MatriboxSaveDialog } from './MatriboxSaveDialog';
@@ -48,10 +51,29 @@ export function MatriboxEditor({ port, desktop }: { port: MidiPort; desktop: boo
   const unit = mb.unit;
   // Without a catalog the chain still shows, by module number and raw fxid.
   const chain = useMemo(() => (unit ? resolveMbPreset(unit.preset, mb.catalog ?? { modules: [] }).chain : []), [unit, mb.catalog]);
+  const assignments = useMemo(() => (unit ? mbAssignments(unit.preset) : null), [unit]);
   const disabled = mb.busy !== null;
-  const userSlot = (module: string, fxid: number) => (module === 'IR' ? unit?.irNames : module === 'CLONE' ? unit?.cloneNames : undefined)?.[fxid & 0xff]?.trim() || undefined;
+  const userSlot = (b: MbResolvedBlock) => (b.module === 'IR' ? unit?.irNames : b.module === 'CLONE' ? unit?.cloneNames : undefined)?.[b.fxid & 0xff]?.trim() || undefined;
+
+  // The block the panel edits, by storage slot (a move keeps it). The AMP until one is picked; a block just added is picked.
+  const [selected, setSelected] = useState<number | null>(null);
+  const seen = useRef<{ current: number; slots: readonly number[] } | null>(null);
+  const current = unit?.current;
+  const slots = chain.map((b) => b.slot).join(',');
+  // biome-ignore lint/correctness/useExhaustiveDependencies: slots is the chain's identity here (which storage slots it uses)
+  useEffect(() => {
+    if (current === undefined) return;
+    const now = chain.map((b) => b.slot);
+    const before = seen.current;
+    seen.current = { current, slots: now };
+    if (!before || before.current !== current) return setSelected(null);
+    const added = now.filter((slot) => !before.slots.includes(slot));
+    if (added.length === 1 && now.length === before.slots.length + 1) setSelected(added[0] ?? null);
+  }, [current, slots]);
+  const block = chain.find((b) => b.slot === selected) ?? chain.find((b) => mbLookKey(b) === 'amp') ?? chain[0] ?? null;
+
   return (
-    <div className="layout">
+    <div className={unit ? 'layout' : 'layout layout-single'}>
       {unit && <MatriboxPresets names={unit.names} current={unit.current} edited={mb.edited} onLoad={(i) => void mb.select(i)} />}
       <main className="main">
         {mb.error && !saveOpen && (
@@ -59,76 +81,62 @@ export function MatriboxEditor({ port, desktop }: { port: MidiPort; desktop: boo
             {te(mb.error)}
           </p>
         )}
-        <p className="notice" role="status">
+        <p className="mb-banner" role="status">
           {t('mb.experimental')}
         </p>
-        <MatriboxCatalog catalog={mb.catalog} error={mb.catalogError} onPick={(f) => void mb.pickCatalog(f)} onForget={() => void mb.dropCatalog()} />
-        {!unit ? (
+        {!mb.catalog && <MatriboxCatalog catalog={null} error={mb.catalogError} onPick={(f) => void mb.pickCatalog(f)} onForget={() => void mb.dropCatalog()} />}
+        {!unit || !assignments ? (
           <p className="muted">{t(mb.busy ? 'status.reading' : 'mb.notRead')}</p>
         ) : (
           <>
-            <div className="mb-head">
-              <h1>
-                {mbPresetLabel(unit.current)} {unit.preset.name}
-                {mb.edited ? ` ${t('mb.edited')}` : ''}
-              </h1>
-              <div className="mb-head-actions">
-                <button type="button" className="btn" disabled={disabled || !history.canUndo} onClick={() => void history.undo()}>
-                  {t('action.undo')}
-                </button>
-                <button type="button" className="btn" disabled={disabled || !history.canRedo} onClick={() => void history.redo()}>
-                  {t('action.redo')}
-                </button>
-                <button type="button" className="btn" disabled={disabled} onClick={() => void mb.refresh()}>
-                  {t('action.read')}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  disabled={disabled}
-                  onClick={() => {
-                    mb.clearError();
-                    setSaveOpen(true);
-                  }}
-                >
-                  {t('action.save')}
-                </button>
-                <MatriboxPresetFile mb={mb} />
-              </div>
-            </div>
-            <p className="muted small">
-              {t('mb.chain')}: {chain.map((b) => b.module).join(' → ') || t('mb.empty')}
-            </p>
-            <ol className="mb-chain">
-              {chain.map((block) => (
-                <MatriboxBlock
-                  key={`${block.position}-${block.slot}`}
+            <section className="preset" aria-label={t('preset.aria')}>
+              <MatriboxHeader
+                label={mbPresetLabel(unit.current)}
+                name={unit.preset.name}
+                style={unit.preset.style.trim()}
+                edited={mb.edited}
+                volume={assignments.volume}
+                disabled={disabled}
+                canUndo={history.canUndo}
+                canRedo={history.canRedo}
+                onVolume={mb.setVolume}
+                onUndo={() => void history.undo()}
+                onRedo={() => void history.redo()}
+                onRead={() => void mb.refresh()}
+                onSave={() => {
+                  mb.clearError();
+                  setSaveOpen(true);
+                }}
+                files={<MatriboxPresetFile mb={mb} />}
+              />
+              <MatriboxChain
+                chain={chain}
+                catalog={mb.catalog}
+                selected={block?.slot ?? null}
+                disabled={disabled}
+                userSlot={userSlot}
+                onSelect={setSelected}
+                onOn={(s, on) => void history.setOn(s, on)}
+                onMove={(a, b) => void history.moveBlock(a, b)}
+                onAdd={(m, fxid) => void history.addBlock(chain.length, m, fxid)}
+              />
+              {block && (
+                <MatriboxBlockPanel
                   block={block}
-                  chainLength={chain.length}
+                  values={unit.preset.chain.find((b) => b.slot === block.slot)?.values ?? []}
                   catalog={mb.catalog}
-                  userSlot={userSlot(block.module, block.fxid)}
+                  userSlot={userSlot(block)}
                   disabled={disabled}
                   onParam={history.setParam}
                   onOn={(s, on) => void history.setOn(s, on)}
                   onModel={(s, m, f) => void history.changeModel(s, m, f)}
-                  onMove={(a, b) => void history.moveBlock(a, b)}
                   onRemove={(p) => void history.removeBlock(p)}
                 />
-              ))}
-            </ol>
-            {mb.catalog && chain.length < MB_SLOTS && (
-              <p className="mb-add">
-                <MatriboxModelSelect catalog={mb.catalog} label={t('mb.addBlock')} value="" disabled={disabled} onChange={(m, fxid) => void history.addBlock(chain.length, m, fxid)} />
-              </p>
-            )}
-            <MatriboxControls preset={unit.preset} disabled={disabled} onVolume={mb.setVolume} onControl={(m) => void mb.control(m)} />
-            <MatriboxAssignments
-              preset={unit.preset}
-              chain={chain}
-              disabled={disabled}
-              onFootswitch={(f, s, on) => void mb.assignFootswitch(f, s, on)}
-              onExpression={(a) => void mb.assignExpression(a)}
-            />
+              )}
+            </section>
+            <MatriboxFootswitches footswitches={assignments.footswitches} chain={chain} disabled={disabled} onFootswitch={(f, s, on) => void mb.assignFootswitch(f, s, on)} />
+            <MatriboxExpression expression={assignments.expression} chain={chain} disabled={disabled} onExpression={(a) => void mb.assignExpression(a)} />
+            <MatriboxControls tempo={assignments.tempo} onControl={(m) => void mb.control(m)} />
             <MatriboxSaveDialog
               open={saveOpen}
               current={proposal?.index ?? unit.current}
@@ -145,25 +153,8 @@ export function MatriboxEditor({ port, desktop }: { port: MidiPort; desktop: boo
             <MatriboxBackupAll mb={mb} loaded={mbPresetLabel(unit.current)} />
           </>
         )}
-        {mb.backups.length > 0 && (
-          <section className="panel" aria-label={t('mb.backups')}>
-            <div className="panel-head">
-              <h2>{t('mb.backups')}</h2>
-            </div>
-            <ul className="mb-backups">
-              {mb.backups.map((b) => (
-                <li key={`${b.createdAt}-${b.label}`}>
-                  <span>
-                    {b.label} {b.name} <span className="muted small">{new Date(b.createdAt).toLocaleString()}</span>
-                  </span>
-                  <button type="button" className="btn btn-small" onClick={() => downloadJson(b, mbBackupFileName(b))}>
-                    {t('mb.download')}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+        {mb.backups.length > 0 && <MatriboxBackups backups={mb.backups} />}
+        {mb.catalog && <MatriboxCatalog catalog={mb.catalog} error={mb.catalogError} onPick={(f) => void mb.pickCatalog(f)} onForget={() => void mb.dropCatalog()} />}
       </main>
     </div>
   );

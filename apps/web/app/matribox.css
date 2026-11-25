@@ -1,0 +1,131 @@
+/* Matribox II Pro editor: the Pocket Master's page (globals.css) with the unit's own modules.
+   Only what that page does not already have lives here. */
+
+/* Module tints. DRV red and DYN light blue are the unit's own LED colours (seen on the owner's
+   unit); the others follow the Pocket Master's block they match (IR, EQ, MOD = FX, DLY, RVB), and
+   AMP takes the orange DRV gave up. Each reads at 4.5:1 on a tile in both themes. */
+.mb-dyn { --tint: var(--cyan); }      .mb-freq { --tint: color-mix(in srgb, var(--green) 88%, #000); }
+.mb-wah { --tint: var(--pink); }      .mb-drv { --tint: var(--red); }
+.mb-amp { --tint: var(--orange); }    .mb-clone { --tint: var(--orange); }
+.mb-cab { --tint: var(--yellow); }    .mb-ir { --tint: var(--brown); }
+.mb-eq { --tint: var(--indigo); }     .mb-mod { --tint: var(--purple); }
+.mb-dly { --tint: var(--blue); }      .mb-rvb { --tint: var(--teal); }
+.mb-fxloop, .mb-fxsnd, .mb-fxrtn, .mb-vol, .mb-other { --tint: var(--gray); }
+
+/* Without the catalog a module is "module 3": set like the names. */
+.tile[class*=' mb-'] .tile-label, .editor[class*=' mb-'] .editor-label { text-transform: uppercase; }
+
+/* The experimental notice: one quiet line. */
+.mb-banner {
+  margin: 0; padding: 6px 12px; border-left: 3px solid var(--orange); border-radius: 4px;
+  background: color-mix(in srgb, var(--orange) 8%, transparent); color: var(--label-2); font-size: 0.8125rem;
+}
+
+/* Preset header: the actions sit beside the patch volume knob. */
+.mb-head-end { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 24px; }
+.mb-head-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.mb-head-end .mb-head-actions { padding-bottom: 8px; }
+.mb-style { margin-left: 10px; padding: 2px 8px; border-radius: 980px; background: var(--fill); color: var(--label-2); font-size: 0.6875rem; }
+label.btn { display: inline-block; }
+
+/* Chain strip: tiles do not drag here; the last one adds a block. */
+.tiles-editable .mb-unit { cursor: default; }
+.mb-chain-empty { align-items: center; padding: 0 8px; }
+.mb-tile-add {
+  align-content: center; border-style: dashed; background: transparent; box-shadow: none; color: var(--label-2);
+  font: inherit; cursor: pointer;
+}
+.mb-tile-add .tile-label { color: inherit; }
+.mb-tile-add:hover:not(:disabled), .mb-tile-add[aria-expanded='true'] { border-color: var(--label-2); color: var(--label); }
+.mb-tile-add:active:not(:disabled) { transform: scale(0.97); }
+.mb-tile-add:disabled { opacity: 0.4; cursor: default; }
+.mb-tile-add:focus-visible, .mb-chip:focus-visible, .fold summary:focus-visible { outline: 3px solid color-mix(in srgb, var(--blue) 50%, transparent); outline-offset: 2px; }
+.mb-tile-plus { font-size: 1.75rem; font-weight: 300; line-height: 1; }
+:root[data-theme='dark'] .mb-tile-add { background: rgba(14, 16, 20, 0.7); border-color: rgba(255, 255, 255, 0.24); box-shadow: none; }
+/* Its menu hangs under the strip's end (on a phone it is the same bottom sheet as every model menu). */
+.mb-add-menu { position: absolute; right: 0; top: 100%; }
+@media (min-width: 721px) {
+  .mb-add-menu .picker-list { top: -4px; left: auto; right: 0; min-width: 0; }
+}
+
+/* Block panel */
+.mb-user-slot { color: var(--label-2); font-size: 0.9375rem; }
+.knob-hint { font-size: 0.6875rem; color: var(--label-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.face-amp .knob-hint { color: color-mix(in srgb, var(--label) 72%, transparent); }
+:root .face-amp[data-skin] .knob-hint { color: var(--face-ink-2); }
+.mb-raw p { margin: 0; }
+.mb-raw-values {
+  list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px;
+  font-family: var(--font-mono); font-size: 0.8125rem; font-variant-numeric: tabular-nums;
+}
+.mb-raw-values li { padding: 4px 8px; border-radius: 6px; background: var(--fill); }
+
+/* Preset sidebar: 60 banks of four. */
+@media (min-width: 901px) {
+  .mb-sidebar { grid-template-rows: auto 1fr; }
+}
+.mb-banks { gap: 10px; }
+.mb-bank { display: grid; gap: 2px; }
+.mb-bank-label { padding: 0 8px; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--label-2); }
+.mb-bank-presets { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+
+/* Panels under the block panel */
+.mb-body { padding: 12px 16px 14px; display: grid; gap: 10px; }
+.mb-body p { margin: 0; }
+.mb-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px; }
+.mb-control { display: inline-flex; align-items: center; gap: 8px; font-size: 0.875rem; }
+.mb-control-end { margin-left: auto; }
+.mb-number { width: 4.5em; padding: 4px 6px; }
+.mb-confirm { display: flex; gap: 6px; align-items: flex-start; font-size: 0.875rem; }
+.mb-path { display: block; padding: 8px 10px; border-radius: var(--radius-small); background: var(--surface-2); font-size: 0.75rem; overflow-wrap: anywhere; }
+.mb-catalog-line { text-align: center; }
+.mb-catalog-line p { margin: 0; }
+
+/* A panel that folds under its heading */
+.fold summary { cursor: pointer; list-style: none; -webkit-user-select: none; user-select: none; }
+.fold summary::-webkit-details-marker { display: none; }
+.fold summary::after {
+  content: ''; flex: none; width: 7px; height: 7px; margin: 0 4px 3px 12px; border-right: 1.5px solid var(--label-2); border-bottom: 1.5px solid var(--label-2);
+  transform: rotate(45deg); transition: transform 150ms ease-out;
+}
+.fold details:not([open]) summary { border-bottom: 0; }
+.fold details:not([open]) summary::after { transform: rotate(-45deg); margin-bottom: 0; }
+.fold-note { margin-left: auto; }
+
+/* Footswitches: a card a switch, a chip a block; a lit chip is toggled by that switch. */
+.mb-fs-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 14px 16px 16px; }
+.mb-fs { min-width: 0; margin: 0; padding: 6px 12px 12px; border: 1px solid var(--separator); border-radius: 12px; background: var(--surface-2); }
+.mb-fs legend { display: flex; align-items: center; gap: 8px; padding: 0 6px; font-size: 0.8125rem; font-weight: 600; color: var(--label-2); }
+.mb-fs-cap {
+  display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; color: #1b1d21; font-size: 0.8125rem; font-weight: 800;
+  background: radial-gradient(circle at 35% 30%, #fff, #c9ccd1 45%, #8c9097 80%); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+.mb-fs-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.mb-chip {
+  display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border: 1px solid var(--separator); border-radius: 980px;
+  background: transparent; color: var(--label-2); font: inherit; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  cursor: pointer; transition: transform 100ms ease-out, background 120ms, border-color 120ms;
+}
+.mb-chip-n { font-weight: 500; font-variant-numeric: tabular-nums; }
+.mb-chip.is-on { border-color: var(--tint); background: color-mix(in srgb, var(--tint) 18%, transparent); color: var(--label); }
+:root[data-theme='dark'] .mb-chip.is-on { box-shadow: 0 0 10px color-mix(in srgb, var(--tint) 35%, transparent); }
+.mb-chip:active:not(:disabled) { transform: scale(0.97); }
+.mb-chip:disabled { opacity: 0.5; cursor: default; }
+
+/* Expression pedal: three entries a pedal mode */
+.mb-exp-groups { display: grid; gap: 12px; }
+.mb-exp-group { min-width: 0; margin: 0; padding: 6px 12px 12px; border: 1px solid var(--separator); border-radius: 12px; }
+.mb-exp-group legend { padding: 0 6px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--label-2); }
+.mb-exp { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.mb-exp-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.mb-exp-row select { flex: 1 1 130px; min-width: 0; padding: 5px 8px; }
+
+@media (max-width: 900px) {
+  .mb-fs-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mb-head-end { width: 100%; justify-content: space-between; }
+  .mb-head-end .fields { width: auto; }
+  .mb-control-end { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mb-chip, .mb-tile-add, .fold summary::after { transition: none; }
+}

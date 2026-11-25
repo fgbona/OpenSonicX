@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { mbPresetLabel, type MbPresetName } from '@pocket-master/core';
 import { Dialog } from './Dialog';
 import { useI18n } from './I18n';
@@ -12,39 +12,71 @@ interface Props {
   onLoad: (index: number) => void;
 }
 
+/** Presets a bank: A, B, C and D. */
+const BANK_SIZE = 4;
+
 /**
- * The Matribox's 240 presets (1A..60D) with a search; loading asks first over unsaved edits. Never
- * disabled: a load waits in the editor's queue behind whatever runs.
+ * The Matribox's 240 presets by bank (1A..60D) with a search, in the Pocket Master's sidebar;
+ * loading asks first over unsaved edits. Never disabled: a load waits in the editor's queue behind
+ * whatever runs. At phone width the list folds behind a button showing the loaded preset.
  */
 export function MatriboxPresets({ names, current, edited, onLoad }: Props) {
   const { t } = useI18n();
   const [filter, setFilter] = useState('');
   const [pending, setPending] = useState<number | null>(null);
-  const shown = useMemo(() => {
+  const [open, setOpen] = useState(false);
+  const listRef = useRef<HTMLUListElement>(null);
+  const banks = useMemo(() => {
     const f = filter.trim().toLowerCase();
-    return names.map((p, i) => ({ i, name: p.name, label: mbPresetLabel(i) })).filter((p) => !f || p.name.toLowerCase().includes(f) || p.label.toLowerCase() === f);
+    const shown = names.map((p, i) => ({ i, name: p.name, label: mbPresetLabel(i) })).filter((p) => !f || p.name.toLowerCase().includes(f) || p.label.toLowerCase() === f);
+    const bankOf = (i: number) => Math.floor(i / BANK_SIZE) + 1;
+    return [...new Set(shown.map((p) => bankOf(p.i)))].map((bank) => ({ bank, presets: shown.filter((p) => bankOf(p.i) === bank) }));
   }, [names, filter]);
+
+  // The loaded preset in view: the list is long (60 banks). Only the list scrolls, never the page.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: current and open are the triggers (another preset loaded, the list unfolded)
+  useEffect(() => {
+    const list = listRef.current;
+    const item = list?.querySelector<HTMLElement>('[aria-current="true"]');
+    if (list && item) list.scrollTop += item.getBoundingClientRect().top - list.getBoundingClientRect().top - list.clientHeight / 2 + item.offsetHeight / 2;
+  }, [current, open]);
+
   const choose = (i: number) => {
     if (i === current) return;
+    setOpen(false);
     if (edited) setPending(i);
     else onLoad(i);
   };
   return (
-    <aside className="sidebar mb-sidebar" aria-label={t('presets.title')}>
+    <aside className={`sidebar mb-sidebar${open ? ' is-open' : ''}`} aria-label={t('presets.title')}>
+      <button type="button" className="sidebar-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span>
+          {t('presets.title')} · {mbPresetLabel(current)} {names[current]?.name ?? ''}
+        </span>
+      </button>
       <input className="sidebar-search" type="search" value={filter} placeholder={t('presets.filter')} aria-label={t('presets.filter')} onChange={(e) => setFilter(e.target.value)} />
-      <ul className="sidebar-list">
-        {shown.map((p) => (
-          <li key={p.i}>
-            <button
-              type="button"
-              className={`sidebar-item${p.i === current ? ' is-current' : ''}`}
-              aria-current={p.i === current ? 'true' : undefined}
-              aria-label={t('presets.loadAria', { label: p.label, name: p.name })}
-              onClick={() => choose(p.i)}
-            >
-              <span className="sidebar-badge">{p.label}</span>
-              <span className="sidebar-name">{p.name}</span>
-            </button>
+      <ul className="sidebar-list mb-banks" ref={listRef}>
+        {banks.map(({ bank, presets }) => (
+          <li key={bank} className="mb-bank">
+            <span className="mb-bank-label" id={`mb-bank-${bank}`}>
+              {t('mb.bank', { n: bank })}
+            </span>
+            <ul className="mb-bank-presets" aria-labelledby={`mb-bank-${bank}`}>
+              {presets.map((p) => (
+                <li key={p.i}>
+                  <button
+                    type="button"
+                    className={`sidebar-item${p.i === current ? ' is-current' : ''}`}
+                    aria-current={p.i === current ? 'true' : undefined}
+                    aria-label={t('presets.loadAria', { label: p.label, name: p.name })}
+                    onClick={() => choose(p.i)}
+                  >
+                    <span className="sidebar-badge">{p.label}</span>
+                    <span className={`sidebar-name${p.name.trim() ? '' : ' muted'}`}>{p.name.trim() || t('mb.unnamed')}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
           </li>
         ))}
       </ul>
