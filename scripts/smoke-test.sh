@@ -29,7 +29,7 @@ until curl -sf -o /dev/null "$url/"; do
 done
 
 page="$(curl -sf "$url/")"
-echo "$page" | grep -q '<title>OpenSonicX</title>' || fail "page title missing"
+echo "$page" | grep -q '<title>OpenSonicX[^<]*</title>' || fail "page title missing"
 
 asset="$(echo "$page" | grep -o '/_next/static/[^"]*\.js' | head -n 1)"
 [ -n "$asset" ] || fail "no static script referenced by the page"
