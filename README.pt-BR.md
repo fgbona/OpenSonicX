@@ -117,6 +117,12 @@ Todo menu mostra o nome que a pedaleira usa ao lado do que ele é, agrupado por 
   `/Applications/Matribox II PRO.app/Contents/Frameworks/App.framework/Resources/flutter_assets/assets/alg/alg_data.json`)
   e ele fica naquele navegador; o app desktop lê do app instalado (ou de `MATRIBOX_CATALOG`). Sem
   ele, os presets e as cadeias aparecem mesmo assim, pelo número do módulo.
+  A aparência é a do editor da Pocket Master: a cadeia como uma fileira de pedais (cada módulo
+  na sua cor, um LED que o liga e desliga, setas para movê-lo, um último bloco para adicionar),
+  um painel para o bloco selecionado com o menu de modelos (o modelo e o equipamento real ao
+  lado) e os parâmetros como knobs, chaves e seletores pequenos, e os blocos AMP vestidos como o
+  amplificador em que o modelo se baseia, lido do seu catálogo (painel dourado Marshall, tweed
+  ou blackface Fender, chapa xadrez Mesa…; só materiais e cores, sem logotipos).
   O volume do patch, quais blocos os footswitches A-D ligam e desligam, as entradas do pedal de
   expressão (bloco, parâmetro, mínimo, máximo) e uma linha de afinador / tap tempo / BPM também
   estão lá (conferidos em uma unidade até agora; afinador e andamento vão como os MIDI Control

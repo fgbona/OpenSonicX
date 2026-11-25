@@ -118,6 +118,12 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
   `/Applications/Matribox II PRO.app/Contents/Frameworks/App.framework/Resources/flutter_assets/assets/alg/alg_data.json`)
   and it stays in that browser; the desktop app reads it from the installed app (or
   `MATRIBOX_CATALOG`). Without it the presets and chains still show, by module number.
+  It looks like the Pocket Master's editor: the chain as a strip of pedals (each module in its
+  own colour, an LED that switches it, arrows to move it, a last tile to add a block), one panel
+  for the selected block with its model menu (the model and the real gear beside it) and its
+  parameters as knobs, switches and small selectors, and AMP blocks dressed like the amp their
+  model is based on, read from your catalog (Marshall gold panel, Fender tweed or blackface,
+  Mesa diamond plate…; materials and colours only, no logos).
   The patch volume, which blocks footswitches A-D toggle, the expression-pedal entries (block,
   parameter, min, max) and a tuner / tap tempo / BPM row are there too (checked on one unit so far;
   tuner and tempo go as the manual's MIDI Control Changes).
