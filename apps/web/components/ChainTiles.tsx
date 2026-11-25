@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
 import { type Block, blockModelLabel, chainUnits, type Edit, moveInChain } from '@pocket-master/core';
 import { PedalTile, TileMove, TileStrip } from './TileStrip';
 import { useI18n } from './I18n';
+import { useTileDrag } from './useTileDrag';
 
 interface Props {
   chain: readonly Block[];
@@ -21,20 +21,8 @@ interface Props {
  * click selects the block for the editor; in live edit units drag (or move with the arrows), and
  * DRV-AMP-IR-EQ move together.
  */
-/** Touch screens (no hover): a draggable tile would take the swipe and the strip could not scroll. */
-const TOUCH = '(hover: none)';
-const touchOnly = () => window.matchMedia(TOUCH).matches;
-const onTouchChange = (notify: () => void) => {
-  const query = window.matchMedia(TOUCH);
-  query.addEventListener('change', notify);
-  return () => query.removeEventListener('change', notify);
-};
-
 export function ChainTiles({ chain, editable, selected, onSelect, onEdit, irNames, profileNames, ampMode }: Props) {
   const { t } = useI18n();
-  const touch = useSyncExternalStore(onTouchChange, touchOnly, () => false);
-  const [dragging, setDragging] = useState<number | null>(null);
-  const [over, setOver] = useState<number | null>(null);
   const order = chain.map((b) => b.module);
   const byModule = new Map(chain.map((b) => [b.module, b]));
   const units = chainUnits(order);
@@ -42,38 +30,16 @@ export function ChainTiles({ chain, editable, selected, onSelect, onEdit, irName
     const next = moveInChain(order, module, to);
     if (next.some((m, i) => m !== order[i])) onEdit({ kind: 'chain', order: next });
   };
+  const drag = useTileDrag(editable, move);
 
   return (
     <TileStrip deps={[chain.length]} editable={editable}>
       {units.map((unit, index) => {
         const lead = unit[0] as number;
         const name = unit.map((m) => byModule.get(m)?.label).join('-');
+        const { className, ...dragProps } = drag(lead, index);
         return (
-          <li
-            key={lead}
-            className={`tile-unit${unit.length > 1 ? ' tile-group' : ''}${dragging === lead ? ' tile-dragging' : ''}${over === index && dragging !== null ? ' tile-over' : ''}`}
-            draggable={editable && !touch}
-            onDragStart={(e) => {
-              setDragging(lead);
-              e.dataTransfer.effectAllowed = 'move';
-              e.dataTransfer.setData('text/plain', String(lead));
-            }}
-            onDragEnd={() => {
-              setDragging(null);
-              setOver(null);
-            }}
-            onDragOver={(e) => {
-              if (dragging === null) return;
-              e.preventDefault();
-              setOver(index);
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              if (dragging !== null) move(dragging, index);
-              setDragging(null);
-              setOver(null);
-            }}
-          >
+          <li key={lead} className={`tile-unit${unit.length > 1 ? ' tile-group' : ''}${className}`} {...dragProps}>
             {unit.map((m) => {
               const b = byModule.get(m) as Block;
               const model = blockModelLabel(b, ampMode, irNames, profileNames);

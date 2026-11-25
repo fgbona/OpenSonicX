@@ -8,6 +8,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Matribox II Pro editor: drag a chain tile to a new place, as on the Pocket Master's strip. A
+  drop is one move-block write to the unit, then the usual read-back; a blue line shows where the
+  tile lands, the ADD tile neither drags nor takes a drop, and Undo covers the move like an arrow
+  move. Touch screens keep the arrows (a swipe still scrolls the strip). The drag code is now
+  one hook (`useTileDrag`) both pedals' strips use; the Pocket Master's behaves as before.
+
 - Matribox II Pro editor (web and desktop): one preset as a file. *Export preset* reads the
   loaded preset from the unit (unsaved edits included) and downloads it as `<label> <name>.prst`,
   the format Sonicake's own app opens (`writeMatriboxPrst`). *Import preset…* takes a `.prst` (or
@@ -21,6 +27,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
   (`matribox_export_preset`, `matribox_import_preset`) handled single presets.
 
 ### Changed
+
+- Matribox II Pro editor on a phone: Export preset, Import preset… and Read fold under a ⋯
+  *More actions* button in the preset header, so Undo, Redo, Save… and the patch-volume knob
+  stay on one row. Wider screens show the buttons as before. The import dialog now lives on
+  `<body>`, so it opens from the folded menu too.
 
 - The Matribox II Pro editor now looks like the Pocket Master's. The chain is a strip of pedal
   tiles (module drawing and colour, model, an LED that switches the block, arrows to move it, a

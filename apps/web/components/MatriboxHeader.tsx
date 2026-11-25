@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { Knob } from './Knob';
+import { MatriboxMore } from './MatriboxMore';
 import { RedoIcon, UndoIcon } from './icons';
 import { useI18n } from './I18n';
 
@@ -25,7 +26,8 @@ interface Props {
   files?: ReactNode;
 }
 
-/** The loaded Matribox preset as the Pocket Master's preset header: big label and name, its actions, patch volume as a knob. */
+/** The loaded Matribox preset as the Pocket Master's preset header: big label and name, its actions, patch volume as a knob.
+ * On a phone, export, import and Read fold under a ⋯ button so the row fits beside the knob. */
 export function MatriboxHeader(p: Props) {
   const { t } = useI18n();
   return (
@@ -52,10 +54,12 @@ export function MatriboxHeader(p: Props) {
           <button type="button" className="btn" disabled={p.disabled} onClick={p.onSave}>
             {t('action.save')}
           </button>
-          {p.files}
-          <button type="button" className="btn btn-primary" disabled={p.disabled} onClick={p.onRead}>
-            {t('action.read')}
-          </button>
+          <MatriboxMore>
+            {p.files}
+            <button type="button" className="btn btn-primary" disabled={p.disabled} onClick={p.onRead}>
+              {t('action.read')}
+            </button>
+          </MatriboxMore>
         </div>
         <section className="fields" aria-label={t('fields.aria')}>
           <Knob label={t('mb.volume')} value={p.volume} min={0} max={100} display={String(p.volume)} disabled={p.disabled} onChange={p.onVolume} />
