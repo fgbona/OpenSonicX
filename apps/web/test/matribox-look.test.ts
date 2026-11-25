@@ -1,21 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseMbCatalog } from '@pocket-master/core';
-import { FAKE_ALG_DATA } from '../../../packages/core/test/matribox-fake-catalog.ts';
-import { MB_MODULE_KEYS, mbAmpSkin, mbControl, mbFxidHex, mbLookKey, mbModelGroups, mbModelValue, mbModuleKey, mbSteps, parseMbModelValue } from '../lib/matriboxLook.ts';
+import { MB_MODULE_KEYS, mbAmpSkin, mbControl, mbFxidHex, mbLookKey, mbModelValue, mbModuleKey, mbSteps, parseMbModelValue } from '../lib/matriboxLook.ts';
 
-test('the model menu groups the catalog by module, with the gear beside each model', () => {
-  const groups = mbModelGroups(parseMbCatalog(FAKE_ALG_DATA));
-  assert.deepEqual(
-    groups.map((g) => g.name),
-    ['DYN', 'DRV', 'AMP', 'CAB', 'IR', 'DLY', 'RVB', 'CLONE', 'VOL'],
-  );
-  assert.deepEqual(groups[1]!.options, [
-    { value: '3:50331690', name: 'Fake Drive', detail: 'Imaginary Overdrive 808' },
-    { value: '3:50331664', name: 'Fake Fuzz', detail: 'Imaginary Fuzz Face' },
-  ]);
-  // An origin that is only a number, or empty, is not gear.
-  assert.equal(groups[3]!.options[0]!.detail, undefined);
+test('a model menu value names the module and the model', () => {
   assert.deepEqual(parseMbModelValue(mbModelValue(3, 0x03000010)), { moduleIndex: 3, fxid: 0x03000010 });
   assert.equal(parseMbModelValue(''), null);
   assert.equal(parseMbModelValue('3:x'), null);

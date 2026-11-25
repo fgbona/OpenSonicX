@@ -119,8 +119,9 @@ Todo menu mostra o nome que a pedaleira usa ao lado do que ele é, agrupado por 
   ele, os presets e as cadeias aparecem mesmo assim, pelo número do módulo.
   A aparência é a do editor da Pocket Master: a cadeia como uma fileira de pedais (cada módulo
   na sua cor, um LED que o liga e desliga, setas para movê-lo, um último bloco para adicionar),
-  um painel para o bloco selecionado com o menu de modelos (o modelo e o equipamento real ao
-  lado) e os parâmetros como knobs, chaves e seletores pequenos, e os blocos AMP vestidos como o
+  um painel para o bloco selecionado com o menu de modelos (só os modelos daquele módulo,
+  agrupados por tipo, com o equipamento real ao lado; *Adicionar* pede primeiro o tipo de bloco,
+  depois o modelo) e os parâmetros como knobs, chaves e seletores pequenos, e os blocos AMP vestidos como o
   amplificador em que o modelo se baseia, lido do seu catálogo (painel dourado Marshall, tweed
   ou blackface Fender, chapa xadrez Mesa…; só materiais e cores, sem logotipos).
   O volume do patch, quais blocos os footswitches A-D ligam e desligam, as entradas do pedal de

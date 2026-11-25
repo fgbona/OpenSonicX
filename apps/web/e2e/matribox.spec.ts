@@ -21,7 +21,17 @@ test('a Matribox is recognised by its port and gets its own editor, usable witho
   await expect(amp.getByRole('list', { name: 'Raw values of 3. module 4' }).getByRole('listitem')).toHaveCount(15);
   await expect(page.getByRole('slider')).toHaveCount(1); // the patch volume only: parameters need the catalog
   await expect(page.getByRole('slider', { name: 'Patch volume' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Add a block…' })).toHaveCount(0);
+
+  // Adding still works by module; the models known are only the ids the chain uses.
+  await page.getByRole('button', { name: 'Add a block…' }).click();
+  const types = page.getByRole('listbox', { name: 'Add a block: type' });
+  await expect(types.getByRole('option')).toHaveCount(16);
+  await types.getByRole('option', { name: 'DRV' }).click();
+  const models = page.getByRole('listbox', { name: 'Add a block: DRV model' });
+  await expect(models.getByRole('option')).toHaveText(['‹ Back to block types', 'Unknown model (0x0300002a)']);
+  await models.getByRole('option', { name: /Back to block types/ }).click();
+  await types.getByRole('option', { name: 'WAH' }).click();
+  await expect(page.getByRole('listbox', { name: 'Add a block: WAH model' }).getByRole('option', { name: 'Pick alg_data.json to list these models' })).toHaveAttribute('aria-disabled', 'true');
 });
 
 test('the chain shows as pedals; the AMP is dressed like the gear its model is based on', async ({ page }) => {
@@ -59,18 +69,31 @@ test('with the picked catalog: live parameters, on/off, models and chain edits r
   await page.getByRole('list', { name: 'Signal chain' }).getByRole('switch', { name: '2. DRV on' }).click();
   await expect.poll(() => loaded(unit).chain[1]!.on).toBe(false);
 
+  // The block's menu lists only DRV models, under their type headings.
   await drive.getByRole('button', { name: '2. DRV model' }).click();
   const menu = page.getByRole('listbox', { name: '2. DRV model' });
-  await expect(menu.getByRole('group', { name: 'DRV' }).getByRole('option')).toHaveText(['✓Fake DriveImaginary Overdrive 808', 'Fake FuzzImaginary Fuzz Face']);
+  await expect(menu.getByRole('option')).toHaveCount(2);
+  await expect(menu.locator('.picker-heading')).toHaveText(['Overdrive', 'Fuzz']);
+  await expect(menu.getByRole('group', { name: 'Overdrive' }).getByRole('option')).toHaveText(['✓Fake DriveImaginary Overdrive 808']);
+  await expect(menu.getByRole('group', { name: 'Fuzz' }).getByRole('option')).toHaveText(['Fake FuzzImaginary Fuzz Face']);
   await menu.getByRole('option', { name: /^Fake Fuzz/ }).click();
   await expect(drive.getByRole('button', { name: '2. DRV model' })).toContainText('Fake Fuzz');
   expect(loaded(unit).chain[1]!.fxid).toBe(0x03000010);
+  // A module with a single type shows no heading.
+  await (await blockPanel(page, 5, 'RVB')).getByRole('button', { name: '5. RVB model' }).click();
+  await expect(page.getByRole('listbox', { name: '5. RVB model' }).locator('.picker-heading')).toHaveCount(0);
+  await page.keyboard.press('Escape');
 
+  // Add: the block type first, then that module's models.
   await page.getByRole('button', { name: 'Add a block…' }).click();
-  await page
-    .getByRole('listbox', { name: 'Add a block…' })
-    .getByRole('option', { name: /^Fake Echo/ })
-    .click();
+  const types = page.getByRole('listbox', { name: 'Add a block: type' });
+  await expect(types.getByRole('option')).toHaveText(['DYN', 'DRV', 'AMP', 'CAB', 'IR', 'DLY', 'RVB', 'CLONE', 'VOL']);
+  await expect(types.locator('.mb-pick-icon.mb-dly .module-icon')).toBeVisible();
+  await types.getByRole('option', { name: 'DLY' }).click();
+  const delays = page.getByRole('listbox', { name: 'Add a block: DLY model' });
+  await expect(delays.getByRole('option')).toHaveText(['‹ Back to block types', 'Fake EchoImaginary Tape Echo']);
+  await expect(delays.locator('.picker-heading')).toHaveCount(0);
+  await delays.getByRole('option', { name: /^Fake Echo/ }).click();
   await expectChain(page, 'DYN → DRV → AMP → CAB → RVB → VOL → DLY');
   // The block just added is the one shown; a knob whose range is not 0..100 says it.
   const echo = page.getByRole('region', { name: '7. DLY block' });
@@ -83,6 +106,40 @@ test('with the picked catalog: live parameters, on/off, models and chain edits r
   await dyn.getByRole('button', { name: 'Remove 1. DYN from the chain' }).click();
   await expectChain(page, 'DRV → AMP → CAB → RVB → DLY → VOL');
   expect(loaded(unit).chain.map((b) => b.moduleIndex)).toEqual([3, 4, 5, 10, 9, 15]);
+});
+
+test('the add menu works from the keyboard: arrows, Enter, Escape back a step and out', async ({ page, unit }) => {
+  await connectMatribox(page);
+  await pickCatalog(page);
+  const add = page.getByRole('button', { name: 'Add a block…' });
+  await expect(add).toBeEnabled(); // not while the editor is still reading
+  await add.focus();
+  await page.keyboard.press('Enter');
+  const types = page.getByRole('listbox', { name: 'Add a block: type' });
+  await expect(types).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
+  await expect(types.getByRole('option', { name: 'DRV' })).toHaveClass(/is-active/);
+  await page.keyboard.press('Enter');
+  const drives = page.getByRole('listbox', { name: 'Add a block: DRV model' });
+  await expect(drives).toBeFocused();
+  await expect(drives.locator('.picker-heading')).toHaveText(['Overdrive', 'Fuzz']);
+  // Escape returns to the types, a second Escape closes the menu on the Add tile.
+  await page.keyboard.press('Escape');
+  await expect(types).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(types).toHaveCount(0);
+  await expect(add).toBeFocused();
+
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('d'); // DYN
+  await page.keyboard.press('d'); // DRV
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('End');
+  await expect(drives.getByRole('option', { name: /^Fake Fuzz/ })).toHaveClass(/is-active/);
+  await page.keyboard.press('Enter');
+  await expectChain(page, 'DYN → DRV → AMP → CAB → RVB → VOL → DRV');
+  expect(loaded(unit).chain.at(-1)).toMatchObject({ moduleIndex: 3, fxid: 0x03000010 });
 });
 
 test('patch volume, footswitch and expression assignments reach the unit; tuner and tempo go as Control Changes', async ({ page, unit }) => {
@@ -238,6 +295,20 @@ for (const theme of ['dark', 'light'] as const) {
     expect(await violations()).toEqual([]);
     await pickCatalog(page);
     await page.getByText('Expression pedal').click();
+    expect(await violations()).toEqual([]);
+    // The menus open: a block's model menu, then both steps of the add menu.
+    // The DRV (two types, so headings) switched on: an off block's dimmed labels are inactive controls.
+    const drive = await blockPanel(page, 2, 'DRV');
+    await drive.getByRole('switch', { name: '2. DRV off' }).click();
+    await drive.getByRole('button', { name: '2. DRV model' }).click();
+    await expect(page.getByRole('listbox', { name: '2. DRV model' })).toBeVisible();
+    expect(await violations()).toEqual([]);
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Add a block…' }).click();
+    await expect(page.getByRole('listbox', { name: 'Add a block: type' })).toBeVisible();
+    expect(await violations()).toEqual([]);
+    await page.getByRole('listbox', { name: 'Add a block: type' }).getByRole('option', { name: 'DRV', exact: true }).click();
+    await expect(page.getByRole('listbox', { name: 'Add a block: DRV model' })).toBeVisible();
     expect(await violations()).toEqual([]);
   });
 

@@ -53,7 +53,7 @@ export function MatriboxEditor({ port, desktop }: { port: MidiPort; desktop: boo
   const chain = useMemo(() => (unit ? resolveMbPreset(unit.preset, mb.catalog ?? { modules: [] }).chain : []), [unit, mb.catalog]);
   const assignments = useMemo(() => (unit ? mbAssignments(unit.preset) : null), [unit]);
   const disabled = mb.busy !== null;
-  const userSlot = (b: MbResolvedBlock) => (b.module === 'IR' ? unit?.irNames : b.module === 'CLONE' ? unit?.cloneNames : undefined)?.[b.fxid & 0xff]?.trim() || undefined;
+  const userSlot = (b: Pick<MbResolvedBlock, 'module' | 'fxid'>) => (b.module === 'IR' ? unit?.irNames : b.module === 'CLONE' ? unit?.cloneNames : undefined)?.[b.fxid & 0xff]?.trim() || undefined;
 
   // The block the panel edits, by storage slot (a move keeps it). The AMP until one is picked; a block just added is picked.
   const [selected, setSelected] = useState<number | null>(null);
@@ -125,7 +125,7 @@ export function MatriboxEditor({ port, desktop }: { port: MidiPort; desktop: boo
                   block={block}
                   values={unit.preset.chain.find((b) => b.slot === block.slot)?.values ?? []}
                   catalog={mb.catalog}
-                  userSlot={userSlot(block)}
+                  userSlot={userSlot}
                   disabled={disabled}
                   onParam={history.setParam}
                   onOn={(s, on) => void history.setOn(s, on)}

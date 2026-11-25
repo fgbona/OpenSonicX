@@ -1,6 +1,6 @@
 'use client';
 
-import { type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
+import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from 'react';
 
 export interface PickerOption {
   readonly value: string;
@@ -9,6 +9,8 @@ export interface PickerOption {
   /** What it is, in plain words; shown in its own column. */
   readonly detail?: string;
   readonly disabled?: boolean;
+  /** A drawing before the name (the Matribox's block types). */
+  readonly icon?: ReactNode;
 }
 
 export interface PickerGroup {
@@ -101,7 +103,7 @@ export function PickerList({ groups, value, ariaLabel, onChoose, onClose, isInsi
   };
 
   return (
-    <div ref={listRef} className="picker-list" role="listbox" tabIndex={-1} aria-label={ariaLabel} aria-activedescendant={active ? optionId(active) : undefined} onKeyDown={onKey}>
+    <div ref={listRef} className="picker-list" role="listbox" tabIndex={0} aria-label={ariaLabel} aria-activedescendant={active ? optionId(active) : undefined} onKeyDown={onKey}>
       {groups.map((group, gi) => (
         <div key={group.name ?? `group-${gi}`} className="picker-group" role="group" aria-label={group.name ?? undefined}>
           {group.name && (
@@ -129,7 +131,10 @@ export function PickerList({ groups, value, ariaLabel, onChoose, onClose, isInsi
               <span className="picker-check" aria-hidden="true">
                 {o.value === value ? '✓' : ''}
               </span>
-              <span className="picker-name">{o.name}</span>
+              <span className="picker-name">
+                {o.icon}
+                {o.name}
+              </span>
               <span className="picker-detail">{o.detail ?? ''}</span>
             </div>
           ))}
