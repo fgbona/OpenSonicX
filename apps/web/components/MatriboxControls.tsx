@@ -8,6 +8,8 @@ import { useI18n } from './I18n';
 interface Props {
   /** The loaded preset's tempo (BPM). */
   tempo: number;
+  /** The unit's MIDI input channel (USB) from its global settings; null for Omni or unknown (any channel works). */
+  unitChannel: number | null;
   /** MIDI Control Changes: the unit does not answer them. */
   onControl: (messages: () => readonly Uint8Array[]) => void;
 }
@@ -18,12 +20,16 @@ const CHANNELS = Array.from({ length: 16 }, (_, i) => i + 1);
  * Tuner and tempo, sent as the manual's MIDI Control Changes on the unit's MIDI channel. The unit
  * does not report its tuner or tempo back.
  */
-export function MatriboxControls({ tempo, onControl }: Props) {
+export function MatriboxControls({ tempo, unitChannel, onControl }: Props) {
   const { t } = useI18n();
   const [channel, setChannel] = useState(1);
   const [tuner, setTuner] = useState(false);
   const [bpm, setBpm] = useState(tempo);
   useEffect(() => setBpm(tempo), [tempo]);
+  // A unit listening on one channel ignores the others: follow its global setting.
+  useEffect(() => {
+    if (unitChannel !== null) setChannel(unitChannel);
+  }, [unitChannel]);
   const bpmOk = Number.isInteger(bpm) && bpm >= MB_BPM_MIN && bpm <= MB_BPM_MAX;
   return (
     <Fold title={t('mb.controls')}>

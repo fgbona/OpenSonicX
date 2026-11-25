@@ -68,7 +68,9 @@ byte the 160-byte table leaves out: call it `mb-26-chain-with-assignments.mmon`.
 
 ## Global settings and pedal-side changes
 
-What is still open after the 2026-11-25 analysis ([matribox.md](matribox.md#other-connect-reads-flag-0-no-argument-the-global-settings)):
+**Done (2026-11-25):** mb-30 … mb-44 are decoded in [matribox.md](matribox.md#other-connect-reads-flag-0-no-argument-the-global-settings) and "The unit's own messages". Still open: mb-29 (baseline) was empty; mb-37 was taken on the unit (Global Tempo cannot be enabled from the official editor), so a host-side tempo change with Global Tempo already on (mb-37b) is wanted; one capture of an EQ band other than 2 (gain) would open bands 1, 3 and 4.
+
+What was open before the 2026-11-25 captures ([matribox.md](matribox.md#other-connect-reads-flag-0-no-argument-the-global-settings)):
 the global tables (cmd `11`, `13`, `16`) are read on every connect but never changed in a capture,
 and no host write to a global was ever captured. Rows 22 to 24 above are replaced by these, in
 this order. Same setup and steps as above (both MIDI Monitor sources, Clear, one action, wait 3 s,
