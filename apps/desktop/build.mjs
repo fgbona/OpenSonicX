@@ -22,3 +22,13 @@ await build({
   outfile: 'dist/main.cjs',
   external: ['electron'],
 });
+// The page's only bridge to the app (sandboxed: one bundled file, electron its only import).
+await build({
+  entryPoints: ['src/preload.ts'],
+  bundle: true,
+  platform: 'node',
+  format: 'cjs',
+  target: 'node22',
+  outfile: 'dist/preload.cjs',
+  external: ['electron'],
+});

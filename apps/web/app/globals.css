@@ -980,3 +980,12 @@ button, select { font: inherit; color: inherit; }
   padding: 10px 12px 10px 16px; border-radius: var(--radius); background: var(--surface); color: var(--label);
   border: 1px solid var(--separator); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3); font-size: 0.875rem;
 }
+
+/* The desktop app's AI connection (AiConnectionPanel). */
+.ai-connection { display: grid; gap: 10px; padding: 12px 16px; }
+.ai-connection p { margin: 0; }
+.ai-facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; margin: 0; align-items: center; }
+.ai-facts dt { color: var(--label-2); font-size: 0.8125rem; }
+.ai-facts dd { margin: 0; overflow-wrap: anywhere; }
+.ai-setup-title { font-size: 0.9375rem; font-weight: 600; margin: 4px 0 0; }
+.ai-command { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--fill); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.8125rem; }

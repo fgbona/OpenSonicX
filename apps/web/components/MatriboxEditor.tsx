@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { MB_CATALOG, mbAssignments, mbPresetLabel, resolveMbPreset, type MbResolvedBlock, type MidiPort } from '@pocket-master/core';
 import { mbLookKey } from '@/lib/matriboxLook';
 import { useMatribox } from '@/lib/useMatribox';
@@ -22,7 +22,8 @@ import { MatriboxSaveDialog } from './MatriboxSaveDialog';
 import { useI18n } from './I18n';
 
 /** The Matribox II Pro editor, shown when the connected pedal is one. */
-export function MatriboxEditor({ port }: { port: MidiPort }) {
+/** `footer`: shown at the end of the editor (the desktop app's AI connection). */
+export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: ReactNode }) {
   const mb = useMatribox(port);
   const { t, te } = useI18n();
   const history = useMatriboxHistory(mb);
@@ -151,6 +152,7 @@ export function MatriboxEditor({ port }: { port: MidiPort }) {
           </>
         )}
         {mb.backups.length > 0 && <MatriboxBackups backups={mb.backups} />}
+        {footer}
       </main>
     </div>
   );

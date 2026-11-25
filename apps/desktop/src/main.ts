@@ -9,6 +9,7 @@ import { app, BrowserWindow, dialog, net, protocol, session, shell } from 'elect
 import electronUpdater from 'electron-updater';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { setupAiConnection } from './ai-connection.ts';
 import { appBundle, canReplace, pickZip, prepare, startSwap } from './mac-update.ts';
 import { grantsWithoutPrompt } from './permissions.ts';
 import { resolveAppFile } from './serve.ts';
@@ -32,14 +33,17 @@ const text = {
   later: () => (pt() ? 'Depois' : 'Later'),
 };
 
-function createWindow(): void {
+let mainWindow: BrowserWindow | null = null;
+
+function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 360,
     minHeight: 600,
     title: 'OpenSonicX', // the page then names the connected pedal
-    webPreferences: { contextIsolation: true, sandbox: true },
+    // The preload only exposes the AI connection's narrow bridge (preload.ts).
+    webPreferences: { contextIsolation: true, sandbox: true, preload: join(app.getAppPath(), 'dist', 'preload.cjs') },
   });
   // Links (tone3000.com, release pages) open in the browser; the window stays on the editor.
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -72,6 +76,7 @@ function createWindow(): void {
     if (pedal) pick.done(pedal.deviceId);
   });
   void win.loadURL(`${ORIGIN}/`);
+  return win;
 }
 
 /** Offers to restart now; otherwise (also when the box is closed) `install` runs when the app quits. */
@@ -123,7 +128,12 @@ void app.whenReady().then(() => {
   session.defaultSession.setPermissionRequestHandler((_wc, permission, done, details) => done(grantsWithoutPrompt(details.requestingUrl, permission)));
   // The check answers navigator.permissions.query too: "granted" lets the page open the pedal on load.
   session.defaultSession.setPermissionCheckHandler((_wc, permission, origin) => grantsWithoutPrompt(origin, permission));
-  createWindow();
+  const ai = setupAiConnection({ userData: app.getPath('userData'), window: () => mainWindow, origin: ORIGIN, pt });
+  mainWindow = createWindow();
+  mainWindow.webContents.on('did-start-loading', () => ai.reset());
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
   if (app.isPackaged) checkForUpdates();
 });
 
