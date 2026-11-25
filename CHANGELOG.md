@@ -8,6 +8,25 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Matribox II Pro: **Global options** (the header, beside the preset file buttons; on a phone
+  under ⋯). Decoded from the owner's captures of the official editor's global settings window
+  (mb-30 … mb-39): Input Mode, Input Level, AUX Level, footswitch mode (Preset / Stomp), MIDI
+  Input Ch (USB), MIDI In Source (USB Only and Mixed: TRS Only is not offered, it would stop the
+  editor's tuner and tempo Control Changes), the global EQ's switch, level and band 2 gain, each
+  one write the unit confirms (newest value only while a slider moves; on an error the settings
+  are read again). Read on connect; Global Tempo is shown read-only (the unit asks for a
+  confirmation on its own screen before enabling it). The tuner and tempo controls follow the
+  unit's MIDI channel. Core: `globals.ts` (`mbReadGlobalState`, `mbSetGlobal`,
+  `mbSetGlobalEqGain`, `mbSetGlobalEqLevel`, `mbWriteGlobalEqOn`, the table parsers), byte-exact
+  with the captured host frames, and `MatriboxLink.ask` for answers that do not repeat the
+  request; the simulated unit answers and follows the global reads and writes. Not yet checked on
+  the owner's unit.
+- Matribox II Pro: the editor follows more of what is done on the unit (captures mb-37, mb-42,
+  mb-44): a global setting or the global tempo changed on the unit updates Global options, a
+  model changed on the unit (the chain notice) reads the loaded preset again once per burst, and a
+  save made on the unit updates the preset list and the header. The expression pedal's message
+  (mb-43) carries no position and is still dropped, like every unknown kind.
+
 - Desktop app: **AI connection** ("Conexão da IA"). The app serves the editor's tone tools as MCP
   over Streamable HTTP on `127.0.0.1` (port 47830, or a free one when that is taken, shown in the
   panel), so an AI client such as Claude Code drives the same live session as the window: one

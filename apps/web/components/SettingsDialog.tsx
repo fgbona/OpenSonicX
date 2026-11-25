@@ -38,7 +38,8 @@ function fromDump(g: GlobalSettings): Values {
   return { ...g, battOnly: null };
 }
 
-function Segmented({ label, value, options, disabled, onChange }: { label: string; value: number | null; options: readonly string[]; disabled: boolean; onChange: (v: number) => void }) {
+/** One choice of a few, as a row of the Global options (shared with the Matribox's). */
+export function Segmented({ label, value, options, disabled, onChange }: { label: string; value: number | null; options: readonly string[]; disabled: boolean; onChange: (v: number) => void }) {
   return (
     <div className="settings-row">
       <span className="settings-label">{label}</span>

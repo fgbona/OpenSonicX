@@ -15,12 +15,18 @@ import {
   mbSelectPreset,
   mbSetBlockOn,
   mbSetParam,
+  mbSetGlobal,
+  mbSetGlobalEqGain,
+  mbSetGlobalEqLevel,
   mbSetPatchVolume,
+  mbWriteGlobalEqOn,
   parseMbPreset,
   withMbVolume,
   type MatriboxLink,
   type MbBackupAll,
   type MbExpressionAssignment,
+  type MbGlobalSetting,
+  type MbGlobalState,
   type MbPreset,
   type MbProgress,
   type MidiPort,
@@ -31,6 +37,7 @@ import { applyOps } from './matriboxOps';
 import type { MbOp } from './matriboxPlan';
 import { keepMbBackup, loadMbBackups, storeMbBackups } from './matriboxBackups';
 import { importToSlot } from './matriboxPresetFile';
+import { readGlobals, withEqGain, withEqLevel, withEqOn, withGlobal, withGlobalTempo } from './matriboxGlobals';
 
 export interface MatriboxState {
   readonly unit: MbUnit | null;
@@ -44,9 +51,11 @@ export interface MatriboxState {
   readonly storageWarning: boolean;
   /** Backup all / restore all: how far it got ("Backing up 12A", "Restoring 12A"). */
   readonly progress: Progress | null;
+  /** The global settings (Global options); null until read, or when the unit did not answer them. */
+  readonly globals: MbGlobalState | null;
 }
 
-const INITIAL: MatriboxState = { unit: null, busy: null, error: null, edited: false, backups: [], storageWarning: false, progress: null };
+const INITIAL: MatriboxState = { unit: null, busy: null, error: null, edited: false, backups: [], storageWarning: false, progress: null, globals: null };
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /** The Matribox II Pro editor's state and actions over its open MIDI ports. */
@@ -86,7 +95,20 @@ export function useMatribox(port: MidiPort | null) {
     setState((s) => ({ ...s, unit: s.unit ? { ...s.unit, ...loaded } : s.unit }));
   }, []);
 
-  const refresh = useCallback(() => run('Reading', async (unit) => patch({ unit: await readUnit(unit), edited: false })), [run, patch]);
+  const refresh = useCallback(
+    () =>
+      run('Reading', async (unit) => {
+        const read = await readUnit(unit);
+        patch({ unit: read, edited: false, globals: await readGlobals(unit) });
+      }),
+    [run, patch],
+  );
+
+  /** The global settings as the editor or the unit changed them. */
+  const patchGlobals = useCallback((update: (g: MbGlobalState) => MbGlobalState) => setState((s) => (s.globals ? { ...s, globals: update(s.globals) } : s)), []);
+
+  /** A chain changed on the unit: read the loaded preset again, once per burst (the unit sends several while a knob turns). */
+  const chainReread = useRef(false);
 
   // Follow what is done on the unit itself: another preset loaded (read again), blocks, knobs, volume.
   const currentRef = useRef<number | null>(null);
@@ -98,6 +120,28 @@ export function useMatribox(port: MidiPort | null) {
     if (!link) return;
     link.onNotice((notice) => {
       if (notice.kind === 'edited') return patch({ edited: notice.edited });
+      if (notice.kind === 'global') return patchGlobals((g) => withGlobal(g, notice.setting, notice.value));
+      if (notice.kind === 'globalTempo') return patchGlobals((g) => withGlobalTempo(g, notice.bpm));
+      if (notice.kind === 'saved') {
+        const saved = { name: notice.name, style: '' };
+        setState((s) => {
+          if (!s.unit) return s;
+          const names = s.unit.names.map((n, i) => (i === notice.index ? { ...saved, style: n.style } : n));
+          const preset = notice.index === s.unit.current ? { ...s.unit.preset, name: notice.name } : s.unit.preset;
+          return { ...s, edited: false, unit: { ...s.unit, names, preset } };
+        });
+        return;
+      }
+      if (notice.kind === 'chain') {
+        if (chainReread.current) return;
+        chainReread.current = true;
+        void run('Loading', async (unit) => {
+          chainReread.current = false;
+          await reloadLoaded(unit);
+          patch({ edited: true });
+        });
+        return;
+      }
       if (notice.kind !== 'preset') {
         setState((s) => (s.unit ? { ...s, edited: true, unit: { ...s.unit, preset: withNotice(s.unit.preset, notice) } } : s));
         return;
@@ -110,7 +154,7 @@ export function useMatribox(port: MidiPort | null) {
       });
     });
     return () => link.onNotice(null);
-  }, [link, run, reloadLoaded, patch]);
+  }, [link, run, reloadLoaded, patch, patchGlobals]);
 
   useEffect(() => {
     if (link) void refresh();
@@ -173,6 +217,67 @@ export function useMatribox(port: MidiPort | null) {
       });
     },
     [run],
+  );
+
+  /**
+   * Global writes, newest value only per setting (a slider drag sends the last value once the one
+   * before is confirmed). Shown at once; when a write fails the globals are read again to show the unit's.
+   */
+  const pendingGlobals = useRef(new Map<string, (unit: MatriboxLink) => Promise<unknown>>());
+  const sendGlobal = useCallback(
+    (key: string, shown: (g: MbGlobalState) => MbGlobalState, send: (unit: MatriboxLink) => Promise<unknown>) => {
+      patchGlobals(shown);
+      const queued = pendingGlobals.current.has(key);
+      pendingGlobals.current.set(key, send);
+      if (queued) return;
+      void run(null, async (unit) => {
+        const latest = pendingGlobals.current.get(key);
+        pendingGlobals.current.delete(key);
+        try {
+          if (latest) await latest(unit);
+        } catch (e) {
+          patch({ globals: await readGlobals(unit) });
+          throw e;
+        }
+      });
+    },
+    [run, patch, patchGlobals],
+  );
+  const setGlobal = useCallback(
+    (setting: MbGlobalSetting, value: number) =>
+      sendGlobal(
+        setting,
+        (g) => withGlobal(g, setting, value),
+        (unit) => unit.write(mbSetGlobal(setting, value)),
+      ),
+    [sendGlobal],
+  );
+  const setEqLevel = useCallback(
+    (level: number) =>
+      sendGlobal(
+        'eqLevel',
+        (g) => withEqLevel(g, level),
+        (unit) => unit.write(mbSetGlobalEqLevel(level)),
+      ),
+    [sendGlobal],
+  );
+  const setEqGain = useCallback(
+    (band: number, gain: number) =>
+      sendGlobal(
+        `eqGain${band}`,
+        (g) => withEqGain(g, band, gain),
+        (unit) => unit.write(mbSetGlobalEqGain(band, gain)),
+      ),
+    [sendGlobal],
+  );
+  const setEqOn = useCallback(
+    (on: boolean) =>
+      sendGlobal(
+        'eqOn',
+        (g) => withEqOn(g, on),
+        (unit) => mbWriteGlobalEqOn(unit, on),
+      ),
+    [sendGlobal],
   );
 
   /** An assignment write (footswitch, expression), then the loaded preset is read again to show what the unit holds. */
@@ -316,6 +421,10 @@ export function useMatribox(port: MidiPort | null) {
     assignFootswitch: (footswitch: number, slot: number, on: boolean) => assign(() => [mbAssignFootswitch(footswitch, slot, on)]),
     assignExpression: (a: MbExpressionAssignment) => assign(() => mbExpressionWrites(a)),
     control,
+    setGlobal,
+    setEqLevel,
+    setEqGain,
+    setEqOn,
     apply,
     save,
     readEditBuffer,

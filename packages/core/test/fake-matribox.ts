@@ -8,6 +8,9 @@
  * A whole-preset write (flag 2, paged) is stored in the slot it names, like the unit, and answered with cmd 0x17.
  * A user IR upload (flag 1, cmd 0x14, paged) renames its slot in the IR table and is acknowledged
  * with flag 3, cmd 0x14, `slot, 1, 0`, as captures mb-17, mb-17b and mb-17c show.
+ * The global tables answer their argument-less reads (cmd 0x11, 0x16) and follow the global writes
+ * (flag 1 cmd 0x11 setting, flag 2 cmd 0x16 EQ value: echoed; flag 1 cmd 0x16 EQ switch: answered
+ * `00 00 00 00` + u32), as captures mb-30 … mb-39 show.
  * Never a real device.
  */
 import { readFileSync } from 'node:fs';
@@ -15,6 +18,8 @@ import {
   expand,
   fromHex,
   joinMbPages,
+  MB_GLOBAL_TEMPO_ID,
+  MB_GLOBALS,
   MB_IR_SLOTS,
   MB_PAGE_SIZE,
   MB_READ,
@@ -77,6 +82,33 @@ interface FakeChain {
 }
 const NONE = 0xff;
 
+/** The general table of the first sessions (docs/matribox.md), with a 0 dB input level. */
+const GENERAL = (() => {
+  const t = new Uint8Array(52);
+  for (const [at, v] of [
+    [2, 2],
+    [5, 1],
+    [9, 1],
+    [11, 50],
+    [15, 1],
+    [20, 1],
+    [21, 1],
+    [22, 1],
+    [35, 1],
+    [44, 2],
+    [45, 4],
+    [48, 0xff],
+    [49, 0xff],
+  ] as const)
+    t[at] = v;
+  return t;
+})();
+/** The global EQ of the first sessions: 31 float32 (head, low cut, bands 1..4, high cut, tail with the level). */
+const EQ = [1, 80, 0.71, 0, 20, 0.71, 0, 1, 250, 1, -1, 1, 500, 0.71, 0, 1, 1000, 0.71, 0, 1, 5000, 1, 1, 0, 20000, 0.71, 0, 1, 8000, 0.71, 50];
+const EQ_SWITCH = '01000016';
+/** Byte of each global setting the unit takes a write of, by id (the global tempo's BPM too: notices only). */
+const GENERAL_AT = new Map<number, number>([...Object.values(MB_GLOBALS).map(({ id, at }) => [id, at] as const), [MB_GLOBAL_TEMPO_ID, 48]]);
+
 /** A copy of `data` with `bytes` written at `at`. */
 function patched(data: Uint8Array, at: number, bytes: ArrayLike<number>): Uint8Array {
   const out = Uint8Array.from(data);
@@ -109,6 +141,11 @@ export class FakeMatribox {
   dropsPresetWriteTo: number | null = null;
   /** When false the unit stores whole-preset writes but does not acknowledge them. */
   acksPresetWrites = true;
+  /** When true the unit answers the EQ switch without switching it (to test that the answer is checked). */
+  ignoresEqSwitch = false;
+  #general: Uint8Array = GENERAL;
+  #eq: Uint8Array = new Uint8Array(new Float32Array(EQ).buffer);
+  #eqOn = true;
   #pages: ReturnType<typeof parseMbFrame>[] = [];
   #irNames = dataOf(this.#replies.get(key(mbReadIrNames()))!);
   #names = dataOf(this.#replies.get(key(mbReadPresetNames()))!);
@@ -127,6 +164,11 @@ export class FakeMatribox {
   /** The loaded preset, decompressed (1211 bytes). */
   get editBuffer(): Uint8Array {
     return this.#edit;
+  }
+
+  /** The general global table (52 bytes) and the global EQ table (124 bytes) as the unit holds them. */
+  get globals(): { general: Uint8Array; eq: Uint8Array; eqOn: boolean } {
+    return { general: this.#general, eq: this.#eq, eqOn: this.#eqOn };
   }
 
   stored(index: number): Uint8Array | undefined {
@@ -156,6 +198,11 @@ export class FakeMatribox {
       return; // the unit answers a save with nothing
     }
     if (frame.type === MB_WRITE) {
+      const global = this.#globalWrite(message);
+      if (global) {
+        if (this.echoes) this.#reply(replyFrames(wrapMbMessage(message.flag, message.cmd, global)));
+        return;
+      }
       const notice = this.#apply(message.cmd, message.data);
       if (this.echoes) this.#reply(replyFrames(wrapMbMessage(message.flag, message.cmd, notice ?? message.data)));
       return;
@@ -209,6 +256,31 @@ export class FakeMatribox {
     return replyFrames(wrapMbMessage(1, 0x10, data))[0] as Uint8Array;
   }
 
+  /** A global setting changed on the unit (`00 <id> 00 00` + i32): applied, and the notice frame it sends returned. */
+  onUnitGlobal(id: number, value: number): Uint8Array {
+    const data = Uint8Array.of(0, id, 0, 0, value & 0xff, (value >> 8) & 0xff, (value >> 16) & 0xff, (value >> 24) & 0xff);
+    this.#globalWrite({ flag: 1, cmd: 0x11, data });
+    return replyFrames(wrapMbMessage(1, 0x11, data))[0] as Uint8Array;
+  }
+
+  /** A global write: what the unit answers (its echo, or the EQ switch's answer); null when it is not one. */
+  #globalWrite({ flag, cmd, data }: { flag: number; cmd: number; data: Uint8Array }): Uint8Array | null {
+    const at = GENERAL_AT.get(data[1] as number);
+    if (flag === 1 && cmd === 0x11 && data.length === 8 && at !== undefined) {
+      this.#general = patched(this.#general, at, at === 48 ? data.subarray(4, 6) : [data[4] as number]); // the tempo is a u16
+      return data;
+    }
+    if (flag === 2 && cmd === 0x16 && data.length === 8 && u32(data, 0) < 31) {
+      this.#eq = patched(this.#eq, u32(data, 0) * 4, data.subarray(4, 8));
+      return data;
+    }
+    if (flag === 1 && cmd === 0x16 && data.length === 8 && hexOf(data.subarray(0, 4)) === EQ_SWITCH) {
+      if (!this.ignoresEqSwitch) this.#eqOn = u32(data, 4) !== 0;
+      return Uint8Array.of(0, 0, 0, 0, this.#eqOn ? 1 : 0, 0, 0, 0);
+    }
+    return null;
+  }
+
   listen(receiver: (bytes: Uint8Array) => void): void {
     this.#receiver = receiver;
   }
@@ -223,6 +295,9 @@ export class FakeMatribox {
     const argHex = hexOf(arg);
     if (flag === 1 && cmd === 0x10 && argHex === '00000a01') return answer(this.#names);
     if (flag === 0 && cmd === 0x14 && arg.length === 0) return answer(this.#irNames);
+    if (flag === 0 && cmd === 0x11 && arg.length === 0) return answer(this.#general);
+    if (flag === 0 && cmd === 0x16 && arg.length === 0) return answer(this.#eq);
+    if (flag === 1 && cmd === 0x16 && argHex === EQ_SWITCH) return answer([0, 0, 0, 0, this.#eqOn ? 1 : 0, 0, 0, 0]);
     if (flag === 1 && cmd === 0x10 && argHex === '01000a01') return answer([...arg, ...[this.#current, 0, 0, 0]]);
     if (flag === 0 && cmd === 0x10 && arg.length === 4) {
       const number = u32(arg, 0);

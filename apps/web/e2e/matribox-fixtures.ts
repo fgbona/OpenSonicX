@@ -65,6 +65,23 @@ export async function connectMatribox(page: Page) {
   await expect(loadedMatribox(page)).toBeVisible();
 }
 
+/**
+ * Waits until the editor stops sending (the dev server's strict mode reads the unit twice on
+ * connect), so a test can count the requests one action causes.
+ */
+export async function settled(unit: FakeMatribox) {
+  let last = -1;
+  await expect
+    .poll(async () => {
+      const now = unit.received.length;
+      const same = now === last;
+      last = now;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      return same && unit.received.length === now;
+    })
+    .toBe(true);
+}
+
 /** The chain as its tiles name it, "DYN → DRV → …", once it shows exactly that. */
 export async function expectChain(page: Page, modules: string) {
   await expect.poll(async () => (await page.locator('.tiles .tile-label').allTextContents()).filter((m) => m !== 'Add').join(' → ')).toBe(modules);

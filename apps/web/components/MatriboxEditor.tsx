@@ -2,6 +2,7 @@
 
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { MB_CATALOG, mbAssignments, mbPresetLabel, resolveMbPreset, type MbResolvedBlock, type MidiPort } from '@pocket-master/core';
+import { ccChannelOf } from '@/lib/matriboxGlobals';
 import { mbLookKey } from '@/lib/matriboxLook';
 import { useMatribox } from '@/lib/useMatribox';
 import { useMatriboxHistory } from '@/lib/useMatriboxHistory';
@@ -14,6 +15,7 @@ import { MatriboxChain } from './MatriboxChain';
 import { MatriboxControls } from './MatriboxControls';
 import { MatriboxExpression } from './MatriboxExpression';
 import { MatriboxFootswitches } from './MatriboxFootswitches';
+import { MatriboxGlobals } from './MatriboxGlobals';
 import { MatriboxHeader } from './MatriboxHeader';
 import { MatriboxLibrary } from './MatriboxLibrary';
 import { MatriboxPresetFile } from './MatriboxPresetFile';
@@ -106,7 +108,12 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
                   mb.clearError();
                   setSaveOpen(true);
                 }}
-                files={<MatriboxPresetFile mb={mb} />}
+                files={
+                  <>
+                    <MatriboxPresetFile mb={mb} />
+                    <MatriboxGlobals mb={mb} />
+                  </>
+                }
               />
               <MatriboxChain
                 chain={chain}
@@ -133,7 +140,7 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
             </section>
             <MatriboxFootswitches footswitches={assignments.footswitches} chain={chain} disabled={disabled} onFootswitch={(f, s, on) => void mb.assignFootswitch(f, s, on)} />
             <MatriboxExpression expression={assignments.expression} chain={chain} disabled={disabled} onExpression={(a) => void mb.assignExpression(a)} />
-            <MatriboxControls tempo={assignments.tempo} onControl={(m) => void mb.control(m)} />
+            <MatriboxControls tempo={assignments.tempo} unitChannel={ccChannelOf(mb.globals)} onControl={(m) => void mb.control(m)} />
             <MatriboxSaveDialog
               open={saveOpen}
               current={proposal?.index ?? unit.current}
