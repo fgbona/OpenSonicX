@@ -94,3 +94,34 @@ back and note in `captures/README.txt` the setting, the value before and the val
 | 42 | `mb-42-unit-knobs.mmon` | No editor action: turn quick knob 1, then 2, then 3, a little each, 2 s apart | Knob notices with both sides: whether the official editor answers them |
 | 43 | `mb-43-unit-exp.mmon` | No editor action: move the expression pedal heel → toe → heel, then press its toe switch twice | The expression pedal's notice (`08 00 05 01`?) and the toe switch |
 | 44 | `mb-44-unit-edit.mmon` | No editor action: on the unit, change the model of one block, then save the preset on the unit (to 60D) | Whether the unit sends its chain notice and a save notice for its own edits, so the editors can follow them |
+
+Before mb-30, take one more: `mb-29-baseline.mmon`, nothing changed, just open the official
+editor while capturing. Its connect reads are the "before" of every global capture (each setting
+is put back after its capture, so they all start from the same tables).
+
+## Decoding the captures
+
+`apps/mcp/scripts/mb-capture.ts` decodes `.mmon` files offline with core's own frame, message and
+LZO1X code; it never opens a MIDI port. From the repository root:
+
+```sh
+C=~/.pocket-master-editor/matribox/captures
+
+# Every message, both sides: time, direction, read/WRITE/unit, flag, cmd, length, data
+# (and the parseMbNotice reading of a notice)
+node apps/mcp/scripts/mb-capture.ts decode $C/mb-30-global-input-level.mmon
+
+# mb-30 … mb-39: for each capture, its host writes (the official app's global write) and which
+# bytes and float32 words of the cmd 11, 13 and 16 tables changed against the baseline
+node apps/mcp/scripts/mb-capture.ts diff $C/mb-29-baseline.mmon $C/mb-3[0-9]-*.mmon
+
+# One capture alone: its first read-back against its last
+node apps/mcp/scripts/mb-capture.ts diff $C/mb-38-global-eq-band.mmon
+
+# mb-40 … mb-44: what the unit sent on its own (replies and echoes of a host message left out)
+node apps/mcp/scripts/mb-capture.ts notices $C/mb-4[0-4]-*.mmon
+```
+
+Without a baseline capture, any earlier capture with connect reads works as the base (e.g.
+`mb-01-volume.mmon`): the globals were the same in every connect since the first session. A
+stream of writes of one kind (a slider drag) is shown as its first and last write and a count.
