@@ -12,6 +12,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
   tests run against and the catalog name/range checks now live once in `packages/core`; the MCP
   server and the web editor import them instead of keeping their own copies. No behaviour change.
 
+### Documentation
+
+- `docs/matribox.md`: how the official editor converts a NAM capture into a Matribox CLONE
+  `.clo`. Calling the installed editor's converter rebuilds the captured upload byte for byte.
+  Its reference DI is the same as ours, and its fit is a different, single-level algorithm.
+  The doc also covers why no `matribox_load_capture` ships yet and what would unblock it.
+
 ## [1.1.0] - 2026-11-24
 
 The Matribox II Pro grows from "opens and edits" to a full second pedal, all of it run on the
