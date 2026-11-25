@@ -5,18 +5,31 @@ import './matribox.css';
 import { I18nProvider } from '@/components/I18n';
 import { THEME_BOOT_SCRIPT } from '@/components/ThemeToggle';
 import { UpdatePrompt } from '@/components/UpdatePrompt';
+import { SITE_DESCRIPTION, SITE_KEYWORDS, SITE_NAME, SITE_TITLE, softwareApplicationJsonLd } from '@/lib/seo';
 
 /** The script lettering on the amp's faceplate; self-hosted by Next, so it works offline. */
 const script = Yellowtail({ weight: '400', subsets: ['latin'], variable: '--font-script', display: 'swap' });
 
-const DESCRIPTION = 'Free editor for the Sonicake Pocket Master, over USB or Bluetooth: edit live, save with a backup, install TONE3000 captures, or describe a tone and let a free AI build it.';
-
 export const metadata: Metadata = {
-  // Link previews need absolute URLs: the Pages workflow sets SITE_URL (the origin; Next adds the basePath).
+  // Link previews and the canonical need absolute URLs: the Pages workflow sets SITE_URL (the origin; Next adds the basePath).
   metadataBase: process.env.SITE_URL ? new URL(process.env.SITE_URL) : undefined,
-  description: DESCRIPTION,
-  openGraph: { title: 'OpenSonicX', description: DESCRIPTION, type: 'website' },
-  twitter: { card: 'summary_large_image' },
+  // One page, so no title.template.
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  keywords: SITE_KEYWORDS,
+  // Next does not add the base path to a relative canonical.
+  alternates: { canonical: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/` },
+  robots: { index: true, follow: true },
+  openGraph: {
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    siteName: SITE_NAME,
+    type: 'website',
+    locale: 'en_US',
+    alternateLocale: ['pt_BR'],
+  },
+  twitter: { card: 'summary_large_image', title: SITE_TITLE, description: SITE_DESCRIPTION },
 };
 
 export const viewport: Viewport = {
@@ -32,6 +45,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         {/* biome-ignore lint/security/noDangerouslySetInnerHtml: a constant script from this code base (no user data), run before the first paint */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: JSON built from constants in this code base, "<" escaped */}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationJsonLd()).replace(/</g, '\\u003c') }} />
       </head>
       <body>
         {/* Shared paint servers: the chrome of every knob cap (referenced from CSS). */}

@@ -22,7 +22,14 @@ test('serves a valid web app manifest with installable icons', async ({ page, re
   const res = await request.get('/OpenSonicX/manifest.webmanifest');
   expect(res.ok()).toBe(true);
   const manifest = await res.json();
-  expect(manifest).toMatchObject({ name: 'OpenSonicX', short_name: 'OpenSonicX', start_url: HOME, scope: HOME, display: 'standalone', theme_color: '#0b0d10' });
+  expect(manifest).toMatchObject({
+    name: 'OpenSonicX: Sonicake Pocket Master & Matribox II Pro editor',
+    short_name: 'OpenSonicX',
+    start_url: HOME,
+    scope: HOME,
+    display: 'standalone',
+    theme_color: '#0b0d10',
+  });
   expect(manifest.icons.map((i: { sizes: string; purpose: string }) => `${i.sizes} ${i.purpose}`)).toEqual(['192x192 any', '512x512 any', '512x512 maskable']);
   for (const icon of manifest.icons as { src: string }[]) {
     const png = await request.get(icon.src);

@@ -114,8 +114,8 @@ export default function EditorPage() {
   }, [connected, names, loadNames]);
   return (
     <>
-      {/* React puts it in the head; layout.tsx sets no title of its own, so this one wins. */}
-      <title>{pedalName ? `${APP_NAME} · ${pedalName}` : APP_NAME}</title>
+      {/* React puts it in the head and it wins over layout.tsx's title; with no pedal the layout's (search) title stays. */}
+      {pedalName && <title>{`${APP_NAME} · ${pedalName}`}</title>}
       <Toolbar
         status={pm.status}
         transport={pm.transport}
