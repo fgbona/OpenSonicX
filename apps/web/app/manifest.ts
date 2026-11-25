@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { SITE_DESCRIPTION, SITE_TITLE } from '@/lib/seo';
 
 // The static export writes it once, as manifest.webmanifest (Next links it from every page).
 export const dynamic = 'force-static';
@@ -9,9 +10,9 @@ export default function manifest(): MetadataRoute.Manifest {
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
   return {
     id: `${base}/`,
-    name: 'OpenSonicX',
+    name: SITE_TITLE,
     short_name: 'OpenSonicX',
-    description: 'Free editor for the Sonicake Pocket Master and the Valeton/Sonicake Matribox II Pro.',
+    description: SITE_DESCRIPTION,
     start_url: `${base}/`,
     scope: `${base}/`,
     display: 'standalone',
