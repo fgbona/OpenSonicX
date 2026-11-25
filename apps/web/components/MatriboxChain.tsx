@@ -1,7 +1,7 @@
 'use client';
 
 import { type RefObject, useLayoutEffect, useRef, useState } from 'react';
-import { MB_SLOTS, type MbCatalog, type MbResolvedBlock } from '@pocket-master/core';
+import { MB_SLOTS, type MbResolvedBlock } from '@pocket-master/core';
 import { mbFxidHex, mbLookKey } from '@/lib/matriboxLook';
 import { MatriboxAddMenu } from './MatriboxAddMenu';
 import { snakePath } from '@/lib/snakePath';
@@ -11,7 +11,6 @@ import { useTileDrag } from './useTileDrag';
 
 interface Props {
   chain: readonly MbResolvedBlock[];
-  catalog: MbCatalog | null;
   /** Storage slot of the block the panel below edits. */
   selected: number | null;
   disabled: boolean;
@@ -91,7 +90,7 @@ function useMenuUnder(open: boolean, wrap: RefObject<HTMLElement | null>, tile: 
  * block, the LED switches it, a drag (or the arrows) moves it, and the last tile adds a block
  * while the unit has a free slot (MatriboxAddMenu).
  */
-export function MatriboxChain({ chain, catalog, selected, disabled, userSlot, onSelect, onOn, onMove, onAdd }: Props) {
+export function MatriboxChain({ chain, selected, disabled, userSlot, onSelect, onOn, onMove, onAdd }: Props) {
   const { t } = useI18n();
   const [adding, setAdding] = useState(false);
   const addRef = useRef<HTMLButtonElement>(null);
@@ -168,14 +167,7 @@ export function MatriboxChain({ chain, catalog, selected, disabled, userSlot, on
       </ol>
       {adding && canAdd && (
         <div className="picker mb-add-menu" ref={menuRef}>
-          <MatriboxAddMenu
-            catalog={catalog}
-            chain={chain}
-            userSlot={userSlot}
-            isInside={(target) => (addRef.current?.contains(target) || menuRef.current?.contains(target)) ?? false}
-            onClose={closeAdd}
-            onAdd={onAdd}
-          />
+          <MatriboxAddMenu userSlot={userSlot} isInside={(target) => (addRef.current?.contains(target) || menuRef.current?.contains(target)) ?? false} onClose={closeAdd} onAdd={onAdd} />
         </div>
       )}
     </div>

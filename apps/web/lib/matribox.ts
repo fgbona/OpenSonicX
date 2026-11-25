@@ -25,7 +25,6 @@ import {
   toHex,
   withMbVolume,
   type MatriboxLink,
-  type MbModel,
   type MbNotice,
   type MbPreset,
   type MbPresetName,
@@ -141,9 +140,6 @@ export function withNotice(preset: MbPreset, notice: MbNotice): MbPreset {
   if (notice.kind === 'volume') return withMbVolume(preset, notice.value);
   return preset;
 }
-
-/** The real gear a model is based on, on one line; '' when the catalog gives none or only a number. */
-export const gearOf = (model: MbModel): string => (/[a-z]/i.test(model.origin) ? model.origin.replace(/\s+/g, ' ').trim() : '');
 
 /** Runs the calls given to it one at a time, in order; a failure does not stop the next ones. */
 export function serialQueue(): <T>(run: () => Promise<T>) => Promise<T> {

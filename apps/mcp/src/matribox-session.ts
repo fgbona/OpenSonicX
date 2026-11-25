@@ -1,7 +1,7 @@
 /**
  * The Matribox II Pro as the MCP tools see it. Like the Pocket Master session, every call opens its
- * own connection and closes it, and calls run one at a time. The model catalog comes from the user's
- * install of Sonicake's official editor; it is loaded once, when first needed. Writes (experimental,
+ * own connection and closes it, and calls run one at a time. The model catalog is core's built-in
+ * MB_CATALOG (tests give their own). Writes (experimental,
  * validated on one unit only so far) change the loaded preset; only savePreset stores it, after a
  * backup of the slot it overwrites.
  */
@@ -15,6 +15,7 @@ import {
   mbReadIrNames,
   mbReadPreset,
   mbReadPresetNames,
+  MB_CATALOG,
   MB_SLOTS,
   mbAddBlock,
   mbBackupAllPresets,
@@ -78,7 +79,7 @@ function formatBlock(block: MbResolvedBlock, irNames: readonly string[], cloneNa
 }
 
 function formatModel(model: MbModel): string {
-  const about = [gear(model) ? `based on ${gear(model)}.` : '', firstSentence(model.description)].filter(Boolean).join(' ');
+  const about = [gear(model) ? `based on ${gear(model)}.` : '', firstSentence(model.description.en)].filter(Boolean).join(' ');
   const params = model.params.map((p) => `${p.name} ${round(p.min)}..${round(p.max)}`).join(', ');
   return `- ${model.name}${about ? `: ${about}` : ''}${params ? `\n    params: ${params}` : ''}`;
 }
@@ -104,14 +105,13 @@ function checkSave(preset: string, confirm: string | undefined, name: string): T
 
 export class MatriboxSession {
   readonly #connect: () => MatriboxConnection | Promise<MatriboxConnection>;
-  readonly #loadCatalog: () => Promise<MbCatalog>;
+  readonly #catalog: MbCatalog;
   readonly #folders: MatriboxFolders;
-  #catalog: Promise<MbCatalog> | null = null;
   #queue: Promise<unknown> = Promise.resolve();
 
-  constructor(connect: () => MatriboxConnection | Promise<MatriboxConnection>, loadCatalog: () => Promise<MbCatalog>, folders: MatriboxFolders) {
+  constructor(connect: () => MatriboxConnection | Promise<MatriboxConnection>, folders: MatriboxFolders, catalog: MbCatalog = MB_CATALOG) {
     this.#connect = connect;
-    this.#loadCatalog = loadCatalog;
+    this.#catalog = catalog;
     this.#folders = folders;
   }
 
@@ -128,15 +128,6 @@ export class MatriboxSession {
     return call;
   }
 
-  /** Loaded once; a failure is not kept, so installing the app later works without a restart. */
-  #catalogOnce(): Promise<MbCatalog> {
-    this.#catalog ??= this.#loadCatalog().catch((error: unknown) => {
-      this.#catalog = null;
-      throw error;
-    });
-    return this.#catalog;
-  }
-
   listPresets(): Promise<string> {
     return this.#use(async (unit) => {
       const presets = parseMbPresetNames(await unit.read(mbReadPresetNames()));
@@ -149,7 +140,7 @@ export class MatriboxSession {
   /** The loaded preset: chain in signal order, each block's model, what it is based on, on/off and parameters. */
   describe(): Promise<string> {
     return this.#use(async (unit) => {
-      const catalog = await this.#catalogOnce();
+      const catalog = this.#catalog;
       const current = parseMbCurrentPresetNumber(await unit.read(mbReadCurrentPresetNumber()));
       const preset = resolveMbPreset(parseMbPreset(await unit.read(mbReadPreset(current))), catalog);
       const irNames = parseMbIrNames(await unit.read(mbReadIrNames()));
@@ -161,7 +152,7 @@ export class MatriboxSession {
 
   /** The catalog (no pedal needed): every module's models, or one module's. */
   async listModels(module?: string): Promise<string> {
-    const catalog = await this.#catalogOnce();
+    const catalog = this.#catalog;
     if (module === undefined) return catalog.modules.map(formatModule).join('\n\n');
     const found = catalog.modules.find((m) => m.name.toLowerCase() === module.trim().toLowerCase());
     if (!found) throw new Error(`No module "${module}". Modules: ${catalog.modules.map((m) => m.name).join(', ')}`);
@@ -192,7 +183,7 @@ export class MatriboxSession {
 
   /** The loaded preset, raw and named from the catalog. */
   async #loaded(unit: MatriboxConnection): Promise<{ catalog: MbCatalog; raw: MbPreset; preset: MbResolvedPreset }> {
-    const catalog = await this.#catalogOnce();
+    const catalog = this.#catalog;
     const raw = await MatriboxSession.#loadedRaw(unit);
     return { catalog, raw, preset: resolveMbPreset(raw, catalog) };
   }
@@ -256,7 +247,7 @@ export class MatriboxSession {
 
   /** Inserts a block at 1-based `position` (default: the end), then writes its parameters by the slot the unit picked. */
   addBlock(options: ToneBlock & { position?: number }): Promise<string> {
-    return this.#catalogOnce().then((catalog) => {
+    return Promise.resolve(this.#catalog).then((catalog) => {
       const { module, model } = findModel(catalog, options.model, findModule(catalog, options.module));
       const values = modelValues(model, 0, options.params); // checked before the unit is opened
       return this.#use(async (unit) => {
@@ -301,7 +292,7 @@ export class MatriboxSession {
    * new ones (the unit picks their slots), then writes every parameter and on/off by slot.
    */
   buildTone(options: { blocks: readonly ToneBlock[] }): Promise<string> {
-    return this.#catalogOnce().then((catalog) => {
+    return Promise.resolve(this.#catalog).then((catalog) => {
       const plan = planTone(catalog, options.blocks); // everything checked before the unit is opened
       return this.#use(async (unit) => {
         const old = (await this.#loaded(unit)).preset.chain;
@@ -456,8 +447,7 @@ export class MatriboxSession {
   async #store(unit: MatriboxConnection, target: Target, preset: MbPreset): Promise<string[]> {
     const { label } = target;
     const backup = await this.#storeWhole(unit, target, preset);
-    const catalog = await this.#catalogOnce().catch(() => undefined); // without the app: module numbers
-    const modules = catalog ? resolveMbPreset(preset, catalog).chain.map((b) => b.module) : preset.chain.map((b) => `module ${b.moduleIndex}`);
+    const modules = resolveMbPreset(preset, this.#catalog).chain.map((b) => b.module);
     const lines = [
       `Stored "${preset.name}" in ${label} in one write: chain, parameters, knob, expression-pedal and footswitch assignments, volume and tempo. ${label} is now the loaded preset.`,
       `Chain: ${modules.join(' → ')}`,

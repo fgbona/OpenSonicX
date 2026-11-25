@@ -7,7 +7,7 @@ import { useI18n } from './I18n';
 
 interface Props {
   param: MbResolvedParam;
-  /** The catalog's parameter: its step and default. */
+  /** The catalog's parameter: its step, default and the labels of a list's steps. */
   spec: MbParam | undefined;
   disabled: boolean;
   onChange: (value: number) => void;
@@ -46,7 +46,7 @@ export function MatriboxParam({ param, spec, disabled, onChange }: Props) {
     return (
       <div className="editor-toggle">
         <span className="knob-value" aria-hidden="true">
-          {round(value)}
+          {spec?.options?.[steps.indexOf(value)] ?? round(value)}
         </span>
         <select
           className="param-select"
@@ -56,9 +56,9 @@ export function MatriboxParam({ param, spec, disabled, onChange }: Props) {
           onChange={(e) => e.target.value !== '' && onChange(Number(e.target.value))}
         >
           {!steps.includes(value) && <option value="">{round(value)}</option>}
-          {steps.map((step) => (
+          {steps.map((step, i) => (
             <option key={step} value={step}>
-              {round(step)}
+              {spec?.options?.[i] ?? round(step)}
             </option>
           ))}
         </select>

@@ -1,13 +1,12 @@
 import { parseMbPreset } from '@pocket-master/core';
 import type { Page } from '@playwright/test';
-import { blockPanel, connectMatribox, expect, pickCatalog, test } from './matribox-fixtures.ts';
+import { blockPanel, connectMatribox, expect, test } from './matribox-fixtures.ts';
 
 /** Delivers a frame the simulated unit sends on its own (no request from the editor). */
 const fromUnit = (page: Page, frame: Uint8Array) => page.evaluate((bytes) => window.__midi.receive('Matribox II PRO', bytes), Array.from(frame));
 
 test('the editor follows what is done on the unit: a block toggled, another preset loaded', async ({ page, unit }) => {
   await connectMatribox(page);
-  await pickCatalog(page);
   const drive = await blockPanel(page, 2, 'DRV');
   await expect(drive.getByRole('switch', { name: '2. DRV off' })).toBeVisible();
 

@@ -1,13 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseMbCatalog, parseMbPreset, type MbPreset } from '@pocket-master/core';
+import { parseMbPreset, type MbPreset } from '@pocket-master/core';
 import { FakeMatribox } from '../../../packages/core/test/fake-matribox.ts';
-import { FAKE_ALG_DATA } from '../../../packages/core/test/matribox-fake-catalog.ts';
+import { FAKE_CATALOG } from '../../../packages/core/test/matribox-fake-catalog.ts';
 import { askedToSaveMb, matriboxAgent, type MbAgentHost } from '../lib/matriboxAgent.ts';
 import { requestTexts } from '../lib/assistant.ts';
 import { mbTone, withTone, type MbTone } from '../lib/matriboxLibrary.ts';
 
-const catalog = parseMbCatalog(FAKE_ALG_DATA);
+const catalog = FAKE_CATALOG;
 
 /** A host over plain state: apply sets the chain (slots in order), undo goes back one apply. */
 function host() {

@@ -19,6 +19,8 @@
       "!**/test/fixtures",
       // Vendored device map, kept byte-identical to its upstream (see NOTICE).
       "!packages/core/src/catalog.json",
+      // The Matribox model map, written by scripts/matribox-map.mjs: kept as the script writes it.
+      "!packages/core/src/matribox/models.json",
       // App icons: image files, not the markup of a page.
       "!**/*.svg",
       // Prose and workflow files keep their hand-made wrapping, quotes and aligned comments.

@@ -20,7 +20,6 @@ import {
   withMbVolume,
   type MatriboxLink,
   type MbBackupAll,
-  type MbCatalog,
   type MbExpressionAssignment,
   type MbPreset,
   type MbProgress,
@@ -32,13 +31,9 @@ import { applyOps } from './matriboxOps';
 import type { MbOp } from './matriboxPlan';
 import { keepMbBackup, loadMbBackups, storeMbBackups } from './matriboxBackups';
 import { importToSlot } from './matriboxPresetFile';
-import { forgetCatalog, loadDesktopCatalog, loadStoredCatalog, parseCatalogText, storeCatalog } from './matriboxCatalog';
 
 export interface MatriboxState {
   readonly unit: MbUnit | null;
-  readonly catalog: MbCatalog | null;
-  /** Why the picked or installed catalog could not be read. */
-  readonly catalogError: string | null;
   /** What runs now ("Saving", …); edits wait meanwhile. */
   readonly busy: string | null;
   readonly error: string | null;
@@ -51,11 +46,11 @@ export interface MatriboxState {
   readonly progress: Progress | null;
 }
 
-const INITIAL: MatriboxState = { unit: null, catalog: null, catalogError: null, busy: null, error: null, edited: false, backups: [], storageWarning: false, progress: null };
+const INITIAL: MatriboxState = { unit: null, busy: null, error: null, edited: false, backups: [], storageWarning: false, progress: null };
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /** The Matribox II Pro editor's state and actions over its open MIDI ports. */
-export function useMatribox(port: MidiPort | null, desktop: boolean) {
+export function useMatribox(port: MidiPort | null) {
   const [state, setState] = useState<MatriboxState>(INITIAL);
   const patch = useCallback((p: Partial<MatriboxState>) => setState((s) => ({ ...s, ...p })), []);
   const link = useMemo<MatriboxLink | null>(() => (port ? matriboxLink(port) : null), [port]);
@@ -122,42 +117,11 @@ export function useMatribox(port: MidiPort | null, desktop: boolean) {
     else setState((s) => ({ ...s, unit: null, busy: null, error: null }));
   }, [link, refresh]);
 
-  // The catalog: the installed one in the desktop app, else the one picked in this browser.
   useEffect(() => {
     backupsRef.current = loadMbBackups();
     patch({ backups: backupsRef.current });
-    let cancelled = false;
-    void (async () => {
-      const text = (desktop ? await loadDesktopCatalog() : null) ?? (await loadStoredCatalog());
-      if (cancelled || text === null) return;
-      try {
-        patch({ catalog: parseCatalogText(text), catalogError: null });
-      } catch (e) {
-        patch({ catalogError: message(e) });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [desktop, patch]);
-
-  const pickCatalog = useCallback(
-    async (file: File) => {
-      try {
-        const text = await file.text();
-        const catalog = parseCatalogText(text);
-        await storeCatalog(text).catch((e: unknown) => console.error('could not keep the catalog in this browser', e));
-        patch({ catalog, catalogError: null });
-      } catch (e) {
-        patch({ catalogError: message(e) });
-      }
-    },
-    [patch],
-  );
-
-  const dropCatalog = useCallback(async () => {
-    await forgetCatalog().catch((e: unknown) => console.error('could not forget the catalog', e));
-    patch({ catalog: null, catalogError: null });
+    // The catalog is built in now: drop the alg_data.json older versions kept in this browser (its only use of IndexedDB).
+    if (typeof indexedDB !== 'undefined') indexedDB.deleteDatabase('pocket-master-editor');
   }, [patch]);
 
   const select = useCallback(
@@ -341,8 +305,6 @@ export function useMatribox(port: MidiPort | null, desktop: boolean) {
   return {
     ...state,
     refresh,
-    pickCatalog,
-    dropCatalog,
     select,
     setParam,
     setOn,

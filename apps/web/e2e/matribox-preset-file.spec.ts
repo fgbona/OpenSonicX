@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { parseMatriboxPrst, parseMbPreset, toHex, writeMatriboxPrst } from '@pocket-master/core';
-import { blockPanel, connectMatribox, expect, pickCatalog, test, turnKnob } from './matribox-fixtures.ts';
+import { blockPanel, connectMatribox, expect, MODELS, test, turnKnob } from './matribox-fixtures.ts';
 
 const loaded = (unit: { editBuffer: Uint8Array }) => parseMbPreset(unit.editBuffer);
 const KEPT = [2, 3, 4, 5, 7, 9];
@@ -15,7 +15,6 @@ const BACKUPS = 'pocket-master-editor.matribox-backups.v1';
 
 test('export downloads the loaded preset, unsaved edits included, as a .prst that parses back', async ({ page, unit }) => {
   await connectMatribox(page);
-  await pickCatalog(page);
   const drive = await blockPanel(page, 2, 'DRV');
   await turnKnob(drive.getByRole('slider', { name: 'Gain' }), 16);
   const download = page.waitForEvent('download');
@@ -32,11 +31,12 @@ test('export downloads the loaded preset, unsaved edits included, as a .prst tha
 
 test('import shows what the file holds, needs a confirmation, backs the target up, stores it and leaves it loaded', async ({ page, unit }) => {
   await connectMatribox(page);
-  await pickCatalog(page);
   await page.getByLabel(PICK).setInputFiles(prst(unit));
   const dialog = page.getByRole('dialog', { name: 'Import a preset file' });
   await expect(dialog.getByText('“Drive AD” from drive.prst')).toBeVisible();
-  await expect(dialog.getByText('Chain: DYN Fake Gate → DRV Fake Drive → AMP Fake Plexi → CAB → RVB Fake Hall → VOL Volume')).toBeVisible();
+  await expect(
+    dialog.getByText(`Chain: DYN ${MODELS.gate.name} → DRV ${MODELS.drive.name} → AMP ${MODELS.amp.name} → CAB ${MODELS.cab.name} → RVB ${MODELS.hall.name} → VOL ${MODELS.volume.name}`),
+  ).toBeVisible();
   const slot = dialog.getByRole('combobox', { name: 'Slot' });
   await expect(slot).toHaveValue('66'); // the loaded slot by default
   await slot.selectOption({ index: 5 });
@@ -59,7 +59,7 @@ test('import shows what the file holds, needs a confirmation, backs the target u
 
 test('import takes a backup of one slot too, and says that unsaved edits are lost', async ({ page, unit }) => {
   await connectMatribox(page);
-  await page.getByRole('list', { name: 'Signal chain' }).getByRole('switch', { name: '2. module 3 off' }).click();
+  await page.getByRole('list', { name: 'Signal chain' }).getByRole('switch', { name: '2. DRV off' }).click();
   await expect.poll(() => loaded(unit).chain[1]!.on).toBe(true);
   const backup = { device: 'Sonicake Matribox II Pro', label: '17C', index: 66, name: 'Drive AD', createdAt: '2026-11-24T12:00:00.000Z', source: 'slot', preset: toHex(unit.stored(66)!) };
   await page.getByLabel(PICK).setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) });

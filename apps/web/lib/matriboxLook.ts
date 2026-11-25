@@ -1,8 +1,7 @@
 /**
  * How a Matribox II Pro block looks in the editor: its module's tint and drawing, the faceplate
- * finish of an AMP model, and which control a parameter gets. All of it is read from the person's
- * own catalog at run time (module names, a model's `origin`, a parameter's range); nothing of the
- * catalog is kept here.
+ * finish of an AMP model, and which control a parameter gets, from the catalog (module names, a
+ * model's `basedOn`, a parameter's range).
  */
 import type { MbParam } from '@pocket-master/core';
 import type { AmpSkin } from './ampSkins.ts';
@@ -34,7 +33,7 @@ export function parseMbModelValue(value: string): { moduleIndex: number; fxid: n
   return match ? { moduleIndex: Number(match[1]), fxid: Number(match[2]) } : null;
 }
 
-/** Makers and model names as an origin text spells them; the first match wins (bass amps before a maker's guitar amps). */
+/** Makers and model names as a `basedOn` text spells them; the first match wins (bass amps before a maker's guitar amps). */
 const SKIN_RULES: readonly (readonly [RegExp, AmpSkin])[] = [
   [/roland|jazz chorus|jc-?120/i, 'jazz'],
   [/ampeg|svt|gallien|aguilar|darkglass|markbass|hartke|bass amp/i, 'bass'],
@@ -49,9 +48,9 @@ const SKIN_RULES: readonly (readonly [RegExp, AmpSkin])[] = [
   [/bogner|friedman|matchless|dumble|two[- ]?rock|suhr|fortin|dr\.? ?z\b/i, 'boutique'],
 ];
 
-/** The faceplate finish for an AMP model's `origin` (materials and colours, never a logo); null keeps the plain plate. */
-export function mbAmpSkin(origin: string): AmpSkin | null {
-  return SKIN_RULES.find(([pattern]) => pattern.test(origin))?.[1] ?? null;
+/** The faceplate finish for an AMP model's `basedOn` (materials and colours, never a logo); null keeps the plain plate. */
+export function mbAmpSkin(basedOn: string): AmpSkin | null {
+  return SKIN_RULES.find(([pattern]) => pattern.test(basedOn))?.[1] ?? null;
 }
 
 type Range = Pick<MbParam, 'min' | 'max' | 'step'>;

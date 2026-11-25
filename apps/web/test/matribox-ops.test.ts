@@ -1,12 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { matriboxLink, parseMbCatalog, parseMbPreset } from '@pocket-master/core';
+import { matriboxLink, parseMbPreset } from '@pocket-master/core';
 import { FakeMatribox } from '../../../packages/core/test/fake-matribox.ts';
-import { FAKE_ALG_DATA } from '../../../packages/core/test/matribox-fake-catalog.ts';
+import { FAKE_CATALOG } from '../../../packages/core/test/matribox-fake-catalog.ts';
 import { applyOps } from '../lib/matriboxOps.ts';
 import { planTone, transition } from '../lib/matriboxPlan.ts';
 
-const catalog = parseMbCatalog(FAKE_ALG_DATA);
+const catalog = FAKE_CATALOG;
 const unitLink = (fake: FakeMatribox) => matriboxLink({ send: (b) => fake.send(b), listen: (r) => fake.listen(r ?? (() => undefined)) }, 500);
 const shape = (chain: readonly { moduleIndex: number; fxid: number; on: boolean }[]) => chain.map((b) => [b.moduleIndex, b.fxid, b.on]);
 

@@ -1,0 +1,157 @@
+#!/usr/bin/env node
+/**
+ * Writes packages/core/src/matribox/models.json, the built-in functional map of the Matribox II Pro
+ * models, from a local copy of the official editor's alg_data.json (never committed, never shipped):
+ *
+ *   node scripts/matribox-map.mjs ~/Downloads/alg_data.json
+ *
+ * Only what the protocol needs is kept, in our own structure. Model names and descriptions are not
+ * here: they are our own text, in packages/core/src/matribox/model-text.json.
+ *
+ * Schema (version 1):
+ *
+ *   {
+ *     "version": 1,
+ *     "modules": [                       // by module index
+ *       {
+ *         "module": "DRV",               // module code, as the unit's block types are known
+ *         "index": 3,                    // module index in the protocol (DYN 0 … VOL 15)
+ *         "models": [                    // by model index
+ *           {
+ *             "fxid": 50331648,          // model id the unit reads and writes
+ *             "index": 0,                // position in the module's list
+ *             "type": "OD",              // our category, groups the model menus ("" when none)
+ *             "basedOn": "…",            // the real gear it models, one line, no trademark signs ("" when none)
+ *             "params": [                // by id
+ *               {
+ *                 "id": 0,               // parameter slot (index of the preset's 15 values)
+ *                 "label": "Gain",       // generic control name
+ *                 "min": 0, "max": 100, "step": 1, "default": 50,
+ *                 "options": ["Off", "On"]   // only for a switch or a list, one label per step
+ *               }
+ *             ]
+ *           }
+ *         ]
+ *       }
+ *     ]
+ *   }
+ *
+ * Never emitted: the source's descriptions, parameter help, notes, legal notice block or model
+ * display names, nor trademark signs. The output is checked against this schema: any key outside
+ * it, or a trademark sign anywhere, and the script refuses to write.
+ */
+import { readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'packages', 'core', 'src', 'matribox', 'models.json');
+
+/** The only keys models.json may hold: anything else from the source (texts, names, notes) is refused. */
+export const ALLOWED_KEYS = ['version', 'modules', 'module', 'index', 'models', 'fxid', 'type', 'basedOn', 'params', 'id', 'label', 'min', 'max', 'step', 'default', 'options'];
+/** The registered and trademark signs. */
+export const TRADEMARK_SIGNS = /[\u00ae\u2122]/g;
+
+const fail = (message) => {
+  throw new Error(`matribox-map: ${message}`);
+};
+
+/** One line of plain text: first line only, no trademark signs, spaces collapsed. */
+const clean = (value) =>
+  String(value ?? '')
+    .split('\n')[0]
+    .replace(TRADEMARK_SIGNS, '')
+    .replace(/\s+/g, ' ')
+    .replace(/\s+\)/g, ')')
+    .trim();
+
+/** Cabinet sizes as " 4 x 12”" become 4x12"; "/" means none. */
+const category = (value) => {
+  const text = clean(value)
+    .replace(/\s*x\s*/i, 'x')
+    .replace(/[”″]/g, '"');
+  return text === '/' ? '' : text;
+};
+
+const number = (value, path) => {
+  const n = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : Number.NaN;
+  if (!Number.isFinite(n)) fail(`${path} is not a number: ${JSON.stringify(value)}`);
+  return n;
+};
+
+const integer = (value, path) => {
+  const n = number(value, path);
+  if (!Number.isInteger(n)) fail(`${path} is not an integer: ${JSON.stringify(value)}`);
+  return n;
+};
+
+/** The labels of a switch (widgetType 1, "Off/On") or a list (2, "A, B, C"), when one per step. */
+function options(widget, min, max, step) {
+  if (widget.widgetType !== 1 && widget.widgetType !== 2) return undefined;
+  const labels = String(widget.valueRange ?? '')
+    .split(widget.widgetType === 1 ? '/' : ',')
+    .map(clean);
+  return labels.length === Math.round((max - min) / step) + 1 && labels.every(Boolean) ? labels : undefined;
+}
+
+function param(widget, path) {
+  const [min, max, step, def] = [number(widget.min, `${path}.min`), number(widget.max, `${path}.max`), number(widget.step, `${path}.step`), number(widget.defaultValue, `${path}.defaultValue`)];
+  if (step <= 0) fail(`${path}.step must be greater than 0`);
+  if (min > max || def < min || def > max) fail(`${path} is out of range (min ${min}, max ${max}, default ${def})`);
+  const label = clean(widget.name);
+  if (!label) fail(`${path} has no control name`);
+  const opts = options(widget, min, max, step);
+  return { id: integer(widget.ID, `${path}.ID`), label, min, max, step, default: def, ...(opts ? { options: opts } : {}) };
+}
+
+function model(alg, path) {
+  const basedOn = clean(alg.origin);
+  const params = (alg.widget ?? []).map((w, i) => param(w, `${path}.widget[${i}]`)).sort((a, b) => a.id - b.id);
+  return {
+    fxid: integer(alg.fxid, `${path}.fxid`),
+    index: integer(alg.index, `${path}.index`),
+    type: category(alg.type),
+    // Only real gear: a bare number (cabinets) or the source's own "Original…" algorithms are none.
+    basedOn: /[a-z]/i.test(basedOn) && !/^original\b/i.test(basedOn) ? basedOn : '',
+    params,
+  };
+}
+
+/** Throws when `value` has a key outside the schema or a trademark sign anywhere. */
+export function assertClean(value, path = 'map') {
+  if (typeof value === 'string') {
+    if (value.search(TRADEMARK_SIGNS) >= 0) fail(`${path} contains a trademark sign`);
+  } else if (Array.isArray(value)) {
+    value.forEach((v, i) => assertClean(v, `${path}[${i}]`));
+  } else if (value && typeof value === 'object') {
+    for (const [key, v] of Object.entries(value)) {
+      if (!ALLOWED_KEYS.includes(key)) fail(`${path}.${key} is not a field of the map`);
+      assertClean(v, `${path}.${key}`);
+    }
+  }
+}
+
+/** The functional map of a parsed alg_data.json, in our schema. */
+export function buildMap(source) {
+  if (!Array.isArray(source?.Modules)) fail('the input has no Modules array: is it alg_data.json?');
+  const modules = source.Modules.map((m, i) => {
+    const code = clean(m.name);
+    if (!/^[A-Z]+$/.test(code)) fail(`Modules[${i}].name is not a module code: ${JSON.stringify(m.name)}`);
+    const models = (m.alg ?? []).map((a, j) => model(a, `Modules[${i}].alg[${j}]`)).sort((a, b) => a.index - b.index);
+    return { module: code, index: integer(m.index, `Modules[${i}].index`), models };
+  }).sort((a, b) => a.index - b.index);
+  const map = { version: 1, modules };
+  assertClean(map);
+  return map;
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const input = process.argv[2];
+  if (!input) {
+    console.error('usage: node scripts/matribox-map.mjs <path to alg_data.json>');
+    process.exit(2);
+  }
+  const map = buildMap(JSON.parse(readFileSync(input, 'utf8')));
+  writeFileSync(OUT, `${JSON.stringify(map, null, 1)}\n`);
+  const models = map.modules.reduce((n, m) => n + m.models.length, 0);
+  console.log(`wrote ${OUT}: ${map.modules.length} modules, ${models} models`);
+}

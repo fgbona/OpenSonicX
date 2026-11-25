@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { mbReadCloneNames, mbReadPresetNames, mbRequest, parseMbPresetNames } from '@pocket-master/core';
+import { MB_CATALOG, mbReadCloneNames, mbReadPresetNames, mbRequest, parseMbPresetNames } from '@pocket-master/core';
+import { MatriboxSession } from '../src/matribox-session.ts';
 import { FakeMatribox } from '../../../packages/core/test/fake-matribox.ts';
 import { call, connected, fakeLink, text } from './matribox-helpers.ts';
 import { describePedals, detectPedals, MATRIBOX, POCKET_MASTER } from '../src/devices.ts';
@@ -72,7 +73,7 @@ test('matribox_get_preset describes the loaded preset: chain, models with origin
   const lines = out.split('\n');
   assert.equal(lines[0], '17C "Drive AD" · style Rock');
   assert.equal(lines[1], 'Chain: DYN → DRV → AMP → CAB → RVB → VOL');
-  assert.match(out, /^1\. DYN {2}on {3}Fake Gate \(based on Imaginary Gate Alias: Gate X\): Threshold [-\d.]+ \[-80\.\.0\]$/m);
+  assert.match(out, /^1\. DYN {2}on {3}Fake Gate \(based on Imaginary Gate\): Threshold [-\d.]+ \[-80\.\.0\]$/m);
   assert.match(out, /^2\. DRV {2}off {2}Fake Drive \(based on Imaginary Overdrive 808\): Gain 15 \[0\.\.100\], Tone 50 \[0\.\.100\], Volume 14 \[0\.\.100\]$/m);
   assert.match(out, /^4\. CAB {2}on {3}unknown model \(fxid 0x0a000006\)$/m);
   assert.match(out, /^6\. VOL {2}on {3}Volume \(based on Volume\): Volume /m);
@@ -90,15 +91,12 @@ test('matribox_list_models gives the palette: models with origin and parameter r
   assert.match(text(bad), /No module "XYZ"\. Modules: DYN, DRV, AMP, CAB, IR, DLY, RVB, CLONE, VOL/);
 });
 
-test('matribox_list_models explains how to get the catalog when the official app is missing', async () => {
-  const { client } = await connected({
-    catalog: async () => {
-      throw new Error('Matribox II PRO catalog not found at /x: install it');
-    },
-  });
-  const result = await client.callTool({ name: 'matribox_list_models', arguments: {} });
-  assert.equal(result.isError, true);
-  assert.match(text(result), /catalog not found/);
+test('the session uses the built-in catalog by default: no file, no install', async () => {
+  const session = new MatriboxSession(() => Promise.reject(new Error('no unit')), { backups: '/nonexistent', presets: '/nonexistent', irs: '/nonexistent' });
+  const drv = await session.listModels('DRV');
+  assert.equal(drv.match(/^- /gm)?.length, MB_CATALOG.modules.find((m) => m.name === 'DRV')?.models.length);
+  assert.match(drv, /based on Ibanez TS808\./);
+  assert.doesNotMatch(await session.listModels(), /alg_data|[\u00ae\u2122]/);
 });
 
 test('matribox_list_irs and matribox_list_captures read the slot names', async () => {

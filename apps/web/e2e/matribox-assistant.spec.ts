@@ -1,6 +1,6 @@
 import type { Page, Route } from '@playwright/test';
 import { parseMbPreset } from '@pocket-master/core';
-import { blockPanel, CATALOG_FILE, connectMatribox, expect, expectChain, pickCatalog, test, turnKnob } from './matribox-fixtures.ts';
+import { blockPanel, connectMatribox, expect, expectChain, MODELS, test, turnKnob } from './matribox-fixtures.ts';
 
 // Groq is simulated: every call is answered here, so nothing leaves the machine.
 type Reply = { body: unknown };
@@ -35,43 +35,37 @@ async function ask(page: Page, text: string) {
   await panel(page).getByRole('button', { name: 'Send' }).click();
 }
 
-test('without the catalog the assistant explains what it needs', async ({ page }) => {
-  await connectMatribox(page);
-  await expect(panel(page).getByText(/only the model catalog says: choose your alg_data.json/)).toBeVisible();
-  await expect(panel(page).getByLabel('Groq API key')).toHaveCount(0);
-});
-
 test('the assistant builds a whole chain on the unit, shows what changed, and Undo/Redo replay it', async ({ page, unit }) => {
   const requests = await fakeGroq(page, [
     call('build_tone', {
       blocks: [
-        { module: 'DRV', model: 'Fake Fuzz', params: [{ name: 'Fuzz', value: 80 }] },
-        { module: 'AMP', model: 'Fake Plexi', params: [{ name: 'Gain', value: 60 }] },
-        { module: 'DLY', model: 'Fake Echo', on: false },
+        { module: 'DRV', model: MODELS.od.name, params: [{ name: 'Gain', value: 80 }] },
+        { module: 'AMP', model: MODELS.amp.name, params: [{ name: 'Gain', value: 60 }] },
+        { module: 'DLY', model: MODELS.echo.name, on: false },
       ],
     }),
-    say('A Fuzz Face into a Plexi.'),
+    say('A Zendrive into a Shiva.'),
   ]);
   await connectMatribox(page);
-  await pickCatalog(page);
   await openChat(page);
   await ask(page, 'Hendrix, Purple Haze');
-  await expect(panel(page).getByText('A Fuzz Face into a Plexi.')).toBeVisible();
+  await expect(panel(page).getByText('A Zendrive into a Shiva.')).toBeVisible();
 
-  // The model got the person's catalog (models with the gear they are based on) and the loaded preset.
+  // The model got the built-in catalog (models with the gear they are based on) and the loaded preset.
   const first = requests[0]!.messages.at(-1)!.content!;
-  expect(first).toContain('DRV: Fake Drive (Imaginary Overdrive 808); Fake Fuzz (Imaginary Fuzz Face)');
+  expect(first).toContain(`${MODELS.drive.name} (${MODELS.drive.basedOn})`);
+  expect(first).not.toMatch(/alg_data/);
   expect(first).toContain('Name: Drive AD');
 
   await chain(page, 'DRV → AMP → DLY');
   expect(loaded(unit).chain.map((b) => [b.fxid, b.on, b.values[0]])).toEqual([
     [0x03000010, true, 80],
     [0x0700001a, true, 60],
-    [0x0b000001, false, 0],
+    [0x0b000001, false, MODELS.echo.params[0]!.defaultValue],
   ]);
   const changes = panel(page).getByRole('region', { name: 'What changed' });
   await expect(changes.getByText('DYN DRV AMP CAB RVB VOL → DRV AMP DLY')).toBeVisible();
-  await expect(changes.getByText('DRV · Fake Fuzz')).toHaveCount(2);
+  await expect(changes.getByText(`DRV · ${MODELS.od.name}`)).toHaveCount(MODELS.od.params.length);
 
   await page.getByRole('button', { name: 'Undo' }).click();
   await chain(page, 'DYN → DRV → AMP → CAB → RVB → VOL');
@@ -83,7 +77,6 @@ test('the assistant builds a whole chain on the unit, shows what changed, and Un
 
 test("Undo and Redo replay the editor's own edits through the unit, from the buttons and the keyboard", async ({ page, unit }) => {
   await connectMatribox(page);
-  await pickCatalog(page);
   const undo = page.getByRole('button', { name: 'Undo' });
   await expect(undo).toBeDisabled();
 
@@ -114,7 +107,6 @@ test("Undo and Redo replay the editor's own edits through the unit, from the but
 test('the assistant only proposes a save: the person confirms it in the Save dialog', async ({ page, unit }) => {
   const requests = await fakeGroq(page, [call('save_preset', { slot: '2B', name: 'Purple Haze' }), say('Saved if you confirmed.')]);
   await connectMatribox(page);
-  await pickCatalog(page);
   await openChat(page);
   await ask(page, 'save it on 2B');
   const dialog = page.getByRole('dialog', { name: 'Save to the Matribox' });
@@ -133,9 +125,6 @@ test.describe('in Portuguese', () => {
   test.use({ locale: 'pt-BR' });
   test('the Matribox assistant speaks Portuguese', async ({ page }) => {
     await connectMatribox(page);
-    await expect(page.getByText(/só o catálogo de modelos diz isso/)).toBeVisible();
-    await page.getByLabel('Escolher alg_data.json').setInputFiles(CATALOG_FILE);
-    await expect(page.getByText('Catálogo de modelos: 10 modelos.')).toBeVisible();
     await expect(page.getByText(/o catálogo de modelos vão para o provedor da sua chave/)).toBeVisible();
   });
 });

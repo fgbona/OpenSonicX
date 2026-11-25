@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useRef } from 'react';
+import { MB_CATALOG } from '@pocket-master/core';
 import { matriboxAgent } from '@/lib/matriboxAgent';
 import { keepMbTone, mbLibraryNow, mbTone } from '@/lib/matriboxLibrary';
 import type { Matribox } from '@/lib/useMatribox';
@@ -15,19 +16,19 @@ interface Props {
   proposeSave: (index: number, name: string) => Promise<'saved' | 'cancelled'>;
 }
 
-/** The tone assistant on the Matribox: it needs the catalog, the person's own alg_data.json, to pick models. */
+/** The tone assistant on the Matribox: it picks models from the built-in catalog by the gear they are based on. */
 export function MatriboxAssistant({ mb, history, proposeSave }: Props) {
-  const { t } = useI18n();
+  const { lang } = useI18n();
   // The agent stays the same across renders and reads the editor as it is now.
-  const latest = useRef({ mb, history, proposeSave });
-  latest.current = { mb, history, proposeSave };
+  const latest = useRef({ mb, history, proposeSave, lang });
+  latest.current = { mb, history, proposeSave, lang };
   const agent = useMemo(
     () =>
       matriboxAgent({
         snapshot: () => {
-          const { mb: now, history: steps } = latest.current;
-          if (!now.unit || !now.catalog) throw new Error('The Matribox or its model catalog is not there any more.');
-          return { current: now.unit.current, preset: steps.preset() ?? now.unit.preset, catalog: now.catalog };
+          const { mb: now, history: steps, lang: language } = latest.current;
+          if (!now.unit) throw new Error('The Matribox is not there any more.');
+          return { current: now.unit.current, preset: steps.preset() ?? now.unit.preset, catalog: MB_CATALOG, lang: language };
         },
         apply: (chain) => latest.current.history.applyChain(chain),
         undo: () => latest.current.history.undo(),
@@ -41,15 +42,5 @@ export function MatriboxAssistant({ mb, history, proposeSave }: Props) {
       }),
     [],
   );
-  if (!mb.catalog) {
-    return (
-      <section className="panel assistant" aria-label={t('assistant.title')}>
-        <header className="panel-head">
-          <h2>{t('assistant.title')}</h2>
-        </header>
-        <p className="muted assistant-body">{t('mb.assistantNeedsCatalog')}</p>
-      </section>
-    );
-  }
   return <AssistantPanel agent={agent} hint="mb.assistantHint" privacy="mb.assistantPrivacy" />;
 }

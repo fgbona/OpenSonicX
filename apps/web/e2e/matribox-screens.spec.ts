@@ -1,9 +1,9 @@
 /**
- * Pictures of the Matribox editor for a design review, against the simulated unit and the invented
+ * Pictures of the Matribox editor for a design review, against the simulated unit and the built-in
  * catalog: MB_SCREENS=<folder> npx playwright test e2e/matribox-screens.spec.ts. Skipped otherwise.
  */
 import { devices, type Page, type PageScreenshotOptions } from '@playwright/test';
-import { blockPanel, connectMatribox, expect, pickCatalog, test } from './matribox-fixtures.ts';
+import { blockPanel, connectMatribox, expect, test } from './matribox-fixtures.ts';
 
 const DIR = process.env.MB_SCREENS;
 test.skip(!DIR, 'set MB_SCREENS to a folder to take the pictures');
@@ -24,9 +24,7 @@ for (const theme of ['dark', 'light'] as const) {
   test(`desktop, ${theme} theme`, async ({ page }) => {
     await connectMatribox(page);
     if (theme === 'light') await page.getByRole('button', { name: 'Switch to light theme' }).click();
-    await snap(page, `desktop-${theme}-no-catalog`);
-    await pickCatalog(page);
-    await expect(page.locator('.face-amp')).toHaveAttribute('data-skin', 'marshall');
+    await expect(page.locator('.face-amp')).toHaveAttribute('data-skin', 'boutique');
     await snap(page, `desktop-${theme}`);
     await idle(page);
     await page.locator('section.preset').screenshot({ path: `${DIR}/amp-block-${theme}.png` });
@@ -35,7 +33,6 @@ for (const theme of ['dark', 'light'] as const) {
 
 test('model picker open, and a non-amp block', async ({ page }) => {
   await connectMatribox(page);
-  await pickCatalog(page);
   const drive = await blockPanel(page, 2, 'DRV');
   await snap(page, 'drv-block-dark', { clip: SCREEN });
   await drive.getByRole('button', { name: '2. DRV model' }).click();
@@ -45,7 +42,6 @@ test('model picker open, and a non-amp block', async ({ page }) => {
 
 test("add menu: block types, then a module's models", async ({ page }) => {
   await connectMatribox(page);
-  await pickCatalog(page);
   await page.getByRole('button', { name: 'Add a block…' }).click();
   await expect(page.getByRole('listbox', { name: 'Add a block: type' })).toBeVisible();
   await snap(page, 'add-types-dark', { clip: SCREEN });
@@ -56,7 +52,6 @@ test("add menu: block types, then a module's models", async ({ page }) => {
 
 test('footswitch, expression and tuner panels', async ({ page }) => {
   await connectMatribox(page);
-  await pickCatalog(page);
   await page.getByText('Expression pedal').click();
   const panels = page.locator('.fold');
   const first = (await panels.first().boundingBox())!;
@@ -82,7 +77,6 @@ for (const theme of ['dark', 'light'] as const) {
   test(`tone library, ${theme} theme`, async ({ page }) => {
     await connectMatribox(page);
     if (theme === 'light') await page.getByRole('button', { name: 'Switch to light theme' }).click();
-    await pickCatalog(page);
     const library = await keepTones(page);
     await idle(page);
     await library.screenshot({ path: `${DIR}/library-desktop-${theme}.png` });
@@ -94,7 +88,6 @@ test.describe('phone', () => {
   test.use(pixel);
   test('portrait', async ({ page }) => {
     await connectMatribox(page);
-    await pickCatalog(page);
     await snap(page, 'phone-dark', {});
     await snap(page, 'phone-dark-full');
     await page.getByRole('button', { name: 'Add a block…' }).scrollIntoViewIfNeeded();
@@ -107,7 +100,6 @@ test.describe('phone', () => {
     test(`tone library, ${theme} theme`, async ({ page }) => {
       await connectMatribox(page);
       if (theme === 'light') await page.getByRole('button', { name: 'Switch to light theme' }).click();
-      await pickCatalog(page);
       const library = await keepTones(page);
       // The Read button sits in the More menu here: the Keep button tells the editor is idle.
       await expect(library.getByRole('button', { name: 'Keep tone' })).toBeEnabled();
