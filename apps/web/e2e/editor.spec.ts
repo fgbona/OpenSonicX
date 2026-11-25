@@ -165,6 +165,16 @@ test('a .prst from the Sonicake app imports like a preset file, compared first',
   await dialog.getByRole('button', { name: 'Cancel' }).click();
 });
 
+test('the preset-file import is reachable by keyboard: Tab focuses it and Enter opens the file picker', async ({ page, pedal }) => {
+  await connect(page, pedal);
+  await page.getByRole('button', { name: 'Export preset' }).focus();
+  await page.keyboard.press('Tab');
+  await expect(page.getByText('Import preset').locator('input[type=file]')).toBeFocused();
+  const chooser = page.waitForEvent('filechooser');
+  await page.keyboard.press('Enter');
+  await chooser;
+});
+
 test('the save dialog suggests the name of the slot it saves to, every time it opens', async ({ page, pedal }) => {
   await connect(page, pedal);
   await pickAmp(page, 'Calif DualM');

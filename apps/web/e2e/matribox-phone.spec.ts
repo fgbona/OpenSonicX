@@ -123,6 +123,20 @@ test('the preset header fits one row: secondary actions fold into a More menu th
   await expect(more).toBeFocused();
 });
 
+test('the folded menu’s import is a button the keyboard reaches and opens the file picker', async ({ page }) => {
+  await connectMatribox(page);
+  const head = page.locator('.preset-head');
+  await expect(head.getByRole('button', { name: 'Read', exact: true, includeHidden: true })).toBeEnabled(); // the editor is idle
+  await head.getByRole('button', { name: 'More actions' }).focus();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Tab'); // Export preset
+  await page.keyboard.press('Tab');
+  await expect(head.getByRole('button', { name: 'Import preset…' })).toBeFocused();
+  const chooser = page.waitForEvent('filechooser');
+  await page.keyboard.press('Enter');
+  await chooser;
+});
+
 test.describe('in Portuguese', () => {
   test.use({ locale: 'pt-BR' });
   test('the More menu speaks Portuguese', async ({ page }) => {

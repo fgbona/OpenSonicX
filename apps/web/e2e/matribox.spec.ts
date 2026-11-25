@@ -288,6 +288,7 @@ test('restore all refuses a file that is not a backup-all file', async ({ page }
 
 for (const theme of ['dark', 'light'] as const) {
   test(`no WCAG A/AA violations in the Matribox editor, without and with the catalog (${theme} theme)`, async ({ page }) => {
+    test.setTimeout(90_000); // six axe passes over the whole page
     const violations = async () =>
       (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
     await connectMatribox(page);
@@ -296,9 +297,11 @@ for (const theme of ['dark', 'light'] as const) {
     await pickCatalog(page);
     await page.getByText('Expression pedal').click();
     expect(await violations()).toEqual([]);
-    // The menus open: a block's model menu, then both steps of the add menu.
-    // The DRV (two types, so headings) switched on: an off block's dimmed labels are inactive controls.
+    // An off block (the DRV): its dimmed knob labels still read at AA.
     const drive = await blockPanel(page, 2, 'DRV');
+    await expect(drive.getByRole('switch', { name: '2. DRV off' })).toBeVisible();
+    expect(await violations()).toEqual([]);
+    // The menus open: a block's model menu (the DRV's two types, so headings), then both steps of the add menu.
     await drive.getByRole('switch', { name: '2. DRV off' }).click();
     await drive.getByRole('button', { name: '2. DRV model' }).click();
     await expect(page.getByRole('listbox', { name: '2. DRV model' })).toBeVisible();
@@ -332,3 +335,66 @@ for (const theme of ['dark', 'light'] as const) {
     expect(failures).toEqual([]);
   });
 }
+
+// Between the phone layout and the wide one the header keeps the patch volume beside its buttons.
+for (const locale of ['en-US', 'pt-BR']) {
+  test.describe(locale, () => {
+    test.use({ locale });
+    test('the patch volume stays on the button row at 721–900px, with no sideways scroll', async ({ page }) => {
+      const sameRow = (a: { y: number; height: number }, b: { y: number; height: number }) => a.y < b.y + b.height && b.y < a.y + a.height;
+      await connectMatribox(page);
+      const head = page.locator('.preset-head');
+      for (const width of [721, 800, 900]) {
+        await page.setViewportSize({ width, height: 800 });
+        const read = (await head.getByRole('button', { name: /^(Read|Ler)$/ }).boundingBox())!;
+        const knob = (await head.getByRole('slider').boundingBox())!;
+        expect(sameRow(read, knob), `at ${width}px`).toBe(true);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), `at ${width}px`).toBeLessThanOrEqual(0);
+      }
+    });
+  });
+}
+
+test('back from the models, the add menu focuses and highlights the block type chosen before', async ({ page }) => {
+  await connectMatribox(page);
+  await pickCatalog(page);
+  await page.getByRole('button', { name: 'Add a block…' }).click();
+  const types = page.getByRole('listbox', { name: 'Add a block: type' });
+  await types.getByRole('option', { name: 'DLY', exact: true }).click();
+  await page.mouse.move(0, 0); // a pointer resting on the list would highlight what it rests on
+  await expect(page.getByRole('listbox', { name: 'Add a block: DLY model' })).toBeFocused();
+  await page.keyboard.press('Home'); // "‹ Back to block types"
+  await page.keyboard.press('Enter');
+  await expect(types).toBeFocused();
+  const dly = types.getByRole('option', { name: 'DLY', exact: true });
+  await expect(dly).toHaveClass(/is-active/);
+  await expect(types).toHaveAttribute('aria-activedescendant', (await dly.getAttribute('id'))!);
+  // Escape from the models goes back the same way.
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('listbox', { name: 'Add a block: DLY model' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(types).toBeFocused();
+  await expect(dly).toHaveClass(/is-active/);
+});
+
+test('on a desktop the add menu hangs under the add tile, inside the screen, even when its row is short', async ({ page }) => {
+  for (const width of [1280, 1000]) {
+    await page.setViewportSize({ width, height: 900 });
+    await connectMatribox(page);
+    await pickCatalog(page);
+    const add = page.getByRole('button', { name: 'Add a block…' });
+    await add.click();
+    for (const step of ['type', 'DRV model']) {
+      if (step !== 'type') await page.getByRole('listbox', { name: 'Add a block: type' }).getByRole('option', { name: 'DRV', exact: true }).click();
+      const menu = (await page.getByRole('listbox', { name: `Add a block: ${step}` }).boundingBox())!;
+      const tile = (await add.boundingBox())!;
+      expect(menu.y, `${step} at ${width}px`).toBeGreaterThanOrEqual(tile.y + tile.height);
+      expect(menu.y, `${step} at ${width}px`).toBeLessThan(tile.y + tile.height + 16);
+      expect(menu.x, `${step} at ${width}px`).toBeLessThanOrEqual(tile.x + tile.width);
+      expect(menu.x + menu.width, `${step} at ${width}px`).toBeGreaterThan(tile.x);
+      expect(menu.x + menu.width, `${step} at ${width}px`).toBeLessThanOrEqual(width);
+      expect(menu.x).toBeGreaterThanOrEqual(0);
+    }
+    await page.keyboard.press('Tab');
+  }
+});

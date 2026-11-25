@@ -95,6 +95,21 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 - The Matribox editor no longer logs a refused import file as an error in the browser console: a
   wrong file is the person's mistake and the dialog already says so (it also showed in the e2e log).
+- Matribox editor, keyboard: *Import preset…* (in the header and in the phone's folded ⋯ menu),
+  *Restore all…* and the catalog's *Choose alg_data.json* were a `<label>` around a hidden file
+  input, which Tab skipped. They are buttons now (`FileButton`) that open the file picker with
+  Enter or Space. The Pocket Master's import was already reachable (its input is overlaid, not
+  hidden) and is unchanged; an e2e test now checks it.
+- Matribox editor, light theme: an off block's knob labels read at 2.34:1 (the whole parameter row
+  was at 55% opacity). The dials and switches still dim, the values turn grey, and the text keeps
+  WCAG AA (4.5:1). The axe check now runs on an off block in both themes.
+- Matribox editor at 721–900px: the patch-volume knob no longer drops onto a row of its own when
+  the buttons are long (Portuguese at 721px): the buttons wrap among themselves beside the knob.
+- Matribox add menu: back from the models ("Back to block types" or Escape), the type chosen
+  before is highlighted and the list focused, instead of starting over at the top.
+- Matribox add menu on a desktop: it hangs under the ADD tile wherever the chain's last row ends,
+  moved left only as far as it takes to stay on screen, instead of at the chain area's right edge.
+  Phones keep the bottom sheet.
 
 ## [1.1.0] - 2026-11-24
 

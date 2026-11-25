@@ -99,3 +99,24 @@ test('cancelling an import sends nothing to the unit', async ({ page, unit }) =>
   expect(unit.stored(5)).toBeUndefined();
   expect(await page.evaluate((key) => localStorage.getItem(key), BACKUPS)).toBeNull();
 });
+
+test('import is a button the keyboard reaches, and Enter or Space opens the file picker', async ({ page, unit }) => {
+  await connectMatribox(page);
+  const exportButton = page.getByRole('button', { name: 'Export preset' });
+  await expect(exportButton).toBeEnabled(); // the editor is idle
+  await exportButton.focus();
+  await page.keyboard.press('Tab');
+  const button = page.getByRole('button', { name: 'Import preset…' });
+  await expect(button).toBeFocused();
+  const dialog = page.getByRole('dialog', { name: 'Import a preset file' });
+  for (const key of ['Enter', 'Space']) {
+    await button.focus();
+    const chooser = page.waitForEvent('filechooser');
+    await page.keyboard.press(key);
+    await (await chooser).setFiles(prst(unit));
+    await expect(dialog.getByText('“Drive AD” from drive.prst')).toBeVisible();
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(dialog).toBeHidden();
+  }
+  expect(unit.presetWrites).toHaveLength(0);
+});

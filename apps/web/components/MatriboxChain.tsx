@@ -1,6 +1,6 @@
 'use client';
 
-import { useLayoutEffect, useRef, useState } from 'react';
+import { type RefObject, useLayoutEffect, useRef, useState } from 'react';
 import { MB_SLOTS, type MbCatalog, type MbResolvedBlock } from '@pocket-master/core';
 import { mbFxidHex, mbLookKey } from '@/lib/matriboxLook';
 import { MatriboxAddMenu } from './MatriboxAddMenu';
@@ -54,6 +54,36 @@ function useSnakeLine(deps: readonly unknown[]) {
   return { wrap, list, path };
 }
 
+/** Room kept between the add menu and the screen's edges. */
+const SCREEN_GUTTER = 8;
+
+/**
+ * Hangs the open add menu under the add tile wherever the tile wrapped to, moved left as far as it
+ * takes to stay on screen; placed again when the menu (its other step) or the chain resizes. On a
+ * phone the menu is a bottom sheet fixed to the screen, which this placing does not move.
+ */
+function useMenuUnder(open: boolean, wrap: RefObject<HTMLElement | null>, tile: RefObject<HTMLElement | null>, menu: RefObject<HTMLElement | null>) {
+  useLayoutEffect(() => {
+    const box = wrap.current;
+    const add = tile.current;
+    const el = menu.current;
+    if (!open || !box || !add || !el) return undefined;
+    const place = () => {
+      const at = box.getBoundingClientRect();
+      const under = add.getBoundingClientRect();
+      const room = document.documentElement.clientWidth - SCREEN_GUTTER - el.offsetWidth;
+      const left = Math.max(SCREEN_GUTTER, Math.min(under.left, room));
+      el.style.left = `${left - at.left}px`;
+      el.style.top = `${under.bottom - at.top}px`;
+    };
+    place();
+    const observer = new ResizeObserver(place);
+    observer.observe(el);
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, [open, wrap, tile, menu]);
+}
+
 /**
  * The Matribox's signal chain as the pedals of the Pocket Master's strip, wrapped into rows that
  * read left to right with a cable snaking from each row's end to the next row's start (a Helix-like
@@ -76,6 +106,7 @@ export function MatriboxChain({ chain, catalog, selected, disabled, userSlot, on
     if (refocus) addRef.current?.focus();
   };
   const line = useSnakeLine([chain, canAdd, disabled]);
+  useMenuUnder(adding, line.wrap, addRef, menuRef);
   return (
     <div className="tiles-wrap mb-snake" ref={line.wrap}>
       <svg className="mb-snake-line" aria-hidden="true" focusable="false">

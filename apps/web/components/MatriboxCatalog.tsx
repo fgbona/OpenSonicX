@@ -2,6 +2,7 @@
 
 import type { MbCatalog } from '@pocket-master/core';
 import { MAC_CATALOG_PATH } from '@/lib/matriboxCatalog';
+import { FileButton } from './FileButton';
 import { useI18n } from './I18n';
 
 interface Props {
@@ -18,20 +19,18 @@ interface Props {
 export function MatriboxCatalog({ catalog, error, onPick, onForget }: Props) {
   const { t, te } = useI18n();
   const picker = (
-    <label className={catalog ? 'btn-link' : 'btn btn-primary'}>
+    <FileButton
+      className={catalog ? 'btn-link' : 'btn btn-primary'}
+      accept=".json,application/json"
+      pickLabel={t('mb.catalogPick')}
+      onPick={(input) => {
+        const file = input.files?.[0];
+        input.value = '';
+        if (file) onPick(file);
+      }}
+    >
       {t(catalog ? 'mb.catalogReplace' : 'mb.catalogPick')}
-      <input
-        type="file"
-        accept=".json,application/json"
-        hidden
-        aria-label={t('mb.catalogPick')}
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          e.target.value = '';
-          if (file) onPick(file);
-        }}
-      />
-    </label>
+    </FileButton>
   );
   const alert = error && (
     <p className="alert" role="alert">
