@@ -6,7 +6,9 @@
  */
 import { CHAT_INSTRUCTIONS_THOROUGH, checkMbPresetName, mbPresetLabel, parseMbPresetLabel, type ChatTool, type JsonSchema, type MbCatalog, type MbPreset } from '@pocket-master/core';
 import { SAVE_VERB, type ToneAgent } from './assistant.ts';
-import { editChain, planTone, type ChainChange, type MbChainBlock, type ToneBlock } from './matriboxPlan.ts';
+import { gearOf } from './matribox.ts';
+import { findTone, tonePreset, type MbTone } from './matriboxLibrary.ts';
+import { editChain, modelOf, planTone, type ChainChange, type MbChainBlock, type ToneBlock } from './matriboxPlan.ts';
 import { mbCatalogText, mbChanges, mbModelsText, mbPresetText } from './matriboxText.ts';
 
 /** What the assistant needs from the Matribox editor; every method works on its current state. */
@@ -18,6 +20,10 @@ export interface MbAgentHost {
   undo(): Promise<boolean>;
   /** Opens the Save dialog filled in; resolves with what the person did. */
   proposeSave(index: number, name: string): Promise<'saved' | 'cancelled'>;
+  /** The tones kept in the editor's tone library, newest first. */
+  tones(): readonly MbTone[];
+  /** Keeps the sound as the unit plays it now in the tone library (nothing is written to the unit). */
+  keepTone(name: string, notes: string): Promise<void>;
 }
 
 const object = (properties: Record<string, JsonSchema>, required: string[]): JsonSchema => ({ type: 'object', properties, required });
@@ -76,6 +82,24 @@ const TOOLS: readonly ChatTool[] = [
     parameters: object({ changes: { type: 'array', items: CHANGE } }, ['changes']),
   },
   { name: 'undo_edit', description: "Undoes the last change to the sound (the editor's Undo, also the person's own edits). Nothing is saved.", parameters: NONE },
+  { name: 'list_saved_tones', description: "Tones the person kept in the editor's tone library, with the reference each one matches. The first message already lists them.", parameters: NONE },
+  {
+    name: 'load_saved_tone',
+    description:
+      'Loads a kept tone into the loaded preset, by its name, as one Undo step. Live only: nothing is saved. Prefer it to rebuilding when a kept tone matches the request: it is exact and costs no extra requests. Returns the preset as it now is.',
+    parameters: object({ name: { type: 'string', description: 'Name of a kept tone, as list_saved_tones shows it' } }, ['name']),
+  },
+  {
+    name: 'keep_tone',
+    description: "Keeps the sound as it is now in the editor's tone library, so it loads at once next time. Offer it when the person says a tone sounds right; nothing is written to the Matribox.",
+    parameters: object(
+      {
+        name: { type: 'string', description: 'Short name, 1..16 printable ASCII characters (like a preset name)' },
+        notes: { type: 'string', description: 'The reference it matches, e.g. "AC/DC, Back in Black, rhythm"' },
+      },
+      ['name', 'notes'],
+    ),
+  },
   {
     name: 'save_preset',
     description:
@@ -88,7 +112,7 @@ const TOOLS: readonly ChatTool[] = [
 ];
 
 /** The tools that change the sound (or open the Save dialog). */
-const ACTS = new Set(['build_tone', 'edit_preset', 'undo_edit', 'save_preset']);
+const ACTS = new Set(['build_tone', 'edit_preset', 'undo_edit', 'save_preset', 'load_saved_tone', 'keep_tone']);
 
 const INSTRUCTIONS = [
   'You are the tone assistant of an editor for the Sonicake Matribox II Pro guitar multi-effects. The person usually describes a sound (an artist, a record, a song, or words like "warmer").',
@@ -96,6 +120,7 @@ const INSTRUCTIONS = [
   'For adjustments ("warmer", "less gain") use edit_preset. Values must be within the ranges given. Say what you did in the same terms as the values.',
   'Do not ask for details the person did not give: make reasonable choices, say briefly what you chose and why, naming the real gear, and invite them to ask for adjustments by ear.',
   'The editor shows every change live, and the person can undo. Nothing is stored until save_preset, which opens the editor\'s Save dialog for the person to confirm; propose it only when the person asks to save (e.g. "on 12A"). Never say a tone is saved unless save_preset answered that the person saved it.',
+  'A kept tone in the first message is reused with load_saved_tone only when it matches the request: the same instrument, part and reference, as its notes and gear show; a name that merely mentions the band is not enough, and when in doubt, build the tone. When the person says a tone sounds right, offer to keep it with keep_tone, naming the reference in notes.',
   'Use as few calls as possible: build_tone and edit_preset already return the resulting preset. Answer in the language the person writes in, in two to four short sentences.',
 ].join(' ');
 
@@ -110,6 +135,21 @@ export function askedToSaveMb(message: string): number | null {
   } catch {
     return null; // "61A" is not a preset
   }
+}
+
+/** The kept tones, one a line: name, notes and the gear its models are based on. */
+function tonesText(host: MbAgentHost, catalog: MbCatalog): string {
+  return host
+    .tones()
+    .map((t) => {
+      const gear = tonePreset(t)
+        .chain.map((b) => modelOf(catalog, b))
+        .map((m) => (m ? gearOf(m) || m.name : ''))
+        .filter(Boolean)
+        .join(', ');
+      return `- ${t.name}${t.notes ? `: ${t.notes}` : ''}${gear ? ` [${gear}]` : ''}`;
+    })
+    .join('\n');
 }
 
 const field = (args: unknown, name: string): unknown => (typeof args === 'object' && args !== null ? (args as Record<string, unknown>)[name] : undefined);
@@ -132,6 +172,19 @@ async function run(host: MbAgentHost, name: string, args: unknown): Promise<stri
     case 'undo_edit':
       if (!(await host.undo())) throw new Error('there is nothing to undo.');
       return now(host.snapshot().preset);
+    case 'list_saved_tones':
+      return tonesText(host, catalog) || 'No tones kept yet.';
+    case 'load_saved_tone': {
+      const toneName = String(field(args, 'name') ?? '').trim();
+      const tone = findTone(host.tones(), toneName);
+      if (!tone) throw new Error(`no kept tone is called "${toneName}". Kept tones:\n${tonesText(host, catalog) || '(none)'}`);
+      return `Loaded the kept tone "${tone.name}".\n\n${now(await host.apply(tonePreset(tone).chain))}`;
+    }
+    case 'keep_tone': {
+      const toneName = checkMbPresetName(String(field(args, 'name') ?? '').trim());
+      await host.keepTone(toneName, String(field(args, 'notes') ?? '').trim());
+      return `Kept "${toneName}" in the tone library; it loads with load_saved_tone next time.`;
+    }
     case 'save_preset': {
       const index = parseMbPresetLabel(String(field(args, 'slot') ?? ''));
       const presetName = checkMbPresetName(String(field(args, 'name') ?? ''));
@@ -153,7 +206,11 @@ export function matriboxAgent(host: MbAgentHost): ToneAgent {
     tools: TOOLS,
     acts: ACTS,
     instructions: (thorough) => (thorough ? `${INSTRUCTIONS} ${CHAT_INSTRUCTIONS_THOROUGH}` : INSTRUCTIONS),
-    context: (thorough) => `Loaded preset:\n${presetText()}\n\nModels by module (name, then the gear it is based on):\n${mbCatalogText(host.snapshot().catalog, thorough)}`,
+    context: (thorough) => {
+      const { catalog } = host.snapshot();
+      const tones = tonesText(host, catalog);
+      return `Loaded preset:\n${presetText()}\n\nModels by module (name, then the gear it is based on):\n${mbCatalogText(catalog, thorough)}${tones ? `\n\nSaved tones (load_saved_tone):\n${tones}` : ''}`;
+    },
     current: presetText,
     runner: () => {
       // The preset this message works on: the person loading another one stops the sound changes.

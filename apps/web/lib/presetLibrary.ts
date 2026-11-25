@@ -4,8 +4,8 @@
  * Presets exported or imported in this browser (or the desktop app), so they can be loaded or
  * compared again without looking for the file. Kept in localStorage like the backups.
  */
-import { useSyncExternalStore } from 'react';
 import { parsePresetFile, type PresetFile } from '@pocket-master/core';
+import { localList } from './localList.ts';
 
 const KEY = 'pocket-master-editor.presetLibrary.v1';
 export const LIBRARY_LIMIT = 50;
@@ -38,44 +38,12 @@ export function parseLibrary(raw: string | null): PresetFile[] {
   }
 }
 
-let cache: PresetFile[] | null = null;
-const listeners = new Set<() => void>();
-const EMPTY: PresetFile[] = [];
+const store = localList(KEY, parseLibrary);
 
-function current(): PresetFile[] {
-  if (cache === null) {
-    try {
-      cache = parseLibrary(localStorage.getItem(KEY));
-    } catch {
-      cache = []; // storage blocked: the library lasts for this page only
-    }
-  }
-  return cache;
-}
-
-function update(next: PresetFile[]): void {
-  cache = next;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(next));
-  } catch {
-    // storage blocked or full: kept for this page only
-  }
-  listeners.forEach((listener) => listener());
-}
-
-export const addToLibrary = (file: PresetFile) => update(withPreset(current(), file));
+export const addToLibrary = (file: PresetFile) => store.set(withPreset(store.now(), file));
 /** The library as it is now, for code outside React (the tone assistant's tools). */
-export const libraryNow = (): readonly PresetFile[] => current();
-export const removeFromLibrary = (file: PresetFile) => update(withoutPreset(current(), file));
+export const libraryNow = (): readonly PresetFile[] => store.now();
+export const removeFromLibrary = (file: PresetFile) => store.set(withoutPreset(store.now(), file));
 
 /** The library, newest first; components re-render when it changes. */
-export function usePresetLibrary(): readonly PresetFile[] {
-  return useSyncExternalStore(
-    (listener) => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-    current,
-    () => EMPTY,
-  );
-}
+export const usePresetLibrary = (): readonly PresetFile[] => store.useList();

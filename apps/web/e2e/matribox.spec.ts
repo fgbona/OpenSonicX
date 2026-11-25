@@ -288,7 +288,7 @@ test('restore all refuses a file that is not a backup-all file', async ({ page }
 
 for (const theme of ['dark', 'light'] as const) {
   test(`no WCAG A/AA violations in the Matribox editor, without and with the catalog (${theme} theme)`, async ({ page }) => {
-    test.setTimeout(90_000); // six axe passes over the whole page
+    test.setTimeout(120_000); // seven axe passes over the whole page
     const violations = async () =>
       (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
     await connectMatribox(page);
@@ -296,7 +296,15 @@ for (const theme of ['dark', 'light'] as const) {
     expect(await violations()).toEqual([]);
     await pickCatalog(page);
     await page.getByText('Expression pedal').click();
+    // A kept tone in the tone library, one shown and one being renamed.
+    const library = page.getByRole('region', { name: 'Tone library' });
+    await library.getByRole('button', { name: 'Keep tone' }).click();
+    await library.getByRole('textbox', { name: 'Name' }).fill('Second');
+    await library.getByRole('button', { name: 'Keep tone' }).click();
+    await expect(library.getByRole('listitem')).toHaveCount(2);
+    await library.getByRole('button', { name: 'Rename Second' }).click();
     expect(await violations()).toEqual([]);
+    await library.getByRole('button', { name: 'Cancel' }).click();
     // An off block (the DRV): its dimmed knob labels still read at AA.
     const drive = await blockPanel(page, 2, 'DRV');
     await expect(drive.getByRole('switch', { name: '2. DRV off' })).toBeVisible();
