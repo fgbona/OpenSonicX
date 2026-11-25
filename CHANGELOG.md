@@ -8,6 +8,17 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Matribox II Pro: `apps/mcp/scripts/mb-capture.ts`, an offline decoder for MIDI Monitor captures
+  (`.mmon`, read with a small bplist00 reader; no MIDI port is opened). `decode` prints every
+  message both ways (frame type, flag, cmd, length, data, and the `parseMbNotice` reading of the
+  unit's notices), joining pages and unwrapping LZO1X with core's own code. `diff` compares the
+  global tables (unit replies to cmd `11`, `13`, `16`) of each capture's last read-back with a
+  base capture, byte by byte and as u32/float32 words, and lists the capture's host writes (a
+  drag's stream collapsed to its first and last); with one file it compares that file's first
+  and last read-backs. `notices` lists what the unit sent on its own (replies and echoes of a
+  host message are left out). Documented in docs/matribox-captures.md for the mb-30 … mb-44
+  session; unit tests on synthetic messages.
+
 - Matribox II Pro: the editor follows what is done on the unit itself. Core `parseMbNotice`
   decodes the messages the unit sends on its own (another preset loaded, one block or every
   block's on/off, knob 1/2 parameter turns, knob 3 patch volume, the "preset edited" flag), from
