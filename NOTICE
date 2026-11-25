@@ -4,6 +4,13 @@ Copyright (c) 2026 Fernando Bona and contributors. Licensed under MIT, see LICEN
 Third-party material
 ====================
 
+The Matribox II Pro model catalog (packages/core/src/matribox/models.json and
+model-text.json) is our own work: a functional map of the unit's models (ids, categories,
+parameter ranges) written by scripts/matribox-map.mjs, and our own model names and
+descriptions. Names of real gear in it ("based on …") are trademarks of their owners, used only
+to describe the sound each model aims at; this project is not affiliated with or endorsed by
+them, nor by Sonicake.
+
 packages/core/src/catalog.json, packages/core/test/fixtures/p34-payload.hex and
 packages/core/test/fixtures/pocketedit-commands.json are copied from pocket-master-mcp (https://github.com/voronkovd/pocket-master-mcp).
 The protocol implementation in packages/core/src was written from scratch
