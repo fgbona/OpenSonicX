@@ -40,6 +40,20 @@ test('parseMbPresetFile says so for a Pocket Master .prst', () => {
   assert.throws(() => parseMbPresetFile(file), { message: POCKET_MASTER_PRST });
 });
 
+test("a refused file is the person's mistake, explained on the page: nothing goes to console.error", () => {
+  const logged: unknown[][] = [];
+  const saved = console.error;
+  console.error = (...args: unknown[]) => {
+    logged.push(args);
+  };
+  try {
+    assert.throws(() => parseMbPresetFile(bytes('not a preset at all')), { message: NOT_MB_PRESET });
+  } finally {
+    console.error = saved;
+  }
+  assert.deepEqual(logged, []);
+});
+
 test('parseMbPresetFile refuses anything else with one clear message', () => {
   const refused = [
     'hello',
