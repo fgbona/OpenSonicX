@@ -10,6 +10,10 @@ const WCAG = ['wcag2a', 'wcag2aa', 'wcag21aa'];
 const FINISHES = ['TWD Deluxe', 'Dark Twin', 'Voks 30N', 'Brit 800', 'Calif DualM', 'Sol 100 OD', 'Halen 51', 'Eng 120', 'Bog XT', 'Jazz 120', 'A BassVT'];
 const FACE_TEXT = '.face-amp :is(.knob-value, .knob-label, .amp-script, .editor-info)';
 
+// axe walks the whole DOM (up to 3 passes per test): CPU-bound, so it needs the headroom (3x
+// timeout) when many workers share the machine. Idle, these tests take a few seconds.
+test.beforeEach(() => test.slow());
+
 const violations = async (page: Parameters<typeof connect>[0]) =>
   (await new AxeBuilder({ page }).withTags(WCAG).analyze()).violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
 

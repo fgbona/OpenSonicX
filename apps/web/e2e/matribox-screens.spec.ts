@@ -11,9 +11,12 @@ test.use({ viewport: { width: 1440, height: 1000 } });
 
 const SCREEN = { x: 0, y: 0, width: 1440, height: 1000 };
 
+/** The editor is idle once Read is enabled; on a phone it sits in the folded More menu, hence includeHidden. */
+const idle = (page: Page) => expect(page.getByRole('button', { name: 'Read', exact: true, includeHidden: true })).toBeEnabled();
+
 /** A picture once the editor is idle (Read enabled), not mid-read with its buttons dimmed. */
 async function snap(page: Page, name: string, options: PageScreenshotOptions = { fullPage: true }) {
-  await expect(page.getByRole('button', { name: 'Read', exact: true })).toBeEnabled();
+  await idle(page);
   await page.screenshot({ ...options, path: `${DIR}/${name}.png` });
 }
 
@@ -25,7 +28,7 @@ for (const theme of ['dark', 'light'] as const) {
     await pickCatalog(page);
     await expect(page.locator('.face-amp')).toHaveAttribute('data-skin', 'marshall');
     await snap(page, `desktop-${theme}`);
-    await expect(page.getByRole('button', { name: 'Read', exact: true })).toBeEnabled();
+    await idle(page);
     await page.locator('section.preset').screenshot({ path: `${DIR}/amp-block-${theme}.png` });
   });
 }
@@ -81,7 +84,7 @@ for (const theme of ['dark', 'light'] as const) {
     if (theme === 'light') await page.getByRole('button', { name: 'Switch to light theme' }).click();
     await pickCatalog(page);
     const library = await keepTones(page);
-    await expect(page.getByRole('button', { name: 'Read', exact: true })).toBeEnabled();
+    await idle(page);
     await library.screenshot({ path: `${DIR}/library-desktop-${theme}.png` });
   });
 }
