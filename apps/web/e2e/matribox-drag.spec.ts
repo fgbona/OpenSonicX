@@ -1,5 +1,5 @@
 import { MB_SLOTS, mbMoveBlock, parseMbPreset } from '@pocket-master/core';
-import { connectMatribox, expect, expectChain, pickCatalog, test } from './matribox-fixtures.ts';
+import { connectMatribox, expect, expectChain, test } from './matribox-fixtures.ts';
 
 const hex = (bytes: Uint8Array) => Buffer.from(bytes).toString('hex');
 /** Every move-block write the editor could send. */
@@ -9,7 +9,6 @@ const modules = (unit: { editBuffer: Uint8Array }) => parseMbPreset(unit.editBuf
 
 test('a tile dragged onto another position is one move write; the chain reads back in the new order and Undo restores it', async ({ page, unit }) => {
   await connectMatribox(page);
-  await pickCatalog(page);
   await expectChain(page, 'DYN → DRV → AMP → CAB → RVB → VOL');
   const tiles = page.locator('.tiles .tile-unit');
   await expect(tiles.first()).toHaveAttribute('draggable', 'true');
@@ -27,7 +26,6 @@ test('a tile dragged onto another position is one move write; the chain reads ba
 
 test('a tile dropped on itself or on the add tile writes nothing', async ({ page, unit }) => {
   await connectMatribox(page);
-  await pickCatalog(page);
   const tiles = page.locator('.tiles .tile-unit');
   await tiles.nth(1).dragTo(tiles.nth(1));
   await tiles.nth(1).dragTo(page.locator('.tiles .tile-unit:has(.mb-tile-add)'));

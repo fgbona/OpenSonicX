@@ -5,7 +5,7 @@
  */
 import { devices, type Page } from '@playwright/test';
 import { MB_SLOTS, mbMoveBlock } from '@pocket-master/core';
-import { connectMatribox, expect, expectChain, pickCatalog, test } from './matribox-fixtures.ts';
+import { connectMatribox, expect, expectChain, test } from './matribox-fixtures.ts';
 
 const SHOTS = process.env.MB_SNAKE;
 const CHAIN_10 = 'DYN → DRV → AMP → CAB → RVB → VOL → DLY → DRV → AMP → CAB';
@@ -30,7 +30,6 @@ async function addBlocks(page: Page, types: readonly string[]) {
 /** The 6-block preset grown to 10 blocks. */
 async function longChain(page: Page) {
   await connectMatribox(page);
-  await pickCatalog(page);
   await addBlocks(page, ['DLY', 'DRV', 'AMP', 'CAB']);
   await expectChain(page, CHAIN_10);
   await expect(page.getByRole('button', { name: 'Add a block…' })).toBeEnabled(); // the editor is idle

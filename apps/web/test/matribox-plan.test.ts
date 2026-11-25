@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseMbCatalog, parseMbPreset } from '@pocket-master/core';
+import { parseMbPreset } from '@pocket-master/core';
 import { FakeMatribox } from '../../../packages/core/test/fake-matribox.ts';
-import { FAKE_ALG_DATA } from '../../../packages/core/test/matribox-fake-catalog.ts';
+import { FAKE_CATALOG } from '../../../packages/core/test/matribox-fake-catalog.ts';
 import { editChain, planTone, transition, type MbChainBlock } from '../lib/matriboxPlan.ts';
 
-const catalog = parseMbCatalog(FAKE_ALG_DATA);
+const catalog = FAKE_CATALOG;
 // Drive AD: DYN Fake Gate, DRV Fake Drive (off), AMP Fake Plexi, CAB unknown, RVB Fake Hall, VOL Volume.
 const loaded = (): readonly MbChainBlock[] => parseMbPreset(new FakeMatribox().editBuffer).chain;
 const values = (set: Record<number, number>) => Array.from({ length: 15 }, (_, i) => set[i] ?? 0);

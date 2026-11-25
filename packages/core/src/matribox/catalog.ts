@@ -1,8 +1,11 @@
 /**
- * Matribox II Pro model catalog, parsed from the official editor's alg_data.json. That file is
- * Sonicake's: it is read at run time from the user's own installed app and never shipped here
- * (docs/matribox.md). This parser takes the already-parsed JSON and trusts nothing in it.
+ * The Matribox II Pro model catalog, built in: models.json is our functional map of the unit's
+ * models (ids, categories, the gear each is based on, parameter ranges; written by
+ * scripts/matribox-map.mjs, schema there and in docs/matribox.md), and model-text.json our own
+ * names and descriptions, keyed "MODULE:fxid".
  */
+import mapJson from './models.json' with { type: 'json' };
+import textJson from './model-text.json' with { type: 'json' };
 
 export interface MbParam {
   readonly name: string;
@@ -11,16 +14,26 @@ export interface MbParam {
   readonly min: number;
   readonly max: number;
   readonly step: number;
+  /** A switch's or list's label for each step, from min. */
+  readonly options?: readonly string[];
+}
+
+/** A text in each language of the UI. */
+export interface MbText {
+  readonly en: string;
+  readonly pt: string;
 }
 
 export interface MbModel {
   readonly fxid: number;
   readonly index: number;
+  /** Our short name for the model. */
   readonly name: string;
+  /** Category, groups the model menus; '' when none. */
   readonly type: string;
-  readonly origin: string;
-  readonly style: string;
-  readonly description: string;
+  /** The real gear the model is based on; '' when none. */
+  readonly basedOn: string;
+  readonly description: MbText;
   readonly params: readonly MbParam[];
 }
 
@@ -34,80 +47,56 @@ export interface MbCatalog {
   readonly modules: readonly MbModule[];
 }
 
-type Obj = Record<string, unknown>;
-
-function object(value: unknown, path: string): Obj {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new Error(`catalog: ${path} must be an object`);
-  return value as Obj;
+/** models.json, as scripts/matribox-map.mjs writes it. */
+export interface MbMap {
+  readonly modules: readonly {
+    readonly module: string;
+    readonly index: number;
+    readonly models: readonly {
+      readonly fxid: number;
+      readonly index: number;
+      readonly type: string;
+      readonly basedOn: string;
+      readonly params: readonly {
+        readonly id: number;
+        readonly label: string;
+        readonly min: number;
+        readonly max: number;
+        readonly step: number;
+        readonly default: number;
+        readonly options?: readonly string[];
+      }[];
+    }[];
+  }[];
 }
 
-function array(value: unknown, path: string): readonly unknown[] {
-  if (!Array.isArray(value)) throw new Error(`catalog: ${path} must be an array`);
-  return value;
-}
+/** model-text.json: our name and descriptions of each model, by "MODULE:fxid". */
+export type MbTextMap = Readonly<Record<string, { readonly name: string; readonly en: string; readonly pt: string }>>;
 
-function string(value: unknown, path: string): string {
-  if (typeof value !== 'string') throw new Error(`catalog: ${path} must be a string`);
-  return value;
-}
+export const mbTextKey = (module: string, fxid: number) => `${module}:${fxid}`;
 
-/** Descriptive text: missing or null reads as '', a bare number (one model's origin is) as its digits. */
-function text(value: unknown, path: string): string {
-  if (value === undefined || value === null) return '';
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  return string(value, path);
-}
-
-/** A finite number, given as a number or as a numeric string ("50", "-12", "+3", "0.5"). */
-function number(value: unknown, path: string): number {
-  const n = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : Number.NaN;
-  if (!Number.isFinite(n)) throw new Error(`catalog: ${path} must be a number, got ${JSON.stringify(value)}`);
-  return n;
-}
-
-function integer(value: unknown, path: string): number {
-  const n = number(value, path);
-  if (!Number.isInteger(n)) throw new Error(`catalog: ${path} must be an integer, got ${JSON.stringify(value)}`);
-  return n;
-}
-
-function parseParam(raw: unknown, path: string): MbParam {
-  const w = object(raw, path);
-  const [min, max, defaultValue] = [number(w.min, `${path}.min`), number(w.max, `${path}.max`), number(w.defaultValue, `${path}.defaultValue`)];
-  const step = number(w.step, `${path}.step`);
-  if (step <= 0) throw new Error(`catalog: ${path}.step must be greater than 0`);
-  if (min > max || defaultValue < min || defaultValue > max) {
-    throw new Error(`catalog: ${path} is out of range (min ${min}, max ${max}, default ${defaultValue})`);
-  }
-  return Object.freeze({ name: string(w.name, `${path}.name`), id: integer(w.ID, `${path}.ID`), defaultValue, min, max, step });
-}
-
-function parseModel(raw: unknown, path: string): MbModel {
-  const a = object(raw, path);
-  const params = array(a.widget, `${path}.widget`).map((w, i) => parseParam(w, `${path}.widget[${i}]`));
-  return Object.freeze({
-    fxid: integer(a.fxid, `${path}.fxid`),
-    index: integer(a.index, `${path}.index`),
-    name: string(a.name, `${path}.name`),
-    type: text(a.type, `${path}.type`),
-    origin: text(a.origin, `${path}.origin`),
-    style: text(a.style, `${path}.style`),
-    description: text(a.descriptionEN, `${path}.descriptionEN`),
-    params: Object.freeze(params),
+/** The catalog of a map and its texts; a model without text is named "<MODULE> <index>" and described by its gear. */
+export function mbCatalog(map: MbMap, text: MbTextMap): MbCatalog {
+  const modules = map.modules.map((m) => {
+    const models = m.models.map((a) => {
+      const own = text[mbTextKey(m.module, a.fxid)];
+      const params = a.params.map((p) =>
+        Object.freeze({ name: p.label, id: p.id, defaultValue: p.default, min: p.min, max: p.max, step: p.step, ...(p.options ? { options: Object.freeze([...p.options]) } : {}) }),
+      );
+      return Object.freeze({
+        fxid: a.fxid,
+        index: a.index,
+        name: own?.name ?? `${m.module} ${a.index}`,
+        type: a.type,
+        basedOn: a.basedOn,
+        description: Object.freeze({ en: own?.en ?? a.basedOn, pt: own?.pt ?? a.basedOn }),
+        params: Object.freeze(params),
+      });
+    });
+    return Object.freeze({ name: m.module, index: m.index, models: Object.freeze(models) });
   });
-}
-
-function parseModule(raw: unknown, path: string): MbModule {
-  const m = object(raw, path);
-  const name = string(m.name, `${path}.name`);
-  const index = integer(m.index, `${path}.index`);
-  const models = array(m.alg, `${path}.alg`).map((a, i) => parseModel(a, `${path}.alg[${i}]`));
-  return Object.freeze({ name, index, models: Object.freeze(models) });
-}
-
-/** Validates and converts the parsed alg_data.json into a frozen catalog. Throws with the path of the first problem. */
-export function parseMbCatalog(json: unknown): MbCatalog {
-  const root = object(json, 'root');
-  const modules = array(root.Modules, 'Modules').map((m, i) => parseModule(m, `Modules[${i}]`));
   return Object.freeze({ modules: Object.freeze(modules) });
 }
+
+/** The built-in catalog: every module and model of the unit. */
+export const MB_CATALOG: MbCatalog = mbCatalog(mapJson as MbMap, textJson as MbTextMap);

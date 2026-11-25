@@ -23,8 +23,8 @@ export { checkParam, findModule, findParam };
 export const EXPERIMENTAL = 'Experimental: Matribox writes are validated on one unit only so far. Check the result with matribox_get_preset and by ear on the unit.';
 
 const round = (n: number) => String(Number(n.toFixed(2)));
-/** The real gear a model is based on, on one line; '' when the catalog gives none or only a number. */
-export const gear = (model: MbModel) => (/[a-z]/i.test(model.origin) ? model.origin.replace(/\s+/g, ' ').trim() : '');
+/** The real gear a model is based on; '' when none. */
+export const gear = (model: MbModel) => model.basedOn;
 export const modelTitle = (model: MbModel) => `${model.name}${gear(model) ? ` (based on ${gear(model)})` : ''}`;
 
 /** A block of the loaded preset by its 1-based chain position ("2") or its module name ("DRV", if only one). */

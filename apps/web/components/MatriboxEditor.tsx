@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { mbAssignments, mbPresetLabel, resolveMbPreset, type MbResolvedBlock, type MidiPort } from '@pocket-master/core';
+import { MB_CATALOG, mbAssignments, mbPresetLabel, resolveMbPreset, type MbResolvedBlock, type MidiPort } from '@pocket-master/core';
 import { mbLookKey } from '@/lib/matriboxLook';
 import { useMatribox } from '@/lib/useMatribox';
 import { useMatriboxHistory } from '@/lib/useMatriboxHistory';
@@ -10,7 +10,6 @@ import { MatriboxAssistant } from './MatriboxAssistant';
 import { MatriboxBackupAll } from './MatriboxBackupAll';
 import { MatriboxBackups } from './MatriboxBackups';
 import { MatriboxBlockPanel } from './MatriboxBlockPanel';
-import { MatriboxCatalog } from './MatriboxCatalog';
 import { MatriboxChain } from './MatriboxChain';
 import { MatriboxControls } from './MatriboxControls';
 import { MatriboxExpression } from './MatriboxExpression';
@@ -23,8 +22,8 @@ import { MatriboxSaveDialog } from './MatriboxSaveDialog';
 import { useI18n } from './I18n';
 
 /** The Matribox II Pro editor, shown when the connected pedal is one. */
-export function MatriboxEditor({ port, desktop }: { port: MidiPort; desktop: boolean }) {
-  const mb = useMatribox(port, desktop);
+export function MatriboxEditor({ port }: { port: MidiPort }) {
+  const mb = useMatribox(port);
   const { t, te } = useI18n();
   const history = useMatriboxHistory(mb);
   useUndoKeys(history.undo, history.redo);
@@ -50,8 +49,7 @@ export function MatriboxEditor({ port, desktop }: { port: MidiPort; desktop: boo
     return ok;
   };
   const unit = mb.unit;
-  // Without a catalog the chain still shows, by module number and raw fxid.
-  const chain = useMemo(() => (unit ? resolveMbPreset(unit.preset, mb.catalog ?? { modules: [] }).chain : []), [unit, mb.catalog]);
+  const chain = useMemo(() => (unit ? resolveMbPreset(unit.preset, MB_CATALOG).chain : []), [unit]);
   const assignments = useMemo(() => (unit ? mbAssignments(unit.preset) : null), [unit]);
   const disabled = mb.busy !== null;
   const userSlot = (b: Pick<MbResolvedBlock, 'module' | 'fxid'>) => (b.module === 'IR' ? unit?.irNames : b.module === 'CLONE' ? unit?.cloneNames : undefined)?.[b.fxid & 0xff]?.trim() || undefined;
@@ -85,7 +83,6 @@ export function MatriboxEditor({ port, desktop }: { port: MidiPort; desktop: boo
         <p className="mb-banner" role="status">
           {t('mb.experimental')}
         </p>
-        {!mb.catalog && <MatriboxCatalog catalog={null} error={mb.catalogError} onPick={(f) => void mb.pickCatalog(f)} onForget={() => void mb.dropCatalog()} />}
         {!unit || !assignments ? (
           <p className="muted">{t(mb.busy ? 'status.reading' : 'mb.notRead')}</p>
         ) : (
@@ -112,7 +109,6 @@ export function MatriboxEditor({ port, desktop }: { port: MidiPort; desktop: boo
               />
               <MatriboxChain
                 chain={chain}
-                catalog={mb.catalog}
                 selected={block?.slot ?? null}
                 disabled={disabled}
                 userSlot={userSlot}
@@ -125,7 +121,6 @@ export function MatriboxEditor({ port, desktop }: { port: MidiPort; desktop: boo
                 <MatriboxBlockPanel
                   block={block}
                   values={unit.preset.chain.find((b) => b.slot === block.slot)?.values ?? []}
-                  catalog={mb.catalog}
                   userSlot={userSlot}
                   disabled={disabled}
                   onParam={history.setParam}
@@ -156,7 +151,6 @@ export function MatriboxEditor({ port, desktop }: { port: MidiPort; desktop: boo
           </>
         )}
         {mb.backups.length > 0 && <MatriboxBackups backups={mb.backups} />}
-        {mb.catalog && <MatriboxCatalog catalog={mb.catalog} error={mb.catalogError} onPick={(f) => void mb.pickCatalog(f)} onForget={() => void mb.dropCatalog()} />}
       </main>
     </div>
   );

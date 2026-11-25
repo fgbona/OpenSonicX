@@ -26,8 +26,7 @@ export function MatriboxLibrary({ mb, history }: { mb: Matribox; history: Matrib
   const [note, setNote] = useState<Note>(null);
   const disabled = mb.busy !== null;
   const loadedName = mb.unit?.preset.name.trim() ?? '';
-  // Without the catalog a model's parameter IDs are unknown: a load would bring the blocks back without their values.
-  const canLoad = !disabled && mb.catalog !== null;
+  const canLoad = !disabled;
 
   const keep = async () => {
     const preset = await mb.readEditBuffer();
@@ -70,7 +69,6 @@ export function MatriboxLibrary({ mb, history }: { mb: Matribox; history: Matrib
     <Fold title={t('mbLib.title')} note={String(library.length)}>
       <div className="mb-body">
         <p className="muted small">{t('mbLib.note')}</p>
-        {!mb.catalog && library.length > 0 && <p className="small">{t('mbLib.needsCatalog')}</p>}
         <form
           className="mb-lib-keep"
           onSubmit={(e) => {

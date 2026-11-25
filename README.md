@@ -112,12 +112,11 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
   240 are backed up and downloaded first, so it can be undone). *Export preset* downloads the
   loaded preset (unsaved edits included) as a `.prst` that Sonicake's own app opens, and
   *Import preset…* stores a `.prst` (or a backup of one slot) in the slot you choose, after an
-  explicit confirmation and a backup of that slot: the unit stores an imported preset at once. Model names and parameters come from the
-  catalog of Sonicake's official Matribox II PRO app, which is not ours to ship: in the browser
-  you pick its `alg_data.json` once (on a Mac:
-  `/Applications/Matribox II PRO.app/Contents/Frameworks/App.framework/Resources/flutter_assets/assets/alg/alg_data.json`)
-  and it stays in that browser; the desktop app reads it from the installed app (or
-  `MATRIBOX_CATALOG`). Without it the presets and chains still show, by module number.
+  explicit confirmation and a backup of that slot: the unit stores an imported preset at once. The model catalog is
+  built in (in the web app, the PWA, the desktop app and the MCP server): nothing to install or
+  load. It is our own functional map of the unit's models (ids, categories, parameter ranges)
+  with our own short model names and descriptions in English and Portuguese, and each model
+  shows the real gear it is based on ("Based on …").
   It looks like the Pocket Master's editor: the chain as pedal tiles (each module in its own
   colour, an LED that switches it, arrows to move it, a last tile to add a block). The tiles
   wrap in a snake, each row read left to right with a cable bending from the end of one row to
@@ -126,8 +125,7 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
   Undo covers it; touch screens keep the arrows). One panel shows the selected block with its
   model menu (only that module's models, grouped by type, with the real gear beside each; *Add*
   asks for the block type first, then the model) and its parameters as knobs, switches and
-  small selectors, and AMP blocks dressed like the amp their model is based on, read from your
-  catalog (Marshall gold panel, Fender tweed or blackface, Mesa diamond plate…; materials and
+  small selectors, and AMP blocks dressed like the amp their model is based on (Marshall gold panel, Fender tweed or blackface, Mesa diamond plate…; materials and
   colours only, no logos). On a phone, Export preset, Import preset… and Read fold under a ⋯
   menu so the header stays on one row.
   It follows what you do on the unit itself: loading another preset, switching a block on or
@@ -141,8 +139,8 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
   parameter, min, max) and a tuner / tap tempo / BPM row are there too (checked on one unit so far;
   tuner and tempo go as the manual's MIDI Control Changes).
   Undo and Redo cover the chain edits (blocks, models, parameters, on/off). The **tone assistant** works on the Matribox too,
-  with the same free keys: it picks models by the real gear they are based on (from your catalog,
-  which it needs), builds the whole chain or adjusts it, shows what changed, and saving still
+  with the same free keys: it picks models by the real gear they are based on (from the built-in
+  catalog), builds the whole chain or adjusts it, shows what changed, and saving still
   goes through the Save dialog for you to confirm.
 
 ## What works where
@@ -314,8 +312,7 @@ Tools: `get_preset`, `list_presets`, `list_models`, `edit_preset`,
   `matribox_assign_expression`, `matribox_set_expression_range` (decoded from the official app),
   and the manual's MIDI Control Changes `matribox_tuner`, `matribox_tap_tempo`,
   `matribox_set_bpm`, `matribox_looper`, `matribox_drum`, `matribox_ctrl`, `matribox_quick_knob`
-  (on the unit's MIDI channel, default 1; its MIDI In Source must include USB). The model list comes from Sonicake's official
-  Matribox II PRO app, which must be installed (or set `MATRIBOX_CATALOG` to its `alg_data.json`).
+  (on the unit's MIDI channel, default 1; its MIDI In Source must include USB). The model list is built in.
   `matribox_load_ir` (experimental, checked on one unit so far) loads a WAV from
   `~/.pocket-master-editor/irs` into user IR slot 1..20, converted the way the official editor does
   it and rebuilt byte for byte from its uploads; `confirm` repeats `IR<slot>` and an occupied slot
@@ -347,3 +344,7 @@ most useful thing you can send is a SysEx capture from your own unit.
 MIT, see [LICENSE](LICENSE). The model catalog comes from pocket-master-mcp,
 which derived it from [PocketEdit](https://github.com/suckyble/PocketEdit);
 see [NOTICE](NOTICE). Not affiliated with Sonicake.
+
+Based on: the names of real gear shown next to the Matribox models ("Based on …") and in their
+descriptions are trademarks of their owners, used only to describe the sound each model aims at.
+This project has no affiliation with them, and they do not endorse it.

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { MbCatalog, MbResolvedBlock } from '@pocket-master/core';
+import { MB_CATALOG, type MbResolvedBlock } from '@pocket-master/core';
 import { parseMbModelValue } from '@/lib/matriboxLook';
 import { mbMenuModels, mbMenuModules } from '@/lib/matriboxMenus';
 import { PickerList } from './ModelPicker';
@@ -9,9 +9,6 @@ import { ModuleIcon } from './ModuleIcon';
 import { useI18n } from './I18n';
 
 interface Props {
-  catalog: MbCatalog | null;
-  /** The blocks in the chain: without the catalog, the only models known are the ones they use. */
-  chain: readonly MbResolvedBlock[];
   userSlot: (block: Pick<MbResolvedBlock, 'module' | 'fxid'>) => string | undefined;
   isInside: (target: Node) => boolean;
   onClose: (refocus: boolean) => void;
@@ -24,9 +21,9 @@ const BACK = 'back';
  * The "add block" menu, in two steps: the block type (module, with its drawing and colour), then
  * that module's models grouped by type. Escape or "Back" returns to the types.
  */
-export function MatriboxAddMenu({ catalog, chain, userSlot, isInside, onClose, onAdd }: Props) {
+export function MatriboxAddMenu({ userSlot, isInside, onClose, onAdd }: Props) {
   const { t } = useI18n();
-  const modules = mbMenuModules(catalog);
+  const modules = mbMenuModules(MB_CATALOG);
   const [chosen, setChosen] = useState<number | null>(null);
   // The type the models step went back from: highlighted again on the types.
   const [left, setLeft] = useState<number | null>(null);
@@ -60,18 +57,15 @@ export function MatriboxAddMenu({ catalog, chain, userSlot, isInside, onClose, o
     );
   }
 
-  const present = chain.filter((b) => b.moduleIndex === mod.index).map((b) => b.fxid);
-  const models = mbMenuModels(catalog, mod.index, present, {
+  const models = mbMenuModels(MB_CATALOG, mod.index, {
     other: t('block.otherModels'),
-    unknown: (fxid) => t('mb.unknownModel', { fxid }),
     userName: (fxid) => userSlot({ module: mod.name, fxid }),
   });
   const backGroup = { name: null, options: [{ value: BACK, name: `‹ ${t('mb.addBack')}` }] };
-  const none = { name: null, options: [{ value: 'none', name: t('mb.addNoModels'), disabled: true }] };
   return (
     <PickerList
       key={`models-${mod.index}`}
-      groups={[backGroup, ...(models.length > 0 ? models : [none])]}
+      groups={[backGroup, ...models]}
       value=""
       ariaLabel={t('mb.addModel', { module: mod.name })}
       isInside={isInside}

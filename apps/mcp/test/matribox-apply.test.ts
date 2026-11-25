@@ -183,8 +183,8 @@ test('matribox_restore_backup refuses a file that is not a Matribox backup', asy
   }
 });
 
-test("export, import and save work without the official app's catalog (blocks shown by module number)", async () => {
-  const { client, fake } = await connected({ catalog: () => Promise.reject(new Error('no catalog installed')) });
+test('export, import and save work for modules a catalog does not know (blocks shown by module number)', async () => {
+  const { client, fake } = await connected({ catalog: { modules: [] } });
   await call(client, 'matribox_export_preset', { file: 'drive.prst' });
   const out = await call(client, 'matribox_import_preset', { file: 'drive.prst', preset: '20A', confirm: '20A' });
   assert.match(out, /^Chain: module 0 → module 3 → module 4 → module 5 → module 10 → module 15$/m);

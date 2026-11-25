@@ -1,11 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { matriboxLink, mbRemoveBlock, mbSetBlockOn, parseMbCatalog, parseMbPreset } from '@pocket-master/core';
+import { matriboxLink, mbRemoveBlock, mbSetBlockOn, parseMbPreset } from '@pocket-master/core';
 import { FakeMatribox } from '../../../packages/core/test/fake-matribox.ts';
-import { FAKE_ALG_DATA } from '../../../packages/core/test/matribox-fake-catalog.ts';
-import { backupFromSlot, gearOf, readLoaded, readUnit, saveToSlot, serialQueue, withParam, type MbBackup } from '../lib/matribox.ts';
+import { backupFromSlot, readLoaded, readUnit, saveToSlot, serialQueue, withParam, type MbBackup } from '../lib/matribox.ts';
 import { keepMbBackup, mbBackupFileName } from '../lib/matriboxBackups.ts';
-import { parseCatalogText } from '../lib/matriboxCatalog.ts';
 
 const unitLink = (fake = new FakeMatribox()) => matriboxLink({ send: (b) => fake.send(b), listen: (r) => fake.listen(r ?? (() => undefined)) }, 500);
 
@@ -148,18 +146,4 @@ test('the queue runs calls one at a time and goes on after a failure', async () 
   await assert.rejects(failing, /boom/);
   await fast;
   assert.deepEqual(order, [1, 2]);
-});
-
-test('parseCatalogText reads an alg_data.json and explains a wrong file', () => {
-  const catalog = parseCatalogText(JSON.stringify(FAKE_ALG_DATA));
-  assert.equal(catalog.modules.length, 9);
-  assert.throws(() => parseCatalogText('not json'), /not an alg_data.json/);
-  assert.throws(() => parseCatalogText('{}'), /not an alg_data.json.*Modules/);
-});
-
-test('gearOf gives the gear a model is based on, nothing for a bare number', () => {
-  const catalog = parseMbCatalog(FAKE_ALG_DATA);
-  const models = catalog.modules.flatMap((m) => m.models);
-  assert.equal(gearOf(models.find((m) => m.name === 'Fake Gate')!), 'Imaginary Gate Alias: Gate X');
-  assert.equal(gearOf(models.find((m) => m.name === 'Fake 4x12')!), '');
 });

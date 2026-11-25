@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { parseMbCatalog } from '../src/matribox/catalog.ts';
+import { fakeCatalog, fakeModel as model, fakeParam as w } from './matribox-fake-catalog.ts';
 import { MB_PRESET_BODY_SIZE, MB_PRESET_SIZE, mbPresetLabel, parseMbPresetLabel, parseMatriboxPrst, parseMbPreset, resolveMbPreset, writeMatriboxPrst } from '../src/matribox/preset.ts';
 import { lzo1xDecompress } from '../src/matribox/lzo1x.ts';
 import { fromHex } from '../src/hex.ts';
@@ -84,15 +84,12 @@ function literalStream(data: Uint8Array): number[] {
 }
 const prstText = (b: Uint8Array) => Buffer.from(JSON.stringify(literalStream(b))).toString('base64');
 
-// Synthetic catalog (invented models); the real alg_data.json is Sonicake's and never used in tests.
-const w = (name: string, ID: string, min = '0', max = '100') => ({ name, ID, defaultValue: min, min, max, step: '1' });
-const CATALOG = parseMbCatalog({
-  Modules: [
-    { name: 'DYN', index: 0, alg: [{ fxid: 0x1b, index: 0, name: 'Fake Gate', origin: 'Imaginary Gate', widget: [w('Threshold', '0', '-80', '0')] }] },
-    { name: 'DRV', index: 3, alg: [{ fxid: 0x301, index: 0, name: 'Fake Drive', origin: 'Imaginary OD', widget: [w('Gain', '0'), w('Level', '2')] }] },
-    { name: 'AMP', index: 4, alg: [{ fxid: 0x401, index: 0, name: 'Fake Amp', origin: 'Imaginary Amp', widget: [w('Gain', '0'), w('Master', '3')] }] },
-  ],
-});
+// Synthetic catalog (invented models).
+const CATALOG = fakeCatalog([
+  ['DYN', 0, [model(0x1b, 'Fake Gate', 'Imaginary Gate', [w('Threshold', 0, -80, 0)])]],
+  ['DRV', 3, [model(0x301, 'Fake Drive', 'Imaginary OD', [w('Gain', 0), w('Level', 2)])]],
+  ['AMP', 4, [model(0x401, 'Fake Amp', 'Imaginary Amp', [w('Gain', 0), w('Master', 3)])]],
+]);
 
 test('parses the real device preset: number, name, style and chain in signal order', () => {
   assert.equal(DRIVE_AD.length, MB_PRESET_SIZE);
@@ -195,7 +192,7 @@ test("resolves names against the catalog, reading only the selected model's para
       [2, 0, 'DRV', 'Fake Drive', true],
     ],
   );
-  assert.equal(r.chain[0]?.model?.origin, 'Imaginary Amp');
+  assert.equal(r.chain[0]?.model?.basedOn, 'Imaginary Amp');
   // Stale values at positions the model does not use (999, 20001) are never shown.
   assert.deepEqual(
     r.chain[0]?.params.map((x) => [x.name, x.value, x.min, x.max]),

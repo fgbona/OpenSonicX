@@ -1,62 +1,73 @@
 import AxeBuilder from '@axe-core/playwright';
 import { readFileSync } from 'node:fs';
-import { mbAssignments, parseMbPreset, toHex } from '@pocket-master/core';
+import { MB_CATALOG, mbAssignments, parseMbPreset, toHex } from '@pocket-master/core';
 import { measure } from './contrast.ts';
-import { blockPanel, connectMatribox, expect, expectChain, pickCatalog, test, turnKnob } from './matribox-fixtures.ts';
+import { blockPanel, connectMatribox, expect, expectChain, MODELS, optionName, test, turnKnob } from './matribox-fixtures.ts';
 
 const loaded = (unit: { editBuffer: Uint8Array }) => parseMbPreset(unit.editBuffer);
 
-test('a Matribox is recognised by its port and gets its own editor, usable without the catalog', async ({ page }) => {
+test('a Matribox is recognised by its port and gets its own editor, its models built in', async ({ page }) => {
   await connectMatribox(page);
   // None of the Pocket Master's tools.
   await expect(page.getByRole('button', { name: 'Tuner' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /Load 60D/ })).toBeAttached();
-  await expect(page.getByText('/Applications/Matribox II PRO.app/Contents/Frameworks/App.framework/Resources/flutter_assets/assets/alg/alg_data.json')).toBeVisible();
-  await expectChain(page, 'module 0 → module 3 → module 4 → module 5 → module 10 → module 15');
-  // Each module keeps its colour by index, and a tile shows the raw model id.
-  await expect(page.locator('.tile.mb-drv')).toContainText('0300002a');
-  // The AMP is selected: its model is unknown, so its stored values show raw.
-  const amp = page.getByRole('region', { name: '3. module 4 block' });
-  await expect(amp.getByText('Unknown model (0x0700001a)')).toBeVisible();
-  await expect(amp.getByRole('list', { name: 'Raw values of 3. module 4' }).getByRole('listitem')).toHaveCount(15);
-  await expect(page.getByRole('slider')).toHaveCount(1); // the patch volume only: parameters need the catalog
-  await expect(page.getByRole('slider', { name: 'Patch volume' })).toBeVisible();
-
-  // Adding still works by module; the models known are only the ids the chain uses.
-  await page.getByRole('button', { name: 'Add a block…' }).click();
-  const types = page.getByRole('listbox', { name: 'Add a block: type' });
-  await expect(types.getByRole('option')).toHaveCount(16);
-  await types.getByRole('option', { name: 'DRV' }).click();
-  const models = page.getByRole('listbox', { name: 'Add a block: DRV model' });
-  await expect(models.getByRole('option')).toHaveText(['‹ Back to block types', 'Unknown model (0x0300002a)']);
-  await models.getByRole('option', { name: /Back to block types/ }).click();
-  await types.getByRole('option', { name: 'WAH' }).click();
-  await expect(page.getByRole('listbox', { name: 'Add a block: WAH model' }).getByRole('option', { name: 'Pick alg_data.json to list these models' })).toHaveAttribute('aria-disabled', 'true');
+  await expectChain(page, 'DYN → DRV → AMP → CAB → RVB → VOL');
+  await expect(page.locator('.tile.mb-drv')).toContainText(MODELS.drive.name);
+  // Every block of the preset is named: no raw values, and every parameter is a control.
+  await expect(page.locator('.mb-raw')).toHaveCount(0);
+  await expect(page.getByRole('region', { name: '3. AMP block' }).getByRole('slider', { name: 'Gain' })).toBeVisible();
 });
+
+for (const [locale, lang, basedOn] of [
+  ['en-US', 'en', 'Based on'],
+  ['pt-BR', 'pt', 'Baseado em'],
+] as const) {
+  test.describe(locale, () => {
+    test.use({ locale });
+    test('the catalog is built in: no file to choose and no alg_data anywhere in the Matribox UI', async ({ page }) => {
+      await connectMatribox(page);
+      // The file pickers left are for presets, backups and kept tones: none for a catalog.
+      await expect(page.getByLabel(/alg_data|catalog|catálogo/i)).toHaveCount(0);
+      await expect(page.getByText(/alg_data|Model catalog|Catálogo de modelos/)).toHaveCount(0);
+      // The add menu lists every module's models straight away.
+      await page.locator('.mb-tile-add').click();
+      await page.getByRole('listbox').getByRole('option', { name: 'WAH', exact: true }).click();
+      await expect(page.getByRole('listbox').getByRole('option')).toHaveCount(1 + (MB_CATALOG.modules.find((m) => m.name === 'WAH')?.models.length ?? 0));
+      await page.keyboard.press('Escape');
+      expect(await page.content()).not.toMatch(/alg_data/);
+      // The selected AMP: our name, "Based on" the gear, and the description in the UI's language.
+      const amp = page.locator('section.editor');
+      // The header pairs our name with the plain gear, as the menu's two columns do.
+      await expect(amp.locator('.picker-button .picker-name')).toHaveText(MODELS.amp.name);
+      await expect(amp.locator('.picker-button .picker-detail')).toHaveText(MODELS.amp.basedOn);
+      await expect(amp.getByText(`${basedOn} ${MODELS.amp.basedOn}`)).toBeVisible();
+      await expect(amp.locator('.editor-info')).toHaveText(MODELS.amp.description[lang]);
+      await expect(amp.locator('.editor-info')).not.toHaveText(MODELS.amp.description[lang === 'en' ? 'pt' : 'en']);
+    });
+  });
+}
 
 test('the chain shows as pedals; the AMP is dressed like the gear its model is based on', async ({ page }) => {
   await connectMatribox(page);
-  await pickCatalog(page);
   await expectChain(page, 'DYN → DRV → AMP → CAB → RVB → VOL');
   const chain = page.getByRole('list', { name: 'Signal chain' });
-  await expect(chain.getByRole('button', { name: 'Edit 3. AMP: Fake Plexi' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(chain.getByRole('button', { name: `Edit 3. AMP: ${MODELS.amp.name}` })).toHaveAttribute('aria-pressed', 'true');
   await expect(chain.getByRole('switch', { name: '2. DRV off' })).toBeVisible();
   const amp = page.getByRole('region', { name: '3. AMP block' });
-  await expect(amp.locator('.face-amp')).toHaveAttribute('data-skin', 'marshall'); // "Imaginary Plexi 50W"
-  await expect(amp.getByText('Based on Imaginary Plexi 50W')).toBeVisible();
+  await expect(amp.locator('.face-amp')).toHaveAttribute('data-skin', 'boutique'); // based on a Bogner
+  await expect(amp.getByText(`Based on ${MODELS.amp.basedOn}`)).toBeVisible();
   await expect(amp.getByRole('slider', { name: 'Gain' })).toHaveAttribute('aria-valuenow', '30');
 
   // One panel: the selected block's.
   await expect(page.locator('section.editor')).toHaveCount(1);
   const drive = await blockPanel(page, 2, 'DRV');
-  await expect(drive.getByText('Based on Imaginary Overdrive 808 · A mid-boost overdrive.')).toBeVisible();
+  await expect(drive.getByText(`Based on ${MODELS.drive.basedOn} · ${MODELS.drive.description.en}`)).toBeVisible();
   await expect(drive.locator('.face-amp')).toHaveCount(0);
   await expect(page.locator('section.editor')).toHaveCount(1);
 });
 
-test('with the picked catalog: live parameters, on/off, models and chain edits reach the unit', async ({ page, unit }) => {
+test('live parameters, on/off, models and chain edits reach the unit', async ({ page, unit }) => {
   await connectMatribox(page);
-  await pickCatalog(page);
   const drive = await blockPanel(page, 2, 'DRV');
 
   // A knob turned key after key: the unit ends on the last value.
@@ -72,12 +83,14 @@ test('with the picked catalog: live parameters, on/off, models and chain edits r
   // The block's menu lists only DRV models, under their type headings.
   await drive.getByRole('button', { name: '2. DRV model' }).click();
   const menu = page.getByRole('listbox', { name: '2. DRV model' });
-  await expect(menu.getByRole('option')).toHaveCount(2);
-  await expect(menu.locator('.picker-heading')).toHaveText(['Overdrive', 'Fuzz']);
-  await expect(menu.getByRole('group', { name: 'Overdrive' }).getByRole('option')).toHaveText(['✓Fake DriveImaginary Overdrive 808']);
-  await expect(menu.getByRole('group', { name: 'Fuzz' }).getByRole('option')).toHaveText(['Fake FuzzImaginary Fuzz Face']);
-  await menu.getByRole('option', { name: /^Fake Fuzz/ }).click();
-  await expect(drive.getByRole('button', { name: '2. DRV model' })).toContainText('Fake Fuzz');
+  await expect(menu.getByRole('option')).toHaveCount(24);
+  await expect(menu.locator('.picker-heading')).toHaveText(['OD', 'Fuzz', 'Distortion', 'Bass Drive']);
+  await expect(menu.getByRole('group', { name: 'Distortion' }).getByRole('option', { name: optionName(MODELS.drive) })).toHaveText(/^✓/); // the chosen one
+  await menu
+    .getByRole('group', { name: 'OD' })
+    .getByRole('option', { name: optionName(MODELS.od) })
+    .click();
+  await expect(drive.getByRole('button', { name: '2. DRV model' })).toContainText(MODELS.od.name);
   expect(loaded(unit).chain[1]!.fxid).toBe(0x03000010);
   // A module with a single type shows no heading.
   await (await blockPanel(page, 5, 'RVB')).getByRole('button', { name: '5. RVB model' }).click();
@@ -87,17 +100,17 @@ test('with the picked catalog: live parameters, on/off, models and chain edits r
   // Add: the block type first, then that module's models.
   await page.getByRole('button', { name: 'Add a block…' }).click();
   const types = page.getByRole('listbox', { name: 'Add a block: type' });
-  await expect(types.getByRole('option')).toHaveText(['DYN', 'DRV', 'AMP', 'CAB', 'IR', 'DLY', 'RVB', 'CLONE', 'VOL']);
+  await expect(types.getByRole('option')).toHaveText(MB_CATALOG.modules.map((m) => m.name));
   await expect(types.locator('.mb-pick-icon.mb-dly .module-icon')).toBeVisible();
   await types.getByRole('option', { name: 'DLY' }).click();
   const delays = page.getByRole('listbox', { name: 'Add a block: DLY model' });
-  await expect(delays.getByRole('option')).toHaveText(['‹ Back to block types', 'Fake EchoImaginary Tape Echo']);
+  await expect(delays.getByRole('option')).toHaveCount(18);
   await expect(delays.locator('.picker-heading')).toHaveCount(0);
-  await delays.getByRole('option', { name: /^Fake Echo/ }).click();
+  await delays.getByRole('option', { name: optionName(MODELS.echo) }).click();
   await expectChain(page, 'DYN → DRV → AMP → CAB → RVB → VOL → DLY');
   // The block just added is the one shown; a knob whose range is not 0..100 says it.
   const echo = page.getByRole('region', { name: '7. DLY block' });
-  await expect(echo.getByText('20 … 2000')).toBeVisible();
+  await expect(echo.getByText('20 … 4000')).toBeVisible();
 
   await page.getByRole('button', { name: 'Move block 7 earlier in the chain' }).click();
   await expectChain(page, 'DYN → DRV → AMP → CAB → RVB → DLY → VOL');
@@ -110,20 +123,18 @@ test('with the picked catalog: live parameters, on/off, models and chain edits r
 
 test('the add menu works from the keyboard: arrows, Enter, Escape back a step and out', async ({ page, unit }) => {
   await connectMatribox(page);
-  await pickCatalog(page);
   const add = page.getByRole('button', { name: 'Add a block…' });
   await expect(add).toBeEnabled(); // not while the editor is still reading
   await add.focus();
   await page.keyboard.press('Enter');
   const types = page.getByRole('listbox', { name: 'Add a block: type' });
   await expect(types).toBeFocused();
-  await page.keyboard.press('ArrowDown');
-  await page.keyboard.press('ArrowDown');
+  for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowDown'); // DYN, FREQ, WAH, DRV
   await expect(types.getByRole('option', { name: 'DRV' })).toHaveClass(/is-active/);
   await page.keyboard.press('Enter');
   const drives = page.getByRole('listbox', { name: 'Add a block: DRV model' });
   await expect(drives).toBeFocused();
-  await expect(drives.locator('.picker-heading')).toHaveText(['Overdrive', 'Fuzz']);
+  await expect(drives.locator('.picker-heading')).toHaveText(['OD', 'Fuzz', 'Distortion', 'Bass Drive']);
   // Escape returns to the types, a second Escape closes the menu on the Add tile.
   await page.keyboard.press('Escape');
   await expect(types).toBeFocused();
@@ -136,15 +147,15 @@ test('the add menu works from the keyboard: arrows, Enter, Escape back a step an
   await page.keyboard.press('d'); // DRV
   await page.keyboard.press('Enter');
   await page.keyboard.press('End');
-  await expect(drives.getByRole('option', { name: /^Fake Fuzz/ })).toHaveClass(/is-active/);
+  const last = MB_CATALOG.modules[3]!.models.at(-1)!;
+  await expect(drives.getByRole('option', { name: optionName(last) })).toHaveClass(/is-active/);
   await page.keyboard.press('Enter');
   await expectChain(page, 'DYN → DRV → AMP → CAB → RVB → VOL → DRV');
-  expect(loaded(unit).chain.at(-1)).toMatchObject({ moduleIndex: 3, fxid: 0x03000010 });
+  expect(loaded(unit).chain.at(-1)).toMatchObject({ moduleIndex: 3, fxid: last.fxid });
 });
 
 test('patch volume, footswitch and expression assignments reach the unit; tuner and tempo go as Control Changes', async ({ page, unit }) => {
   await connectMatribox(page);
-  await pickCatalog(page);
   const assigned = () => mbAssignments(loaded(unit));
 
   await turnKnob(page.getByRole('slider', { name: 'Patch volume' }), 80);
@@ -167,7 +178,7 @@ test('patch volume, footswitch and expression assignments reach the unit; tuner 
   await expect(expression.getByRole('combobox', { name: 'Block of expression entry 4' })).toBeHidden();
   await expression.getByText('Expression pedal').click();
   await expect(expression.getByRole('group', { name: 'EXP 1 · mode B' }).getByRole('combobox', { name: /^Block of expression entry/ })).toHaveCount(3);
-  await page.getByRole('combobox', { name: 'Block of expression entry 4' }).selectOption({ label: '2. DRV Fake Drive' });
+  await page.getByRole('combobox', { name: 'Block of expression entry 4' }).selectOption({ label: `2. DRV ${MODELS.drive.name}` });
   await page.getByRole('combobox', { name: 'Parameter of expression entry 4' }).selectOption({ label: 'Tone' });
   await page.getByRole('spinbutton', { name: 'Minimum of expression entry 4' }).fill('10');
   await page.getByRole('spinbutton', { name: 'Maximum of expression entry 4' }).fill('90');
@@ -185,15 +196,6 @@ test('patch volume, footswitch and expression assignments reach the unit; tuner 
   await expect.poll(() => unit.controls).toEqual(['b03a7f', 'b0467f', 'b04401', 'b0450c']);
 });
 
-test('the catalog stays in this browser across visits', async ({ page }) => {
-  await connectMatribox(page);
-  await pickCatalog(page);
-  await connectMatribox(page);
-  await expect(page.getByText('Model catalog: 10 models.')).toBeVisible();
-  await page.getByRole('button', { name: 'Forget' }).click();
-  await expect(page.getByText('Unknown model (0x0700001a)')).toBeVisible();
-});
-
 test('the preset list groups the banks, filters and marks the loaded preset', async ({ page }) => {
   await connectMatribox(page);
   const presets = page.getByRole('complementary', { name: 'Presets' });
@@ -206,7 +208,7 @@ test('the preset list groups the banks, filters and marks the loaded preset', as
 
 test('loading a preset asks first over live edits', async ({ page, unit }) => {
   await connectMatribox(page);
-  await page.getByRole('list', { name: 'Signal chain' }).getByRole('switch', { name: '2. module 3 off' }).click();
+  await page.getByRole('list', { name: 'Signal chain' }).getByRole('switch', { name: '2. DRV off' }).click();
   await page.getByRole('button', { name: /Load 1A/ }).click();
   await page.getByRole('button', { name: 'Discard and load' }).click();
   await expect.poll(() => unit.current).toBe(0);
@@ -287,14 +289,13 @@ test('restore all refuses a file that is not a backup-all file', async ({ page }
 });
 
 for (const theme of ['dark', 'light'] as const) {
-  test(`no WCAG A/AA violations in the Matribox editor, without and with the catalog (${theme} theme)`, async ({ page }) => {
+  test(`no WCAG A/AA violations in the Matribox editor (${theme} theme)`, async ({ page }) => {
     test.setTimeout(120_000); // seven axe passes over the whole page
     const violations = async () =>
       (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
     await connectMatribox(page);
     if (theme === 'light') await page.getByRole('button', { name: 'Switch to light theme' }).click();
     expect(await violations()).toEqual([]);
-    await pickCatalog(page);
     await page.getByText('Expression pedal').click();
     // A kept tone in the tone library, one shown and one being renamed.
     const library = page.getByRole('region', { name: 'Tone library' });
@@ -328,7 +329,6 @@ for (const theme of ['dark', 'light'] as const) {
     test.setTimeout(180_000);
     await connectMatribox(page);
     if (theme === 'light') await page.getByRole('button', { name: 'Switch to light theme' }).click();
-    await pickCatalog(page);
     const failures: string[] = [];
     for (const position of [3, 2]) {
       if (position === 2) await blockPanel(page, 2, 'DRV');
@@ -365,7 +365,6 @@ for (const locale of ['en-US', 'pt-BR']) {
 
 test('back from the models, the add menu focuses and highlights the block type chosen before', async ({ page }) => {
   await connectMatribox(page);
-  await pickCatalog(page);
   await page.getByRole('button', { name: 'Add a block…' }).click();
   const types = page.getByRole('listbox', { name: 'Add a block: type' });
   await types.getByRole('option', { name: 'DLY', exact: true }).click();
@@ -389,7 +388,6 @@ test('on a desktop the add menu hangs under the add tile, inside the screen, eve
   for (const width of [1280, 1000]) {
     await page.setViewportSize({ width, height: 900 });
     await connectMatribox(page);
-    await pickCatalog(page);
     const add = page.getByRole('button', { name: 'Add a block…' });
     await add.click();
     for (const step of ['type', 'DRV model']) {

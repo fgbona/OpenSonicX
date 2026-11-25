@@ -449,7 +449,7 @@ function registerMatriboxTools(server: McpServer, options: ServerOptions): void 
     {
       title: 'List the Matribox models',
       description:
-        'Matribox II Pro: every model of a module (or of all 16), with the real gear it is based on, a short description and its parameters with ranges. Read from the official Matribox II PRO app installed on this computer. Call it once without module to learn the palette before planning a tone.',
+        'Matribox II Pro: every model of a module (or of all 16), with the real gear it is based on, a short description and its parameters with ranges. Built in: nothing to install. Call it once without module to learn the palette before planning a tone.',
       inputSchema: { module: z.string().optional().describe('Module name: DYN, FREQ, WAH, DRV, AMP, CAB, IR, EQ, MOD, DLY, RVB, CLONE, FXLOOP, FXSND, FXRTN or VOL') },
       annotations: READ,
     },

@@ -1,16 +1,15 @@
 /**
  * The Matribox II Pro as text for the tone assistant (the catalog, a module's models, the loaded
- * preset) and what an answer changed, in the rows the Pocket Master's "What changed" uses. The
- * catalog is the person's own alg_data.json: it goes to their AI provider, never anywhere else.
+ * preset) and what an answer changed, in the rows the Pocket Master's "What changed" uses.
  */
 import type { Difference, MbCatalog, MbModel, MbParam, MbPreset } from '@pocket-master/core';
-import { gearOf } from './matribox.ts';
+import type { Lang } from './i18n.ts';
 import { mbFxidHex as fxidHex } from './matriboxLook.ts';
 import { modelOf, moduleName, type MbChainBlock } from './matriboxPlan.ts';
 
 const round = (n: number) => String(Number(n.toFixed(2)));
 const isPercent = (p: MbParam) => p.min === 0 && p.max === 100;
-const withGear = (model: MbModel, based = '') => `${model.name}${gearOf(model) ? ` (${based}${gearOf(model)})` : ''}`;
+const withGear = (model: MbModel, based = '') => `${model.name}${model.basedOn ? ` (${based}${model.basedOn})` : ''}`;
 
 /**
  * Every module's models with the gear each is based on, one line a module. `withParams` adds the
@@ -22,8 +21,8 @@ export function mbCatalogText(catalog: MbCatalog, withParams: boolean): string {
   return `${lines.join('\n')}${withParams ? '\n(Parameters are 0..100 unless a range is given.)' : ''}`;
 }
 
-/** The models of the modules asked for (all when none), with every parameter's range and default. */
-export function mbModelsText(catalog: MbCatalog, modules?: readonly string[]): string {
+/** The models of the modules asked for (all when none), with every parameter's range and default and the description in `lang`. */
+export function mbModelsText(catalog: MbCatalog, modules?: readonly string[], lang: Lang = 'en'): string {
   const find = (name: string) => {
     const found = catalog.modules.find((m) => m.name.toLowerCase() === String(name).trim().toLowerCase());
     if (!found) throw new Error(`No module "${name}". Modules: ${catalog.modules.map((m) => m.name).join(', ')}`);
@@ -31,7 +30,8 @@ export function mbModelsText(catalog: MbCatalog, modules?: readonly string[]): s
   };
   const picked = modules?.length ? modules.map(find) : catalog.modules;
   const param = (p: MbParam) => `${p.name} ${round(p.min)}..${round(p.max)} (default ${round(p.defaultValue)})`;
-  return picked.map((mod) => [mod.name, ...mod.models.map((m) => `- ${withGear(m, 'based on ')}: ${m.params.map(param).join(', ') || 'no parameters'}`)].join('\n')).join('\n\n');
+  const about = (m: MbModel) => (m.description[lang] ? `\n  ${m.description[lang]}` : '');
+  return picked.map((mod) => [mod.name, ...mod.models.map((m) => `- ${withGear(m, 'based on ')}: ${m.params.map(param).join(', ') || 'no parameters'}${about(m)}`)].join('\n')).join('\n\n');
 }
 
 function blockLine(catalog: MbCatalog, b: MbChainBlock, i: number): string {

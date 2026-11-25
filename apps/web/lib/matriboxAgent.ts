@@ -1,19 +1,20 @@
 /**
  * The tone assistant on the Matribox II Pro. The model picks models by the real gear they are based
- * on (the person's own alg_data.json) and sends a whole chain or small edits; the editor checks
+ * on (the built-in catalog) and sends a whole chain or small edits; the editor checks
  * them against the catalog and sends them through its validated writes as one Undo step. Saving
  * only opens the editor's Save dialog.
  */
 import { CHAT_INSTRUCTIONS_THOROUGH, checkMbPresetName, mbPresetLabel, parseMbPresetLabel, type ChatTool, type JsonSchema, type MbCatalog, type MbPreset } from '@pocket-master/core';
 import { SAVE_VERB, type ToneAgent } from './assistant.ts';
-import { gearOf } from './matribox.ts';
+import type { Lang } from './i18n.ts';
 import { findTone, tonePreset, type MbTone } from './matriboxLibrary.ts';
 import { editChain, modelOf, planTone, type ChainChange, type MbChainBlock, type ToneBlock } from './matriboxPlan.ts';
 import { mbCatalogText, mbChanges, mbModelsText, mbPresetText } from './matriboxText.ts';
 
 /** What the assistant needs from the Matribox editor; every method works on its current state. */
 export interface MbAgentHost {
-  snapshot(): { readonly current: number; readonly preset: MbPreset; readonly catalog: MbCatalog };
+  /** `lang`: the UI language, for the model descriptions the assistant reads. */
+  snapshot(): { readonly current: number; readonly preset: MbPreset; readonly catalog: MbCatalog; readonly lang?: Lang };
   /** Sends the chain as one Undo step; resolves with the preset as the unit has it, throws when refused. */
   apply(chain: readonly MbChainBlock[]): Promise<MbPreset>;
   /** The editor's Undo; false when there is nothing to undo. */
@@ -144,7 +145,7 @@ function tonesText(host: MbAgentHost, catalog: MbCatalog): string {
     .map((t) => {
       const gear = tonePreset(t)
         .chain.map((b) => modelOf(catalog, b))
-        .map((m) => (m ? gearOf(m) || m.name : ''))
+        .map((m) => (m ? m.basedOn || m.name : ''))
         .filter(Boolean)
         .join(', ');
       return `- ${t.name}${t.notes ? `: ${t.notes}` : ''}${gear ? ` [${gear}]` : ''}`;
@@ -155,13 +156,13 @@ function tonesText(host: MbAgentHost, catalog: MbCatalog): string {
 const field = (args: unknown, name: string): unknown => (typeof args === 'object' && args !== null ? (args as Record<string, unknown>)[name] : undefined);
 
 async function run(host: MbAgentHost, name: string, args: unknown): Promise<string> {
-  const { preset, catalog } = host.snapshot();
+  const { preset, catalog, lang } = host.snapshot();
   const now = (p: MbPreset) => mbPresetText(p, catalog);
   switch (name) {
     case 'get_preset':
       return now(preset);
     case 'list_models':
-      return mbModelsText(catalog, field(args, 'modules') as string[] | undefined);
+      return mbModelsText(catalog, field(args, 'modules') as string[] | undefined, lang);
     case 'build_tone': {
       const blocks = field(args, 'blocks');
       if (!Array.isArray(blocks)) throw new Error('blocks must be a list');

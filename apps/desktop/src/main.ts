@@ -12,7 +12,6 @@ import { pathToFileURL } from 'node:url';
 import { appBundle, canReplace, pickZip, prepare, startSwap } from './mac-update.ts';
 import { grantsWithoutPrompt } from './permissions.ts';
 import { resolveAppFile } from './serve.ts';
-import { CATALOG_URL_PATH, matriboxCatalogPath } from './matribox-catalog.ts';
 
 const ORIGIN = 'app://editor';
 const RELEASES = 'https://github.com/fgbona/OpenSonicX/releases';
@@ -21,7 +20,7 @@ const BLUETOOTH_TIMEOUT_MS = 15_000;
 protocol.registerSchemesAsPrivileged([{ scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }]);
 
 // Renamed from "Pocket Master Editor" in 1.0.0. Electron names the data folder (backups, keys,
-// settings, the Matribox catalog) after the product, so keep the old folder: nothing is lost.
+// settings) after the product, so keep the old folder: nothing is lost.
 app.setPath('userData', join(app.getPath('appData'), 'Pocket Master Editor'));
 
 const pt = () => app.getLocale().toLowerCase().startsWith('pt');
@@ -120,14 +119,7 @@ function checkForUpdates(): void {
 
 void app.whenReady().then(() => {
   const root = join(app.getAppPath(), 'web');
-  protocol.handle('app', (request) => {
-    // The Matribox catalog is the user's own install of Sonicake's app, never part of this one.
-    if (new URL(request.url).pathname === CATALOG_URL_PATH) {
-      const catalog = matriboxCatalogPath();
-      return catalog ? net.fetch(pathToFileURL(catalog).toString()).catch(() => new Response(null, { status: 404 })) : new Response(null, { status: 404 });
-    }
-    return net.fetch(pathToFileURL(resolveAppFile(root, request.url)).toString());
-  });
+  protocol.handle('app', (request) => net.fetch(pathToFileURL(resolveAppFile(root, request.url)).toString()));
   session.defaultSession.setPermissionRequestHandler((_wc, permission, done, details) => done(grantsWithoutPrompt(details.requestingUrl, permission)));
   // The check answers navigator.permissions.query too: "granted" lets the page open the pedal on load.
   session.defaultSession.setPermissionCheckHandler((_wc, permission, origin) => grantsWithoutPrompt(origin, permission));

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { MbPreset } from '@pocket-master/core';
+import { MB_CATALOG, type MbPreset } from '@pocket-master/core';
 import { EMPTY_HISTORY, record, redo as redoStep, undo as undoStep, type History } from './history';
 import { transition, type MbChainBlock } from './matriboxPlan';
 import type { Matribox } from './useMatribox';
@@ -17,8 +17,6 @@ export function useMatriboxHistory(mb: Matribox) {
   /** The preset on screen; also set right after a write, before React renders it (the assistant reads it next). */
   const presetRef = useRef<MbPreset | null>(null);
   presetRef.current = mb.unit?.preset ?? null;
-  const catalogRef = useRef(mb.catalog);
-  catalogRef.current = mb.catalog;
   const { apply } = mb;
 
   const commit = useCallback((next: History<MbPreset>) => {
@@ -37,7 +35,7 @@ export function useMatriboxHistory(mb: Matribox) {
     async (target: readonly MbChainBlock[]): Promise<MbPreset | null> => {
       const now = presetRef.current;
       if (!now) return null;
-      const preset = await apply(transition(catalogRef.current ?? { modules: [] }, now.chain, target));
+      const preset = await apply(transition(MB_CATALOG, now.chain, target));
       if (preset) presetRef.current = preset;
       return preset;
     },

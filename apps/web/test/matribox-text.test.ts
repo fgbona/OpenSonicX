@@ -1,12 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseMbCatalog, parseMbPreset } from '@pocket-master/core';
+import { parseMbPreset } from '@pocket-master/core';
 import { FakeMatribox } from '../../../packages/core/test/fake-matribox.ts';
-import { FAKE_ALG_DATA } from '../../../packages/core/test/matribox-fake-catalog.ts';
+import { FAKE_CATALOG } from '../../../packages/core/test/matribox-fake-catalog.ts';
 import { editChain } from '../lib/matriboxPlan.ts';
 import { mbCatalogText, mbChanges, mbModelsText, mbPresetText } from '../lib/matriboxText.ts';
 
-const catalog = parseMbCatalog(FAKE_ALG_DATA);
+const catalog = FAKE_CATALOG;
 const preset = () => parseMbPreset(new FakeMatribox().editBuffer);
 
 test('the catalog for the first message: one line a module, models with the gear they are based on', () => {
@@ -24,6 +24,11 @@ test('list_models gives the parameters with ranges and defaults, for the modules
   assert.equal(text, 'DLY\n- Fake Echo (based on Imaginary Tape Echo): Mix 0..100 (default 0), Time 20..2000 (default 20)');
   assert.throws(() => mbModelsText(catalog, ['XYZ']), /No module "XYZ"/);
   assert.match(mbModelsText(catalog), /^DYN\n/);
+});
+
+test('list_models describes each model in the language of the UI', () => {
+  assert.match(mbModelsText(catalog, ['drv']), /Volume 0\.\.100 \(default 0\)\n {2}A mid-boost overdrive\.\n/);
+  assert.match(mbModelsText(catalog, ['drv'], 'pt'), /\n {2}Um overdrive com médios\.\n/);
 });
 
 test('the loaded preset: chain in signal order, each block with its gear, on/off and values in range', () => {

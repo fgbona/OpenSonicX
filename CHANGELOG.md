@@ -63,6 +63,26 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Matribox II Pro: the model catalog is built in, in the web app, the PWA, the desktop app and the
+  MCP server; nothing has to be installed, picked or loaded. Core exports `MB_CATALOG`, built from
+  `packages/core/src/matribox/models.json` (our clean functional map: module and model ids, our
+  category, the real gear each model is based on without trademark signs, and per parameter its control
+  name, id, range, step, default and the labels of a switch or list) and `model-text.json` (our
+  own short model names and descriptions in English and Portuguese). `scripts/matribox-map.mjs`
+  writes `models.json` from a local copy of the official editor's file (the gear as plain text on
+  one line, without other makers' product names; none for the source's own algorithms) and
+  refuses to emit its
+  descriptions, parameter help, notes, legal notice block or display names; the schema is in the
+  script and in docs/matribox.md. Each model shows our name with "Based on …" / "Baseado em …"
+  next to it, and its description in the language of the UI (block panel, assistant); the model
+  menus and *Add* keep the grouping by type, and a list parameter's selector shows its labels.
+  The MCP `MatriboxSession` takes the catalog as an optional last argument (default
+  `MB_CATALOG`) instead of a loader. Tests check the map has none of the forbidden fields, every
+  model has our text with unique names carrying no brand or model token, and the e2e run on the
+  built-in catalog in English and Portuguese with no file picker or `alg_data` text anywhere.
+  NOTICE and the READMEs say that names of real gear belong to their owners and are used only
+  to describe the sound.
+
 - Matribox II Pro editor on a phone: Export preset, Import preset… and Read fold under a ⋯
   *More actions* button in the preset header, so Undo, Redo, Save… and the patch-volume knob
   stay on one row. Wider screens show the buttons as before. The import dialog now lives on
@@ -108,6 +128,17 @@ and the project uses [Semantic Versioning](https://semver.org/).
   page. The Pocket Master's strip is unchanged.
 - Dependencies: Biome 2.6.6 → 2.6.8 and Turbo 2.11.10 → 2.11.13 (#213), and
   `docker/setup-buildx-action` v3 → v4 in the CI and release workflows (#212).
+
+### Removed
+
+- Matribox II Pro: every way to load or choose the catalog file: the web app's *Choose
+  alg_data.json* / *Replace* / *Forget* panel and line (`MatriboxCatalog.tsx`,
+  `lib/matriboxCatalog.ts`, its IndexedDB store, which is cleared once), the "catalog required"
+  states of the add menu, the block panel, the assistant and the tone library, and their
+  messages; the desktop app's `app://editor/matribox-catalog.json` route
+  (`apps/desktop/src/matribox-catalog.ts`); the MCP server's lookup of the official app's install
+  and the `MATRIBOX_CATALOG` variable (`apps/mcp/src/matribox-catalog.ts`); and core's
+  `parseMbCatalog`.
 
 ### Documentation
 

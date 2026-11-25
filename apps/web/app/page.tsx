@@ -163,7 +163,7 @@ export default function EditorPage() {
               {te(pm.error)}
             </p>
           )}
-          <MatriboxEditor port={matribox} desktop={desktop} />
+          <MatriboxEditor port={matribox} />
         </>
       ) : (
         <div className={connected ? 'layout' : 'layout layout-single'}>

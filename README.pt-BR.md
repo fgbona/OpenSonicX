@@ -111,12 +111,11 @@ Todo menu mostra o nome que a pedaleira usa ao lado do que ele é, agrupado por 
   *Exportar preset* baixa o preset carregado (com as edições não salvas) como um `.prst` que o
   app da própria Sonicake abre, e *Importar preset…* grava um `.prst` (ou o backup de um slot) no
   slot que você escolher, depois de uma confirmação explícita e do backup desse slot: a unidade
-  grava um preset importado na hora. Os nomes dos modelos e os
-  parâmetros vêm do catálogo do app oficial Matribox II PRO da Sonicake, que não é nosso para
-  distribuir: no navegador você escolhe o `alg_data.json` dele uma vez (no Mac:
-  `/Applications/Matribox II PRO.app/Contents/Frameworks/App.framework/Resources/flutter_assets/assets/alg/alg_data.json`)
-  e ele fica naquele navegador; o app desktop lê do app instalado (ou de `MATRIBOX_CATALOG`). Sem
-  ele, os presets e as cadeias aparecem mesmo assim, pelo número do módulo.
+  grava um preset importado na hora. O catálogo de modelos
+  vem embutido (no app web, no PWA, no app desktop e no servidor MCP): nada para instalar ou
+  carregar. É o nosso próprio mapa funcional dos modelos da unidade (ids, categorias, faixas dos
+  parâmetros), com nomes curtos e descrições nossas em português e inglês, e cada modelo mostra
+  o equipamento real em que se baseia ("Baseado em …").
   A aparência é a do editor da Pocket Master: a cadeia como blocos de pedal (cada módulo na sua
   cor, um LED que o liga e desliga, setas para movê-lo, um último bloco para adicionar). Os
   blocos quebram em linhas, em zigue-zague: cada linha se lê da esquerda para a direita e um cabo
@@ -126,7 +125,7 @@ Todo menu mostra o nome que a pedaleira usa ao lado do que ele é, agrupado por 
   painel mostra o bloco selecionado, com o menu de modelos (só os modelos daquele módulo,
   agrupados por tipo, com o equipamento real ao lado; *Adicionar* pede primeiro o tipo de bloco,
   depois o modelo) e os parâmetros como knobs, chaves e seletores pequenos. Os blocos AMP são
-  vestidos como o amplificador em que o modelo se baseia, lido do seu catálogo (painel dourado
+  vestidos como o amplificador em que o modelo se baseia (painel dourado
   Marshall, tweed ou blackface Fender, chapa xadrez Mesa…; só materiais e cores, sem logotipos).
   No celular, Exportar preset, Importar preset… e Ler ficam num menu ⋯, e o cabeçalho cabe numa
   linha só.
@@ -136,15 +135,14 @@ Todo menu mostra o nome que a pedaleira usa ao lado do que ele é, agrupado por 
   Uma **biblioteca de timbres**, como a da Pocket Master: *Guardar timbre* salva a cadeia carregada
   neste navegador, com nome e anotações; *Carregar* manda um timbre guardado de volta ao preset
   carregado, num único passo de Desfazer (nunca grava um slot); e a biblioteca inteira se exporta
-  e se importa num arquivo JSON. O assistente de timbre também guarda e carrega. Carregar
-  precisa do catálogo.
+  e se importa num arquivo JSON. O assistente de timbre também guarda e carrega.
   O volume do patch, quais blocos os footswitches A-D ligam e desligam, as entradas do pedal de
   expressão (bloco, parâmetro, mínimo, máximo) e uma linha de afinador / tap tempo / BPM também
   estão lá (conferidos em uma unidade até agora; afinador e andamento vão como os MIDI Control
   Changes do manual).
   Desfazer e refazer cobrem as edições da cadeia (blocos, modelos, parâmetros, liga/desliga). O **assistente de timbre** também
   funciona na Matribox, com as mesmas chaves gratuitas: ele escolhe os modelos pelo equipamento
-  real em que se baseiam (do seu catálogo, que ele precisa), monta a cadeia inteira ou ajusta, mostra
+  real em que se baseiam (do catálogo embutido), monta a cadeia inteira ou ajusta, mostra
   o que mudou, e salvar continua passando pela janela de Salvar que você confirma.
 
 ## O que funciona onde
@@ -308,9 +306,8 @@ Ferramentas: `get_preset`, `list_presets`, `list_models`, `edit_preset`, `select
   `matribox_assign_expression`, `matribox_set_expression_range` (decodificados do app oficial), e
   os MIDI Control Changes do manual `matribox_tuner`, `matribox_tap_tempo`, `matribox_set_bpm`,
   `matribox_looper`, `matribox_drum`, `matribox_ctrl`, `matribox_quick_knob` (no canal MIDI da
-  unidade, 1 por padrão; o MIDI In Source dela precisa incluir USB). A lista de modelos vem do app oficial Matribox
-  II PRO da Sonicake, que precisa estar instalado (ou defina `MATRIBOX_CATALOG` com o caminho do
-  `alg_data.json`). `matribox_load_ir` (experimental, conferido em uma
+  unidade, 1 por padrão; o MIDI In Source dela precisa incluir USB). A lista de modelos vem embutida.
+  `matribox_load_ir` (experimental, conferido em uma
   unidade até agora) carrega um WAV de `~/.pocket-master-editor/irs` no slot de IR do usuário
   1..20, convertido como o editor oficial faz e refeito byte a byte a partir dos envios dele;
   `confirm` repete `IR<slot>` e um slot ocupado só é sobrescrito com `replace: true`. Carregar
@@ -340,3 +337,7 @@ Contribuições são bem-vindas. Leia antes o [CONTRIBUTING.md](CONTRIBUTING.md)
 MIT, veja [LICENSE](LICENSE). O catálogo de modelos vem do pocket-master-mcp, que o derivou do
 [PocketEdit](https://github.com/suckyble/PocketEdit); veja [NOTICE](NOTICE). Sem vínculo com a
 Sonicake.
+
+Baseado em: os nomes de equipamentos reais mostrados ao lado dos modelos da Matribox ("Baseado
+em …") e nas descrições deles são marcas dos seus donos, usadas só para descrever o som que cada
+modelo busca. Este projeto não tem vínculo com eles, nem endosso deles.

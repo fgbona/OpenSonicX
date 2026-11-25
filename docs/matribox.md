@@ -3,7 +3,7 @@
 The goal: an MCP server where you describe a tone and the AI builds it on the Matribox II Pro,
 like the Pocket Master server does today. What exists so far: the protocol groundwork in
 `packages/core/src/matribox/` (framing, pages, LZO1X, messages, name tables, the preset decoder),
-the model catalog reader, and the MCP server (below): the read tools, and **experimental** write tools
+the built-in model catalog, and the MCP server (below): the read tools, and **experimental** write tools
 decoded from captures but not yet validated on the unit, and the editor UI (below).
 
 Everything below was learned from our own captures of the owner's unit (USB MIDI, 2026-11-24):
@@ -138,9 +138,9 @@ a body that starts `00 00 <id> 01`. Ids and body sizes are fixed: 0 (11), 1 (105
 | 1 | 8 | Name, NUL-terminated (stale bytes after it) |
 | 1 | 95 | Style tag ("Rock", "@lex") |
 | 4 | 4 | Chain: up to 12 storage slots in signal order, `FF` = none |
-| 4 | 16 | Module index per slot (catalog `Modules[].index`: DYN 0 … VOL 15), `FF` = unused |
-| 4 | 28 | u32 fxid per slot (catalog `alg[].fxid`). IR `0x0A1000nn` = user IR nn, CLONE `0x0F00000n` = capture n |
-| 5 | 4 + slot × 60 | 15 float32 per slot, indexed by the catalog widget `ID`, in real units |
+| 4 | 16 | Module index per slot (catalog module `index`: DYN 0 … VOL 15), `FF` = unused |
+| 4 | 28 | u32 fxid per slot (catalog model `fxid`). IR `0x0A1000nn` = user IR nn, CLONE `0x0F00000n` = capture n |
+| 5 | 4 + slot × 60 | 15 float32 per slot, indexed by the catalog parameter `id`, in real units |
 | 5 | 724 + slot | On/off per slot |
 
 A slot is a storage slot, not a chain position (live edits address the slot). Values at positions
@@ -309,8 +309,7 @@ Pocket Master keeps its tools; the Matribox's start with `matribox_`, and nothin
 - `matribox_get_preset`: the loaded preset: chain in order, each block's model and the gear it is
   based on, on/off, parameters by name with their ranges; IR and CLONE blocks show the slot's name.
 - `matribox_list_models`: the catalog by module (all 16, or one), with origins and parameter ranges:
-  the palette the assistant plans a tone from. Read from the official app's install (below); the
-  tool says how to fix a missing catalog.
+  the palette the assistant plans a tone from. Built in (below): nothing to install.
 - `matribox_list_irs`, `matribox_list_captures`: the user IR and capture slot names.
 - `matribox_load_ir` (write, experimental): a WAV into a user IR slot; see "User IR and capture
   uploads".
@@ -719,8 +718,8 @@ patch volume show without a read. Status on the owner's unit: following the unit
 the tone library's Keep/Load and the snake with a long preset are **not yet checked** there.
 The tone library (`components/MatriboxLibrary.tsx`): *Keep tone* reads the edit buffer and keeps
 it in this browser (key `pocket-master-editor.matriboxLibrary.v1`) with a name and notes; *Load*
-sends a kept chain to the loaded preset as one Undo step through the validated writes (needs the
-catalog) and never writes a slot; the library exports to and imports from `matribox-library.json`.
+sends a kept chain to the loaded preset as one Undo step through the validated writes and never
+writes a slot; the library exports to and imports from `matribox-library.json`.
 The tone assistant uses the same library.
 A parameter drag sends only the newest value once the previous write is confirmed. After a chain
 edit or a preset select it reads the loaded preset again. Save reads the slot, keeps it as a
@@ -741,10 +740,8 @@ that is not a Matribox preset are refused before anything is sent. It also shows
 footswitches A–D toggle, the nine expression entries (block, parameter, min, max, Apply) and a
 tuner / tap tempo / BPM row sent as Control Changes on a chosen MIDI channel; after an assignment
 it reads the loaded preset again. Undo and Redo cover the chain edits only (the history replays
-chains). The catalog: in the browser the owner picks his own `alg_data.json`
-and it is kept in IndexedDB; the desktop app serves the installed one (or `MATRIBOX_CATALOG`) at
-`app://editor/matribox-catalog.json`. The e2e tests (`apps/web/e2e/matribox.spec.ts`) run the
-editor against the simulated unit with an invented catalog.
+chains). The model catalog is built in (below): nothing is picked or loaded. The e2e tests
+(`apps/web/e2e/matribox.spec.ts`) run the editor against the simulated unit with it.
 
 ## Phases
 
@@ -762,17 +759,55 @@ next one starts.
 
 ## The model catalog
 
-The models and their parameters (16 modules, 267 models) come from the official editor's
-`alg_data.json`. That file is **Copyright Sonicake**: it is never copied into this repository,
-bundled, published or quoted. We read it at run time from the user's own installed app:
+The models and their parameters (16 modules, 267 models) are built in, in the web app, the PWA,
+the desktop app and the MCP server; nothing has to be installed, picked or loaded. Core exports
+them as `MB_CATALOG`, built by `mbCatalog(map, text)` from two files of ours:
 
-- macOS: `/Applications/Matribox II PRO.app/Contents/Frameworks/App.framework/Resources/flutter_assets/assets/alg/alg_data.json`
-- Windows: `%ProgramFiles%\Matribox II PRO\data\flutter_assets\assets\alg\alg_data.json`
-  (the usual Flutter layout; not yet checked on a real install)
-- Anywhere: set `MATRIBOX_CATALOG` to the path of `alg_data.json`.
+- `packages/core/src/matribox/models.json`: a clean functional map, only what the protocol needs,
+  in our own structure. It is written by `scripts/matribox-map.mjs` from a local copy of the
+  official editor's `alg_data.json` (`node scripts/matribox-map.mjs <path>`); that file is never
+  committed or shipped, and the script keeps none of its descriptions, parameter help, notes,
+  legal notice block or model display names (it refuses to write any key outside the schema).
+- `packages/core/src/matribox/model-text.json`: our own short name for each model and our own
+  description in English and Portuguese, keyed `"MODULE:fxid"` (e.g. `"DRV:50331648"`). The UI
+  shows the description in its language; the MCP server and the assistant read the English one
+  (the web assistant the one of the UI).
 
-`parseMbCatalog` (core) validates the parsed JSON and returns a frozen catalog;
-`loadMatriboxCatalog` (`apps/mcp`) reads the file. Tests use a small invented catalog.
+Schema of `models.json` (version 1):
+
+```
+{
+  "version": 1,
+  "modules": [                       // by module index
+    {
+      "module": "DRV",               // module code
+      "index": 3,                    // module index in the protocol (DYN 0 … VOL 15)
+      "models": [                    // by model index
+        {
+          "fxid": 50331648,          // model id the unit reads and writes
+          "index": 0,                // position in the module's list
+          "type": "OD",              // our category, groups the model menus ("" when none)
+          "basedOn": "…",            // the real gear, plain text on one line ("" for originals)
+          "params": [                // by id
+            {
+              "id": 0,               // parameter slot (index of the preset's 15 values)
+              "label": "Gain",       // generic control name
+              "min": 0, "max": 100, "step": 1, "default": 50,
+              "options": ["Off", "On"]   // only for a switch or a list, one label per step
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+Core tests check that `models.json` holds only the keys of this schema (none of the source's texts or names) and no trademark signs, that every
+model has our text (names unique per module, none carrying a brand or model token of real
+gear), and the generator on synthetic input. Names of real gear are trademarks of their owners,
+used only to describe the sound (see NOTICE). Tests of the editors use small invented catalogs
+in the same schema (`packages/core/test/matribox-fake-catalog.ts`).
 
 ## Clean room
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { MB_PRESET_COUNT, mbPresetLabel, resolveMbPreset, writeMatriboxPrst, type MbPreset } from '@pocket-master/core';
+import { MB_CATALOG, MB_PRESET_COUNT, mbPresetLabel, resolveMbPreset, writeMatriboxPrst, type MbPreset } from '@pocket-master/core';
 import { downloadJson, downloadText } from '@/lib/backupStore';
 import { mbBackupFileName } from '@/lib/matriboxBackups';
 import { MB_PRESET_FILE_ACCEPT, mbPrstFileName, parseMbPresetFile } from '@/lib/matriboxPresetFile';
@@ -107,7 +107,7 @@ export function MatriboxPresetFile({ mb }: { mb: Matribox }) {
                 </p>
                 <p>
                   {t('mb.chain')}:{' '}
-                  {resolveMbPreset(picked.preset, mb.catalog ?? { modules: [] })
+                  {resolveMbPreset(picked.preset, MB_CATALOG)
                     .chain.map((b) => (b.model ? `${b.module} ${b.model.name}` : b.module))
                     .join(' → ') || t('mb.empty')}
                 </p>

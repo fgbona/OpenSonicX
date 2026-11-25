@@ -1,6 +1,6 @@
 import { devices, type Page } from '@playwright/test';
 import { parseMbPreset, writeMatriboxPrst } from '@pocket-master/core';
-import { blockPanel, connectMatribox, expect, expectChain, pickCatalog, test } from './matribox-fixtures.ts';
+import { blockPanel, connectMatribox, expect, expectChain, MODELS, optionName, test } from './matribox-fixtures.ts';
 
 // A phone: narrow, touch, no hover (the chain's move arrows stay visible).
 const { defaultBrowserType: _, ...pixel } = devices['Pixel 7'];
@@ -25,7 +25,6 @@ test('the Matribox editor fits the screen, with the preset list folded away unti
 
 test('the chain wraps into rows with no sideways scroll, its add tile on screen; arrows move a block', async ({ page, unit }) => {
   await connectMatribox(page);
-  await pickCatalog(page);
   const strip = page.locator('.tiles');
   expect(await strip.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(0);
   await expect(page.getByRole('button', { name: 'Show later blocks' })).toHaveCount(0);
@@ -41,7 +40,6 @@ test('the chain wraps into rows with no sideways scroll, its add tile on screen;
 
 test('the model menu opens as a sheet inside the screen and the panels fit', async ({ page }) => {
   await connectMatribox(page);
-  await pickCatalog(page);
   const drive = await blockPanel(page, 2, 'DRV');
   await drive.getByRole('button', { name: '2. DRV model' }).tap();
   const box = (await page.locator('.picker-list').boundingBox())!;
@@ -49,8 +47,8 @@ test('the model menu opens as a sheet inside the screen and the panels fit', asy
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(screen.width);
   expect(Math.round(box.y + box.height)).toBe(screen.height - 12);
-  await page.getByRole('option', { name: /^Fake Fuzz/ }).tap();
-  await expect(drive.getByRole('button', { name: '2. DRV model' })).toContainText('Fake Fuzz');
+  await page.getByRole('option', { name: optionName(MODELS.od) }).tap();
+  await expect(drive.getByRole('button', { name: '2. DRV model' })).toContainText(MODELS.od.name);
 
   // The add menu's two steps are the same sheet.
   await page.getByRole('button', { name: 'Add a block…' }).scrollIntoViewIfNeeded();
@@ -75,7 +73,6 @@ test('the model menu opens as a sheet inside the screen and the panels fit', asy
 
 test('tiles do not drag on touch, and a swipe on the chain scrolls the page', async ({ page }) => {
   await connectMatribox(page);
-  await pickCatalog(page);
   for (const tile of await page.locator('.tiles .tile-unit').all()) await expect(tile).not.toHaveAttribute('draggable', 'true');
   await expect(page.locator('.tiles')).toHaveCSS('touch-action', 'auto');
 });
