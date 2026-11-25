@@ -482,6 +482,8 @@ button, select { font: inherit; color: inherit; }
 .editor-params { display: flex; flex-wrap: wrap; gap: 18px 22px; align-items: flex-end; }
 .editor-toggle { display: grid; justify-items: center; gap: 6px; min-width: 76px; }
 .editor-info { margin: 14px 0 0; padding: 8px 10px; border-radius: var(--radius-small); background: var(--surface-2); color: var(--label-2); font-size: 0.8125rem; }
+.editor-info-note { display: block; margin-top: 4px; font-size: 0.75rem; }
+button.editor-info-note { display: inline-block; }
 
 @media (max-width: 900px) {
   .layout { grid-template-columns: minmax(0, 1fr); }

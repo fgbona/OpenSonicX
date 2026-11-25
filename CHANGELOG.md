@@ -19,6 +19,17 @@ and the project uses [Semantic Versioning](https://semver.org/).
   host message are left out). Documented in docs/matribox-captures.md for the mb-30 … mb-44
   session; unit tests on synthetic messages.
 
+- Matribox II Pro editor: in Portuguese, the model description (the catalog only has English and
+  Chinese) is translated on this device with Chrome's built-in Translator API (`en` to `pt`).
+  The English text shows until the translation is ready, then a note says it was translated
+  automatically in the browser. Without the API, or for an unsupported pair, the English text stays
+  with an "(em inglês)" note; when the language model still has to be downloaded, a "Traduzir
+  descrições" button starts it (Chrome needs a user gesture). Nothing is sent anywhere and there is
+  no network fallback; no translation table ships with the app (the catalog is the user's file).
+  Translations are kept in localStorage (`pocket-master-editor.translations.v1`, keyed by a hash of
+  the English text). Tone3000 descriptions are left as they are. The desktop app (Electron) has no
+  Chrome on-device model component (expected; the fallback covers it), so it keeps the English text.
+
 - Matribox II Pro: the editor follows what is done on the unit itself. Core `parseMbNotice`
   decodes the messages the unit sends on its own (another preset loaded, one block or every
   block's on/off, knob 1/2 parameter turns, knob 3 patch volume, the "preset edited" flag), from

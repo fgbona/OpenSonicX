@@ -10,6 +10,7 @@ import { MatriboxParam } from './MatriboxParam';
 import { ModelPicker } from './ModelPicker';
 import { ModuleIcon } from './ModuleIcon';
 import { useI18n } from './I18n';
+import { useTranslatedText } from '@/lib/useTranslatedText';
 
 interface Props {
   block: MbResolvedBlock;
@@ -41,7 +42,9 @@ function driveOf(block: MbResolvedBlock): number {
  * the gear its model is based on.
  */
 export function MatriboxBlockPanel({ block, values, catalog, userSlot, disabled, onParam, onOn, onModel, onRemove }: Props) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  // The catalog's description is English; in Portuguese it is translated on this device (lib/translate.ts).
+  const description = useTranslatedText(block.model?.description ?? '', lang === 'pt');
   const key = mbLookKey(block);
   const name = `${block.position}. ${block.module}`;
   const unknown = t('mb.unknownModel', { fxid: mbFxidHex(block.fxid) });
@@ -118,7 +121,14 @@ export function MatriboxBlockPanel({ block, values, catalog, userSlot, disabled,
           <p className="editor-info">
             {gear && !amp ? t('editor.basedOn', { gear }) : ''}
             {gear && !amp && block.model.description ? ' · ' : ''}
-            {block.model.description}
+            {block.model.description && <span lang={description.state === 'translated' ? 'pt-BR' : 'en'}>{description.text}</span>}
+            {description.state === 'translated' && <span className="editor-info-note">{t('mb.translated')}</span>}
+            {description.state === 'english' && <span className="editor-info-note">{t('mb.inEnglish')}</span>}
+            {description.state === 'download' && (
+              <button type="button" className="btn btn-small editor-info-note" onClick={description.start}>
+                {t('mb.translateButton')}
+              </button>
+            )}
           </p>
         )}
       </div>
