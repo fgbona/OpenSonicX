@@ -112,6 +112,14 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Web e2e under parallel load: the axe and pixel-contrast tests (`a11y.spec.ts`) timed out at 30 s
+  when many workers shared the CPU, and passed alone. Cause: `e2e/contrast.ts` shipped every pixel
+  of every screenshot to the page as a JS array of arrays and sorted it there, and added a new
+  `<style>` tag per element measured, so each contrast pass was CPU and GC heavy and slowed axe
+  too. It now reads the typed pixel buffer, sorts a `Float64Array`, and adds the style once per
+  page; the a11y specs also run with `test.slow()` (3x timeout), since axe is CPU-bound. CI
+  behaviour is unchanged. The `phone › portrait` screenshot case in `matribox-screens.spec.ts`
+  waits for the Read button with `includeHidden`, as it lives in the folded More menu on phones.
 - Pocket Master editor, keyboard: the file-import buttons (*Import preset*, *Import a backup*, the
   NAM and WAV loaders) are a transparent input over a button, so Tab reached them with no visible
   focus. The button now shows the focus ring (`:focus-within`); the input and its tests are
