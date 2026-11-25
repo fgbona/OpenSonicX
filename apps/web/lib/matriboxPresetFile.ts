@@ -36,8 +36,8 @@ export function parseMbPresetFile(bytes: Uint8Array): MbPreset {
   try {
     return text.trimStart().startsWith('{') ? fromBackup(text) : parseMatriboxPrst(text);
   } catch (error) {
-    console.error('Matribox: the picked file is not a preset', error);
-    throw new Error(NOT_MB_PRESET);
+    // A wrong file is the person's mistake, explained on the page: not an error worth logging.
+    throw new Error(NOT_MB_PRESET, { cause: error });
   }
 }
 

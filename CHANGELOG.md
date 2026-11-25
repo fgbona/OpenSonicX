@@ -33,6 +33,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
   Its reference DI is the same as ours, and its fit is a different, single-level algorithm.
   The doc also covers why no `matribox_load_capture` ships yet and what would unblock it.
 
+### Fixed
+
+- The Matribox editor no longer logs a refused import file as an error in the browser console: a
+  wrong file is the person's mistake and the dialog already says so (it also showed in the e2e log).
+
 ## [1.1.0] - 2026-11-24
 
 The Matribox II Pro grows from "opens and edits" to a full second pedal, all of it run on the
