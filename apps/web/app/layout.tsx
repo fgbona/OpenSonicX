@@ -13,8 +13,7 @@ const script = Yellowtail({ weight: '400', subsets: ['latin'], variable: '--font
 export const metadata: Metadata = {
   // Link previews and the canonical need absolute URLs: the Pages workflow sets SITE_URL (the origin; Next adds the basePath).
   metadataBase: process.env.SITE_URL ? new URL(process.env.SITE_URL) : undefined,
-  // One page, so no title.template.
-  title: SITE_TITLE,
+  // No `title` here: the one page sets it (page.tsx), as it follows the connected pedal.
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
   keywords: SITE_KEYWORDS,

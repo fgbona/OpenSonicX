@@ -25,6 +25,7 @@ import { useIsDesktop } from '@/lib/desktop';
 import { MatriboxEditor } from '@/components/MatriboxEditor';
 import { AiConnectionPanel } from '@/components/AiConnectionPanel';
 import { useAiAgent } from '@/lib/aiBridge';
+import { SITE_TITLE } from '@/lib/seo';
 
 const STEPS = ['empty.step1', 'empty.step2'] as const;
 const LOG_KEY = 'pocket-master-editor.showLog';
@@ -114,8 +115,8 @@ export default function EditorPage() {
   }, [connected, names, loadNames]);
   return (
     <>
-      {/* React puts it in the head and it wins over layout.tsx's title; with no pedal the layout's (search) title stays. */}
-      {pedalName && <title>{`${APP_NAME} · ${pedalName}`}</title>}
+      {/* React puts it in the head. It is the page's only <title> (a title in layout.tsx would come first and hide it); the exported HTML carries the search title. */}
+      <title>{pedalName ? `${APP_NAME} · ${pedalName}` : SITE_TITLE}</title>
       <Toolbar
         status={pm.status}
         transport={pm.transport}
