@@ -290,6 +290,8 @@ button, select { font: inherit; color: inherit; }
 .panel-empty { margin: 0; padding: 12px 16px; }
 .file-button { position: relative; overflow: hidden; display: inline-block; }
 .file-button input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+/* The transparent input is what Tab reaches: ring the button it covers (overflow is clipped, so inset). */
+.file-button:focus-within { outline: 3px solid color-mix(in srgb, var(--blue) 50%, transparent); outline-offset: -3px; }
 .backups { list-style: none; margin: 0; padding: 0; }
 .backup + .backup { border-top: 0.5px solid var(--separator); }
 .backup { padding: 12px 16px; }
@@ -469,7 +471,8 @@ button, select { font: inherit; color: inherit; }
 /* Module editor */
 .editor { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 20px 18px; border-top: 3px solid var(--tint); }
 .editor-off { border-top-color: var(--separator); }
-.editor-off .editor-params { opacity: 0.55; }
+.editor-off .editor-params :is(.knob-dial, .switch) { opacity: 0.55; }
+.editor-off .editor-face:not(.face-amp) .knob-value { color: var(--label-2); }
 .editor-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
 .editor-head .module-icon { color: var(--tint); }
 .editor-label { font-size: 0.8125rem; font-weight: 800; color: var(--tint); letter-spacing: 0.06em; }
