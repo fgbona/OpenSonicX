@@ -20,6 +20,10 @@ for (const theme of ['dark', 'light'] as const) {
     expect(await violations(page)).toEqual([]);
     await connect(page, pedal);
     expect(await violations(page)).toEqual([]);
+    // The AMP's model menu open: its style headings and its scrolling list.
+    await page.locator('section.block-amp .picker-button').click();
+    await expect(page.getByRole('listbox')).toBeVisible();
+    expect(await violations(page)).toEqual([]);
   });
 }
 
