@@ -129,6 +129,7 @@ test('saving needs an explicit confirmation, backs the slot up first and is chec
 });
 
 test('back up all presets: every slot read once loaded, one file downloaded, the loaded preset loaded again', async ({ page, unit }) => {
+  test.slow(); // 240 selects and reads: over 20 s on a busy CI runner
   await connectMatribox(page);
   const all = page.getByRole('region', { name: 'All presets' });
   const download = page.waitForEvent('download');
@@ -143,6 +144,7 @@ test('back up all presets: every slot read once loaded, one file downloaded, the
 });
 
 test('restore all asks for an explicit confirmation, backs everything up first and writes each preset', async ({ page, unit }) => {
+  test.slow(); // a backup of all 240 presets first: over 20 s on a busy CI runner
   await connectMatribox(page);
   const drive = toHex(unit.editBuffer).replaceAll(' ', '');
   const file = {

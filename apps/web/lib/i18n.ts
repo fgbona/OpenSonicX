@@ -31,6 +31,9 @@ const EXACT: ReadonlyArray<[string, MessageKey]> = [
   ['the preset file is damaged and cannot be read', 'error.damagedPresetFile'],
   ['not a Pocket Master .prst file', 'error.notPresetFile'],
   ['the .prst file is damaged and cannot be read', 'error.damagedPresetFile'],
+  // Raised by lib/matriboxPresetFile.ts when a picked file is read.
+  ['not a Matribox II Pro preset file (.prst)', 'error.notMbPreset'],
+  ['this is a Pocket Master .prst file, a different format: the Matribox II Pro cannot load it', 'error.pocketMasterPrst'],
 ];
 /** The editor's English messages that end in a reason from below, which stays as it is. */
 const PREFIXES: ReadonlyArray<[string, MessageKey]> = [

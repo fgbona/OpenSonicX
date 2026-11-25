@@ -62,7 +62,12 @@ export function backupFileName(file: BackupFile): string {
 
 /** Hands the visitor a JSON file. Call it from a click: Chrome blocks repeated downloads without one. */
 export function downloadJson(data: unknown, fileName: string): void {
-  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+  downloadText(JSON.stringify(data, null, 2), fileName, 'application/json');
+}
+
+/** Hands the visitor a text file (same rule: from a click). */
+export function downloadText(text: string, fileName: string, type: string): void {
+  const url = URL.createObjectURL(new Blob([text], { type }));
   const a = document.createElement('a');
   a.href = url;
   a.download = fileName;

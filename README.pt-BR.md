@@ -107,7 +107,11 @@ Todo menu mostra o nome que a pedaleira usa ao lado do que ele é, agrupado por 
   modelo) e modelos, adicionar, mover e remover blocos, e Salvar num slot com confirmação
   explícita e backup do slot antes (guardado no navegador, para baixar). *Backup de todos os
   presets* baixa os 240 presets num arquivo só e *Restaurar todos…* os devolve a partir de um
-  (confirmação explícita; por padrão os 240 são salvos e baixados antes, para poder desfazer). Os nomes dos modelos e os
+  (confirmação explícita; por padrão os 240 são salvos e baixados antes, para poder desfazer).
+  *Exportar preset* baixa o preset carregado (com as edições não salvas) como um `.prst` que o
+  app da própria Sonicake abre, e *Importar preset…* grava um `.prst` (ou o backup de um slot) no
+  slot que você escolher, depois de uma confirmação explícita e do backup desse slot: a unidade
+  grava um preset importado na hora. Os nomes dos modelos e os
   parâmetros vêm do catálogo do app oficial Matribox II PRO da Sonicake, que não é nosso para
   distribuir: no navegador você escolhe o `alg_data.json` dele uma vez (no Mac:
   `/Applications/Matribox II PRO.app/Contents/Frameworks/App.framework/Resources/flutter_assets/assets/alg/alg_data.json`)

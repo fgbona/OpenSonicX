@@ -13,6 +13,7 @@ import { MatriboxAssignments } from './MatriboxAssignments';
 import { MatriboxBackupAll } from './MatriboxBackupAll';
 import { MatriboxCatalog } from './MatriboxCatalog';
 import { MatriboxControls } from './MatriboxControls';
+import { MatriboxPresetFile } from './MatriboxPresetFile';
 import { MatriboxPresets } from './MatriboxPresets';
 import { MatriboxSaveDialog } from './MatriboxSaveDialog';
 import { useI18n } from './I18n';
@@ -92,6 +93,7 @@ export function MatriboxEditor({ port, desktop }: { port: MidiPort; desktop: boo
                 >
                   {t('action.save')}
                 </button>
+                <MatriboxPresetFile mb={mb} />
               </div>
             </div>
             <p className="muted small">
