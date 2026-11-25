@@ -59,7 +59,7 @@ const CHANGE: JsonSchema = {
 };
 const NONE: JsonSchema = { type: 'object', properties: {} };
 
-const TOOLS: readonly ChatTool[] = [
+export const MB_CHAT_TOOLS: readonly ChatTool[] = [
   {
     name: 'get_preset',
     description: "The preset loaded on the Matribox: name, chain in signal order, each block's model, the gear it is based on, on/off and parameter values with ranges.",
@@ -204,7 +204,7 @@ export function matriboxAgent(host: MbAgentHost): ToneAgent {
     return mbPresetText(s.preset, s.catalog);
   };
   return {
-    tools: TOOLS,
+    tools: MB_CHAT_TOOLS,
     acts: ACTS,
     instructions: (thorough) => (thorough ? `${INSTRUCTIONS} ${CHAT_INSTRUCTIONS_THOROUGH}` : INSTRUCTIONS),
     context: (thorough) => {

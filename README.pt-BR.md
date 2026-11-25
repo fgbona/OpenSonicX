@@ -216,6 +216,44 @@ A partir do repositório: `npm run start -w @pocket-master/desktop` faz o build 
 `npm run dist -w @pocket-master/desktop` gera o instalador do seu sistema em
 `apps/desktop/release`.
 
+### Conexão da IA (só no app desktop)
+
+O app desktop pode deixar um cliente de IA no mesmo computador (Claude Code, ou qualquer cliente
+MCP) controlar **o editor que você tem aberto**: a IA lê e muda o mesmo preset que você vê, cada
+mudança aparece na tela na hora e o Desfazer do editor volta atrás. Só o app usa a porta MIDI,
+então você e a IA trabalham juntos (o servidor MCP por stdio, abaixo, abre a própria porta e não
+pode dividi-la com o editor).
+
+1. Abra o painel **Conexão da IA** no fim do editor e ligue *Permitir que um cliente de IA neste
+   computador se conecte*. Fica desligada até você ligar, continua como você deixou depois de
+   reiniciar, e desligar fecha o servidor na hora.
+2. O painel mostra o endereço, `http://127.0.0.1:47830/mcp` (se a porta 47830 estiver ocupada o
+   app usa uma porta livre e a mostra; essa porta muda no próximo início), e o token, mascarado.
+3. Clique em **Copiar comando** e rode uma vez num terminal. Ele é:
+
+   ```sh
+   claude mcp add --transport http opensonicx http://127.0.0.1:47830/mcp --header "Authorization: Bearer <token>"
+   ```
+
+   Depois peça ao Claude Code algo como "deixa a Pocket Master com o timbre do Black Album".
+
+As ferramentas são as do assistente de timbres: para a Pocket Master `get_preset`,
+`list_presets`, `list_models`, `edit_preset`, `undo_edit`, `revert_preset`, `select_preset`, as de
+timbres guardados e `save_preset`; para a Matribox II Pro o mesmo conjunto com o prefixo
+`matribox_`, mais `matribox_build_tone`; `which_pedal` diz qual está conectada. Sem pedaleira
+conectada, elas respondem com um erro dizendo isso.
+
+**Modelo de segurança.** O servidor escuta só em 127.0.0.1, nunca na rede. Todo pedido precisa
+do token (256 bits aleatórios, criado quando você liga a conexão pela primeira vez, guardado nos
+dados do app, comparado em tempo constante; *Gerar outro* faz o antigo parar de funcionar na
+hora). Pedidos com Host diferente de `127.0.0.1:<porta>` ou `localhost:<porta>` são recusados
+(DNS rebinding), assim como qualquer pedido com cabeçalho `Origin`, que todo navegador envia e
+clientes MCP não: uma página web não consegue alcançá-lo. Nenhum cabeçalho CORS é enviado, corpos
+acima de 1 MiB são recusados e há limite de pedidos. Salvar num slot exige `confirm` repetindo o
+rótulo do slot e depois o seu **Permitir** num diálogo do app que nomeia o slot; aí o diálogo
+Salvar do editor abre preenchido, com o backup de sempre. Edições ao vivo não pedem diálogo:
+você as vê e pode desfazer. O token nunca vai para os logs. Mais em [SECURITY.md](SECURITY.md).
+
 ## Usar por um assistente de IA (MCP)
 
 > Pocket Master: leitura, edição ao vivo, reverter e salvar com backup foram conferidos numa

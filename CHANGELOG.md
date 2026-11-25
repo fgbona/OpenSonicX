@@ -8,6 +8,24 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Desktop app: **AI connection** ("Conexão da IA"). The app serves the editor's tone tools as MCP
+  over Streamable HTTP on `127.0.0.1` (port 47830, or a free one when that is taken, shown in the
+  panel), so an AI client such as Claude Code drives the same live session as the window: one
+  owner of the MIDI port, every AI change on screen at once, and the editor's Undo covers it.
+  The tools are the tone assistant's (core `CHAT_TOOLS` for the Pocket Master under their stdio
+  names, the Matribox assistant's with the `matribox_` prefix, plus `which_pedal`); with no pedal
+  connected they answer with an error. Off by default; the switch persists in the app's user
+  data and turning it off closes the server. A panel (desktop only, not on the web or the PWA)
+  shows the endpoint, the masked token with Copy and Regenerate, the last request time and the
+  `claude mcp add --transport http …` command. Security: loopback bind only, a 256-bit bearer
+  token compared in constant time (401 without it), Host allowlist and refusal of any request
+  with an Origin (DNS rebinding, CSRF), no CORS headers, a 1 MiB body cap and rate limiting, and
+  the token is never logged. Saves need the typed `confirm` and then the person's Allow in a
+  native approval dialog. Electron gets a sandboxed preload exposing only this bridge. Unit tests
+  for the checks, an in-process integration test through the real MCP SDK client (401, Origin,
+  success, Deny), web tests of the bridge and an e2e of the panel and of an AI edit undone in the
+  editor. The stdio npm package is unchanged. README, README.pt-BR and SECURITY.md document it.
+
 - Matribox II Pro: `apps/mcp/scripts/mb-capture.ts`, an offline decoder for MIDI Monitor captures
   (`.mmon`, read with a small bplist00 reader; no MIDI port is opened). `decode` prints every
   message both ways (frame type, flag, cmd, length, data, and the `parseMbNotice` reading of the

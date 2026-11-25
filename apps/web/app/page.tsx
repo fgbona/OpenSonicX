@@ -23,6 +23,8 @@ import { usePocketMaster } from '@/lib/usePocketMaster';
 import { useI18n } from '@/components/I18n';
 import { useIsDesktop } from '@/lib/desktop';
 import { MatriboxEditor } from '@/components/MatriboxEditor';
+import { AiConnectionPanel } from '@/components/AiConnectionPanel';
+import { useAiAgent } from '@/lib/aiBridge';
 
 const STEPS = ['empty.step1', 'empty.step2'] as const;
 const LOG_KEY = 'pocket-master-editor.showLog';
@@ -82,6 +84,7 @@ export default function EditorPage() {
     [assistantBase, loadPresetNow, readNames],
   );
   const toneAgent = useMemo(() => pocketMasterAgent(toneHost), [toneHost]);
+  const hasPreset = pm.preset !== null;
   const closeSave = () => {
     setSaveOpen(false);
     proposal?.resolve(savedRef.current ? 'saved' : 'cancelled');
@@ -98,6 +101,8 @@ export default function EditorPage() {
   // The Matribox II Pro has its own editor; everything below is the Pocket Master's.
   const matribox = linked && pm.pedal === 'matribox' ? pm.matribox : null;
   const connected = linked && !matribox;
+  // The desktop app's AI connection drives the same assistant tools once a preset is read.
+  useAiAgent('pocket', connected && hasPreset ? toneAgent : null);
   // The Matribox editor has its own Undo (MatriboxEditor).
   useUndoKeys(pm.undo, pm.redo, !matribox);
   // The window (and the desktop app's title bar) names the connected pedal.
@@ -163,7 +168,7 @@ export default function EditorPage() {
               {te(pm.error)}
             </p>
           )}
-          <MatriboxEditor port={matribox} />
+          <MatriboxEditor port={matribox} footer={<AiConnectionPanel />} />
         </>
       ) : (
         <div className={connected ? 'layout' : 'layout layout-single'}>
@@ -250,6 +255,7 @@ export default function EditorPage() {
               onBackupAll={pm.backupAll}
               onRestoreAll={pm.restoreAll}
             />
+            <AiConnectionPanel />
             {showLog && <SysexLog log={pm.log} onClear={pm.clearLog} />}
             <p className="page-tools">
               <button type="button" className="btn-link" onClick={toggleLog}>

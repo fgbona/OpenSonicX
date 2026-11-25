@@ -2,6 +2,7 @@
 
 import { useMemo, useRef } from 'react';
 import { MB_CATALOG } from '@pocket-master/core';
+import { useAiAgent } from '@/lib/aiBridge';
 import { matriboxAgent } from '@/lib/matriboxAgent';
 import { keepMbTone, mbLibraryNow, mbTone } from '@/lib/matriboxLibrary';
 import type { Matribox } from '@/lib/useMatribox';
@@ -42,5 +43,7 @@ export function MatriboxAssistant({ mb, history, proposeSave }: Props) {
       }),
     [],
   );
+  // The desktop app's AI connection drives the same tools while this editor is up.
+  useAiAgent('matribox', agent);
   return <AssistantPanel agent={agent} hint="mb.assistantHint" privacy="mb.assistantPrivacy" />;
 }

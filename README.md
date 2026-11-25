@@ -216,6 +216,44 @@ From the repository: `npm run start -w @pocket-master/desktop` builds and opens
 it; `npm run dist -w @pocket-master/desktop` makes the installer for your
 system in `apps/desktop/release`.
 
+### AI connection (desktop app only)
+
+The desktop app can let an AI client on the same computer (Claude Code, or any MCP client)
+drive **the editor you have open**: the AI reads and changes the same preset you see, every
+change shows on screen at once, and the editor's Undo takes it back. The app owns the MIDI port
+alone, so you and the AI can work together (the stdio MCP server below opens its own port and
+cannot share it with the editor).
+
+1. Open the **AI connection** panel at the bottom of the editor and turn on *Allow an AI client
+   on this computer to connect*. It is off until you turn it on, stays as you left it across
+   restarts, and turning it off closes the server at once.
+2. The panel shows the endpoint, `http://127.0.0.1:47830/mcp` (when port 47830 is taken the app
+   uses a free port and shows it; that port changes on the next start), and the token, masked.
+3. Click **Copy command** and run it once in a terminal. It is:
+
+   ```sh
+   claude mcp add --transport http opensonicx http://127.0.0.1:47830/mcp --header "Authorization: Bearer <token>"
+   ```
+
+   Then ask Claude Code something like "make the Pocket Master sound like the Black Album".
+
+The tools are the tone assistant's: for the Pocket Master `get_preset`, `list_presets`,
+`list_models`, `edit_preset`, `undo_edit`, `revert_preset`, `select_preset`, the saved-tone tools
+and `save_preset`; for the Matribox II Pro the same set with a `matribox_` prefix plus
+`matribox_build_tone`; `which_pedal` says which one is connected. With no pedal connected they
+answer with an error saying so.
+
+**Security model.** The server listens on 127.0.0.1 only, never on the network. Every request
+needs the bearer token (256 random bits, made when you first turn the connection on, kept in the
+app's user data, compared in constant time; *Regenerate* makes the old one stop working at
+once). Requests with a Host other than `127.0.0.1:<port>` or `localhost:<port>` are refused (DNS
+rebinding), and so is any request with an `Origin` header, which every browser sends and MCP
+clients do not: a web page cannot reach it. No CORS headers are sent, bodies over 1 MiB are
+refused and requests are rate limited. A save to a slot needs `confirm` repeating the slot label
+and then your **Allow** in an app dialog that names the slot; after that the editor's Save dialog
+opens filled in, with its usual backup. Live edits need no dialog: you see them and can undo
+them. The token is never logged. More in [SECURITY.md](SECURITY.md).
+
 ## Use it from an AI assistant (MCP)
 
 > Pocket Master: reading, live edits, revert and saving with backup are checked on a pedal;
