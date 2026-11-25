@@ -5,7 +5,7 @@ import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { joinMbPages, mbIrUpload, mbIrUploadData, parseMbFrame, toHex, unwrapMbMessage } from '@pocket-master/core';
 import { fakeLink, call, connected } from './matribox-helpers.ts';
-import { FakeMatribox } from './fake-matribox.ts';
+import { FakeMatribox } from '../../../packages/core/test/fake-matribox.ts';
 import { uploadMatriboxIr } from '../src/matribox-ir.ts';
 
 const IMPULSE = new URL('../../../packages/core/test/fixtures/matribox-ir/teste-impulso.wav', import.meta.url);

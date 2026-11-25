@@ -11,6 +11,8 @@ tar -tzf "$tarball" | sort > "$tmp/files"
 grep -qx 'package/dist/server.js' "$tmp/files"
 grep -qx 'package/dist/convert-worker.js' "$tmp/files"
 if grep -q 'package/src/\|package/test/' "$tmp/files"; then echo "sources leaked into the package" >&2; exit 1; fi
+# The simulated unit (packages/core/test) is for tests only: the bundle must not carry it.
+if tar -xzOf "$tarball" package/dist/server.js package/dist/convert-worker.js | grep -q 'FakeMatribox'; then echo "test code leaked into the bundle" >&2; exit 1; fi
 cd "$tmp"
 npm init -y > /dev/null
 npm install --no-audit --no-fund --silent "$tarball" @modelcontextprotocol/sdk@1.32.2

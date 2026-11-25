@@ -6,10 +6,27 @@
  * Like the unit, a preset read returns the loaded preset's edit buffer whatever index it names (tagged
  * with that index): only a selected slot reads what it stores.
  * A whole-preset write (flag 2, paged) is stored in the slot it names, like the unit, and answered with cmd 0x17.
+ * A user IR upload (flag 1, cmd 0x14, paged) renames its slot in the IR table and is acknowledged
+ * with flag 3, cmd 0x14, `slot, 1, 0`, as captures mb-17, mb-17b and mb-17c show.
  * Never a real device.
  */
 import { readFileSync } from 'node:fs';
-import { expand, fromHex, joinMbPages, MB_PAGE_SIZE, MB_READ, MB_WRITE, mbReadPreset, mbReadPresetNames, parseMbFrame, toHex, unwrapMbMessage, wrapMbMessage } from '../src/index.ts';
+import {
+  expand,
+  fromHex,
+  joinMbPages,
+  MB_IR_SLOTS,
+  MB_PAGE_SIZE,
+  MB_READ,
+  MB_WRITE,
+  mbReadIrNames,
+  mbReadPreset,
+  mbReadPresetNames,
+  parseMbFrame,
+  toHex,
+  unwrapMbMessage,
+  wrapMbMessage,
+} from '../src/index.ts';
 
 const fixture = (name: string) => readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8').split('\n');
 const key = (bytes: Uint8Array) => toHex(bytes).replaceAll(' ', '').toLowerCase();
@@ -84,9 +101,16 @@ export class FakeMatribox {
   dropsSaves = false;
   /** Every whole-preset write received, decompressed (u32 index + 1207-byte body). */
   readonly presetWrites: Uint8Array[] = [];
+  /** Every user IR upload received, decompressed (4128 bytes). */
+  readonly irUploads: Uint8Array[] = [];
+  /** The status the unit answers an IR upload with (1 = stored). */
+  irStatus = 1;
   /** When set, a whole-preset write to this index is acknowledged but not stored (to test the read-back). */
   dropsPresetWriteTo: number | null = null;
+  /** When false the unit stores whole-preset writes but does not acknowledge them. */
+  acksPresetWrites = true;
   #pages: ReturnType<typeof parseMbFrame>[] = [];
+  #irNames = dataOf(this.#replies.get(key(mbReadIrNames()))!);
   #names = dataOf(this.#replies.get(key(mbReadPresetNames()))!);
   #current = 0x42;
   /** Stored presets by number (1211 bytes, number first). */
@@ -120,7 +144,10 @@ export class FakeMatribox {
     if (frame.offset > 0 || frame.payload.length < frame.total) {
       this.#pages = frame.offset === 0 ? [frame] : [...this.#pages, frame];
       const joined = joinMbPages(this.#pages);
-      if (joined) this.#wholePreset(unwrapMbMessage(joined));
+      if (!joined) return;
+      const message = unwrapMbMessage(joined);
+      if (message.flag === 1 && message.cmd === 0x14) this.#irUpload(message.data);
+      else this.#wholePreset(message);
       return;
     }
     const message = unwrapMbMessage(frame.payload);
@@ -147,13 +174,25 @@ export class FakeMatribox {
       preset.set([0x00, 0x00, 0x00, 0x10], at);
       at += 8 + u32(preset, at + 4);
     }
+    // The unit keeps it in the slot it names (owner's captures mb-20 and midi-123), name included.
     const index = u32(preset, 0);
     if (index !== this.dropsPresetWriteTo) {
       this.#stored = new Map([...this.#stored, [index, preset]]);
       this.#names = patched(this.#names, NAMES_AT + index * 17, preset.subarray(BODY_AT[1] + 8, BODY_AT[1] + 24));
       if (index === this.#current) this.#edit = preset;
     }
-    if (this.echoes) this.#reply(replyFrames(wrapMbMessage(0, 0x17, [0x02, 0x00, 0x00, 0x10])));
+    if (this.echoes && this.acksPresetWrites) this.#reply(replyFrames(wrapMbMessage(0, 0x17, [0x02, 0x00, 0x00, 0x10])));
+  }
+
+  /** u32 slot, u32 0, u32 checksum, 20-byte name, samples: the slot takes the name; acknowledged with flag 3. */
+  #irUpload(data: Uint8Array): void {
+    this.#pages = [];
+    const slot = u32(data, 0);
+    if (data.length !== 4128 || slot >= MB_IR_SLOTS) throw new Error('fake Matribox: bad IR upload');
+    this.irUploads.push(data);
+    const name = Uint8Array.from({ length: 17 }, (_, i) => (i < 16 ? (data[12 + i] as number) : 0));
+    if (this.irStatus === 1) this.#irNames = patched(this.#irNames, MB_IR_SLOTS * 8 + slot * 17, name);
+    if (this.echoes) this.#reply(replyFrames(wrapMbMessage(3, 0x14, [slot, 0, 0, 0, this.irStatus, 0, 0, 0, 0, 0, 0, 0])));
   }
 
   listen(receiver: (bytes: Uint8Array) => void): void {
@@ -169,6 +208,7 @@ export class FakeMatribox {
     const answer = (data: ArrayLike<number>) => replyFrames(wrapMbMessage(flag, cmd, data));
     const argHex = hexOf(arg);
     if (flag === 1 && cmd === 0x10 && argHex === '00000a01') return answer(this.#names);
+    if (flag === 0 && cmd === 0x14 && arg.length === 0) return answer(this.#irNames);
     if (flag === 1 && cmd === 0x10 && argHex === '01000a01') return answer([...arg, ...[this.#current, 0, 0, 0]]);
     if (flag === 0 && cmd === 0x10 && arg.length === 4) {
       const number = u32(arg, 0);

@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { mbReadCloneNames, mbReadPresetNames, mbRequest, parseMbPresetNames } from '@pocket-master/core';
-import { FakeMatribox } from './fake-matribox.ts';
+import { FakeMatribox } from '../../../packages/core/test/fake-matribox.ts';
 import { call, connected, fakeLink, text } from './matribox-helpers.ts';
 import { describePedals, detectPedals, MATRIBOX, POCKET_MASTER } from '../src/devices.ts';
 import { Session, type PedalIO } from '../src/session.ts';

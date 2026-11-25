@@ -5,7 +5,8 @@
  * by the unit's echo (same flag, cmd and data), except a chain edit (01/02 00 04 01: add, move,
  * remove, change model), which the unit answers with its chain notice (00 00 04 01 + the new chain).
  * The whole-preset write (flag 2, paged: mbWritePreset) is answered with flag 0, cmd 0x17,
- * `02 00 00 10` (capture mb-20). A save gets no answer: send it with post and check it by reading the slot back. A MIDI Control
+ * `02 00 00 10` (capture mb-20); a user IR upload (flag 1, cmd 0x14, paged: mbIrUpload) with
+ * flag 3, the same cmd, `slot, status, 0`. A save gets no answer: send it with post and check it by reading the slot back. A MIDI Control
  * Change (control) gets none either. Anything else
  * the unit sends meanwhile (footswitch and knob notifications) is skipped. One request at a time:
  * callers queue their calls.
@@ -22,6 +23,11 @@ export interface MatriboxLink {
   write(frame: Uint8Array): Promise<void>;
   /** Sends the pages of a whole-preset write (mbWritePreset) and resolves once the unit acknowledges it. */
   writePreset(frames: readonly Uint8Array[]): Promise<void>;
+  /**
+   * Sends the pages of an upload (mbIrUpload: flag 1, cmd 0x14) and resolves with the unit's
+   * acknowledgement: flag 3, the same cmd, `u32 slot, u32 status, u32 0` (status 1 = stored).
+   */
+  upload(frames: readonly Uint8Array[]): Promise<Uint8Array>;
   /** Sends a write frame the unit does not answer (mbSavePreset): check its effect with a read. */
   post(frame: Uint8Array): void;
   /** Sends one MIDI Control Change (mbControlChange; tuner, tempo, looper…): the unit sends no answer. */
@@ -39,6 +45,8 @@ const isChainEdit = (data: Uint8Array) => (data[0] === 0x01 || data[0] === 0x02)
 const confirms = (data: Uint8Array, sent: Uint8Array) => equal(data, sent) || (isChainEdit(sent) && startsWith(data, CHAIN_NOTICE));
 /** The unit's answer to a whole-preset write: flag 0, cmd 0x17, `02 00 00 10`. */
 const PRESET_ACK = { flag: 0, cmd: 0x17, data: Uint8Array.of(0x02, 0x00, 0x00, 0x10) };
+/** The unit acknowledges an upload with this flag (captures mb-17, mb-17b, mb-17c). */
+const UPLOAD_ACK_FLAG = 3;
 
 interface Answer {
   readonly flag: number;
@@ -118,6 +126,12 @@ export function matriboxLink(port: MidiPort, timeoutMs: number = MATRIBOX_TIMEOU
       const sent = sentMessage(frames, MB_WRITE);
       const ack = { ...PRESET_ACK, accepts: (data: Uint8Array) => equal(data, PRESET_ACK.data) };
       await exchange(frames, ack, `flag ${sent.flag}, cmd ${hex(sent.cmd)}`, 'acknowledge the preset write');
+    },
+    upload: async (frames) => {
+      const sent = sentMessage(frames, MB_WRITE);
+      const slot = sent.data.subarray(0, 4);
+      const ack = { flag: UPLOAD_ACK_FLAG, cmd: sent.cmd, accepts: (data: Uint8Array) => startsWith(data, slot) };
+      return exchange(frames, ack, `flag ${sent.flag}, cmd ${hex(sent.cmd)}`, 'acknowledge the upload');
     },
     post: (frame) => {
       if (parseMbFrame(frame).type !== MB_WRITE) throw new Error('Matribox link: post sends write frames only');

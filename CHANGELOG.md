@@ -6,6 +6,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Internal: the Matribox II Pro request/answer link (IR upload included), the simulated unit the
+  tests run against and the catalog name/range checks now live once in `packages/core`; the MCP
+  server and the web editor import them instead of keeping their own copies. No behaviour change.
+
 ## [1.1.0] - 2026-11-24
 
 The Matribox II Pro grows from "opens and edits" to a full second pedal, all of it run on the

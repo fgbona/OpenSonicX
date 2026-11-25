@@ -22,7 +22,7 @@ import {
   type MbPreset,
   type MbResolvedPreset,
 } from '@pocket-master/core';
-import type { MatriboxConnection } from './matribox-link.ts';
+import type { MatriboxConnection } from './devices.ts';
 import { EXPERIMENTAL, findBlock, findParam, knownModel } from './matribox-edit.ts';
 
 const SWITCHES = 'ABCD';

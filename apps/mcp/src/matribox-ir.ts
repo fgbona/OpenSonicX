@@ -7,7 +7,7 @@
 import { readFile } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
 import { MB_IR_SLOTS, mbIrUpload, mbReadIrNames, parseMbIrNames } from '@pocket-master/core';
-import type { MatriboxConnection } from './matribox-link.ts';
+import type { MatriboxConnection } from './devices.ts';
 import { inside } from './session.ts';
 
 export const MB_IR_UNCHECKED =

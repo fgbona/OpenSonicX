@@ -3,11 +3,25 @@
  * the read tools show, check values against the catalog's ranges, and plan a whole tone as a chain
  * plus parameter writes. Nothing here talks to the unit.
  */
-import { MB_SLOTS, type MbCatalog, type MbModel, type MbModule, type MbParam, type MbResolvedBlock, type MbResolvedPreset } from '@pocket-master/core';
+import {
+  mbCheckChainLength,
+  mbCheckParam as checkParam,
+  mbFindModel,
+  mbFindModule as findModule,
+  mbFindParam as findParam,
+  mbSameName as same,
+  type MbCatalog,
+  type MbModel,
+  type MbModule,
+  type MbResolvedBlock,
+  type MbResolvedPreset,
+} from '@pocket-master/core';
+
+/** The catalog checks are core's (matribox/edit.ts), shared with the web editor. */
+export { checkParam, findModule, findParam };
 
 export const EXPERIMENTAL = 'Experimental: Matribox writes are validated on one unit only so far. Check the result with matribox_get_preset and by ear on the unit.';
 
-const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 const round = (n: number) => String(Number(n.toFixed(2)));
 /** The real gear a model is based on, on one line; '' when the catalog gives none or only a number. */
 export const gear = (model: MbModel) => (/[a-z]/i.test(model.origin) ? model.origin.replace(/\s+/g, ' ').trim() : '');
@@ -30,31 +44,11 @@ export function knownModel(block: MbResolvedBlock): MbModel {
   return block.model;
 }
 
-/** A parameter of `model` by name. */
-export function findParam(model: MbModel, name: string): MbParam {
-  const param = model.params.find((p) => same(p.name, name));
-  if (!param) throw new Error(`${model.name} has no parameter "${name}". Parameters: ${model.params.map((p) => p.name).join(', ') || 'none'}`);
-  return param;
-}
-
-/** A parameter of `model` by name, with `value` checked against its range. */
-export function checkParam(model: MbModel, name: string, value: number): MbParam {
-  const param = findParam(model, name);
-  if (!Number.isFinite(value) || value < param.min || value > param.max) throw new Error(`${param.name} must be ${round(param.min)}..${round(param.max)}, got ${value}`);
-  return param;
-}
-
-export function findModule(catalog: MbCatalog, name: string): MbModule {
-  const found = catalog.modules.find((m) => same(m.name, name));
-  if (!found) throw new Error(`No module "${name}". Modules: ${catalog.modules.map((m) => m.name).join(', ')}`);
-  return found;
-}
-
 /** A model by name, in `module` when given, else anywhere in the catalog. */
 export function findModel(catalog: MbCatalog, name: string, module?: MbModule): { module: MbModule; model: MbModel } {
   const found = (module ? [module] : catalog.modules).flatMap((m) => m.models.filter((model) => same(model.name, name)).map((model) => ({ module: m, model })));
-  if (found.length === 0)
-    throw new Error(module ? `No ${module.name} model "${name}". Models: ${module.models.map((m) => m.name).join(', ')}` : `No model "${name}": pick one from matribox_list_models.`);
+  if (found.length === 0 && module) mbFindModel(module, name); // throws, listing the module's models
+  if (found.length === 0) throw new Error(`No model "${name}": pick one from matribox_list_models.`);
   if (found.length > 1) throw new Error(`"${name}" is a model of ${found.map((f) => f.module.name).join(' and ')}: name the module too.`);
   return found[0] as { module: MbModule; model: MbModel };
 }
@@ -100,7 +94,7 @@ export interface TonePlan {
 
 /** A whole tone in signal order, checked against the catalog before anything is sent. */
 export function planTone(catalog: MbCatalog, blocks: readonly ToneBlock[]): TonePlan {
-  if (blocks.length < 1 || blocks.length > MB_SLOTS) throw new Error(`A Matribox chain holds at least 1 and at most ${MB_SLOTS} blocks, got ${blocks.length}`);
+  mbCheckChainLength(blocks.length);
   const planned = blocks.map((block, i) => {
     const { module, model } = findModel(catalog, block.model, findModule(catalog, block.module));
     const values = modelValues(model, 0, block.params); // checks the values; the slot is not known yet

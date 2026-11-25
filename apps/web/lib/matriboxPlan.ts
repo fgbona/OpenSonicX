@@ -2,9 +2,19 @@
  * Matribox II Pro chains as plain data: a tone or small edits checked against the catalog (names
  * as the assistant writes them), and the unit's validated writes that turn one chain into another
  * (Undo, Redo and the assistant all go through `transition`). Nothing here talks to the unit.
- * The checks follow the MCP server's (apps/mcp/src/matribox-edit.ts).
+ * The catalog checks are core's (matribox/edit.ts), the ones the MCP server uses.
  */
-import { MB_SLOTS, type MbBlock, type MbCatalog, type MbModel, type MbModule, type MbParam } from '@pocket-master/core';
+import {
+  MB_SLOTS,
+  mbCheckChainLength as checkLength,
+  mbCheckParam as checkParam,
+  mbFindModel as findModel,
+  mbFindModule as findModule,
+  mbSameName as same,
+  type MbBlock,
+  type MbCatalog,
+  type MbModel,
+} from '@pocket-master/core';
 
 /** A block as a chain edit sees it: no storage slot (the unit picks it), the 15 values by widget ID. */
 export type MbChainBlock = Omit<MbBlock, 'slot'>;
@@ -38,31 +48,10 @@ export type ChainChange =
   | { readonly kind: 'move'; readonly block: string; readonly position: number };
 
 const VALUES = 15;
-const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
-const round = (n: number) => String(Number(n.toFixed(2)));
 
 export const moduleName = (catalog: MbCatalog, index: number) => catalog.modules.find((m) => m.index === index)?.name ?? `module ${index}`;
 export const modelOf = (catalog: MbCatalog, b: Pick<MbChainBlock, 'moduleIndex' | 'fxid'>): MbModel | null =>
   catalog.modules.find((m) => m.index === b.moduleIndex)?.models.find((m) => m.fxid === b.fxid) ?? null;
-
-function findModule(catalog: MbCatalog, name: string): MbModule {
-  const found = catalog.modules.find((m) => same(m.name, name));
-  if (!found) throw new Error(`No module "${name}". Modules: ${catalog.modules.map((m) => m.name).join(', ')}`);
-  return found;
-}
-
-function findModel(module: MbModule, name: string): MbModel {
-  const found = module.models.find((m) => same(m.name, name));
-  if (!found) throw new Error(`No ${module.name} model "${name}". Models: ${module.models.map((m) => m.name).join(', ')}`);
-  return found;
-}
-
-function checkParam(model: MbModel, name: string, value: number): MbParam {
-  const param = model.params.find((p) => same(p.name, name));
-  if (!param) throw new Error(`${model.name} has no parameter "${name}". Parameters: ${model.params.map((p) => p.name).join(', ') || 'none'}`);
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < param.min || value > param.max) throw new Error(`${param.name} must be ${round(param.min)}..${round(param.max)}, got ${value}`);
-  return param;
-}
 
 /** A new block of `module`/`model`: the given values (checked), the model's defaults for the rest. */
 function newBlock(catalog: MbCatalog, block: ToneBlock): MbChainBlock {
@@ -71,10 +60,6 @@ function newBlock(catalog: MbCatalog, block: ToneBlock): MbChainBlock {
   const values = Array.from({ length: VALUES }, (_, id) => model.params.find((p) => p.id === id)?.defaultValue ?? 0);
   for (const p of block.params ?? []) values[checkParam(model, p.name, p.value).id] = p.value;
   return { moduleIndex: module.index, fxid: model.fxid, on: block.on ?? true, values };
-}
-
-function checkLength(length: number): void {
-  if (length < 1 || length > MB_SLOTS) throw new Error(`A Matribox chain holds at least 1 and at most ${MB_SLOTS} blocks, got ${length}`);
 }
 
 /** A whole tone in signal order, checked against the catalog before anything is sent. */
