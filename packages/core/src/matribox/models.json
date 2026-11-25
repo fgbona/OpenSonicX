@@ -3030,7 +3030,7 @@
      "fxid": 117440579,
      "index": 17,
      "type": "Drive",
-     "basedOn": "Bogner Ecstasy blue channel (vintage)",
+     "basedOn": "Bogner XTC blue channel",
      "params": [
       {
        "id": 0,
@@ -5799,7 +5799,7 @@
      "fxid": 167772182,
      "index": 8,
      "type": "2x12\"",
-     "basedOn": "Fender Bassman 2x12",
+     "basedOn": "Fender Piggyback Bassman 2x12",
      "params": [
       {
        "id": 1,
@@ -6311,7 +6311,7 @@
      "fxid": 167772169,
      "index": 24,
      "type": "1x12\"",
-     "basedOn": "Mesa/Boogie Lone Star 1x12",
+     "basedOn": "Mesa/Boogie Lonestar 1x12",
      "params": [
       {
        "id": 1,
@@ -6343,7 +6343,7 @@
      "fxid": 167772185,
      "index": 25,
      "type": "2x12\"",
-     "basedOn": "Mesa/Boogie Lone Star 2x12",
+     "basedOn": "Mesa/Boogie Lonestar 2x12",
      "params": [
       {
        "id": 1,
@@ -6407,7 +6407,7 @@
      "fxid": 167772183,
      "index": 27,
      "type": "2x12\"",
-     "basedOn": "Supro 2x12",
+     "basedOn": "Supro 1624T 2x12",
      "params": [
       {
        "id": 1,
@@ -6695,7 +6695,7 @@
      "fxid": 167772202,
      "index": 36,
      "type": "4x12\"",
-     "basedOn": "Hiwatt 4x12",
+     "basedOn": "Hiwatt SE4123 4x12",
      "params": [
       {
        "id": 1,
@@ -7303,7 +7303,7 @@
      "fxid": 167772224,
      "index": 55,
      "type": "Acoustic",
-     "basedOn": "Gibson Hummingbird",
+     "basedOn": "",
      "params": [
       {
        "id": 1,

@@ -175,6 +175,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
   page. The Pocket Master's strip is unchanged.
 - Dependencies: Biome 2.6.6 → 2.6.8 and Turbo 2.11.10 → 2.11.13 (#213), and
   `docker/setup-buildx-action` v3 → v4 in the CI and release workflows (#212).
+- Matribox II Pro: the real gear behind 13 models was checked against the vendor's own model lists
+  (Sonicake Matribox II Pro manual V1.2.2). Corrected: the blue-channel amp is a Bogner XTC (not
+  Ecstasy), the Supro 2x12 is the 1624T, the US 2x12 is the Piggyback Bassman, the Lonestar spelling,
+  and the Hiwatt 4x12 is the SE4123. The acoustic "Square Dread" had no stated brand, so its guessed
+  attribution was removed.
 
 ### Removed
 
