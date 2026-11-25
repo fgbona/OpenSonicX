@@ -93,7 +93,7 @@ export function MatriboxBlockPanel({ block, values, catalog, userSlot, disabled,
           </button>
         </span>
       </header>
-      <div className={`editor-face face-${amp ? 'amp' : key}`} data-skin={skin ?? undefined}>
+      <div className={`editor-face ${amp ? 'face-amp' : `face-mb-${key}`}`} data-skin={skin ?? undefined}>
         {amp && <AmpDecor on={block.on} drive={driveOf(block)} tubeKey={block.fxid} tube={hasTube(skin)} />}
         {block.model ? (
           block.params.length === 0 ? (

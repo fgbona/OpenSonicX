@@ -2,35 +2,42 @@
  * Pictures of the Matribox editor for a design review, against the simulated unit and the invented
  * catalog: MB_SCREENS=<folder> npx playwright test e2e/matribox-screens.spec.ts. Skipped otherwise.
  */
-import { devices } from '@playwright/test';
-import { connectMatribox, expect, pickCatalog, test } from './matribox-fixtures.ts';
+import { devices, type Page, type PageScreenshotOptions } from '@playwright/test';
+import { blockPanel, connectMatribox, expect, pickCatalog, test } from './matribox-fixtures.ts';
 
 const DIR = process.env.MB_SCREENS;
 test.skip(!DIR, 'set MB_SCREENS to a folder to take the pictures');
 test.use({ viewport: { width: 1440, height: 1000 } });
 
-const shot = (name: string) => `${DIR}/${name}.png`;
+const SCREEN = { x: 0, y: 0, width: 1440, height: 1000 };
+
+/** A picture once the editor is idle (Read enabled), not mid-read with its buttons dimmed. */
+async function snap(page: Page, name: string, options: PageScreenshotOptions = { fullPage: true }) {
+  await expect(page.getByRole('button', { name: 'Read', exact: true })).toBeEnabled();
+  await page.screenshot({ ...options, path: `${DIR}/${name}.png` });
+}
 
 for (const theme of ['dark', 'light'] as const) {
   test(`desktop, ${theme} theme`, async ({ page }) => {
     await connectMatribox(page);
     if (theme === 'light') await page.getByRole('button', { name: 'Switch to light theme' }).click();
-    await page.screenshot({ path: shot(`desktop-${theme}-no-catalog`), fullPage: true });
+    await snap(page, `desktop-${theme}-no-catalog`);
     await pickCatalog(page);
     await expect(page.locator('.face-amp')).toHaveAttribute('data-skin', 'marshall');
-    await page.screenshot({ path: shot(`desktop-${theme}`), fullPage: true });
-    await page.locator('section.preset').screenshot({ path: shot(`amp-block-${theme}`) });
+    await snap(page, `desktop-${theme}`);
+    await expect(page.getByRole('button', { name: 'Read', exact: true })).toBeEnabled();
+    await page.locator('section.preset').screenshot({ path: `${DIR}/amp-block-${theme}.png` });
   });
 }
 
 test('model picker open, and a non-amp block', async ({ page }) => {
   await connectMatribox(page);
   await pickCatalog(page);
-  await page.getByRole('button', { name: /^Edit 2\. DRV/ }).click();
-  await page.screenshot({ path: shot('drv-block-dark'), clip: { x: 0, y: 0, width: 1440, height: 1000 } });
-  await page.getByRole('button', { name: '2. DRV model' }).click();
+  const drive = await blockPanel(page, 2, 'DRV');
+  await snap(page, 'drv-block-dark', { clip: SCREEN });
+  await drive.getByRole('button', { name: '2. DRV model' }).click();
   await expect(page.getByRole('listbox')).toBeVisible();
-  await page.screenshot({ path: shot('model-picker-dark'), clip: { x: 0, y: 0, width: 1440, height: 1000 } });
+  await snap(page, 'model-picker-dark', { clip: SCREEN });
 });
 
 test('footswitch, expression and tuner panels', async ({ page }) => {
@@ -38,10 +45,9 @@ test('footswitch, expression and tuner panels', async ({ page }) => {
   await pickCatalog(page);
   await page.getByText('Expression pedal').click();
   const panels = page.locator('.fold');
-  await panels.first().scrollIntoViewIfNeeded();
   const first = (await panels.first().boundingBox())!;
   const last = (await panels.nth(2).boundingBox())!;
-  await page.screenshot({ path: shot('panels-dark'), fullPage: true, clip: { x: 0, y: first.y - 12, width: 1440, height: last.y + last.height - first.y + 24 } });
+  await snap(page, 'panels-dark', { fullPage: true, clip: { x: 0, y: first.y - 12, width: 1440, height: last.y + last.height - first.y + 24 } });
 });
 
 test.describe('phone', () => {
@@ -50,7 +56,7 @@ test.describe('phone', () => {
   test('portrait', async ({ page }) => {
     await connectMatribox(page);
     await pickCatalog(page);
-    await page.screenshot({ path: shot('phone-dark') });
-    await page.screenshot({ path: shot('phone-dark-full'), fullPage: true });
+    await snap(page, 'phone-dark', {});
+    await snap(page, 'phone-dark-full');
   });
 });
