@@ -30,6 +30,12 @@ export interface MatriboxLink {
    * acknowledgement: flag 3, the same cmd, `u32 slot, u32 status, u32 0` (status 1 = stored).
    */
   upload(frames: readonly Uint8Array[]): Promise<Uint8Array>;
+  /**
+   * Sends a read or write frame whose answer does not repeat it, and resolves with the data of the
+   * first message of its flag and cmd that `accepts` takes: the argument-less global tables (told
+   * apart by length) and the global EQ switch (answered `00 00 00 00` + u32; globals.ts).
+   */
+  ask(frame: Uint8Array, accepts: (data: Uint8Array) => boolean): Promise<Uint8Array>;
   /** Sends a write frame the unit does not answer (mbSavePreset): check its effect with a read. */
   post(frame: Uint8Array): void;
   /** Sends one MIDI Control Change (mbControlChange; tuner, tempo, looper…): the unit sends no answer. */
@@ -162,6 +168,7 @@ export function matriboxLink(port: MidiPort, timeoutMs: number = MATRIBOX_TIMEOU
       const ack = { flag: UPLOAD_ACK_FLAG, cmd: sent.cmd, accepts: (data: Uint8Array) => startsWith(data, slot) };
       return exchange(frames, ack, `flag ${sent.flag}, cmd ${hex(sent.cmd)}`, 'acknowledge the upload');
     },
+    ask: (frame, accepts) => own(frame, parseMbFrame(frame).type, (data) => accepts(data), 'answer'),
     post: (frame) => {
       if (parseMbFrame(frame).type !== MB_WRITE) throw new Error('Matribox link: post sends write frames only');
       port.send(frame);

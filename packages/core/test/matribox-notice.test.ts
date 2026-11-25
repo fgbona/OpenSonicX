@@ -31,6 +31,18 @@ test('the notices the unit sent on its own decode to what was done on the unit',
   assert.equal(notice('unknown'), null); // 08 00 05 01: not decoded
 });
 
+test("the unit's own changes of 2026-11-25 decode: a global setting, the global tempo, a chain, a save", () => {
+  assert.deepEqual(notice('global'), { kind: 'global', setting: 'currentMode', value: 1 }); // capture 2
+  assert.deepEqual(notice('tempo'), { kind: 'globalTempo', bpm: 100 }); // mb-37
+  assert.deepEqual(notice('chain'), { kind: 'chain' }); // mb-42: the model knob of a block screen
+  assert.deepEqual(notice('saved'), { kind: 'saved', index: 239, name: 'TESTE OSX' }); // mb-44: saved to 60D
+  // Unknown global ids and the expression pedal's message (mb-43: the same bytes for every move) stay dropped.
+  assert.equal(parseMbNotice({ flag: 1, cmd: 0x11, data: Uint8Array.of(0, 0x99, 0, 0, 1, 0, 0, 0) }), null);
+  assert.equal(parseMbNotice({ flag: 1, cmd: 0x10, data: Uint8Array.of(8, 0, 5, 1, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, ...new Uint8Array(12)) }), null);
+  assert.equal(parseMbNotice({ flag: 1, cmd: 0x05, data: Uint8Array.of(0xef, 0, 0, 0) }), null);
+  assert.equal(parseMbNotice({ flag: 1, cmd: 0x10, data: Uint8Array.of(0, 0, 4, 1, 0xff) }), null);
+});
+
 test('replies, other flags and short data are not notices', () => {
   assert.equal(parseMbNotice({ flag: 0, cmd: 0x11, data: Uint8Array.of(0, 0x52, 0, 0, 1, 0, 0, 0) }), null);
   assert.equal(parseMbNotice({ flag: 1, cmd: 0x10, data: Uint8Array.of(1, 0, 0x0a, 1) }), null);

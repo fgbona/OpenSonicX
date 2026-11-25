@@ -46,4 +46,5 @@ export * from './matribox/notice.ts';
 export * from './matribox/slots.ts';
 export * from './matribox/backup-all.ts';
 export * from './matribox/edit.ts';
+export * from './matribox/globals.ts';
 export * from './pedals.ts';
