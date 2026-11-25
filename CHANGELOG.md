@@ -63,6 +63,16 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - Internal: the Matribox II Pro request/answer link (IR upload included), the simulated unit the
   tests run against and the catalog name/range checks now live once in `packages/core`; the MCP
   server and the web editor import them instead of keeping their own copies. No behaviour change.
+- Matribox II Pro editor: the chain no longer scrolls sideways. Its tiles, a little smaller (still
+  the drawing, the module, the model and the on/off bar), wrap into rows that each read left to
+  right, and a cable drawn behind them runs through every row and bends from the end of one row
+  down and back to the start of the next, as on a Helix. A full chain (12 blocks and the *Add*
+  tile) fits on two rows on a desktop and wraps onto more rows on a phone, with *Add* always last
+  and on screen. Selection, drag (one move per drop, with Undo), the arrows, the two-step add
+  menu and the phone sheets work as before; on a phone a swipe over the chain now scrolls the
+  page. The Pocket Master's strip is unchanged.
+- Dependencies: Biome 2.6.6 → 2.6.8 and Turbo 2.11.10 → 2.11.13 (#213), and
+  `docker/setup-buildx-action` v3 → v4 in the CI and release workflows (#212).
 
 ### Documentation
 

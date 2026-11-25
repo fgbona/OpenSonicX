@@ -23,19 +23,15 @@ test('the Matribox editor fits the screen, with the preset list folded away unti
   expect(await sideways(page)).toBeLessThanOrEqual(0);
 });
 
-test('the chain strip swipes sideways and pages with its buttons; arrows move a block', async ({ page, unit }) => {
+test('the chain wraps into rows with no sideways scroll, its add tile on screen; arrows move a block', async ({ page, unit }) => {
   await connectMatribox(page);
   await pickCatalog(page);
   const strip = page.locator('.tiles');
-  await expect(strip).toHaveCSS('touch-action', 'pan-x');
-  const later = page.getByRole('button', { name: 'Show later blocks' });
-  await expect(page.getByRole('button', { name: 'Show earlier blocks' })).toHaveCount(0);
-  for (let i = 0; i < 6 && (await later.isVisible()); i++) {
-    await later.tap();
-    await page.waitForTimeout(400); // smooth scroll
-  }
-  await expect(page.getByRole('button', { name: 'Add a block…' })).toBeInViewport();
-  await expect(page.getByRole('button', { name: 'Show earlier blocks' })).toBeVisible();
+  expect(await strip.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(0);
+  await expect(page.getByRole('button', { name: 'Show later blocks' })).toHaveCount(0);
+  const add = page.getByRole('button', { name: 'Add a block…' });
+  await add.scrollIntoViewIfNeeded();
+  await expect(add).toBeInViewport({ ratio: 1 });
   expect(await sideways(page)).toBeLessThanOrEqual(0);
 
   await page.getByRole('button', { name: 'Move block 6 earlier in the chain' }).tap();
@@ -77,11 +73,11 @@ test('the model menu opens as a sheet inside the screen and the panels fit', asy
   }
 });
 
-test('tiles do not drag on touch, so a swipe scrolls the strip', async ({ page }) => {
+test('tiles do not drag on touch, and a swipe on the chain scrolls the page', async ({ page }) => {
   await connectMatribox(page);
   await pickCatalog(page);
   for (const tile of await page.locator('.tiles .tile-unit').all()) await expect(tile).not.toHaveAttribute('draggable', 'true');
-  await expect(page.locator('.tiles')).toHaveCSS('touch-action', 'pan-x');
+  await expect(page.locator('.tiles')).toHaveCSS('touch-action', 'auto');
 });
 
 /** Vertical overlap of two boxes: they sit on the same row. */
