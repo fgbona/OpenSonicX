@@ -23,8 +23,10 @@ import {
   parseMbPreset,
   parseMbPresetNames,
   toHex,
+  withMbVolume,
   type MatriboxLink,
   type MbModel,
+  type MbNotice,
   type MbPreset,
   type MbPresetName,
 } from '@pocket-master/core';
@@ -129,6 +131,15 @@ export function withParam(preset: MbPreset, slot: number, id: number, value: num
 
 export function withBlockOn(preset: MbPreset, slot: number, on: boolean): MbPreset {
   return { ...preset, chain: preset.chain.map((b) => (b.slot === slot ? { ...b, on } : b)) };
+}
+
+/** The preset after a change made on the unit itself (a footswitch, a knob); unchanged for the other notices. */
+export function withNotice(preset: MbPreset, notice: MbNotice): MbPreset {
+  if (notice.kind === 'blockOn') return withBlockOn(preset, notice.slot, notice.on);
+  if (notice.kind === 'blocksOn') return { ...preset, chain: preset.chain.map((b) => ({ ...b, on: notice.on[b.slot] ?? b.on })) };
+  if (notice.kind === 'param') return withParam(preset, notice.slot, notice.id, notice.value);
+  if (notice.kind === 'volume') return withMbVolume(preset, notice.value);
+  return preset;
 }
 
 /** The real gear a model is based on, on one line; '' when the catalog gives none or only a number. */

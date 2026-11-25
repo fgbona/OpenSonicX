@@ -56,12 +56,41 @@ during a capture.
 | 19 | `mb-19-capture-upload.mmon` | Import a capture (clone) file into an **unused** capture slot, if the editor can | The capture upload command; the 8-byte header per capture slot |
 | 20 | `mb-20-import-prst.mmon` | Import a `.prst` file into slot 57D | The **whole-preset write**: command, paging, whether it carries the 1207-byte body (and its section tags) |
 | 21 | `mb-21-export-prst.mmon` | Export the loaded preset to a `.prst` file; keep the file next to the capture | Whether export reads anything new; lets us compare the file to the unit's read byte for byte |
-| 22 | `mb-22-global-eq.mmon` | Global settings: change one global EQ band (e.g. 1 kHz gain 0 → +3 dB), if the editor has a global EQ | Which part of the cmd `16` 124-byte table it is, and the write for it |
-| 23 | `mb-23-global-setting.mmon` | Global settings: change one other setting (e.g. input level, output mode, MIDI channel). Note which one and the values | The write for global settings; which byte of the cmd `11` 52-byte table it is |
-| 24 | `mb-24-unit-preset.mmon` | No editor action: change preset with the unit's footswitches (up one, then back) | The unit's preset-change notice and whether the editor re-reads after it |
+| 22 | ~~`mb-22-global-eq.mmon`~~ (replaced: see [below](#global-settings-and-pedal-side-changes)) | Global settings: change one global EQ band (e.g. 1 kHz gain 0 → +3 dB), if the editor has a global EQ | Which part of the cmd `16` 124-byte table it is, and the write for it |
+| 23 | ~~`mb-23-global-setting.mmon`~~ (replaced: see [below](#global-settings-and-pedal-side-changes)) | Global settings: change one other setting (e.g. input level, output mode, MIDI channel). Note which one and the values | The write for global settings; which byte of the cmd `11` 52-byte table it is |
+| 24 | ~~`mb-24-unit-preset.mmon`~~ (replaced: see [below](#global-settings-and-pedal-side-changes)) | No editor action: change preset with the unit's footswitches (up one, then back) | The unit's preset-change notice and whether the editor re-reads after it |
 | 25 | `mb-25-edit-buffer.mmon` | On 60D: change one knob in the editor (do not save), select 59D, select 60D again | Whether unsaved edits survive a preset change; the "edit buffer vs stored slot" question of the preset reads |
 
 The chain edits captured so far (captures 2 to 4 in matribox.md) only ever showed the assignment
 tables (`04 00 04 01`) of an empty preset. Captures 4, 6 and 9 leave assignments in place, so
 after them, **one chain edit** (add or remove a block on the same test slot) would also show which
 byte the 160-byte table leaves out: call it `mb-26-chain-with-assignments.mmon`.
+
+## Global settings and pedal-side changes
+
+What is still open after the 2026-11-25 analysis ([matribox.md](matribox.md#other-connect-reads-flag-0-no-argument-the-global-settings)):
+the global tables (cmd `11`, `13`, `16`) are read on every connect but never changed in a capture,
+and no host write to a global was ever captured. Rows 22 to 24 above are replaced by these, in
+this order. Same setup and steps as above (both MIDI Monitor sources, Clear, one action, wait 3 s,
+save). **Read-back** here means: quit the official editor and open it again while still capturing,
+so its connect reads dump the global tables after the change. After each capture, put the setting
+back and note in `captures/README.txt` the setting, the value before and the value after.
+
+| # | File | Action (one only) | What it answers |
+|---|------|-------------------|-----------------|
+| 0 | none (a note) | On the unit, press GLOBAL and write down every value it shows, page by page (IN/OUT, Functions, USB Audio, EXP 2/Footswitch, Global EQ, MIDI, Display), without changing anything | The baseline: matches the values of the current tables (e.g. which setting is 50) |
+| 30 | `mb-30-global-input-level.mmon` | Official editor, Global settings: Input Level from its value to +5 dB (or 0 → +5). Read-back | The global write command and its shape; the Input Level byte |
+| 31 | `mb-31-global-aux-level.mmon` | Global settings: AUX Level 50 → 80. Read-back | Whether byte 11 (50) is AUX Level |
+| 32 | `mb-32-global-brightness.mmon` | Global settings (Display): Brightness from its value to 80. Read-back | Whether byte 11 is Brightness instead; the Display fields |
+| 33 | `mb-33-global-mode.mmon` | Global settings (Functions): Current Mode Stomp → Preset (or the other way). Read-back | Whether byte 35 (0 in the first session, 1 later) is Current Mode |
+| 34 | `mb-34-global-midi-ch.mmon` | Global settings (MIDI): Input Ch (USB) Omni → 5. Read-back | The MIDI channel bytes (and so how Omni is stored) |
+| 35 | `mb-35-global-midi-source.mmon` | Global settings (MIDI): MIDI In Source Mixed → USB Only. Read-back. **Put it back to Mixed** (or the editor's Control Changes stop) | Whether byte 2 (`02`) is MIDI In Source |
+| 36 | `mb-36-global-input-mode.mmon` | Global settings (IN/OUT): Input Mode E.GT → Line. Read-back | Whether byte 5 or 9 is Input Mode |
+| 37 | `mb-37-global-tempo.mmon` | Global settings (Functions): Global Tempo off → on, then its tempo 120 → 100. Read-back | Whether the 10-byte cmd `13` table is the global tempo |
+| 38 | `mb-38-global-eq-band.mmon` | Global EQ: band 2 (500 Hz) gain 0 → +3 dB. Read-back | The global EQ write; confirms the band layout of cmd `16` |
+| 39 | `mb-39-global-eq-level.mmon` | Global EQ: its level/volume from its value to 70, then its On/Off switch once. Read-back | The head (1, 80, 0.71) and tail (…, 50) of cmd `16`; the flag-1 `01 00 00 16` read |
+| 40 | `mb-40-unit-preset.mmon` | No editor action (editor open and connected): on the unit, step to the next preset with the footswitches, wait 3 s, step back | Both sides of a preset change made on the unit: the notice (twice?) and whether the official editor re-reads after it |
+| 41 | `mb-41-unit-stomp.mmon` | No editor action: unit in stomp mode, press footswitch A twice, 2 s apart; then the same with the touch screen's block on/off, if it has one | Which action sends the single on/off notice (`02 00 05 01`) and which the bulk one (`07 00 05 01`) |
+| 42 | `mb-42-unit-knobs.mmon` | No editor action: turn quick knob 1, then 2, then 3, a little each, 2 s apart | Knob notices with both sides: whether the official editor answers them |
+| 43 | `mb-43-unit-exp.mmon` | No editor action: move the expression pedal heel → toe → heel, then press its toe switch twice | The expression pedal's notice (`08 00 05 01`?) and the toe switch |
+| 44 | `mb-44-unit-edit.mmon` | No editor action: on the unit, change the model of one block, then save the preset on the unit (to 60D) | Whether the unit sends its chain notice and a save notice for its own edits, so the editors can follow them |
