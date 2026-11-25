@@ -6,6 +6,20 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Matribox II Pro editor (web and desktop): one preset as a file. *Export preset* reads the
+  loaded preset from the unit (unsaved edits included) and downloads it as `<label> <name>.prst`,
+  the format Sonicake's own app opens (`writeMatriboxPrst`). *Import preset…* takes a `.prst` (or
+  the editor's / MCP server's backup of one slot, `.json`), shows its name and chain (models from
+  the catalog when it is there), lets you choose the slot (the loaded one by default, 1A..60D)
+  and asks for an explicit confirmation: the unit stores a whole-preset write at once. The slot
+  is loaded and what it stores kept in the editor's Matribox backups first; then the preset is
+  written whole and read back (sections 2, 3, 4, 5, 7, 9), and the slot stays loaded. A failure
+  leaves the backup in the list. A file that is not a Matribox preset is refused, and a Pocket
+  Master `.prst` (a different format) is named as such. Until now only the MCP server
+  (`matribox_export_preset`, `matribox_import_preset`) handled single presets.
+
 ### Changed
 
 - Internal: the Matribox II Pro request/answer link (IR upload included), the simulated unit the

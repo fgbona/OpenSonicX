@@ -109,7 +109,10 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
   move and remove blocks, and Save to a slot with an explicit confirmation and a backup of the
   slot first (kept in the browser, downloadable). *Back up all presets* downloads all 240 presets
   in one file and *Restore all…* puts them back from one (explicit confirmation; by default all
-  240 are backed up and downloaded first, so it can be undone). Model names and parameters come from the
+  240 are backed up and downloaded first, so it can be undone). *Export preset* downloads the
+  loaded preset (unsaved edits included) as a `.prst` that Sonicake's own app opens, and
+  *Import preset…* stores a `.prst` (or a backup of one slot) in the slot you choose, after an
+  explicit confirmation and a backup of that slot: the unit stores an imported preset at once. Model names and parameters come from the
   catalog of Sonicake's official Matribox II PRO app, which is not ours to ship: in the browser
   you pick its `alg_data.json` once (on a Mac:
   `/Applications/Matribox II PRO.app/Contents/Frameworks/App.framework/Resources/flutter_assets/assets/alg/alg_data.json`)

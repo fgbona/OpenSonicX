@@ -9,12 +9,14 @@ import {
   mbBackupAllPresets,
   mbChangeModel,
   mbMoveBlock,
+  mbReadEditBuffer,
   mbRemoveBlock,
   mbRestoreAllPresets,
   mbSelectPreset,
   mbSetBlockOn,
   mbSetParam,
   mbSetPatchVolume,
+  parseMbPreset,
   withMbVolume,
   type MatriboxLink,
   type MbBackupAll,
@@ -29,6 +31,7 @@ import { readLoaded, readUnit, saveToSlot, serialQueue, withBlockOn, withParam, 
 import { applyOps } from './matriboxOps';
 import type { MbOp } from './matriboxPlan';
 import { keepMbBackup, loadMbBackups, storeMbBackups } from './matriboxBackups';
+import { importToSlot } from './matriboxPresetFile';
 import { forgetCatalog, loadDesktopCatalog, loadStoredCatalog, parseCatalogText, storeCatalog } from './matriboxCatalog';
 
 export interface MatriboxState {
@@ -229,17 +232,22 @@ export function useMatribox(port: MidiPort | null, desktop: boolean) {
     [run],
   );
 
+  /** Puts a slot's backup in the list kept in this browser. */
+  const keep = useCallback(
+    (backup: MbBackup) => {
+      backupsRef.current = keepMbBackup(backupsRef.current, backup);
+      patch({ backups: backupsRef.current, storageWarning: !storeMbBackups(backupsRef.current) });
+    },
+    [patch],
+  );
+
   const save = useCallback(
     (index: number, name: string) =>
       run('Saving', async (unit) => {
-        const keep = (backup: MbBackup) => {
-          backupsRef.current = keepMbBackup(backupsRef.current, backup);
-          patch({ backups: backupsRef.current, storageWarning: !storeMbBackups(backupsRef.current) });
-        };
         await saveToSlot(unit, index, name, keep);
         patch({ unit: await readUnit(unit), edited: false });
       }),
-    [run, patch],
+    [run, patch, keep],
   );
 
   const track = useCallback((verb: 'Backing up' | 'Restoring') => (p: MbProgress) => patch({ progress: { step: `${verb} ${p.label}`, done: p.done, total: p.total } }), [patch]);
@@ -255,6 +263,28 @@ export function useMatribox(port: MidiPort | null, desktop: boolean) {
       }
     },
     [patch],
+  );
+
+  /** The loaded preset as the unit plays it now (unsaved edits included), for an export; null when it failed. */
+  const readEditBuffer = useCallback(async (): Promise<MbPreset | null> => {
+    let preset: MbPreset | null = null;
+    await run('Reading', async (unit) => {
+      preset = parseMbPreset(await mbReadEditBuffer(unit));
+    });
+    return preset;
+  }, [run]);
+
+  /** Stores a preset from a file in slot `index` (backed up first, read back); the slot stays loaded. False when it failed. */
+  const importPreset = useCallback(
+    (index: number, preset: MbPreset) =>
+      run('Importing', async (unit) => {
+        try {
+          await importToSlot(unit, index, preset, keep);
+        } finally {
+          await settle(unit); // the target is loaded now, whatever happened after the select
+        }
+      }),
+    [run, keep, settle],
   );
 
   /** All 240 presets, each read once loaded; the loaded preset is loaded again (its unsaved edits are lost). Null when it failed. */
@@ -302,6 +332,8 @@ export function useMatribox(port: MidiPort | null, desktop: boolean) {
     control,
     apply,
     save,
+    readEditBuffer,
+    importPreset,
     backupAll,
     restoreAll,
     clearError: () => patch({ error: null }),

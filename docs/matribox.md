@@ -589,7 +589,16 @@ backup in the browser (localStorage, newest 20, same JSON as the MCP server's ba
 the loaded preset as described in "Reading a slot" (another slot: whole-preset write, the slot
 stays loaded; the loaded slot: save), then reads the slot back. *Back up all presets* and
 *Restore all…* (section "All presets") download and read one backup-all file, with progress
-("Backing up 12A", "Restoring 12A"); see "Backup all". It also shows the patch volume (a slider, newest value only, like a knob), a grid of which blocks
+("Backing up 12A", "Restoring 12A"); see "Backup all". One preset as a file
+(`components/MatriboxPresetFile.tsx`, `lib/matriboxPresetFile.ts`): *Export preset* reads the edit
+buffer (unsaved edits included; nothing is selected) and downloads `<label> <name>.prst`
+(`writeMatriboxPrst`); *Import preset…* reads a `.prst` or a backup of one slot, shows its name
+and chain, and after an explicit confirmation does what the official app does (see "Whole-preset
+write"): select the target (the loaded slot by default), keep what it stores in the backups list,
+write the preset whole, read it back (sections 2, 3, 4, 5, 7, 9). The target stays loaded, under
+the name the file carries (no cmd `05`); unsaved edits of the loaded preset are lost, which the
+dialog says. A Pocket Master `.prst` (515 bytes, starts with "Pocket Master") and anything else
+that is not a Matribox preset are refused before anything is sent. It also shows the patch volume (a slider, newest value only, like a knob), a grid of which blocks
 footswitches A–D toggle, the nine expression entries (block, parameter, min, max, Apply) and a
 tuner / tap tempo / BPM row sent as Control Changes on a chosen MIDI channel; after an assignment
 it reads the loaded preset again. Undo and Redo cover the chain edits only (the history replays
