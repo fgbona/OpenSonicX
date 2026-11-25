@@ -21,7 +21,8 @@
  *             "fxid": 50331648,          // model id the unit reads and writes
  *             "index": 0,                // position in the module's list
  *             "type": "OD",              // our category, groups the model menus ("" when none)
- *             "basedOn": "…",            // the real gear, plain text on one line ("" for originals), see gear()
+ *             "basedOn": "…",            // the real gear, plain text on one line ("" for originals): model-text.json's
+ *                                        // `gear` when set, else the cleaned origin, see gear()
  *             "params": [                // by id
  *               {
  *                 "id": 0,               // parameter slot (index of the preset's 15 values)
@@ -44,12 +45,16 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'packages', 'core', 'src', 'matribox', 'models.json');
+const DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'packages', 'core', 'src', 'matribox');
+const OUT = join(DIR, 'models.json');
+const TEXT = join(DIR, 'model-text.json');
 
 /** The only keys models.json may hold: anything else from the source (texts, names, notes) is refused. */
 export const ALLOWED_KEYS = ['version', 'modules', 'module', 'index', 'models', 'fxid', 'type', 'basedOn', 'params', 'id', 'label', 'min', 'max', 'step', 'default', 'options'];
 /** The registered and trademark signs. */
 export const TRADEMARK_SIGNS = /[\u00ae\u2122]/g;
+/** Origins that are not real gear: the source's own algorithms, IR files and another maker's products. */
+export const NOT_GEAR = /^original\b|binary ir|ampero|xtomp|gp-?100/i;
 
 const fail = (message) => {
   throw new Error(`matribox-map: ${message}`);
@@ -67,15 +72,16 @@ const clean = (value) =>
 /**
  * The real gear a model is based on, as plain text: no trademark signs or "*", without the other
  * maker's product names ("Ampero Name: …", "XTOMP/Ampero Name: …"), on one line. None ('') for
- * the source's own algorithms ("Original…") and for a bare number (cabinets).
+ * the source's own algorithms ("Original…"), a bare number or an IR file name ("… IR Cab: 39"),
+ * anything still naming another maker's product (NOT_GEAR) and text in another script.
  */
 export function gear(value) {
   const text = String(value ?? '')
     .replace(TRADEMARK_SIGNS, '')
     .replace(/\*/g, '')
     .split(/(?:XTOMP\/)?Ampero Name:/i)[0];
-  const line = clean(text.replace(/\s*\n\s*/g, ' '));
-  return /[a-z]/i.test(line) && !/^original\b/i.test(line) ? line : '';
+  const line = clean(text.replace(/\s*\n\s*/g, ' ')).replace(/\s*\/$/, '');
+  return /[a-z]/i.test(line) && !NOT_GEAR.test(line) && !/[^\p{Script=Latin}\p{Script=Common}]/u.test(line) ? line : '';
 }
 
 /** Cabinet sizes as " 4 x 12”" become 4x12"; "/" means none. */
@@ -117,8 +123,9 @@ function param(widget, path) {
   return { id: integer(widget.ID, `${path}.ID`), label, min, max, step, default: def, ...(opts ? { options: opts } : {}) };
 }
 
-function model(alg, path) {
-  const basedOn = gear(alg.origin);
+/** `own` is our text for the model (model-text.json): its `gear`, when set, wins over the source's origin. */
+function model(alg, path, own) {
+  const basedOn = own?.gear ? clean(own.gear) : gear(alg.origin);
   const params = (alg.widget ?? []).map((w, i) => param(w, `${path}.widget[${i}]`)).sort((a, b) => a.id - b.id);
   return {
     fxid: integer(alg.fxid, `${path}.fxid`),
@@ -143,13 +150,13 @@ export function assertClean(value, path = 'map') {
   }
 }
 
-/** The functional map of a parsed alg_data.json, in our schema. */
-export function buildMap(source) {
+/** The functional map of a parsed alg_data.json, in our schema; `text` is model-text.json, by "MODULE:fxid". */
+export function buildMap(source, text = {}) {
   if (!Array.isArray(source?.Modules)) fail('the input has no Modules array: is it alg_data.json?');
   const modules = source.Modules.map((m, i) => {
     const code = clean(m.name);
     if (!/^[A-Z]+$/.test(code)) fail(`Modules[${i}].name is not a module code: ${JSON.stringify(m.name)}`);
-    const models = (m.alg ?? []).map((a, j) => model(a, `Modules[${i}].alg[${j}]`)).sort((a, b) => a.index - b.index);
+    const models = (m.alg ?? []).map((a, j) => model(a, `Modules[${i}].alg[${j}]`, text[`${code}:${a.fxid}`])).sort((a, b) => a.index - b.index);
     return { module: code, index: integer(m.index, `Modules[${i}].index`), models };
   }).sort((a, b) => a.index - b.index);
   const map = { version: 1, modules };
@@ -163,7 +170,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     console.error('usage: node scripts/matribox-map.mjs <path to alg_data.json>');
     process.exit(2);
   }
-  const map = buildMap(JSON.parse(readFileSync(input, 'utf8')));
+  const map = buildMap(JSON.parse(readFileSync(input, 'utf8')), JSON.parse(readFileSync(TEXT, 'utf8')));
   writeFileSync(OUT, `${JSON.stringify(map, null, 1)}\n`);
   const models = map.modules.reduce((n, m) => n + m.models.length, 0);
   console.log(`wrote ${OUT}: ${map.modules.length} modules, ${models} models`);

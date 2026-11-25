@@ -771,7 +771,9 @@ them as `MB_CATALOG`, built by `mbCatalog(map, text)` from two files of ours:
 - `packages/core/src/matribox/model-text.json`: our own short name for each model and our own
   description in English and Portuguese, keyed `"MODULE:fxid"` (e.g. `"DRV:50331648"`). The UI
   shows the description in its language; the MCP server and the assistant read the English one
-  (the web assistant the one of the UI).
+  (the web assistant the one of the UI). An optional `gear` names the real gear in plain text
+  (no trademark signs); when set it is the model's `basedOn` (the menus' right column, "Based
+  on"), and the descriptions start with "Inspired by <gear>." / "Inspirado no <gear>.".
 
 Schema of `models.json` (version 1):
 
@@ -787,7 +789,8 @@ Schema of `models.json` (version 1):
           "fxid": 50331648,          // model id the unit reads and writes
           "index": 0,                // position in the module's list
           "type": "OD",              // our category, groups the model menus ("" when none)
-          "basedOn": "…",            // the real gear, plain text on one line ("" for originals)
+          "basedOn": "…",            // the real gear, plain text on one line ("" for originals);
+                                     // model-text.json's `gear` when set
           "params": [                // by id
             {
               "id": 0,               // parameter slot (index of the preset's 15 values)

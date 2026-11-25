@@ -6,10 +6,10 @@ import { MB_CATALOG, mbCatalog, mbTextKey, type MbMap } from '../src/matribox/ca
 const read = (file: string) => readFileSync(new URL(`../src/matribox/${file}`, import.meta.url), 'utf8');
 const MAP_TEXT = read('models.json');
 const MAP = JSON.parse(MAP_TEXT) as MbMap & { version: number };
-const TEXT = JSON.parse(read('model-text.json')) as Record<string, { name: string; en: string; pt: string }>;
+const TEXT = JSON.parse(read('model-text.json')) as Record<string, { name: string; gear?: string; en: string; pt: string }>;
 
 interface Generator {
-  buildMap(source: unknown): unknown;
+  buildMap(source: unknown, text?: unknown): unknown;
   assertClean(value: unknown): void;
   gear(origin: unknown): string;
   ALLOWED_KEYS: readonly string[];
@@ -176,6 +176,11 @@ test("the gear text is clean: no signs or *, no other maker's names, nothing for
   assert.equal(gear('Original: Ampero 4-step filter'), '');
   assert.equal(gear('Original'), '');
   assert.equal(gear('55'), '');
+  assert.equal(gear('binary ir cab: 39'), '');
+  assert.equal(gear('Original: GP-100'), '');
+  assert.equal(gear('XTOMP Imaginary'), '');
+  assert.equal(gear('Imaginary Gate / ampero name: Other'), 'Imaginary Gate');
+  assert.equal(gear('过载 Drive'), '');
   assert.equal(gear(null), '');
   assert.equal(gear('  Imaginary  Twin\n Normal CH  '), 'Imaginary Twin Normal CH');
 });
@@ -184,6 +189,53 @@ test('models.json basedOn follows the same rules', () => {
   for (const m of MAP.modules) {
     for (const a of m.models) assert.doesNotMatch(a.basedOn, /^original|ampero|\*|\n|^\s|\s$/i, `${m.module}:${a.fxid}`);
   }
+});
+
+/** What must never reach the gear column: the source's own algorithms, IR files, another maker's products, a bare number. */
+const NOT_GEAR = /original|binary ir|ampero|xtomp|gp-?100|^\s*\d+\s*$/i;
+
+test('no basedOn or gear, in the map, our texts or the catalog, is an original, an IR file, another maker product or a bare number', () => {
+  const values = [
+    ...MAP.modules.flatMap((m) => m.models.map((a) => [`map ${m.module}:${a.fxid}`, a.basedOn])),
+    ...Object.entries(TEXT).flatMap(([key, t]) => (t.gear === undefined ? [] : [[`gear ${key}`, t.gear]])),
+    ...MB_CATALOG.modules.flatMap((m) => m.models.map((a) => [`catalog ${m.name}:${a.fxid}`, a.basedOn])),
+  ];
+  assert.deepEqual(
+    values.filter(([, v]) => NOT_GEAR.test(v ?? '') || /[^\p{Script=Latin}\p{Script=Common}]/u.test(v ?? '')),
+    [],
+  );
+  for (const [key, t] of Object.entries(TEXT)) {
+    if (t.gear !== undefined) assert.ok(t.gear.trim(), `gear of ${key} is empty`);
+    assert.doesNotMatch(`${t.name} ${t.en} ${t.pt}`, /binary ir|ampero|xtomp|gp-?100/i, key);
+  }
+});
+
+test('every model has a meaningful name, not a numbered or lettered placeholder', () => {
+  const generic = /^(DLY|VERB|EQ|SIMPLE|SHIMR)-?[A-Z0-9]$|#\d+$/;
+  const offending = MB_CATALOG.modules.flatMap((m) => m.models.flatMap((a) => (generic.test(a.name) ? [`${m.name}:${a.fxid} ${a.name}`] : [])));
+  assert.deepEqual(offending, []);
+  assert.ok(generic.test('DLY-A') && generic.test('4x12 #25') && generic.test('SIMPLE-1') && !generic.test('Tweed 1x12'), 'the pattern catches what it is for');
+});
+
+test('our gear, when set, is the gear the catalog shows, and the text says so first', () => {
+  for (const m of MB_CATALOG.modules) {
+    for (const a of m.models) {
+      const own = TEXT[mbTextKey(m.name, a.fxid)];
+      if (!own?.gear) continue;
+      assert.equal(a.basedOn, own.gear);
+      assert.ok(own.en.startsWith(`Inspired by ${own.gear}.`) && own.pt.startsWith(`Inspirado no ${own.gear}.`), `${m.name}:${a.fxid}`);
+    }
+  }
+  const map: MbMap = { modules: [{ module: 'CAB', index: 5, models: [{ fxid: 1, index: 0, type: '', basedOn: '', params: [] }] }] };
+  assert.equal(mbCatalog(map, { 'CAB:1': { name: 'Own 1x12', gear: 'Imaginary 1x12', en: 'x', pt: 'y' } }).modules[0]?.models[0]?.basedOn, 'Imaginary 1x12');
+});
+
+test('the generator takes our gear over the source origin', async () => {
+  const { buildMap } = await generator();
+  const source = { Modules: [{ name: 'CAB', index: 5, alg: [{ fxid: 7, index: 0, type: '1 x 12”', origin: 'binary ir cab: 39', widget: [] }] }] };
+  const modelOf = (map: unknown) => (map as MbMap).modules[0]?.models[0];
+  assert.equal(modelOf(buildMap(source))?.basedOn, '');
+  assert.equal(modelOf(buildMap(source, { 'CAB:7': { name: 'Own', gear: 'Imaginary\u00ae 1x12', en: '', pt: '' } }))?.basedOn, 'Imaginary 1x12');
 });
 
 test('the generator refuses any field outside the schema, trademark signs and malformed input', async () => {
