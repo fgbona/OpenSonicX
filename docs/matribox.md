@@ -465,6 +465,73 @@ reference DI: 1136 of 8840 bytes equal, gains `0.0858 / 0.0863 / 747.0 / 753.1` 
 `0.165 / 0.166 / 1124 / 1020`, arrayA and arrayB off by up to 0.73 and 0.39. The official
 conversion is native code (`namConvertClo` in `HTUSBTools.dylib`), not ported.
 
+### The official NAM -> `.clo` conversion (research, 2026-11-24)
+
+**The capture is reproducible.** A small C harness (not committed) that `dlopen`s the installed
+editor's `HTUSBTools.dylib`, calls `InitDartApiDL` with stub Dart functions and then
+`namConvertCloData(callback, diWav, outWav, namPath, outBuffer, callback)` (no MIDI function is
+touched) turns `5 RECTIFIER.nam` into an 8840-byte `.clo` in a few seconds that is **identical, byte
+for byte, to the one in mb-19**. The conversion is deterministic and has no hidden input (unit
+state, firmware, slot). `namConvertClo` (the file variant) writes the result through an
+`std::ofstream` that is never opened and crashes outside the app; the `Data` variant copies it
+into the caller's buffer.
+
+**Same reference signal as ours.** The editor bundles `flutter_assets/assets/wavs/nam_input_wav.wav`
+(70 s, 44.1 kHz, 16-bit, two identical channels, SHA-256 `9bb6c1b1…29aa1a`). Its first channel
+divided by 32768 is SonicMaster's `nam_reference_di_44100.f32` sample for sample. So the DI,
+its level and its length are ruled out: the difference is the algorithm.
+
+**A different algorithm, not different parameters.** From the binary's symbols, call graph and the
+debugger trace of one conversion:
+
+1. `getConvertNormalWav(di, 48000)`: the DI resampled to the model's rate (48 kHz; JUCE +
+   r8brain, as for the IRs) and cached as a 24-bit mono WAV
+   (`~/Library/Caches/HTUSBTools/HTCache/48000.wav`).
+2. `getNamOutput`: NeuralAmpModelerCore (`nam::get_dsp`, WaveNet/LSTM/ConvNet, Eigen) runs the
+   model **once**, at the DI's own level, over the whole 70 s; the output is written as a
+   **16-bit** stereo WAV at 48 kHz. There are no probe levels: SonicMaster (and so our port)
+   runs the model five times, at 0.1, 0.03, 0.01, 0.003 and 1.0.
+3. `HTKPA::init(48000)`, `setInputSignalPath(48000.wav)`, `setOutputSignalPath(nam output)`:
+   both read into `70 * fs + 600`-sample float buffers (each must be at least 70 s at exactly
+   `fs`).
+4. `HTKPA::startClone()`, its own fit: remove the output's mean and linear trend, find the
+   response onset, build per-segment envelope tables (max |input|, max/min output) and fit the
+   asymmetric exponential saturator to them (a double-precision least-squares start, then a
+   long unrolled `expf` search), then alternate 2x oversampled passes (`HT_IIRUpX2` ->
+   saturator -> `HT_IIRDownX2`), FFT block convolutions (`convolverInit/ProcessMono`, Ooura and
+   CMSIS `arm_rfft_f32`), transfer-function estimates (`tfestimate`), `smoothdata`,
+   `HTKPA::iterAmpCoeff` (up to three rounds), `downSampleSmoothFreq`, `minPhaseIR`, and finally
+   `convertSampleRate` of both FIRs to 44.1 kHz into the VTSI container. The arithmetic is
+   float32 throughout, NEON-vectorised.
+
+**Why nothing was shipped.** Rebuilding that byte for byte in TypeScript means matching, in
+float32 and in the compiler's summation order: NAM's Eigen inference (whose output is then
+rounded to 16 bits, so a one-ulp difference flips samples), Apple libm's `expf`, two FFT
+libraries and r8brain, through an iterative fit that amplifies any difference. That is far past
+a sensible effort, and a "close" result could not be verified: nothing short of the unit's sound
+tells whether a near miss is good enough. Scaling our probe level does not converge either: the
+official fit never sees more than one level, so its gains (0.0858 vs 0.165) come from another
+estimator, not a 5.7 dB offset.
+
+**Ways forward (owner's call):**
+
+- *Use the installed official converter.* On a Mac with the editor installed, the harness above
+  makes the exact `.clo` the editor would send; `matribox_load_capture` could then upload it
+  (the builder is the 32-byte header + the `.clo`, all known). This depends on Sonicake's binary
+  at run time (macOS only, breaks if they change the entry point), so it was not done without
+  the owner's say.
+- *Upload our own `.clo`.* Same container, different fit: whether the unit plays it well (or at
+  all) is untested. One upload of our converter's `.clo` of `5 RECTIFIER` into a free CLONE slot,
+  compared by ear with the official one, would settle whether exactness matters.
+- *Port `startClone` approximately* (the stages above, decompiled further) and judge it by ear,
+  not bytes.
+
+**What would help from the owner:** (1) a yes/no on calling the installed editor's converter;
+(2) an A/B by ear on the unit of the official `.clo` vs ours for the same NAM (ours could be
+sent by an experimental tool); (3) for an approximate port, a second real capture of the
+official upload of a different NAM (another architecture, e.g. a LSTM or a "lite" WaveNet), to
+check the port on more than one model.
+
 ## Writes
 
 Every write but the whole preset (below) is a flag-1 message in a type `12` frame, its data a literal-only LZO1X stream. The
