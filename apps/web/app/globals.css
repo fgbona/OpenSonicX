@@ -481,6 +481,13 @@ button, select { font: inherit; color: inherit; }
 .editor-end { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 .editor-params { display: flex; flex-wrap: wrap; gap: 18px 22px; align-items: flex-end; }
 .editor-toggle { display: grid; justify-items: center; gap: 6px; min-width: 76px; }
+/* A panel whose knobs carry a range hint (the Matribox's): every control gets the same four rows (value,
+   dial area, label, hint) so dials and labels line up whether or not a hint is there; a switch or a
+   select sits centred in the dial row. */
+.editor-params:has(.knob-hint) { align-items: flex-start; }
+.editor-params:has(.knob-hint) :is(.knob, .editor-toggle) { grid-template-rows: 1.2em 64px auto 1.2em; align-content: start; gap: 2px; }
+.editor-params:has(.knob-hint) .editor-toggle > :is(.switch, .param-select) { align-self: center; }
+.knob-hint { font-size: 0.6875rem; color: var(--label-2); font-variant-numeric: tabular-nums; }
 .editor-info { margin: 14px 0 0; padding: 8px 10px; border-radius: var(--radius-small); background: var(--surface-2); color: var(--label-2); font-size: 0.8125rem; }
 
 @media (max-width: 900px) {
