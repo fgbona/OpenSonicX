@@ -4,9 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { parseMbCatalog } from '@pocket-master/core';
-import { FakeMatribox } from './fake-matribox.ts';
-import { matriboxLink } from '../src/matribox-link.ts';
+import { matriboxLink, parseMbCatalog } from '@pocket-master/core';
+import { FakeMatribox } from '../../../packages/core/test/fake-matribox.ts';
 import { MatriboxSession } from '../src/matribox-session.ts';
 import { Session } from '../src/session.ts';
 import { createServer } from '../src/tools.ts';
@@ -37,7 +36,7 @@ export const CATALOG = parseMbCatalog({
 });
 
 export const fakeLink = (fake = new FakeMatribox(), timeoutMs = 1000) => {
-  const ports = { send: (b: Uint8Array) => fake.send(b), listen: (r: (b: Uint8Array) => void) => fake.listen(r) };
+  const ports = { send: (b: Uint8Array) => fake.send(b), listen: (r: ((b: Uint8Array) => void) | null) => fake.listen(r ?? (() => undefined)) };
   return matriboxLink(ports, timeoutMs);
 };
 

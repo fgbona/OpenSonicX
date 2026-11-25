@@ -318,8 +318,8 @@ returns the **loaded preset's edit buffer**, tagged with the requested index, wh
 is not the loaded one. Seen twice: an export of 58D while 3B was loaded gave 3B's "Chorus Clean",
 and the backup taken before saving to 59D while 60D was loaded held 60D's "TESTE OSX". The
 official editor never reads an unloaded slot: it selects it (`01 00 0A 01` + u32 index) and then
-reads. The simulated units (`apps/mcp/test/fake-matribox.ts`, `packages/core/test/fake-matribox.ts`)
-now behave the same way.
+reads. The simulated unit (`packages/core/test/fake-matribox.ts`, shared by the core, MCP and web tests)
+now behaves the same way.
 
 So every read of a slot that may not be loaded selects it first (core `mbReadSlot`), which
 discards the loaded preset's unsaved edits. What changed (MCP server and editor alike):

@@ -47,7 +47,7 @@ import {
 import { assignExpression, assignFootswitch, CC_NOTE, describeAssignments, setExpressionRange, setVolume } from './matribox-live.ts';
 import { MATRIBOX_DEVICE, readMatriboxBackup, readMatriboxBackupAll, readMatriboxPrst, writeMatriboxBackupAll, writeMatriboxPrstFile } from './matribox-files.ts';
 import { prepareMatriboxIr, uploadMatriboxIr, type MatriboxIrOptions } from './matribox-ir.ts';
-import type { MatriboxConnection } from './matribox-link.ts';
+import type { MatriboxConnection } from './devices.ts';
 import { checkParam, describeValues, EXPERIMENTAL, findBlock, findModel, findModule, gear, knownModel, modelTitle, modelValues, planTone, type ParamWrite, type ToneBlock } from './matribox-edit.ts';
 
 /** Reads of the slot after a save before giving up, and the pause between them. */

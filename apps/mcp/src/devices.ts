@@ -3,7 +3,7 @@
  * opens a pedal's ports. Each pedal has its own tools: the Pocket Master's are unprefixed (their names
  * are frozen for 1.x), the Matribox II Pro's start with matribox_.
  */
-import { MATRIBOX_PORT_NAME } from '@pocket-master/core';
+import { MATRIBOX_PORT_NAME, matriboxLink, type MatriboxLink } from '@pocket-master/core';
 
 export interface PedalDevice {
   readonly name: string;
@@ -54,8 +54,8 @@ export async function midiPortNames(): Promise<readonly string[]> {
 
 export interface MidiPorts {
   send(bytes: Uint8Array): void;
-  /** Receives every SysEx message from the pedal (one receiver at a time). */
-  listen(receiver: (bytes: Uint8Array) => void): void;
+  /** Receives every SysEx message from the pedal (one receiver at a time); null stops it. */
+  listen(receiver: ((bytes: Uint8Array) => void) | null): void;
   close(): void;
 }
 
@@ -98,4 +98,13 @@ export async function openPedalPorts(device: PedalDevice): Promise<MidiPorts> {
     },
     close,
   };
+}
+
+/** The core request/answer link (packages/core matribox/link.ts) over the unit's opened ports. */
+export type MatriboxConnection = MatriboxLink & { close(): void };
+
+/** Opens the Matribox's USB MIDI ports. The native MIDI library loads on the first call. */
+export async function connectMatribox(): Promise<MatriboxConnection> {
+  const ports = await openPedalPorts(MATRIBOX);
+  return { ...matriboxLink(ports), close: ports.close };
 }
