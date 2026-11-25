@@ -346,9 +346,9 @@
   },
   "AMP:117440579": {
     "name": "EURO-BLU",
-    "gear": "Bogner Ecstasy blue channel (vintage)",
-    "en": "Inspired by Bogner Ecstasy blue channel (vintage). A boutique crunch channel with a rich, open drive, from classic rock to warm leads. Gain, Presence, Volume, Bass, Middle and Treble.",
-    "pt": "Inspirado no Bogner Ecstasy blue channel (vintage). Canal de crunch boutique com drive rico e aberto, do rock clássico aos solos quentes. Gain, Presence, Volume, Bass, Middle e Treble."
+    "gear": "Bogner XTC blue channel",
+    "en": "Inspired by Bogner XTC blue channel. A boutique crunch channel with a rich, open drive, from classic rock to warm leads. Gain, Presence, Volume, Bass, Middle and Treble.",
+    "pt": "Inspirado no Bogner XTC blue channel. Canal de crunch boutique com drive rico e aberto, do rock clássico aos solos quentes. Gain, Presence, Volume, Bass, Middle e Treble."
   },
   "AMP:117440622": {
     "name": "EURO-HG",
@@ -624,9 +624,9 @@
   },
   "CAB:167772182": {
     "name": "US 2x12",
-    "gear": "Fender Bassman 2x12",
-    "en": "Inspired by Fender Bassman 2x12. A full, punchy US 2x12 with firm lows and smooth highs. Suits clean to crunch rhythm and blues. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
-    "pt": "Inspirado no Fender Bassman 2x12. Caixa 2x12 americana, cheia e com punch, graves firmes e agudos suaves. Combina com base do limpo ao crunch e blues. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
+    "gear": "Fender Piggyback Bassman 2x12",
+    "en": "Inspired by Fender Piggyback Bassman 2x12. A full, punchy US 2x12 with firm lows and smooth highs. Suits clean to crunch rhythm and blues. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Fender Piggyback Bassman 2x12. Caixa 2x12 americana, cheia e com punch, graves firmes e agudos suaves. Combina com base do limpo ao crunch e blues. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772190": {
     "name": "Tweed 4x10",
@@ -717,15 +717,15 @@
   },
   "CAB:167772169": {
     "name": "Tex 1x12",
-    "gear": "Mesa/Boogie Lone Star 1x12",
-    "en": "Inspired by Mesa/Boogie Lone Star 1x12. A warm, open US boutique 1x12 with rich mids. Good for clean, blues and medium-gain leads. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
-    "pt": "Inspirado no Mesa/Boogie Lone Star 1x12. Caixa 1x12 boutique americana, quente e aberta, com médios ricos. Boa para limpo, blues e solos de ganho médio. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
+    "gear": "Mesa/Boogie Lonestar 1x12",
+    "en": "Inspired by Mesa/Boogie Lonestar 1x12. A warm, open US boutique 1x12 with rich mids. Good for clean, blues and medium-gain leads. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Mesa/Boogie Lonestar 1x12. Caixa 1x12 boutique americana, quente e aberta, com médios ricos. Boa para limpo, blues e solos de ganho médio. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772185": {
     "name": "Tex 2x12",
-    "gear": "Mesa/Boogie Lone Star 2x12",
-    "en": "Inspired by Mesa/Boogie Lone Star 2x12. A full, open US boutique 2x12 with smooth highs and a wide sound. Great for big cleans and singing leads. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
-    "pt": "Inspirado no Mesa/Boogie Lone Star 2x12. Caixa 2x12 boutique americana, cheia e aberta, com agudos suaves e som largo. Ótima para limpos grandes e solos cantados. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
+    "gear": "Mesa/Boogie Lonestar 2x12",
+    "en": "Inspired by Mesa/Boogie Lonestar 2x12. A full, open US boutique 2x12 with smooth highs and a wide sound. Great for big cleans and singing leads. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Mesa/Boogie Lonestar 2x12. Caixa 2x12 boutique americana, cheia e aberta, com agudos suaves e som largo. Ótima para limpos grandes e solos cantados. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772172": {
     "name": "Studio 1x12",
@@ -734,9 +734,9 @@
   },
   "CAB:167772183": {
     "name": "Vintage 2x12",
-    "gear": "Supro 2x12",
-    "en": "Inspired by Supro 2x12. A raw, vintage 2x12 with a gritty, midrange-heavy bark and loose lows. Great for blues and garage rock. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
-    "pt": "Inspirado no Supro 2x12. Caixa 2x12 vintage e crua, com ronco cheio de médios e graves soltos. Ótima para blues e rock de garagem. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
+    "gear": "Supro 1624T 2x12",
+    "en": "Inspired by Supro 1624T 2x12. A raw, vintage 2x12 with a gritty, midrange-heavy bark and loose lows. Great for blues and garage rock. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Supro 1624T 2x12. Caixa 2x12 vintage e crua, com ronco cheio de médios e graves soltos. Ótima para blues e rock de garagem. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772184": {
     "name": "Class-A 2x12",
@@ -787,9 +787,9 @@
   },
   "CAB:167772202": {
     "name": "Brit Loud 4x12",
-    "gear": "Hiwatt 4x12",
-    "en": "Inspired by Hiwatt 4x12. A loud, clear British 4x12 with huge headroom and a hi-fi voice. Great for big clean and classic rock tones. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
-    "pt": "Inspirado no Hiwatt 4x12. Caixa 4x12 britânica alta e clara, com enorme folga e voz hi-fi. Ótima para limpos grandes e rock clássico. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
+    "gear": "Hiwatt SE4123 4x12",
+    "en": "Inspired by Hiwatt SE4123 4x12. A loud, clear British 4x12 with huge headroom and a hi-fi voice. Great for big clean and classic rock tones. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Hiwatt SE4123 4x12. Caixa 4x12 britânica alta e clara, com enorme folga e voz hi-fi. Ótima para limpos grandes e rock clássico. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772204": {
     "name": "Classic 4x12",
@@ -889,9 +889,8 @@
   },
   "CAB:167772224": {
     "name": "Square Dread",
-    "gear": "Gibson Hummingbird",
-    "en": "Inspired by Gibson Hummingbird. A square-shoulder dreadnought acoustic body for piezo signals, warm and woody with a sweet midrange. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
-    "pt": "Inspirado no Gibson Hummingbird. Corpo de violão dreadnought de ombros quadrados para piezo, quente e amadeirado, com médios doces. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
+    "en": "A square-shoulder dreadnought acoustic body for piezo signals, warm and woody with a sweet midrange. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Corpo de violão dreadnought de ombros quadrados para piezo, quente e amadeirado, com médios doces. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772225": {
     "name": "Auditorium",
