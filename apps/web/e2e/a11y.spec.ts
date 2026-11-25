@@ -79,3 +79,48 @@ for (const theme of ['dark', 'light'] as const) {
     expect(failures).toEqual([]);
   });
 }
+
+// An off (bypassed) block dims its controls; its knob labels and values must still read at AA.
+for (const [theme, block] of [
+  ['dark', 'amp'],
+  ['light', 'amp'],
+  ['dark', 'rvb'],
+  ['light', 'rvb'],
+] as const) {
+  test(`an off ${block} block keeps its knob text readable (${theme} theme)`, async ({ page, pedal }) => {
+    await page.goto('/');
+    if (theme === 'light') await page.getByRole('button', { name: 'Switch to light theme' }).click();
+    await connect(page, pedal);
+    if (block !== 'amp') await page.locator('.tile-body', { hasText: block.toUpperCase() }).first().click();
+    const editor = page.locator(`section.editor[aria-label="${block.toUpperCase()} block"]`);
+    const on = editor.getByRole('switch', { name: /on$/ });
+    if (await on.count()) await on.first().click(); // some blocks are already off in the fixture
+    await expect(editor).toHaveClass(/editor-off/);
+    expect(await violations(page)).toEqual([]);
+    const failures: string[] = [];
+    const texts = await editor.locator('.knob-label, .knob-value').all();
+    expect(texts.length).toBeGreaterThan(0);
+    for (const el of texts) {
+      const r = await measure(page, el);
+      if (r && r.ratio < r.required) failures.push(`"${r.text}": ${r.ratio.toFixed(2)} < ${r.required}`);
+    }
+    expect(failures).toEqual([]);
+  });
+}
+
+// The import inputs are transparent overlays on their buttons: Tab must show where focus is.
+test('Tab onto a file import shows a focus ring on its button', async ({ page, pedal }) => {
+  await connect(page, pedal);
+  await page.getByRole('button', { name: 'Export preset' }).focus();
+  await page.keyboard.press('Tab');
+  const label = page.locator('label.file-button', { hasText: 'Import preset' });
+  await expect(label.locator('input')).toBeFocused();
+  const ring = await label.evaluate((e) => ({ style: getComputedStyle(e).outlineStyle, width: parseFloat(getComputedStyle(e).outlineWidth) }));
+  expect(ring.style).not.toBe('none');
+  expect(ring.width).toBeGreaterThanOrEqual(2);
+  for (const key of ['Enter', 'Space']) {
+    const chooser = page.waitForEvent('filechooser');
+    await page.keyboard.press(key);
+    await chooser;
+  }
+});

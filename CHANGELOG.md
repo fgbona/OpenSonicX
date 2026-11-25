@@ -107,6 +107,14 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Pocket Master editor, keyboard: the file-import buttons (*Import preset*, *Import a backup*, the
+  NAM and WAV loaders) are a transparent input over a button, so Tab reached them with no visible
+  focus. The button now shows the focus ring (`:focus-within`); the input and its tests are
+  unchanged, and Enter and Space still open the picker.
+- Pocket Master editor, light theme: an off block's knob labels and values were below WCAG AA
+  because the whole parameter row sat at 55% opacity (axe flagged an off RVB block). Now only the
+  dials and switches dim and the values turn grey, as on the Matribox; the text keeps AA. The
+  a11y e2e checks an off AMP and an off RVB block in both themes.
 - The Matribox editor no longer logs a refused import file as an error in the browser console: a
   wrong file is the person's mistake and the dialog already says so (it also showed in the e2e log).
 - Matribox editor, keyboard: *Import preset…* (in the header and in the phone's folded ⋯ menu),
