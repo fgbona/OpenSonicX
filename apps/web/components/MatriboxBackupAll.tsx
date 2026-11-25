@@ -5,6 +5,7 @@ import { MB_PRESET_COUNT, parseMbBackupAll, type MbBackupAll } from '@pocket-mas
 import { downloadJson } from '@/lib/backupStore';
 import type { Matribox } from '@/lib/useMatribox';
 import { Dialog } from './Dialog';
+import { FileButton } from './FileButton';
 import { ProgressBar } from './ProgressBar';
 import { useI18n } from './I18n';
 
@@ -71,10 +72,9 @@ export function MatriboxBackupAll({ mb, loaded }: Props) {
           <button type="button" className="btn" disabled={disabled} onClick={() => (mb.edited ? setAsking(true) : void backup())}>
             {t('mb.backupAll')}
           </button>
-          <label className="btn">
+          <FileButton className="btn" accept=".json,application/json" pickLabel={t('mb.allPick')} disabled={disabled} onPick={(input) => void pick(input)}>
             {t('mb.restoreAll')}
-            <input type="file" hidden accept=".json,application/json" aria-label={t('mb.allPick')} disabled={disabled} onChange={(e) => void pick(e.currentTarget)} />
-          </label>
+          </FileButton>
         </div>
         {mb.busy === 'Backing up' && !pending && mb.progress && <ProgressBar progress={mb.progress} />}
         {backedUp !== null && mb.busy === null && (

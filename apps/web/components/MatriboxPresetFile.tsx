@@ -8,6 +8,7 @@ import { mbBackupFileName } from '@/lib/matriboxBackups';
 import { MB_PRESET_FILE_ACCEPT, mbPrstFileName, parseMbPresetFile } from '@/lib/matriboxPresetFile';
 import type { Matribox } from '@/lib/useMatribox';
 import { Dialog } from './Dialog';
+import { FileButton } from './FileButton';
 import { useI18n } from './I18n';
 
 /** What the import dialog shows: a file that was refused, or a preset waiting for its confirmation. */
@@ -65,10 +66,9 @@ export function MatriboxPresetFile({ mb }: { mb: Matribox }) {
       <button type="button" className="btn" disabled={disabled} onClick={() => void exportPreset()}>
         {t('mb.exportPreset')}
       </button>
-      <label className="btn">
+      <FileButton className="btn" accept={MB_PRESET_FILE_ACCEPT} pickLabel={t('mb.importPick')} disabled={disabled} onPick={(input) => void pick(input)}>
         {t('mb.importPreset')}
-        <input type="file" hidden accept={MB_PRESET_FILE_ACCEPT} aria-label={t('mb.importPick')} disabled={disabled} onChange={(e) => void pick(e.currentTarget)} />
-      </label>
+      </FileButton>
       {/* On <body>: the buttons may sit in the header's folded menu, which hides its box. */}
       {createPortal(
         <Dialog open={picked !== null} title={t('mb.importTitle')} onClose={close} locked={importing}>

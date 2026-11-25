@@ -26,7 +26,6 @@
 .mb-head-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .mb-head-end .mb-head-actions { padding-bottom: 8px; }
 .mb-style { margin-left: 10px; padding: 2px 8px; border-radius: 980px; background: var(--fill); color: var(--label-2); font-size: 0.6875rem; }
-label.btn { display: inline-block; }
 /* Secondary actions: in the row on wide screens, folded under ⋯ on a phone (MatriboxMore). */
 .mb-more { display: contents; }
 .mb-more-toggle { display: none; }
@@ -84,15 +83,22 @@ label.btn { display: inline-block; }
   .mb-snake .tile .module-icon { width: 28px; height: 28px; }
   .mb-snake .tile-model { max-width: 68px; font-size: 0.6875rem; }
 }
-/* Its menu hangs under the strip's end (on a phone it is the same bottom sheet as every model menu). */
-.mb-add-menu { position: absolute; right: 0; top: 100%; }
+/* Its menu hangs under the add tile, kept on screen (MatriboxChain places it); on a phone it is the
+   same bottom sheet as every model menu. The box takes the list's size, so it can be measured. */
+.mb-add-menu { position: absolute; left: 0; top: 100%; }
 /* A block type in that menu: its drawing in its colour, before the name. */
 .mb-pick-icon { display: inline-flex; vertical-align: -6px; margin-right: 8px; color: var(--tint); }
 @media (min-width: 721px) {
-  .mb-add-menu .picker-list { top: -4px; left: auto; right: 0; min-width: 0; }
+  .mb-add-menu { z-index: 30; width: max-content; }
+  .mb-add-menu .picker-list { position: static; margin-top: 6px; min-width: 0; }
 }
 
 /* Block panel */
+/* An off block dims its dials and switches and greys its values; its text keeps AA contrast
+   (the Pocket Master's opacity on the whole row took the light theme's labels to 2.3:1). */
+.editor-off[class*=' mb-'] .editor-params { opacity: 1; }
+.editor-off[class*=' mb-'] .editor-params :is(.knob-dial, .switch) { opacity: 0.55; }
+.editor-off[class*=' mb-'] .editor-face:not(.face-amp) .knob-value { color: var(--label-2); }
 .knob-hint { font-size: 0.6875rem; color: var(--label-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .face-amp .knob-hint { color: color-mix(in srgb, var(--label) 72%, transparent); }
 :root .face-amp[data-skin] .knob-hint { color: var(--face-ink-2); }
@@ -165,7 +171,8 @@ label.btn { display: inline-block; }
 
 @media (max-width: 900px) {
   .mb-fs-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .mb-head-end { width: 100%; justify-content: space-between; }
+  /* The knob stays beside the buttons: when they run out of room they wrap among themselves. */
+  .mb-head-end { width: 100%; justify-content: space-between; flex-wrap: nowrap; }
   .mb-head-end .fields { width: auto; }
   .mb-control-end { margin-left: 0; }
 }

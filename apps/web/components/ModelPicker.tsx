@@ -30,6 +30,8 @@ interface ListProps {
   readonly groups: readonly PickerGroup[];
   /** The option chosen now; '' when none is. */
   readonly value: string;
+  /** The option highlighted on opening when it is not `value` (a menu step returned to). */
+  readonly initial?: string;
   readonly ariaLabel: string;
   readonly onChoose: (value: string) => void;
   /** `refocus`: the keyboard closed it, so focus goes back to what opened it. */
@@ -44,8 +46,8 @@ interface ListProps {
  * Keyboard: arrows, Home/End, Enter or Space to choose, Escape to close, a letter to jump to the
  * next name starting with it.
  */
-export function PickerList({ groups, value, ariaLabel, onChoose, onClose, isInside }: ListProps) {
-  const [active, setActive] = useState<string | null>(value || null);
+export function PickerList({ groups, value, initial, ariaLabel, onChoose, onClose, isInside }: ListProps) {
+  const [active, setActive] = useState<string | null>(initial || value || null);
   const id = useId();
   const listRef = useRef<HTMLDivElement>(null);
   const options = groups.flatMap((g) => g.options).filter((o) => !o.disabled);

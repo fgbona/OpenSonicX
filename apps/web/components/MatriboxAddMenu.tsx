@@ -28,7 +28,13 @@ export function MatriboxAddMenu({ catalog, chain, userSlot, isInside, onClose, o
   const { t } = useI18n();
   const modules = mbMenuModules(catalog);
   const [chosen, setChosen] = useState<number | null>(null);
+  // The type the models step went back from: highlighted again on the types.
+  const [left, setLeft] = useState<number | null>(null);
   const mod = modules.find((m) => m.index === chosen);
+  const back = () => {
+    setLeft(chosen);
+    setChosen(null);
+  };
 
   if (!mod) {
     const options = modules.map((m) => ({
@@ -40,7 +46,18 @@ export function MatriboxAddMenu({ catalog, chain, userSlot, isInside, onClose, o
         </span>
       ),
     }));
-    return <PickerList key="types" groups={[{ name: null, options }]} value="" ariaLabel={t('mb.addType')} isInside={isInside} onClose={onClose} onChoose={(v) => setChosen(Number(v))} />;
+    return (
+      <PickerList
+        key="types"
+        groups={[{ name: null, options }]}
+        value=""
+        initial={left === null ? undefined : String(left)}
+        ariaLabel={t('mb.addType')}
+        isInside={isInside}
+        onClose={onClose}
+        onChoose={(v) => setChosen(Number(v))}
+      />
+    );
   }
 
   const present = chain.filter((b) => b.moduleIndex === mod.index).map((b) => b.fxid);
@@ -49,19 +66,19 @@ export function MatriboxAddMenu({ catalog, chain, userSlot, isInside, onClose, o
     unknown: (fxid) => t('mb.unknownModel', { fxid }),
     userName: (fxid) => userSlot({ module: mod.name, fxid }),
   });
-  const back = { name: null, options: [{ value: BACK, name: `‹ ${t('mb.addBack')}` }] };
+  const backGroup = { name: null, options: [{ value: BACK, name: `‹ ${t('mb.addBack')}` }] };
   const none = { name: null, options: [{ value: 'none', name: t('mb.addNoModels'), disabled: true }] };
   return (
     <PickerList
       key={`models-${mod.index}`}
-      groups={[back, ...(models.length > 0 ? models : [none])]}
+      groups={[backGroup, ...(models.length > 0 ? models : [none])]}
       value=""
       ariaLabel={t('mb.addModel', { module: mod.name })}
       isInside={isInside}
       // Escape goes back a step; Tab or a press outside closes the menu.
-      onClose={(refocus) => (refocus ? setChosen(null) : onClose(false))}
+      onClose={(refocus) => (refocus ? back() : onClose(false))}
       onChoose={(v) => {
-        if (v === BACK) return setChosen(null);
+        if (v === BACK) return back();
         const model = parseMbModelValue(v);
         onClose(true);
         if (model) onAdd(model.moduleIndex, model.fxid);
