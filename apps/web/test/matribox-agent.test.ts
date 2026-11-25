@@ -5,6 +5,7 @@ import { FakeMatribox } from '../../../packages/core/test/fake-matribox.ts';
 import { FAKE_ALG_DATA } from '../../../packages/core/test/matribox-fake-catalog.ts';
 import { askedToSaveMb, matriboxAgent, type MbAgentHost } from '../lib/matriboxAgent.ts';
 import { requestTexts } from '../lib/assistant.ts';
+import { mbTone, withTone, type MbTone } from '../lib/matriboxLibrary.ts';
 
 const catalog = parseMbCatalog(FAKE_ALG_DATA);
 
@@ -14,6 +15,7 @@ function host() {
   let current = 66;
   const past: MbPreset[] = [];
   const saves: [number, string][] = [];
+  let tones: MbTone[] = [];
   const h: MbAgentHost = {
     snapshot: () => ({ current, preset, catalog }),
     apply: async (chain) => {
@@ -30,10 +32,15 @@ function host() {
       saves.push([index, name]);
       return 'saved';
     },
+    tones: () => tones,
+    keepTone: async (name, notes) => {
+      tones = withTone(tones, mbTone(preset, name, notes, `kept-${tones.length}`));
+    },
   };
   return {
     h,
     saves,
+    tones: () => tones,
     load: (n: number) => {
       current = n;
     },
@@ -119,4 +126,34 @@ test('a message asking to save in a slot opens the Save dialog itself', () => {
   const s = host();
   assert.equal(matriboxAgent(s.h).offerSave('grave no 2B'), '2B');
   assert.deepEqual(s.saves, [[5, 'Drive AD']]);
+});
+
+test('keep_tone keeps the sound, the next first message lists it, and load_saved_tone brings it back as one step', async () => {
+  const s = host();
+  const agent = matriboxAgent(s.h);
+  const run = agent.runner();
+  assert.equal((await run('list_saved_tones', {})).text, 'No tones kept yet.');
+  assert.doesNotMatch(agent.context(false), /Saved tones/);
+  const kept = await run('keep_tone', { name: 'AD Crunch', notes: 'AC/DC, rhythm' });
+  assert.equal(kept.ok, true);
+  assert.deepEqual(
+    s.tones().map((t) => [t.name, t.notes]),
+    [['AD Crunch', 'AC/DC, rhythm']],
+  );
+  assert.match(agent.context(false), /Saved tones \(load_saved_tone\):\n- AD Crunch: AC\/DC, rhythm \[.*Imaginary Overdrive 808/);
+  const original = s.preset().chain;
+  await run('build_tone', { blocks: [{ module: 'AMP', model: 'Fake Plexi' }] });
+  assert.equal(s.preset().chain.length, 1);
+  const loaded = await run('load_saved_tone', { name: 'ad crunch' });
+  assert.equal(loaded.ok, true);
+  assert.match(loaded.text, /^Loaded the kept tone "AD Crunch"\.\n\nName: Drive AD/);
+  assert.deepEqual(
+    s.preset().chain.map((b) => [b.moduleIndex, b.fxid, b.on]),
+    original.map((b) => [b.moduleIndex, b.fxid, b.on]),
+  );
+  assert.equal(agent.acts.has('load_saved_tone') && agent.acts.has('keep_tone'), true);
+  const missing = await run('load_saved_tone', { name: 'Nope' });
+  assert.equal(missing.ok, false);
+  assert.match(missing.text, /no kept tone is called "Nope"\. Kept tones:\n- AD Crunch/);
+  assert.equal((await run('keep_tone', { name: 'Way too long for a preset', notes: '' })).ok, false);
 });

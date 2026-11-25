@@ -16,6 +16,7 @@ import { MatriboxControls } from './MatriboxControls';
 import { MatriboxExpression } from './MatriboxExpression';
 import { MatriboxFootswitches } from './MatriboxFootswitches';
 import { MatriboxHeader } from './MatriboxHeader';
+import { MatriboxLibrary } from './MatriboxLibrary';
 import { MatriboxPresetFile } from './MatriboxPresetFile';
 import { MatriboxPresets } from './MatriboxPresets';
 import { MatriboxSaveDialog } from './MatriboxSaveDialog';
@@ -150,6 +151,7 @@ export function MatriboxEditor({ port, desktop }: { port: MidiPort; desktop: boo
               onClose={closeSave}
             />
             <MatriboxAssistant mb={mb} history={history} proposeSave={proposeSave} />
+            <MatriboxLibrary mb={mb} history={history} />
             <MatriboxBackupAll mb={mb} loaded={mbPresetLabel(unit.current)} />
           </>
         )}

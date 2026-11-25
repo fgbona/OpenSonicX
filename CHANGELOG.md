@@ -18,6 +18,20 @@ and the project uses [Semantic Versioning](https://semver.org/).
   `11`, `13`, `16`) analysed as far as the captures allow (no parser or write: no capture changes
   a global), and a capture list to settle them.
 
+- Matribox II Pro editor: a tone library, like the Pocket Master's. *Keep tone* reads the edit
+  buffer from the unit and keeps it in this browser under a name (the loaded preset's by default)
+  and notes; *Load* sends a kept tone's chain (models, on/off, values) to the loaded preset as one
+  Undo step, through the editor's validated writes, and never writes a slot. Tones can be renamed
+  and deleted, and the whole library exported to and imported from one JSON file
+  (`matribox-library.json`; a file that is not one is refused). It has its own storage key,
+  `pocket-master-editor.matriboxLibrary.v1`, with every storage access guarded; a tone of the
+  same name is replaced. Loading needs the model catalog, which gives each model's parameters.
+  The Matribox tone assistant keeps and loads tones through it (`list_saved_tones`,
+  `load_saved_tone`, `keep_tone`, mirroring the Pocket Master's tools), and its first message
+  lists the kept tones with the gear their models are based on. The list-in-localStorage code is
+  now one small helper (`localList`) both libraries use; the Pocket Master's library keeps its
+  key and behaviour.
+
 - Matribox II Pro editor: drag a chain tile to a new place, as on the Pocket Master's strip. A
   drop is one move-block write to the unit, then the usual read-back; a blue line shows where the
   tile lands, the ADD tile neither drags nor takes a drop, and Undo covers the move like an arrow

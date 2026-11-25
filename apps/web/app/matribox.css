@@ -141,6 +141,16 @@
 .fold details:not([open]) summary::after { transform: rotate(-45deg); margin-bottom: 0; }
 .fold-note { margin-left: auto; }
 
+/* Tone library: the keep form on one row (stacked on a phone), five columns a kept tone. */
+.mb-lib-keep { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; align-items: end; gap: 10px; }
+.library.mb-library li { grid-template-columns: minmax(0, 1fr) auto auto auto auto; }
+.mb-lib-rename { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; }
+.mb-lib-rename input { flex: 1; min-width: 0; padding: 6px 10px; border: none; border-radius: var(--radius-small); background: var(--fill); font: inherit; color: var(--label); }
+@media (max-width: 720px) {
+  .mb-lib-keep { grid-template-columns: minmax(0, 1fr); }
+  .library.mb-library li { grid-template-columns: minmax(0, 1fr) auto auto auto; }
+}
+
 /* Footswitches: a card a switch, a chip a block; a lit chip is toggled by that switch. */
 .mb-fs-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 14px 16px 16px; }
 .mb-fs { min-width: 0; margin: 0; padding: 6px 12px 12px; border: 1px solid var(--separator); border-radius: 12px; background: var(--surface-2); }

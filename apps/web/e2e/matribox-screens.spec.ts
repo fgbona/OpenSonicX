@@ -61,6 +61,31 @@ test('footswitch, expression and tuner panels', async ({ page }) => {
   await snap(page, 'panels-dark', { fullPage: true, clip: { x: 0, y: first.y - 12, width: 1440, height: last.y + last.height - first.y + 24 } });
 });
 
+/** Two kept tones in the tone library, the panel scrolled into view. */
+async function keepTones(page: Page) {
+  const library = page.getByRole('region', { name: 'Tone library' });
+  await library.getByRole('textbox', { name: 'Name' }).fill('Crunch');
+  await library.getByRole('textbox', { name: 'Notes' }).fill('AC/DC, Back in Black, rhythm');
+  await library.getByRole('button', { name: 'Keep tone' }).click();
+  await expect(library.getByRole('status')).toContainText('Crunch');
+  await library.getByRole('textbox', { name: 'Name' }).fill('Lead');
+  await library.getByRole('button', { name: 'Keep tone' }).click();
+  await expect(library.getByRole('listitem')).toHaveCount(2);
+  await library.scrollIntoViewIfNeeded();
+  return library;
+}
+
+for (const theme of ['dark', 'light'] as const) {
+  test(`tone library, ${theme} theme`, async ({ page }) => {
+    await connectMatribox(page);
+    if (theme === 'light') await page.getByRole('button', { name: 'Switch to light theme' }).click();
+    await pickCatalog(page);
+    const library = await keepTones(page);
+    await expect(page.getByRole('button', { name: 'Read', exact: true })).toBeEnabled();
+    await library.screenshot({ path: `${DIR}/library-desktop-${theme}.png` });
+  });
+}
+
 test.describe('phone', () => {
   const { defaultBrowserType: _, ...pixel } = devices['Pixel 7'];
   test.use(pixel);
@@ -75,4 +100,15 @@ test.describe('phone', () => {
     await page.getByRole('listbox', { name: 'Add a block: type' }).getByRole('option', { name: 'DRV', exact: true }).click();
     await snap(page, 'phone-add-models', {});
   });
+  for (const theme of ['dark', 'light'] as const) {
+    test(`tone library, ${theme} theme`, async ({ page }) => {
+      await connectMatribox(page);
+      if (theme === 'light') await page.getByRole('button', { name: 'Switch to light theme' }).click();
+      await pickCatalog(page);
+      const library = await keepTones(page);
+      // The Read button sits in the More menu here: the Keep button tells the editor is idle.
+      await expect(library.getByRole('button', { name: 'Keep tone' })).toBeEnabled();
+      await library.screenshot({ path: `${DIR}/library-phone-${theme}.png` });
+    });
+  }
 });

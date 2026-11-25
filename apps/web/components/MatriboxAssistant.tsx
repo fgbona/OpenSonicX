@@ -2,6 +2,7 @@
 
 import { useMemo, useRef } from 'react';
 import { matriboxAgent } from '@/lib/matriboxAgent';
+import { keepMbTone, mbLibraryNow, mbTone } from '@/lib/matriboxLibrary';
 import type { Matribox } from '@/lib/useMatribox';
 import type { MatriboxHistory } from '@/lib/useMatriboxHistory';
 import { AssistantPanel } from './AssistantPanel';
@@ -31,6 +32,12 @@ export function MatriboxAssistant({ mb, history, proposeSave }: Props) {
         apply: (chain) => latest.current.history.applyChain(chain),
         undo: () => latest.current.history.undo(),
         proposeSave: (index, name) => latest.current.proposeSave(index, name),
+        tones: mbLibraryNow,
+        keepTone: async (name, notes) => {
+          const preset = await latest.current.mb.readEditBuffer();
+          if (!preset) throw new Error('The edit buffer could not be read from the Matribox.');
+          keepMbTone(mbTone(preset, name, notes));
+        },
       }),
     [],
   );
