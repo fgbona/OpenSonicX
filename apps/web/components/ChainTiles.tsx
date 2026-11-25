@@ -2,9 +2,8 @@
 
 import { useState, useSyncExternalStore } from 'react';
 import { type Block, blockModelLabel, chainUnits, type Edit, moveInChain } from '@pocket-master/core';
-import { ModuleIcon } from './ModuleIcon';
+import { PedalTile, TileMove, TileStrip } from './TileStrip';
 import { useI18n } from './I18n';
-import { useStripScroll } from './useStripScroll';
 
 interface Props {
   chain: readonly Block[];
@@ -36,7 +35,6 @@ export function ChainTiles({ chain, editable, selected, onSelect, onEdit, irName
   const touch = useSyncExternalStore(onTouchChange, touchOnly, () => false);
   const [dragging, setDragging] = useState<number | null>(null);
   const [over, setOver] = useState<number | null>(null);
-  const strip = useStripScroll<HTMLOListElement>([chain.length]);
   const order = chain.map((b) => b.module);
   const byModule = new Map(chain.map((b) => [b.module, b]));
   const units = chainUnits(order);
@@ -46,83 +44,69 @@ export function ChainTiles({ chain, editable, selected, onSelect, onEdit, irName
   };
 
   return (
-    <div className="tiles-wrap">
-      {strip.hidden.start && (
-        <button type="button" className="tiles-page tiles-page-start" aria-label={t('chain.scrollStart')} onClick={() => strip.page(-1)}>
-          ‹
-        </button>
-      )}
-      <ol ref={strip.ref} className={`tiles${editable ? ' tiles-editable' : ''}`} aria-label={t('chain.aria')}>
-        {units.map((unit, index) => {
-          const lead = unit[0] as number;
-          const name = unit.map((m) => byModule.get(m)?.label).join('-');
-          return (
-            <li
-              key={lead}
-              className={`tile-unit${unit.length > 1 ? ' tile-group' : ''}${dragging === lead ? ' tile-dragging' : ''}${over === index && dragging !== null ? ' tile-over' : ''}`}
-              draggable={editable && !touch}
-              onDragStart={(e) => {
-                setDragging(lead);
-                e.dataTransfer.effectAllowed = 'move';
-                e.dataTransfer.setData('text/plain', String(lead));
-              }}
-              onDragEnd={() => {
-                setDragging(null);
-                setOver(null);
-              }}
-              onDragOver={(e) => {
-                if (dragging === null) return;
-                e.preventDefault();
-                setOver(index);
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                if (dragging !== null) move(dragging, index);
-                setDragging(null);
-                setOver(null);
-              }}
-            >
-              {unit.map((m) => {
-                const b = byModule.get(m) as Block;
-                const model = blockModelLabel(b, ampMode, irNames, profileNames);
-                return (
-                  <div key={m} className={`tile block-${b.key}${b.on ? '' : ' tile-off'}${selected === m ? ' tile-selected' : ''}`}>
-                    <button type="button" className="tile-body" aria-pressed={selected === m} aria-label={t('tile.select', { block: b.label, model })} onClick={() => onSelect(m)}>
-                      <ModuleIcon blockKey={b.key} />
-                      <span className="tile-label">{b.label}</span>
-                      <span className="tile-model">{model}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className={`tile-led${b.on ? ' is-on' : ''}`}
-                      role="switch"
-                      aria-checked={b.on}
-                      aria-label={t(b.on ? 'block.onAria' : 'block.offAria', { block: b.label })}
-                      disabled={!editable}
-                      onClick={() => onEdit({ kind: 'on', module: b.module, on: !b.on })}
-                    />
-                  </div>
-                );
-              })}
-              {editable && (
-                <span className="tile-move">
-                  <button type="button" aria-label={t('chain.earlier', { name })} disabled={index === 0} onClick={() => move(lead, index - 1)}>
-                    ‹
-                  </button>
-                  <button type="button" aria-label={t('chain.later', { name })} disabled={index === units.length - 1} onClick={() => move(lead, index + 1)}>
-                    ›
-                  </button>
-                </span>
-              )}
-            </li>
-          );
-        })}
-      </ol>
-      {strip.hidden.end && (
-        <button type="button" className="tiles-page tiles-page-end" aria-label={t('chain.scrollEnd')} onClick={() => strip.page(1)}>
-          ›
-        </button>
-      )}
-    </div>
+    <TileStrip deps={[chain.length]} editable={editable}>
+      {units.map((unit, index) => {
+        const lead = unit[0] as number;
+        const name = unit.map((m) => byModule.get(m)?.label).join('-');
+        return (
+          <li
+            key={lead}
+            className={`tile-unit${unit.length > 1 ? ' tile-group' : ''}${dragging === lead ? ' tile-dragging' : ''}${over === index && dragging !== null ? ' tile-over' : ''}`}
+            draggable={editable && !touch}
+            onDragStart={(e) => {
+              setDragging(lead);
+              e.dataTransfer.effectAllowed = 'move';
+              e.dataTransfer.setData('text/plain', String(lead));
+            }}
+            onDragEnd={() => {
+              setDragging(null);
+              setOver(null);
+            }}
+            onDragOver={(e) => {
+              if (dragging === null) return;
+              e.preventDefault();
+              setOver(index);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (dragging !== null) move(dragging, index);
+              setDragging(null);
+              setOver(null);
+            }}
+          >
+            {unit.map((m) => {
+              const b = byModule.get(m) as Block;
+              const model = blockModelLabel(b, ampMode, irNames, profileNames);
+              return (
+                <PedalTile
+                  key={m}
+                  tint={`block-${b.key}`}
+                  icon={b.key}
+                  label={b.label}
+                  model={model}
+                  on={b.on}
+                  selected={selected === m}
+                  editable={editable}
+                  selectLabel={t('tile.select', { block: b.label, model })}
+                  ledLabel={t(b.on ? 'block.onAria' : 'block.offAria', { block: b.label })}
+                  onSelect={() => onSelect(m)}
+                  onToggle={() => onEdit({ kind: 'on', module: b.module, on: !b.on })}
+                />
+              );
+            })}
+            {editable && (
+              <TileMove
+                earlierLabel={t('chain.earlier', { name })}
+                laterLabel={t('chain.later', { name })}
+                first={index === 0}
+                last={index === units.length - 1}
+                onEarlier={() => move(lead, index - 1)}
+                onLater={() => move(lead, index + 1)}
+              />
+            )}
+          </li>
+        );
+      })}
+    </TileStrip>
   );
 }

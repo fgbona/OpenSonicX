@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Yellowtail } from 'next/font/google';
 import './globals.css';
+import './matribox.css';
 import { I18nProvider } from '@/components/I18n';
 import { THEME_BOOT_SCRIPT } from '@/components/ThemeToggle';
 import { UpdatePrompt } from '@/components/UpdatePrompt';

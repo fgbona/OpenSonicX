@@ -1,6 +1,6 @@
 import type { Page, Route } from '@playwright/test';
 import { parseMbPreset } from '@pocket-master/core';
-import { CATALOG_FILE, connectMatribox, expect, pickCatalog, test } from './matribox-fixtures.ts';
+import { blockPanel, CATALOG_FILE, connectMatribox, expect, expectChain, pickCatalog, test, turnKnob } from './matribox-fixtures.ts';
 
 // Groq is simulated: every call is answered here, so nothing leaves the machine.
 type Reply = { body: unknown };
@@ -20,7 +20,7 @@ async function fakeGroq(page: Page, replies: Reply[]) {
 }
 
 const panel = (page: Page) => page.getByRole('region', { name: 'Tone assistant' });
-const chain = (page: Page, text: string) => expect(page.getByText(`Chain: ${text}`, { exact: true })).toBeVisible();
+const chain = expectChain;
 const loaded = (unit: { editBuffer: Uint8Array }) => parseMbPreset(unit.editBuffer);
 
 async function openChat(page: Page) {
@@ -87,16 +87,12 @@ test("Undo and Redo replay the editor's own edits through the unit, from the but
   const undo = page.getByRole('button', { name: 'Undo' });
   await expect(undo).toBeDisabled();
 
-  await page.getByRole('slider', { name: 'DRV Gain' }).fill('77');
+  const drive = await blockPanel(page, 2, 'DRV');
+  await turnKnob(drive.getByRole('slider', { name: 'Gain' }), 77);
   await expect.poll(() => loaded(unit).chain[1]!.values[0]).toBe(77);
-  await page
-    .getByRole('listitem', { name: /^2\. DRV/ })
-    .getByRole('checkbox')
-    .check();
-  await page
-    .getByRole('listitem', { name: /^5\. RVB/ })
-    .getByRole('button', { name: 'Remove' })
-    .click();
+  await drive.getByRole('switch', { name: '2. DRV off' }).click();
+  const reverb = await blockPanel(page, 5, 'RVB');
+  await reverb.getByRole('button', { name: 'Remove 5. RVB from the chain' }).click();
   await chain(page, 'DYN → DRV → AMP → CAB → VOL');
 
   await undo.click();

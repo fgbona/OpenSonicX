@@ -65,27 +65,29 @@ export function MatriboxBackupAll({ mb, loaded }: Props) {
       <div className="panel-head">
         <h2>{t('mb.allTitle')}</h2>
       </div>
-      <p className="muted small">{t('mb.allNote')}</p>
-      <div className="mb-head-actions">
-        <button type="button" className="btn" disabled={disabled} onClick={() => (mb.edited ? setAsking(true) : void backup())}>
-          {t('mb.backupAll')}
-        </button>
-        <label className="btn">
-          {t('mb.restoreAll')}
-          <input type="file" hidden accept=".json,application/json" aria-label={t('mb.allPick')} disabled={disabled} onChange={(e) => void pick(e.currentTarget)} />
-        </label>
+      <div className="mb-body">
+        <p className="muted small">{t('mb.allNote')}</p>
+        <div className="mb-head-actions">
+          <button type="button" className="btn" disabled={disabled} onClick={() => (mb.edited ? setAsking(true) : void backup())}>
+            {t('mb.backupAll')}
+          </button>
+          <label className="btn">
+            {t('mb.restoreAll')}
+            <input type="file" hidden accept=".json,application/json" aria-label={t('mb.allPick')} disabled={disabled} onChange={(e) => void pick(e.currentTarget)} />
+          </label>
+        </div>
+        {mb.busy === 'Backing up' && !pending && mb.progress && <ProgressBar progress={mb.progress} />}
+        {backedUp !== null && mb.busy === null && (
+          <p className="small" role="status">
+            {t('mb.backupAllDone', { count: backedUp })}
+          </p>
+        )}
+        {fileError && (
+          <p className="alert" role="alert">
+            {te(fileError)}
+          </p>
+        )}
       </div>
-      {mb.busy === 'Backing up' && !pending && mb.progress && <ProgressBar progress={mb.progress} />}
-      {backedUp !== null && mb.busy === null && (
-        <p className="small" role="status">
-          {t('mb.backupAllDone', { count: backedUp })}
-        </p>
-      )}
-      {fileError && (
-        <p className="alert" role="alert">
-          {te(fileError)}
-        </p>
-      )}
 
       <Dialog open={asking} title={t('mb.backupAll')} onClose={() => setAsking(false)}>
         <p>{t('mb.allEdited', { slot: loaded })}</p>

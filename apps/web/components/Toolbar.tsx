@@ -7,6 +7,7 @@ import { LanguageSwitch, useI18n } from './I18n';
 import { useEffect, useState } from 'react';
 import { bluetoothAvailable } from '@/lib/ble';
 import { ThemeToggle } from './ThemeToggle';
+import { RedoIcon, UndoIcon } from './icons';
 
 interface Props {
   status: Status;
@@ -90,16 +91,10 @@ export function Toolbar(p: Props) {
         ) : p.matribox ? null : (
           <>
             <button type="button" className="btn btn-icon" onClick={p.onUndo} disabled={!p.canUndo} aria-label={t('action.undo')} title={`${t('action.undo')} (${MOD}Z)`}>
-              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 14 4 9l5-5" />
-                <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
-              </svg>
+              <UndoIcon />
             </button>
             <button type="button" className="btn btn-icon" onClick={p.onRedo} disabled={!p.canRedo} aria-label={t('action.redo')} title={`${t('action.redo')} (${MOD}⇧Z)`}>
-              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m15 14 5-5-5-5" />
-                <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />
-              </svg>
+              <RedoIcon />
             </button>
             <button type="button" className="btn" onClick={p.onRevert} disabled={!p.modified}>
               {t('action.revert')}

@@ -16,7 +16,7 @@ import {
   type Preset,
 } from '@pocket-master/core';
 import { Knob } from './Knob';
-import { AmpTube } from './AmpTube';
+import { AmpDecor } from './AmpDecor';
 import { ModelPicker, type PickerGroup, type PickerOption } from './ModelPicker';
 import { noteFor, useSlotNotes } from '@/lib/slotNotes';
 import { ampSkin, hasTube } from '@/lib/ampSkins';
@@ -196,21 +196,6 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
           })()}
       </div>
     </section>
-  );
-}
-
-/** Faceplate details of the AMP panel: screws, top vent, a lit power tube and the speaker grille. */
-function AmpDecor({ on, drive, tubeKey, tube }: { on: boolean; drive: number; tubeKey: number; tube: boolean }) {
-  return (
-    <>
-      <span className="amp-screw amp-screw-tl" aria-hidden="true" />
-      <span className="amp-screw amp-screw-tr" aria-hidden="true" />
-      <span className="amp-screw amp-screw-bl" aria-hidden="true" />
-      <span className="amp-screw amp-screw-br" aria-hidden="true" />
-      <span className="amp-vent" aria-hidden="true" />
-      {tube ? <AmpTube key={tubeKey} on={on} drive={drive} /> : <span className="amp-tube" aria-hidden="true" />}
-      <span className="amp-grille" aria-hidden="true" />
-    </>
   );
 }
 

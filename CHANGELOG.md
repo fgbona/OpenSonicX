@@ -22,6 +22,22 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The Matribox II Pro editor now looks like the Pocket Master's. The chain is a strip of pedal
+  tiles (module drawing and colour, model, an LED that switches the block, arrows to move it, a
+  last tile to add a block) that scrolls by touch, mouse wheel or its ‹ › buttons. One panel
+  shows the selected block: the same two-column model menu (model, and the real gear it is
+  based on from your catalog, grouped by module), an on/off switch, Remove, and each parameter
+  as a knob, a switch (0..1) or a small selector (a few steps), with ranges other than 0..100
+  under the knob. AMP blocks wear the Pocket Master's amp finishes, chosen from the model's
+  `origin` in your catalog (Marshall, Fender tweed and blackface, Mesa/Boogie, Vox, Soldano,
+  5150, ENGL/Diezel, boutique, Roland JC, bass amps; a plain plate otherwise). DRV is red and
+  DYN light blue, as on the unit; the other modules follow the Pocket Master's colours. The
+  preset header has the big label and name, the style tag, Undo, Redo, Save and Read, and the
+  patch volume as a knob; the sidebar groups the 240 presets by bank and folds away on a
+  phone. Footswitches A-D are cards of block chips, the expression entries are grouped as EXP 1
+  mode A, mode B and EXP 2 in a folding panel, and the experimental notice is a one-line banner.
+  Without the catalog the chain keeps its colours and a block shows its raw stored values. What
+  is sent to the unit is unchanged.
 - Internal: the Matribox II Pro request/answer link (IR upload included), the simulated unit the
   tests run against and the catalog name/range checks now live once in `packages/core`; the MCP
   server and the web editor import them instead of keeping their own copies. No behaviour change.

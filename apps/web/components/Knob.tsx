@@ -11,6 +11,8 @@ interface Props {
   /** Shown above the knob, e.g. "400 ms". */
   display: string;
   defaultValue?: number;
+  /** A note under the label, e.g. the range "-80 … 0". */
+  hint?: string;
   disabled?: boolean;
   onChange: (value: number) => void;
 }
@@ -34,7 +36,7 @@ const arc = (from: number, to: number) => {
 };
 
 /** A rotary control: drag up/down, wheel, arrow keys; double-click returns to the default. */
-export function Knob({ label, value, min, max, step = 1, display, defaultValue, disabled = false, onChange }: Props) {
+export function Knob({ label, value, min, max, step = 1, display, defaultValue, hint, disabled = false, onChange }: Props) {
   const id = useId();
   const ref = useRef<HTMLDivElement>(null);
   const drag = useRef<{ y: number; value: number } | null>(null);
@@ -124,6 +126,7 @@ export function Knob({ label, value, min, max, step = 1, display, defaultValue, 
       <span className="knob-label" id={id}>
         {label}
       </span>
+      {hint && <span className="knob-hint">{hint}</span>}
     </div>
   );
 }

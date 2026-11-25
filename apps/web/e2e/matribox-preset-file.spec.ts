@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { parseMatriboxPrst, parseMbPreset, toHex, writeMatriboxPrst } from '@pocket-master/core';
-import { connectMatribox, expect, pickCatalog, test } from './matribox-fixtures.ts';
+import { blockPanel, connectMatribox, expect, pickCatalog, test, turnKnob } from './matribox-fixtures.ts';
 
 const loaded = (unit: { editBuffer: Uint8Array }) => parseMbPreset(unit.editBuffer);
 const KEPT = [2, 3, 4, 5, 7, 9];
@@ -16,7 +16,8 @@ const BACKUPS = 'pocket-master-editor.matribox-backups.v1';
 test('export downloads the loaded preset, unsaved edits included, as a .prst that parses back', async ({ page, unit }) => {
   await connectMatribox(page);
   await pickCatalog(page);
-  await page.getByRole('slider', { name: 'DRV Gain' }).fill('16');
+  const drive = await blockPanel(page, 2, 'DRV');
+  await turnKnob(drive.getByRole('slider', { name: 'Gain' }), 16);
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export preset' }).click();
   const file = await download;
@@ -58,10 +59,7 @@ test('import shows what the file holds, needs a confirmation, backs the target u
 
 test('import takes a backup of one slot too, and says that unsaved edits are lost', async ({ page, unit }) => {
   await connectMatribox(page);
-  await page
-    .getByRole('listitem', { name: /^2\. module 3/ })
-    .getByRole('checkbox')
-    .check();
+  await page.getByRole('list', { name: 'Signal chain' }).getByRole('switch', { name: '2. module 3 off' }).click();
   await expect.poll(() => loaded(unit).chain[1]!.on).toBe(true);
   const backup = { device: 'Sonicake Matribox II Pro', label: '17C', index: 66, name: 'Drive AD', createdAt: '2026-11-24T12:00:00.000Z', source: 'slot', preset: toHex(unit.stored(66)!) };
   await page.getByLabel(PICK).setInputFiles({ name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) });

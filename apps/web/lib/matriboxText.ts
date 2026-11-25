@@ -5,12 +5,12 @@
  */
 import type { Difference, MbCatalog, MbModel, MbParam, MbPreset } from '@pocket-master/core';
 import { gearOf } from './matribox.ts';
+import { mbFxidHex as fxidHex } from './matriboxLook.ts';
 import { modelOf, moduleName, type MbChainBlock } from './matriboxPlan.ts';
 
 const round = (n: number) => String(Number(n.toFixed(2)));
 const isPercent = (p: MbParam) => p.min === 0 && p.max === 100;
 const withGear = (model: MbModel, based = '') => `${model.name}${gearOf(model) ? ` (${based}${gearOf(model)})` : ''}`;
-const fxidHex = (fxid: number) => `0x${fxid.toString(16).padStart(8, '0')}`;
 
 /**
  * Every module's models with the gear each is based on, one line a module. `withParams` adds the
