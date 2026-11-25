@@ -120,7 +120,8 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
   `MATRIBOX_CATALOG`). Without it the presets and chains still show, by module number.
   It looks like the Pocket Master's editor: the chain as a strip of pedals (each module in its
   own colour, an LED that switches it, arrows to move it, a last tile to add a block), one panel
-  for the selected block with its model menu (the model and the real gear beside it) and its
+  for the selected block with its model menu (only that module's models, grouped by type, with
+  the real gear beside each; *Add* asks for the block type first, then the model) and its
   parameters as knobs, switches and small selectors, and AMP blocks dressed like the amp their
   model is based on, read from your catalog (Marshall gold panel, Fender tweed or blackface,
   Mesa diamond plate…; materials and colours only, no logos).

@@ -49,6 +49,17 @@ and the project uses [Semantic Versioning](https://semver.org/).
   mode A, mode B and EXP 2 in a folding panel, and the experimental notice is a one-line banner.
   Without the catalog the chain keeps its colours and a block shows its raw stored values. What
   is sent to the unit is unchanged.
+- Matribox II Pro editor: a block's model menu lists only that block's module (a DRV block,
+  only DRV models), grouped under the model types of your catalog (Overdrive, Fuzz, …) in the
+  catalog's order, with no heading for a module of one type; IR and CLONE models show the name
+  of the user IR or capture in their slot. The *Add* tile now asks in two steps: first the block
+  type (each module with its drawing and colour), then that module's models grouped the same
+  way; *Back* or Escape returns to the types. Without the catalog *Add* still lists the modules,
+  and offers the models the chain already uses, by id.
+- Model menus (both pedals): group headings are drawn in the secondary label colour, which
+  meets WCAG AA contrast, and the open list takes keyboard focus in the tab order, as an
+  accessibility checker expects of a scrolling region. Nothing else changes in the Pocket
+  Master's menus.
 - Internal: the Matribox II Pro request/answer link (IR upload included), the simulated unit the
   tests run against and the catalog name/range checks now live once in `packages/core`; the MCP
   server and the web editor import them instead of keeping their own copies. No behaviour change.

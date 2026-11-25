@@ -1,10 +1,10 @@
 'use client';
 
-import { useMemo } from 'react';
 import type { MbCatalog, MbResolvedBlock } from '@pocket-master/core';
 import { hasTube } from '@/lib/ampSkins';
 import { gearOf } from '@/lib/matribox';
-import { mbAmpSkin, mbFxidHex, mbLookKey, mbModelGroups, mbModelValue, parseMbModelValue } from '@/lib/matriboxLook';
+import { mbAmpSkin, mbFxidHex, mbLookKey, mbModelValue, parseMbModelValue } from '@/lib/matriboxLook';
+import { mbMenuModels } from '@/lib/matriboxMenus';
 import { AmpDecor } from './AmpDecor';
 import { MatriboxParam } from './MatriboxParam';
 import { ModelPicker } from './ModelPicker';
@@ -16,8 +16,8 @@ interface Props {
   /** The slot's 15 stored values, shown raw when the catalog does not name the model. */
   values: readonly number[];
   catalog: MbCatalog | null;
-  /** The user IR or capture this block plays, for IR and CLONE blocks. */
-  userSlot: string | undefined;
+  /** The user IR or capture an IR or CLONE model plays; the model menu names it so. */
+  userSlot: (block: Pick<MbResolvedBlock, 'module' | 'fxid'>) => string | undefined;
   disabled: boolean;
   onParam: (slot: number, id: number, value: number) => void;
   onOn: (slot: number, on: boolean) => void;
@@ -46,12 +46,9 @@ export function MatriboxBlockPanel({ block, values, catalog, userSlot, disabled,
   const name = `${block.position}. ${block.module}`;
   const unknown = t('mb.unknownModel', { fxid: mbFxidHex(block.fxid) });
   const value = mbModelValue(block.moduleIndex, block.fxid);
-  const groups = useMemo(() => {
-    if (!catalog) return [];
-    const listed = mbModelGroups(catalog);
-    // A model the catalog does not name still shows as the chosen one.
-    return block.model ? listed : [{ name: null, options: [{ value, name: unknown, disabled: true }] }, ...listed];
-  }, [catalog, block.model, value, unknown]);
+  // Only this block's module: a model change keeps the block type. A model the catalog does not name still shows as the chosen one.
+  const listed = catalog ? mbMenuModels(catalog, block.moduleIndex, [], { other: t('block.otherModels'), unknown: (fxid) => fxid, userName: (fxid) => userSlot({ module: block.module, fxid }) }) : [];
+  const groups = block.model ? listed : [{ name: null, options: [{ value, name: unknown, disabled: true }] }, ...listed];
   const gear = block.model ? gearOf(block.model) : '';
   // The faceplate needs the model: without the catalog an AMP shows its raw values like any block.
   const amp = key === 'amp' && block.model !== null;
@@ -75,7 +72,6 @@ export function MatriboxBlockPanel({ block, values, catalog, userSlot, disabled,
         ) : (
           <span className="editor-model editor-model-static">{unknown}</span>
         )}
-        {userSlot && <span className="mb-user-slot">“{userSlot}”</span>}
         <span className="editor-end">
           <button type="button" className="btn btn-small" disabled={disabled} aria-label={t('mb.removeAria', { block: name })} onClick={() => onRemove(block.position - 1)}>
             {t('mb.remove')}

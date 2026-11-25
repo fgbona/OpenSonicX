@@ -40,6 +40,17 @@ test('model picker open, and a non-amp block', async ({ page }) => {
   await snap(page, 'model-picker-dark', { clip: SCREEN });
 });
 
+test("add menu: block types, then a module's models", async ({ page }) => {
+  await connectMatribox(page);
+  await pickCatalog(page);
+  await page.getByRole('button', { name: 'Add a block…' }).click();
+  await expect(page.getByRole('listbox', { name: 'Add a block: type' })).toBeVisible();
+  await snap(page, 'add-types-dark', { clip: SCREEN });
+  await page.getByRole('listbox', { name: 'Add a block: type' }).getByRole('option', { name: 'DRV', exact: true }).click();
+  await expect(page.getByRole('listbox', { name: 'Add a block: DRV model' })).toBeVisible();
+  await snap(page, 'add-models-dark', { clip: SCREEN });
+});
+
 test('footswitch, expression and tuner panels', async ({ page }) => {
   await connectMatribox(page);
   await pickCatalog(page);
@@ -58,5 +69,10 @@ test.describe('phone', () => {
     await pickCatalog(page);
     await snap(page, 'phone-dark', {});
     await snap(page, 'phone-dark-full');
+    await page.getByRole('button', { name: 'Add a block…' }).scrollIntoViewIfNeeded();
+    await page.getByRole('button', { name: 'Add a block…' }).click();
+    await snap(page, 'phone-add-types', {});
+    await page.getByRole('listbox', { name: 'Add a block: type' }).getByRole('option', { name: 'DRV', exact: true }).click();
+    await snap(page, 'phone-add-models', {});
   });
 });

@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { MB_SLOTS, type MbCatalog, type MbResolvedBlock } from '@pocket-master/core';
-import { mbFxidHex, mbLookKey, mbModelGroups, parseMbModelValue } from '@/lib/matriboxLook';
-import { PickerList } from './ModelPicker';
+import { mbFxidHex, mbLookKey } from '@/lib/matriboxLook';
+import { MatriboxAddMenu } from './MatriboxAddMenu';
 import { PedalTile, TileMove, TileStrip } from './TileStrip';
 import { useI18n } from './I18n';
 import { useTileDrag } from './useTileDrag';
@@ -15,7 +15,7 @@ interface Props {
   selected: number | null;
   disabled: boolean;
   /** The user IR or capture an IR or CLONE block plays. */
-  userSlot: (block: MbResolvedBlock) => string | undefined;
+  userSlot: (block: Pick<MbResolvedBlock, 'module' | 'fxid'>) => string | undefined;
   onSelect: (slot: number) => void;
   onOn: (slot: number, on: boolean) => void;
   onMove: (from: number, to: number) => void;
@@ -27,16 +27,15 @@ export const mbTileModel = (block: MbResolvedBlock, userSlot: string | undefined
 
 /**
  * The Matribox's signal chain as the pedals of the Pocket Master's strip: a click selects the
- * block, the LED switches it, a drag (or the arrows) moves it, and the last tile adds a block (with the
- * catalog, while the unit has a free slot).
+ * block, the LED switches it, a drag (or the arrows) moves it, and the last tile adds a block
+ * while the unit has a free slot (MatriboxAddMenu).
  */
 export function MatriboxChain({ chain, catalog, selected, disabled, userSlot, onSelect, onOn, onMove, onAdd }: Props) {
   const { t } = useI18n();
   const [adding, setAdding] = useState(false);
   const addRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const groups = useMemo(() => (catalog ? mbModelGroups(catalog) : []), [catalog]);
-  const canAdd = catalog !== null && chain.length < MB_SLOTS;
+  const canAdd = chain.length < MB_SLOTS;
   // One move write per drop; a drop on the tile's own place writes nothing.
   const drag = useTileDrag(!disabled, (from, to) => {
     if (from !== to) onMove(from, to);
@@ -52,17 +51,13 @@ export function MatriboxChain({ chain, catalog, selected, disabled, userSlot, on
       overlay={
         adding && canAdd ? (
           <div className="picker mb-add-menu" ref={menuRef}>
-            <PickerList
-              groups={groups}
-              value=""
-              ariaLabel={t('mb.addBlock')}
+            <MatriboxAddMenu
+              catalog={catalog}
+              chain={chain}
+              userSlot={userSlot}
               isInside={(target) => (addRef.current?.contains(target) || menuRef.current?.contains(target)) ?? false}
               onClose={closeAdd}
-              onChoose={(value) => {
-                closeAdd(true);
-                const model = parseMbModelValue(value);
-                if (model) onAdd(model.moduleIndex, model.fxid);
-              }}
+              onAdd={onAdd}
             />
           </div>
         ) : null

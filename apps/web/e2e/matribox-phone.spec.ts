@@ -56,6 +56,18 @@ test('the model menu opens as a sheet inside the screen and the panels fit', asy
   await page.getByRole('option', { name: /^Fake Fuzz/ }).tap();
   await expect(drive.getByRole('button', { name: '2. DRV model' })).toContainText('Fake Fuzz');
 
+  // The add menu's two steps are the same sheet.
+  await page.getByRole('button', { name: 'Add a block…' }).scrollIntoViewIfNeeded();
+  await page.getByRole('button', { name: 'Add a block…' }).tap();
+  await page.getByRole('listbox', { name: 'Add a block: type' }).getByRole('option', { name: 'AMP', exact: true }).tap();
+  const sheet = (await page.getByRole('listbox', { name: 'Add a block: AMP model' }).boundingBox())!;
+  expect(sheet.x).toBeGreaterThanOrEqual(0);
+  expect(sheet.x + sheet.width).toBeLessThanOrEqual(screen.width);
+  expect(Math.round(sheet.y + sheet.height)).toBe(screen.height - 12);
+  await page.getByRole('option', { name: /Back to block types/ }).tap();
+  await expect(page.getByRole('listbox', { name: 'Add a block: type' })).toBeFocused();
+  await page.keyboard.press('Escape');
+
   await page.getByText('Expression pedal').tap();
   expect(await sideways(page)).toBeLessThanOrEqual(0);
   for (const control of [page.getByRole('switch', { name: 'Footswitch D toggles 6. VOL' }), page.getByRole('button', { name: 'Set BPM' })]) {

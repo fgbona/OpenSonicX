@@ -4,9 +4,8 @@
  * own catalog at run time (module names, a model's `origin`, a parameter's range); nothing of the
  * catalog is kept here.
  */
-import type { MbCatalog, MbParam } from '@pocket-master/core';
+import type { MbParam } from '@pocket-master/core';
 import type { AmpSkin } from './ampSkins.ts';
-import { gearOf } from './matribox.ts';
 
 /** The modules of the unit, in catalog order; each has a tint (app/matribox.css) and a drawing (ModuleIcon). */
 export const MB_MODULE_KEYS = ['dyn', 'freq', 'wah', 'drv', 'amp', 'cab', 'ir', 'eq', 'mod', 'dly', 'rvb', 'clone', 'fxloop', 'fxsnd', 'fxrtn', 'vol'] as const;
@@ -33,14 +32,6 @@ export const mbModelValue = (moduleIndex: number, fxid: number) => `${moduleInde
 export function parseMbModelValue(value: string): { moduleIndex: number; fxid: number } | null {
   const match = /^(\d+):(\d+)$/.exec(value);
   return match ? { moduleIndex: Number(match[1]), fxid: Number(match[2]) } : null;
-}
-
-/** The model menu: one group a module, each model with the real gear it is based on in the second column. */
-export function mbModelGroups(catalog: MbCatalog) {
-  return catalog.modules.map((mod) => ({
-    name: mod.name,
-    options: mod.models.map((model) => ({ value: mbModelValue(mod.index, model.fxid), name: model.name, detail: gearOf(model) || undefined })),
-  }));
 }
 
 /** Makers and model names as an origin text spells them; the first match wins (bass amps before a maker's guitar amps). */
