@@ -182,6 +182,21 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Matribox II Pro model names and texts: the cabinets, EQs, delays, reverbs and pitch/filter
+  models no longer show numbered placeholders ("4x12 #25", "EQ-A", "DLY-T", "VERB-1",
+  "SIMPLE-1"), and three reverbs whose names had slipped one place (Church, Plate, Spring) now
+  carry their own. Every cabinet has a meaningful name (e.g. "Tweed 1x12", "Brit Lead 4x12",
+  "Fridge 8x10"), the EQs are named by purpose ("Guitar Mid EQ", "Bass Wide EQ"), and the
+  descriptions say the character, the best use and the actual controls (bands and ranges, Low
+  Cut/High Cut on cabinets). The remaining numbered names in DYN, DRV and MOD (GATE-1, DIST-1,
+  CHOR-1, TREM-2…) were renamed too. `model-text.json` gains an optional `gear` field, the real
+  gear in plain text, which the model menus' right column and "Based on" show in place of the
+  source's origin; 43 models have one. The generator (`scripts/matribox-map.mjs`) prefers that
+  field and no longer lets an IR file name (the "IR Cab: 39" kind), an original, another maker's
+  product name or non-Latin text through as gear; `models.json` regenerated. New core tests:
+  no gear is an original, an IR file, another maker's product or a bare number, and no model
+  name is a numbered placeholder.
+
 - Web e2e under parallel load: the axe and pixel-contrast tests (`a11y.spec.ts`) timed out at 30 s
   when many workers shared the CPU, and passed alone. Cause: `e2e/contrast.ts` shipped every pixel
   of every screenshot to the page as a JS array of arrays and sorted it there, and added a new

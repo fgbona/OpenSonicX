@@ -70,16 +70,20 @@ export interface MbMap {
   }[];
 }
 
-/** model-text.json: our name and descriptions of each model, by "MODULE:fxid". */
-export type MbTextMap = Readonly<Record<string, { readonly name: string; readonly en: string; readonly pt: string }>>;
+/** model-text.json: our name, the real gear (when known) and descriptions of each model, by "MODULE:fxid". */
+export type MbTextMap = Readonly<Record<string, { readonly name: string; readonly gear?: string; readonly en: string; readonly pt: string }>>;
 
 export const mbTextKey = (module: string, fxid: number) => `${module}:${fxid}`;
 
-/** The catalog of a map and its texts; a model without text is named "<MODULE> <index>" and described by its gear. */
+/**
+ * The catalog of a map and its texts; a model without text is named "<MODULE> <index>" and described by its gear.
+ * The gear is our text's `gear` when set, else the map's basedOn.
+ */
 export function mbCatalog(map: MbMap, text: MbTextMap): MbCatalog {
   const modules = map.modules.map((m) => {
     const models = m.models.map((a) => {
       const own = text[mbTextKey(m.module, a.fxid)];
+      const basedOn = own?.gear || a.basedOn;
       const params = a.params.map((p) =>
         Object.freeze({ name: p.label, id: p.id, defaultValue: p.default, min: p.min, max: p.max, step: p.step, ...(p.options ? { options: Object.freeze([...p.options]) } : {}) }),
       );
@@ -88,8 +92,8 @@ export function mbCatalog(map: MbMap, text: MbTextMap): MbCatalog {
         index: a.index,
         name: own?.name ?? `${m.module} ${a.index}`,
         type: a.type,
-        basedOn: a.basedOn,
-        description: Object.freeze({ en: own?.en ?? a.basedOn, pt: own?.pt ?? a.basedOn }),
+        basedOn,
+        description: Object.freeze({ en: own?.en ?? basedOn, pt: own?.pt ?? basedOn }),
         params: Object.freeze(params),
       });
     });

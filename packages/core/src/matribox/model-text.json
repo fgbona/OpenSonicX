@@ -60,54 +60,54 @@
     "pt": "Inspirado no ISP Decimator. Noise gate suave e eficiente para timbres de alto ganho. Um único controle de Threshold define quanto chiado é cortado entre as notas."
   },
   "DYN:29": {
-    "name": "GATE-1",
+    "name": "GATE-STD",
     "en": "A simple noise gate that silences hum and hiss when you stop playing. Threshold sets the cut-off, Attack and Release control how fast it opens and closes.",
     "pt": "Noise gate simples que silencia ruído e chiado quando você para de tocar. Threshold define o ponto de corte; Attack e Release controlam a velocidade de abrir e fechar."
   },
   "DYN:33": {
-    "name": "GATE-2",
+    "name": "GATE-FAST",
     "en": "A flexible noise gate with Ratio and Hold for fine control. Threshold sets the level, Ratio the amount of reduction and Hold keeps it open so note tails do not get chopped.",
     "pt": "Noise gate flexível, com Ratio e Hold para ajuste fino. Threshold define o nível, Ratio a redução e Hold mantém aberto para não cortar o final das notas."
   },
   "FREQ:16777241": {
-    "name": "STEPFLT",
-    "en": "An original rhythmic filter that moves through four set steps in time. Step 1 to Step 4 set the cut-off of each step, Rate sets the speed and Sync locks it to tempo.",
-    "pt": "Filtro rítmico original que percorre quatro passos em sequência. Step 1 a Step 4 definem a frequência de cada passo, Rate a velocidade e Sync trava no tempo."
+    "name": "Step Filter",
+    "en": "A rhythmic step filter that jumps between four cut-off settings, for sequenced, synth-like patterns. Step 1 to Step 4 set each step, Rate the speed, Sync locks it to tempo.",
+    "pt": "Filtro em degraus rítmico, que salta entre quatro frequências de corte, para padrões sequenciados de sintetizador. Step 1 a Step 4 definem cada passo, Rate a velocidade e Sync trava no tempo."
   },
   "FREQ:16777249": {
-    "name": "OCTAVE",
-    "en": "An original octaver that blends in a note one or two octaves below and above. Low Oct and High Oct set the octave levels, Dry keeps your direct tone.",
-    "pt": "Oitavador original que mistura notas uma ou duas oitavas abaixo e acima. Low Oct e High Oct ajustam os níveis das oitavas, Dry mantém o som direto."
+    "name": "Clean Octave",
+    "en": "A clean octaver that adds an octave below and above your note. Great for organ-like and fat bass lines. Low Oct, High Oct and Dry set the mix.",
+    "pt": "Octaver limpo, que soma uma oitava abaixo e outra acima da nota. Ótimo para timbres de órgão e linhas graves gordas. Low Oct, High Oct e Dry definem a mistura."
   },
   "FREQ:16777251": {
-    "name": "DUOPIT",
-    "en": "An original dual pitch shifter with a high and a low voice. Hi Pitch and Low Pitch set the intervals, Hi Vol and Low Vol their levels, Dry the direct signal.",
-    "pt": "Pitch shifter duplo original, com uma voz aguda e outra grave. Hi Pitch e Low Pitch definem os intervalos, Hi Vol e Low Vol os níveis e Dry o sinal direto."
+    "name": "Dual Pitch",
+    "en": "A dual pitch shifter with a high voice up to +24 and a low voice down to -24 semitones, for octaves and fixed harmonies. Hi Pitch, Low Pitch, Hi Vol, Low Vol and Dry.",
+    "pt": "Pitch shifter duplo, com uma voz alta até +24 e uma baixa até -24 semitons, para oitavas e harmonias fixas. Hi Pitch, Low Pitch, Hi Vol, Low Vol e Dry."
   },
   "FREQ:16777252": {
-    "name": "PITCH2",
-    "en": "A dual pitch shifter for harmonies and detune. Hi Pitch and Low Pitch set the two voices, Wet and Dry mix them, Range chooses the tracking range.",
-    "pt": "Pitch shifter duplo para harmonias e detune. Hi Pitch e Low Pitch definem as duas vozes, Wet e Dry fazem a mistura e Range escolhe a faixa de captação."
+    "name": "Pitch Bend",
+    "en": "A pitch bender for whammy-style dives and rises, best on an expression pedal. Hi Pitch (up to +12) and Low Pitch (down to -12) set the ends, Range the bend, Wet and Dry the mix.",
+    "pt": "Pitch bend para subidas e mergulhos de afinação, melhor num pedal de expressão. Hi Pitch (até +12) e Low Pitch (até -12) definem os extremos, Range a curva, Wet e Dry a mistura."
   },
   "FREQ:16777294": {
-    "name": "HARMNY",
-    "en": "An original two-voice auto harmonizer that adds intelligent harmonies in a chosen key. Key and Mode pick the scale, Interval 1 and 2 the voices, Smooth the glide, Mix the blend.",
-    "pt": "Harmonizador automático original de duas vozes, que cria harmonias inteligentes numa tonalidade. Key e Mode escolhem a escala, Interval 1 e 2 as vozes, Smooth o glide e Mix a mistura."
+    "name": "Smart Harmony",
+    "en": "An intelligent two-voice harmonizer that follows a key and scale, for twin-guitar lines. Key and Mode pick the scale, Interval 1 and Interval 2 the voices, Smooth the glide, Mix the blend.",
+    "pt": "Harmonizador inteligente de duas vozes que segue tom e escala, para linhas de guitarras gêmeas. Key e Mode escolhem a escala, Interval 1 e Interval 2 as vozes, Smooth a transição e Mix a mistura."
   },
   "FREQ:16777301": {
-    "name": "POLYPIT",
-    "en": "Inspired by Freebird Monophonic PS. A monophonic pitch shifter for big octave and interval jumps on single notes. Range and Position set the shift, Mix blends it, Level sets output.",
-    "pt": "Inspirado no Freebird Monophonic PS. Pitch shifter monofônico para saltos grandes de oitava e intervalo em notas soltas. Range e Position definem o deslocamento, Mix mistura e Level ajusta a saída."
+    "name": "Pedal Shift",
+    "en": "A monophonic pitch shifter for big jumps and smooth expression-pedal sweeps on single notes. Range picks the interval, Position sweeps to it, Mix blends and Level sets output.",
+    "pt": "Pitch shifter monofônico para grandes saltos e varreduras suaves com pedal de expressão em notas soltas. Range escolhe o intervalo, Position varre até ele, Mix mistura e Level ajusta a saída."
   },
   "FREQ:16777263": {
-    "name": "RINGMOD",
-    "en": "An original ring modulator for metallic, bell-like and robotic tones. Freq and Fine set the modulation pitch, Tone shapes the brightness, Mix blends it with your signal.",
-    "pt": "Modulador em anel original, para timbres metálicos, de sino e robóticos. Freq e Fine definem a altura da modulação, Tone o brilho e Mix a mistura com o sinal."
+    "name": "Ring Mod",
+    "en": "A ring modulator for metallic, bell-like and robotic tones. Freq and Fine (±50) set the carrier pitch, Tone the brightness, Mix the blend with your dry signal.",
+    "pt": "Modulador em anel para timbres metálicos, de sino e robóticos. Freq e Fine (±50) definem a frequência portadora, Tone o brilho e Mix a mistura com o sinal seco."
   },
   "FREQ:16777267": {
-    "name": "PWRSAT",
-    "en": "An original power amp saturation simulator that adds the warm compression and grit of a hard-driven output stage. Saturation sets the push, High Cut tames the top, Mix and Volume balance it.",
-    "pt": "Simulador original de saturação de amplificador de potência, com a compressão quente e a aspereza de um estágio de saída exigido. Saturation define o empurrão, High Cut doma os agudos, Mix e Volume equilibram."
+    "name": "Power Amp Sat",
+    "en": "A power-amp saturation stage that adds the warm squash and grit of a cranked output section. Saturation sets the push, High Cut tames the top, Mix and Volume balance it.",
+    "pt": "Estágio de saturação de amplificador de potência, que dá a compressão quente e o grão de um power amp no talo. Saturation define o empurrão, High Cut doma os agudos, Mix e Volume equilibram."
   },
   "WAH:83886081": {
     "name": "VINT-W",
@@ -230,7 +230,7 @@
     "pt": "Inspirado no Marshall Shred Master. Pedal de alto ganho com som saturado e fechado do metal dos anos 80 e controle Contour. Gain e Volume ajustam o drive; Bass, Contour e Treble moldam a voz."
   },
   "DRV:50331689": {
-    "name": "DIST-1",
+    "name": "OPAMP-D",
     "en": "Inspired by MXR M104 Distortion+. A simple, punchy distortion with a classic 70s rock crunch. Gain sets the drive and Volume the output.",
     "pt": "Inspirado no MXR M104 Distortion+. Distorção simples e encorpada, com o crunch clássico do rock dos anos 70. Gain define o drive e Volume a saída."
   },
@@ -345,9 +345,10 @@
     "pt": "Inspirado no Bogner Shiva. Overdrive rico e cremoso de um amp boutique, ótimo para blues-rock e solos suaves. Gain, Presence, Volume e EQ de três bandas moldam o timbre."
   },
   "AMP:117440579": {
-    "name": "OVLD",
-    "en": "Original-style overdrive amp channel with a tight, driven character. A good all-round crunch to lead voice. Gain, Presence, Volume and a three-band EQ shape the sound.",
-    "pt": "Canal de amp de overdrive de estilo original, com caráter firme e saturado. Boa voz geral, do crunch ao solo. Gain, Presence, Volume e EQ de três bandas moldam o som."
+    "name": "EURO-BLU",
+    "gear": "Bogner Ecstasy blue channel (vintage)",
+    "en": "Inspired by Bogner Ecstasy blue channel (vintage). A boutique crunch channel with a rich, open drive, from classic rock to warm leads. Gain, Presence, Volume, Bass, Middle and Treble.",
+    "pt": "Inspirado no Bogner Ecstasy blue channel (vintage). Canal de crunch boutique com drive rico e aberto, do rock clássico aos solos quentes. Gain, Presence, Volume, Bass, Middle e Treble."
   },
   "AMP:117440622": {
     "name": "EURO-HG",
@@ -575,309 +576,347 @@
     "pt": "Inspirado no AER Colourizer (EQ band 2). Voz de amp acústico, com som limpo e natural e uma segunda banda de EQ paramétrico ajustável. Volume, Tone e Balance definem o som; EQ Freq, Q e Gain moldam a banda 2."
   },
   "CAB:167772160": {
-    "name": "1x6 #39",
-    "en": "A small, tiny-speaker 1 x 6 inch speaker cabinet simulation (model #39). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa pequeno de alto-falante minúsculo 1 x 6 polegadas (modelo #39). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Vintage 1x6",
+    "gear": "Supro 1x6",
+    "en": "Inspired by Supro 1x6. A tiny, boxy vintage speaker with a nasal midrange and little low end. Great for raw garage and lo-fi blues. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Supro 1x6. Alto-falante vintage minúsculo, anasalado e com poucos graves. Ótimo para blues lo-fi e rock de garagem. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772161": {
-    "name": "1x8 #31",
-    "en": "A small, focused 1 x 8 inch speaker cabinet simulation (model #31). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa pequeno e focado 1 x 8 polegadas (modelo #31). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Tweed 1x8",
+    "gear": "Fender Tweed Champ 1x8",
+    "en": "Inspired by Fender Tweed Champ 1x8. A small practice-amp speaker, bright and compressed, that breaks up sweetly. Good for studio crunch and slide. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Fender Tweed Champ 1x8. Alto-falante pequeno de amp de estudo, brilhante e comprimido, que satura com doçura. Bom para crunch de estúdio e slide. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772162": {
-    "name": "1x10 #32",
-    "en": "A compact, punchy 1 x 10 inch speaker cabinet simulation (model #32). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa compacto e encorpado 1 x 10 polegadas (modelo #32). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Tweed 1x10",
+    "gear": "Fender Tweed Princeton 1x10",
+    "en": "Inspired by Fender Tweed Princeton 1x10. A small open-back combo with a sweet, focused tone and gentle lows. Suits clean blues and recording. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Fender Tweed Princeton 1x10. Combo pequeno de fundo aberto, de timbre doce e focado e graves suaves. Combina com blues limpo e gravação. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772180": {
-    "name": "2x10 #88",
-    "en": "A tight, quick 2 x 10 inch speaker cabinet simulation (model #88). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa firme e rápido 2 x 10 polegadas (modelo #88). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Tweed 2x10",
+    "gear": "Fender Tweed Super 2x10",
+    "en": "Inspired by Fender Tweed Super 2x10. A lively open-back 2x10 with snappy attack and an airy top. Great for country, blues and crunchy rhythm. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Fender Tweed Super 2x10. Caixa 2x10 de fundo aberto, viva, com ataque estalado e agudos arejados. Ótima para country, blues e base com crunch. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772171": {
-    "name": "1x12 #7",
-    "en": "A classic open-sounding 1 x 12 inch speaker cabinet simulation (model #7). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa clássico e aberto 1 x 12 polegadas (modelo #7). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Tweed 1x12",
+    "gear": "Fender Tweed Deluxe 1x12",
+    "en": "Inspired by Fender Tweed Deluxe 1x12. A warm, open-back 1x12 with a round midrange and soft, touch-sensitive break-up. Perfect for blues and roots rock. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Fender Tweed Deluxe 1x12. Caixa 1x12 de fundo aberto, quente, com médios redondos e saturação suave e sensível ao toque. Perfeita para blues e rock raiz. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772163": {
-    "name": "1x12 #6",
-    "en": "A classic open-sounding 1 x 12 inch speaker cabinet simulation (model #6). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa clássico e aberto 1 x 12 polegadas (modelo #6). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Black 1x12",
+    "gear": "Fender Blackface Deluxe Reverb 1x12",
+    "en": "Inspired by Fender Blackface Deluxe Reverb 1x12. A clear, scooped US 1x12 with sparkling highs. The classic studio combo for clean and edge-of-break-up tones. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Fender Blackface Deluxe Reverb 1x12. Caixa 1x12 americana, clara e de médios cavados, com agudos cintilantes. O combo clássico de estúdio para limpos e quase saturados. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772178": {
-    "name": "2x12 #4",
-    "en": "A full, balanced 2 x 12 inch speaker cabinet simulation (model #4). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa cheio e equilibrado 2 x 12 polegadas (modelo #4). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Black 2x12",
+    "gear": "Fender Blackface Twin Reverb 2x12",
+    "en": "Inspired by Fender Blackface Twin Reverb 2x12. A loud, open-back 2x12 with deep lows and glassy highs and lots of headroom. Ideal for big clean tones. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Fender Blackface Twin Reverb 2x12. Caixa 2x12 de fundo aberto, alta, com graves profundos, agudos cristalinos e muita folga. Ideal para limpos grandes. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772187": {
-    "name": "2x12 #58",
-    "en": "A full, balanced 2 x 12 inch speaker cabinet simulation (model #58). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa cheio e equilibrado 2 x 12 polegadas (modelo #58). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Custom 2x12",
+    "en": "An open-back US-style 2x12 with a clean, balanced voice and a slightly warmer top. Good for clean and light crunch. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Caixa 2x12 de fundo aberto estilo americano, de voz limpa e equilibrada e agudos um pouco mais quentes. Boa para limpo e crunch leve. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772182": {
-    "name": "2x12 #33",
-    "en": "A full, balanced 2 x 12 inch speaker cabinet simulation (model #33). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa cheio e equilibrado 2 x 12 polegadas (modelo #33). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "US 2x12",
+    "gear": "Fender Bassman 2x12",
+    "en": "Inspired by Fender Bassman 2x12. A full, punchy US 2x12 with firm lows and smooth highs. Suits clean to crunch rhythm and blues. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Fender Bassman 2x12. Caixa 2x12 americana, cheia e com punch, graves firmes e agudos suaves. Combina com base do limpo ao crunch e blues. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772190": {
-    "name": "4x10 #10",
-    "en": "A punchy, scooped 4 x 10 inch speaker cabinet simulation (model #10). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa encorpado e com médios abertos 4 x 10 polegadas (modelo #10). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Tweed 4x10",
+    "gear": "Fender Tweed Bassman 4x10",
+    "en": "Inspired by Fender Tweed Bassman 4x10. The classic tweed 4x10: punchy, airy and fast, with a bright snap. Great for blues, rockabilly and vintage rock. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Fender Tweed Bassman 4x10. O clássico 4x10 de tweed: punch, ar e resposta rápida, com estalo brilhante. Ótimo para blues, rockabilly e rock vintage. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772177": {
-    "name": "2x12 #8",
-    "en": "A full, balanced 2 x 12 inch speaker cabinet simulation (model #8). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa cheio e equilibrado 2 x 12 polegadas (modelo #8). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Jazz 2x12",
+    "gear": "Roland JC-120 2x12",
+    "en": "Inspired by Roland JC-120 2x12. A flat, hi-fi 2x12 from a solid-state combo, very clean and wide. Ideal for jazz, chorus-drenched cleans and pedal platforms. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Roland JC-120 2x12. Caixa 2x12 de combo transistorizado, plana e hi-fi, muito limpa e ampla. Ideal para jazz, limpos com chorus e base para pedais. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772174": {
-    "name": "1x12 #84",
-    "en": "A classic open-sounding 1 x 12 inch speaker cabinet simulation (model #84). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa clássico e aberto 1 x 12 polegadas (modelo #84). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Brit 1x12",
+    "gear": "British 1x12 (Celestion G12M)",
+    "en": "Inspired by British 1x12 (Celestion G12M). A warm British 1x12 with a soft, woody midrange and smooth top. Good for crunch and classic rock at low volume. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no British 1x12 (Celestion G12M). Caixa 1x12 britânica, quente, com médios amadeirados e agudos suaves. Boa para crunch e rock clássico em volume baixo. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772179": {
-    "name": "2x12 #14",
-    "en": "A full, balanced 2 x 12 inch speaker cabinet simulation (model #14). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa cheio e equilibrado 2 x 12 polegadas (modelo #14). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Green 2x12",
+    "gear": "Marshall 2x12 (Celestion Greenback)",
+    "en": "Inspired by Marshall 2x12 (Celestion Greenback). A closed-back British 2x12 with a warm, rich midrange that compresses nicely. Great for blues rock and crunch. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Marshall 2x12 (Celestion Greenback). Caixa 2x12 britânica de fundo fechado, de médios quentes e ricos que comprimem bem. Ótima para blues rock e crunch. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772191": {
-    "name": "4x12 #1",
-    "en": "A big, heavy 4 x 12 inch speaker cabinet simulation (model #1). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa grande e pesado 4 x 12 polegadas (modelo #1). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Brit Lead 4x12",
+    "gear": "Marshall 1960A 4x12",
+    "en": "Inspired by Marshall 1960A 4x12. The classic angled British 4x12: tight lows, aggressive mids and a cutting top. The go-to for rock leads and riffs. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Marshall 1960A 4x12. O clássico 4x12 britânico inclinado: graves firmes, médios agressivos e agudos que cortam. A escolha certa para solos e riffs de rock. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772192": {
-    "name": "4x12 #5",
-    "en": "A big, heavy 4 x 12 inch speaker cabinet simulation (model #5). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa grande e pesado 4 x 12 polegadas (modelo #5). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Brit Trad 4x12",
+    "en": "A traditional British 4x12 with a vintage, mid-forward voice and smooth highs. Suits classic rock and crunch. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Caixa 4x12 britânica tradicional, de voz vintage com médios à frente e agudos suaves. Combina com rock clássico e crunch. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772193": {
-    "name": "4x12 #12",
-    "en": "A big, heavy 4 x 12 inch speaker cabinet simulation (model #12). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa grande e pesado 4 x 12 polegadas (modelo #12). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Brit Mod 4x12",
+    "en": "A modern British 4x12 with a tighter low end and more presence. Good for hard rock and high-gain rhythm. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Caixa 4x12 britânica moderna, com graves mais firmes e mais presença. Boa para hard rock e base de alto ganho. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772194": {
-    "name": "4x12 #13",
-    "en": "A big, heavy 4 x 12 inch speaker cabinet simulation (model #13). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa grande e pesado 4 x 12 polegadas (modelo #13). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Green 4x12",
+    "gear": "Marshall 4x12 (Celestion Greenback)",
+    "en": "Inspired by Marshall 4x12 (Celestion Greenback). A vintage British 4x12 with warm, woolly mids and a soft top that compresses when pushed. The sound of 60s and 70s rock. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Marshall 4x12 (Celestion Greenback). Caixa 4x12 britânica vintage, de médios quentes e lanosos e agudos suaves que comprimem quando forçados. O som do rock dos anos 60 e 70. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772208": {
-    "name": "4x12 #11",
-    "en": "A big, heavy 4 x 12 inch speaker cabinet simulation (model #11). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa grande e pesado 4 x 12 polegadas (modelo #11). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Brit 80s 4x12",
+    "gear": "Marshall 4x12 (Celestion G12T-75)",
+    "en": "Inspired by Marshall 4x12 (Celestion G12T-75). A British 4x12 with a scooped, bright voice and tight lows, the sound of 80s rock and metal. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Marshall 4x12 (Celestion G12T-75). Caixa 4x12 britânica de voz brilhante e médios cavados, com graves firmes: o som do rock e metal dos anos 80. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772203": {
-    "name": "4x12 #47",
-    "en": "A big, heavy 4 x 12 inch speaker cabinet simulation (model #47). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa grande e pesado 4 x 12 polegadas (modelo #47). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Brit Dark 4x12",
+    "en": "A British 4x12 with a darker, thicker voice and a big low end. Good for heavy riffs and taming bright amps. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Caixa 4x12 britânica de voz mais escura e encorpada, com graves grandes. Boa para riffs pesados e para domar amps brilhantes. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772168": {
-    "name": "1x12 #42",
-    "en": "A classic open-sounding 1 x 12 inch speaker cabinet simulation (model #42). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa clássico e aberto 1 x 12 polegadas (modelo #42). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Chime 1x12",
+    "gear": "Vox AC15 1x12",
+    "en": "Inspired by Vox AC15 1x12. A chimey British 1x12 with sparkling highs and a jangly midrange. Great for indie, pop and chiming cleans. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Vox AC15 1x12. Caixa 1x12 britânica com brilho cintilante e médios que soam como sinos. Ótima para indie, pop e limpos cristalinos. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772175": {
-    "name": "2x12 #3",
-    "en": "A full, balanced 2 x 12 inch speaker cabinet simulation (model #3). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa cheio e equilibrado 2 x 12 polegadas (modelo #3). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Chime 2x12",
+    "gear": "Vox AC30 2x12",
+    "en": "Inspired by Vox AC30 2x12. An open-back British 2x12 with bright, chimey highs and a lively midrange. Perfect for jangle, Britpop and classic crunch. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Vox AC30 2x12. Caixa 2x12 britânica de fundo aberto, com agudos brilhantes e médios vivos. Perfeita para dedilhados, Britpop e crunch clássico. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772166": {
-    "name": "1x12 #55",
-    "en": "A classic open-sounding 1 x 12 inch speaker cabinet simulation (model #55). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa clássico e aberto 1 x 12 polegadas (modelo #55). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Euro 1x12",
+    "gear": "Bogner Shiva 1x12",
+    "en": "Inspired by Bogner Shiva 1x12. A boutique 1x12 with a balanced, articulate voice and a firm low end. Good for clean to medium-gain tones. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Bogner Shiva 1x12. Caixa 1x12 boutique, de voz equilibrada e articulada e graves firmes. Boa para timbres do limpo ao ganho médio. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772176": {
-    "name": "2x12 #9",
-    "en": "A full, balanced 2 x 12 inch speaker cabinet simulation (model #9). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa cheio e equilibrado 2 x 12 polegadas (modelo #9). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Boutique 2x12",
+    "gear": "Matchless Chieftain 2x12",
+    "en": "Inspired by Matchless Chieftain 2x12. A boutique open-back 2x12 with rich harmonics, a sweet midrange and a smooth top. Great for class-A clean and crunch. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Matchless Chieftain 2x12. Caixa 2x12 boutique de fundo aberto, rica em harmônicos, com médios doces e agudos suaves. Ótima para limpo e crunch classe A. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772196": {
-    "name": "4x12 #2",
-    "en": "A big, heavy 4 x 12 inch speaker cabinet simulation (model #2). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa grande e pesado 4 x 12 polegadas (modelo #2). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "US Metal 4x12",
+    "gear": "Mesa/Boogie Rectifier 4x12",
+    "en": "Inspired by Mesa/Boogie Rectifier 4x12. A deep, tight modern 4x12 with huge lows and a scooped voice. The classic choice for modern metal rhythm. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Mesa/Boogie Rectifier 4x12. Caixa 4x12 moderna, profunda e firme, com graves enormes e voz de médios cavados. A escolha clássica para base de metal moderno. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772169": {
-    "name": "1x12 #54",
-    "en": "A classic open-sounding 1 x 12 inch speaker cabinet simulation (model #54). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa clássico e aberto 1 x 12 polegadas (modelo #54). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Tex 1x12",
+    "gear": "Mesa/Boogie Lone Star 1x12",
+    "en": "Inspired by Mesa/Boogie Lone Star 1x12. A warm, open US boutique 1x12 with rich mids. Good for clean, blues and medium-gain leads. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Mesa/Boogie Lone Star 1x12. Caixa 1x12 boutique americana, quente e aberta, com médios ricos. Boa para limpo, blues e solos de ganho médio. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772185": {
-    "name": "2x12 #53",
-    "en": "A full, balanced 2 x 12 inch speaker cabinet simulation (model #53). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa cheio e equilibrado 2 x 12 polegadas (modelo #53). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Tex 2x12",
+    "gear": "Mesa/Boogie Lone Star 2x12",
+    "en": "Inspired by Mesa/Boogie Lone Star 2x12. A full, open US boutique 2x12 with smooth highs and a wide sound. Great for big cleans and singing leads. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Mesa/Boogie Lone Star 2x12. Caixa 2x12 boutique americana, cheia e aberta, com agudos suaves e som largo. Ótima para limpos grandes e solos cantados. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772172": {
-    "name": "1x12 #38",
-    "en": "A classic open-sounding 1 x 12 inch speaker cabinet simulation (model #38). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa clássico e aberto 1 x 12 polegadas (modelo #38). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Studio 1x12",
+    "en": "A compact closed-back US 1x12 with a tight, focused low end and a clear voice. Good for recording at any gain. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Caixa 1x12 americana compacta de fundo fechado, com graves firmes e focados e voz clara. Boa para gravar em qualquer ganho. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772183": {
-    "name": "2x12 #40",
-    "en": "A full, balanced 2 x 12 inch speaker cabinet simulation (model #40). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa cheio e equilibrado 2 x 12 polegadas (modelo #40). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Vintage 2x12",
+    "gear": "Supro 2x12",
+    "en": "Inspired by Supro 2x12. A raw, vintage 2x12 with a gritty, midrange-heavy bark and loose lows. Great for blues and garage rock. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Supro 2x12. Caixa 2x12 vintage e crua, com ronco cheio de médios e graves soltos. Ótima para blues e rock de garagem. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772184": {
-    "name": "2x12 #52",
-    "en": "A full, balanced 2 x 12 inch speaker cabinet simulation (model #52). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa cheio e equilibrado 2 x 12 polegadas (modelo #52). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Class-A 2x12",
+    "gear": "Matchless 2x12",
+    "en": "Inspired by Matchless 2x12. A boutique 2x12 with a sparkling, harmonically rich top and tight mids. Suits class-A chime and crunch. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Matchless 2x12. Caixa 2x12 boutique, de agudos cintilantes e ricos em harmônicos e médios firmes. Combina com o brilho e o crunch classe A. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772189": {
-    "name": "2x12 #99",
-    "en": "A full, balanced 2 x 12 inch speaker cabinet simulation (model #99). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa cheio e equilibrado 2 x 12 polegadas (modelo #99). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Blue 2x12",
+    "en": "An open 2x12 with a sweet, bell-like top and soft lows. Good for clean, jangly and vintage crunch tones. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Caixa 2x12 aberta, com agudos doces como sinos e graves macios. Boa para limpos, dedilhados e crunch vintage. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772195": {
-    "name": "4x12 #25",
-    "en": "A big, heavy 4 x 12 inch speaker cabinet simulation (model #25). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa grande e pesado 4 x 12 polegadas (modelo #25). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Blitz 4x12",
+    "gear": "Peavey 5150 4x12",
+    "en": "Inspired by Peavey 5150 4x12. A tight, aggressive 4x12 with a punchy low end and a forward upper mid. Made for metal rhythm. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Peavey 5150 4x12. Caixa 4x12 firme e agressiva, com graves com punch e médios-agudos à frente. Feita para base de metal. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772197": {
-    "name": "4x12 #16",
-    "en": "A big, heavy 4 x 12 inch speaker cabinet simulation (model #16). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa grande e pesado 4 x 12 polegadas (modelo #16). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Euro 4x12",
+    "gear": "Bogner 4x12",
+    "en": "Inspired by Bogner 4x12. A boutique 4x12 with a big, balanced low end and an articulate top. Good for modern rock and high gain. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Bogner 4x12. Caixa 4x12 boutique, de graves grandes e equilibrados e agudos articulados. Boa para rock moderno e alto ganho. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772198": {
-    "name": "4x12 #17",
-    "en": "A big, heavy 4 x 12 inch speaker cabinet simulation (model #17). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa grande e pesado 4 x 12 polegadas (modelo #17). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "German 4x12",
+    "gear": "ENGL 4x12",
+    "en": "Inspired by ENGL 4x12. A tight, modern 4x12 with a dry, focused low end and crisp highs. Built for precise high-gain riffing. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no ENGL 4x12. Caixa 4x12 moderna e firme, de graves secos e focados e agudos nítidos. Feita para riffs precisos de alto ganho. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772199": {
-    "name": "4x12 #20",
-    "en": "A big, heavy 4 x 12 inch speaker cabinet simulation (model #20). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa grande e pesado 4 x 12 polegadas (modelo #20). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Euro XL 4x12",
+    "gear": "Bogner Uberkab 4x12",
+    "en": "Inspired by Bogner Uberkab 4x12. An oversized 4x12 with a huge, deep low end and a smooth top. Great for heavy, wide rhythm tones. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Bogner Uberkab 4x12. Caixa 4x12 superdimensionada, com graves enormes e profundos e agudos suaves. Ótima para bases pesadas e largas. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772200": {
-    "name": "4x12 #22",
-    "en": "A big, heavy 4 x 12 inch speaker cabinet simulation (model #22). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa grande e pesado 4 x 12 polegadas (modelo #22). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Hot Rod 4x12",
+    "gear": "Soldano 4x12",
+    "en": "Inspired by Soldano 4x12. A punchy, mid-rich 4x12 that suits hot-rodded amps. Great for classic high-gain leads and rhythm. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Soldano 4x12. Caixa 4x12 com punch e médios ricos, ideal para amps envenenados. Ótima para solos e bases de alto ganho clássico. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772201": {
-    "name": "4x12 #29",
-    "en": "A big, heavy 4 x 12 inch speaker cabinet simulation (model #29). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa grande e pesado 4 x 12 polegadas (modelo #29). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Punch 4x12",
+    "gear": "Orange 4x12",
+    "en": "Inspired by Orange 4x12. A thick, dark British 4x12 with heavy lows and a warm top. Good for stoner, doom and fat rock rhythm. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Orange 4x12. Caixa 4x12 britânica encorpada e escura, com graves pesados e agudos quentes. Boa para stoner, doom e bases gordas de rock. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772202": {
-    "name": "4x12 #45",
-    "en": "A big, heavy 4 x 12 inch speaker cabinet simulation (model #45). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa grande e pesado 4 x 12 polegadas (modelo #45). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Brit Loud 4x12",
+    "gear": "Hiwatt 4x12",
+    "en": "Inspired by Hiwatt 4x12. A loud, clear British 4x12 with huge headroom and a hi-fi voice. Great for big clean and classic rock tones. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Hiwatt 4x12. Caixa 4x12 britânica alta e clara, com enorme folga e voz hi-fi. Ótima para limpos grandes e rock clássico. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772204": {
-    "name": "4x12 #46",
-    "en": "A big, heavy 4 x 12 inch speaker cabinet simulation (model #46). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa grande e pesado 4 x 12 polegadas (modelo #46). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Classic 4x12",
+    "en": "A classic closed-back 4x12 with a balanced, all-round voice. A safe pick for rock, from crunch to high gain. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Caixa 4x12 clássica de fundo fechado, de voz equilibrada e versátil. Escolha segura para rock, do crunch ao alto ganho. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772205": {
-    "name": "4x12 #62",
-    "en": "A big, heavy 4 x 12 inch speaker cabinet simulation (model #62). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa grande e pesado 4 x 12 polegadas (modelo #62). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Boutique 4x12",
+    "gear": "Dumble 4x12",
+    "en": "Inspired by Dumble 4x12. A smooth boutique 4x12 with a rich, vocal midrange. Ideal for fluid, singing lead tones. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Dumble 4x12. Caixa 4x12 boutique e suave, com médios ricos e vocais. Ideal para solos fluidos e cantados. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772206": {
-    "name": "4x12 #21",
-    "en": "A big, heavy 4 x 12 inch speaker cabinet simulation (model #21). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa grande e pesado 4 x 12 polegadas (modelo #21). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Metal 4x12",
+    "gear": "Diezel 4x12",
+    "en": "Inspired by Diezel 4x12. A modern 4x12 with a tight, deep low end and a precise top. Built for detailed high-gain metal. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Diezel 4x12. Caixa 4x12 moderna, com graves firmes e profundos e agudos precisos. Feita para metal de alto ganho bem definido. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772209": {
-    "name": "4x12 #28",
-    "en": "A big, heavy 4 x 12 inch speaker cabinet simulation (model #28). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa grande e pesado 4 x 12 polegadas (modelo #28). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "US 4x12",
+    "en": "A big US-style 4x12 with deep lows and a smooth, rounded top. Good for heavy rock rhythm and leads. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Caixa 4x12 grande estilo americano, com graves profundos e agudos suaves e arredondados. Boa para base e solo de rock pesado. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772210": {
-    "name": "1x15 #72",
-    "en": "A deep, thumpy 1 x 15 inch speaker cabinet simulation (model #72). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa profundo e encorpado 1 x 15 polegadas (modelo #72). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Hi-Fi 1x15",
+    "en": "A clean, hi-fi 1x15 bass cabinet with deep, round lows. Great for warm fingerstyle and vintage bass. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Caixa de baixo 1x15 limpa e hi-fi, com graves profundos e redondos. Ótima para baixo vintage e tocado com os dedos. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772215": {
-    "name": "4x10 #73",
-    "en": "A punchy, scooped 4 x 10 inch speaker cabinet simulation (model #73). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa encorpado e com médios abertos 4 x 10 polegadas (modelo #73). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Hi-Fi 4x10",
+    "en": "A clear, hi-fi 4x10 bass cabinet with punch and detail. Suits modern bass, slap and articulate lines. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Caixa de baixo 4x10 clara e hi-fi, com punch e definição. Combina com baixo moderno, slap e linhas articuladas. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772211": {
-    "name": "1x15 #67",
-    "en": "A deep, thumpy 1 x 15 inch speaker cabinet simulation (model #67). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa profundo e encorpado 1 x 15 polegadas (modelo #67). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Pro 1x15",
+    "en": "A solid 1x15 bass cabinet with a big, warm low end. A dependable base for rock and pop bass. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Caixa de baixo 1x15 robusta, com graves grandes e quentes. Uma base confiável para baixo no rock e no pop. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772217": {
-    "name": "4x10 #77",
-    "en": "A punchy, scooped 4 x 10 inch speaker cabinet simulation (model #77). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa encorpado e com médios abertos 4 x 10 polegadas (modelo #77). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Pro 4x10",
+    "en": "A punchy 4x10 bass cabinet with tight lows and present mids. Good for rock and funk bass. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Caixa de baixo 4x10 com punch, graves firmes e médios presentes. Boa para baixo no rock e no funk. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772213": {
-    "name": "2x10 #71",
-    "en": "A tight, quick 2 x 10 inch speaker cabinet simulation (model #71). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa firme e rápido 2 x 10 polegadas (modelo #71). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Bass 2x10",
+    "en": "A compact 2x10 bass cabinet with a tight, punchy voice. Good for small gigs and bright, defined lines. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Caixa de baixo 2x10 compacta, de voz firme e com punch. Boa para shows pequenos e linhas brilhantes e definidas. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772214": {
-    "name": "2x10 #74",
-    "en": "A tight, quick 2 x 10 inch speaker cabinet simulation (model #74). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa firme e rápido 2 x 10 polegadas (modelo #74). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Neo 2x10",
+    "gear": "Markbass 2x10",
+    "en": "Inspired by Markbass 2x10. A light, modern 2x10 bass cabinet with a clear, hi-fi voice and tight lows. Great for modern and slap bass. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Markbass 2x10. Caixa de baixo 2x10 leve e moderna, de voz clara e hi-fi e graves firmes. Ótima para baixo moderno e slap. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772212": {
-    "name": "1x15 #68",
-    "en": "A deep, thumpy 1 x 15 inch speaker cabinet simulation (model #68). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa profundo e encorpado 1 x 15 polegadas (modelo #68). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Flip-Top 1x15",
+    "gear": "Ampeg B-15 Portaflex 1x15",
+    "en": "Inspired by Ampeg B-15 Portaflex 1x15. The classic studio bass 1x15: round, warm and thumpy. Perfect for vintage soul and fingerstyle bass. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Ampeg B-15 Portaflex 1x15. O clássico 1x15 de baixo de estúdio: redondo, quente e encorpado. Perfeito para soul vintage e baixo com os dedos. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772216": {
-    "name": "4x10 #69",
-    "en": "A punchy, scooped 4 x 10 inch speaker cabinet simulation (model #69). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa encorpado e com médios abertos 4 x 10 polegadas (modelo #69). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Bass 4x10",
+    "gear": "Ampeg 4x10",
+    "en": "Inspired by Ampeg 4x10. A punchy rock bass 4x10 with growl and tight lows. Great for rock and pick-played bass. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Ampeg 4x10. Caixa de baixo 4x10 de rock, com punch, rosnado e graves firmes. Ótima para rock e baixo tocado com palheta. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772219": {
-    "name": "8x10 #66",
-    "en": "A huge, full-range 8 x 10 inch speaker cabinet simulation (model #66). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa enorme e de faixa cheia 8 x 10 polegadas (modelo #66). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Fridge 8x10",
+    "gear": "Ampeg SVT 8x10",
+    "en": "Inspired by Ampeg SVT 8x10. The huge rock bass 8x10: deep, growling lows and a powerful midrange. The classic big-stage rock bass sound. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Ampeg SVT 8x10. O enorme 8x10 de baixo de rock: graves profundos e rosnados e médios poderosos. O clássico som de baixo de palco grande. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772218": {
-    "name": "4x12 #76",
-    "en": "A big, heavy 4 x 12 inch speaker cabinet simulation (model #76). Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Simulação de caixa grande e pesado 4 x 12 polegadas (modelo #76). Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Bass 4x12",
+    "en": "A 4x12 bass cabinet with a wide, punchy voice and a bright top. Good for aggressive rock bass. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Caixa de baixo 4x12 de voz larga e com punch e agudos brilhantes. Boa para baixo de rock agressivo. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772220": {
-    "name": "Acou 1",
-    "en": "An acoustic guitar cabinet and body response for piezo or electric guitars. Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Resposta de caixa e corpo de violão para guitarras ou captadores piezo. Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Dreadnought A",
+    "en": "A dreadnought acoustic body for piezo or acoustic-sim signals: big, booming lows and strong strum. Great for rhythm. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Corpo de violão dreadnought para sinais de piezo ou simulador de violão: graves fortes e cheios para batida. Ótimo para base. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772221": {
-    "name": "Acou 2",
-    "en": "An acoustic guitar cabinet and body response for piezo or electric guitars. Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Resposta de caixa e corpo de violão para guitarras ou captadores piezo. Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Dreadnought B",
+    "en": "A second dreadnought acoustic body for piezo signals, with a slightly different, more balanced voice. Good for strumming. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Um segundo corpo de violão dreadnought para piezo, de voz um pouco diferente e mais equilibrada. Bom para batidas. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772222": {
-    "name": "Acou 3",
-    "en": "An acoustic guitar cabinet and body response for piezo or electric guitars. Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Resposta de caixa e corpo de violão para guitarras ou captadores piezo. Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Orchestra",
+    "en": "An orchestra-model acoustic body for piezo signals: balanced, clear and focused. Good for fingerpicking. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Corpo de violão modelo orquestra para piezo: equilibrado, claro e focado. Bom para dedilhado. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772223": {
-    "name": "Acou 4",
-    "en": "An acoustic guitar cabinet and body response for piezo or electric guitars. Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Resposta de caixa e corpo de violão para guitarras ou captadores piezo. Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Jumbo",
+    "en": "A jumbo acoustic body for piezo signals, with a big, wide and powerful voice. Great for bold strumming. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Corpo de violão jumbo para piezo, de voz grande, larga e potente. Ótimo para batidas fortes. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772224": {
-    "name": "Acou 5",
-    "en": "An acoustic guitar cabinet and body response for piezo or electric guitars. Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Resposta de caixa e corpo de violão para guitarras ou captadores piezo. Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Square Dread",
+    "gear": "Gibson Hummingbird",
+    "en": "Inspired by Gibson Hummingbird. A square-shoulder dreadnought acoustic body for piezo signals, warm and woody with a sweet midrange. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Inspirado no Gibson Hummingbird. Corpo de violão dreadnought de ombros quadrados para piezo, quente e amadeirado, com médios doces. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772225": {
-    "name": "Acou 6",
-    "en": "An acoustic guitar cabinet and body response for piezo or electric guitars. Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Resposta de caixa e corpo de violão para guitarras ou captadores piezo. Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Auditorium",
+    "en": "A grand auditorium acoustic body for piezo signals: articulate and versatile, from strum to fingerstyle. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Corpo de violão grand auditorium para piezo: articulado e versátil, da batida ao dedilhado. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772226": {
-    "name": "Acou 7",
-    "en": "An acoustic guitar cabinet and body response for piezo or electric guitars. Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Resposta de caixa e corpo de violão para guitarras ou captadores piezo. Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Nylon",
+    "en": "A classical nylon-string guitar body for piezo signals, soft and warm. Good for bossa, classical and ballads. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Corpo de violão clássico de nylon para piezo, macio e quente. Bom para bossa, clássico e baladas. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772227": {
-    "name": "Acou 8",
-    "en": "An acoustic guitar cabinet and body response for piezo or electric guitars. Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Resposta de caixa e corpo de violão para guitarras ou captadores piezo. Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Mandolin",
+    "en": "A mandolin body for piezo signals, bright and short with a sparkling top. Good for folk and bluegrass color. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Corpo de bandolim para piezo, brilhante e curto, com agudos cintilantes. Bom para dar cor de folk e bluegrass. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772228": {
-    "name": "Acou 9",
-    "en": "An acoustic guitar cabinet and body response for piezo or electric guitars. Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Resposta de caixa e corpo de violão para guitarras ou captadores piezo. Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Fretless",
+    "en": "A fretless bass body for piezo bass signals, with a smooth, singing, woody tone. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Corpo de baixo fretless para sinais de baixo com piezo, de timbre suave, cantado e amadeirado. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "CAB:167772229": {
-    "name": "Acou 10",
-    "en": "An acoustic guitar cabinet and body response for piezo or electric guitars. Volume sets level, Low Cut and High Cut trim the lows and highs.",
-    "pt": "Resposta de caixa e corpo de violão para guitarras ou captadores piezo. Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
+    "name": "Upright",
+    "en": "An upright double bass body for piezo bass signals, with a round, woody thump. Good for jazz and rockabilly. Volume sets the level; Low Cut and High Cut trim the lows and highs.",
+    "pt": "Corpo de contrabaixo acústico para sinais de baixo com piezo, com som redondo e amadeirado. Bom para jazz e rockabilly. Volume ajusta o nível; Low Cut e High Cut aparam graves e agudos."
   },
   "IR:168820736": {
     "name": "IR 1",
@@ -980,37 +1019,38 @@
     "pt": "Slot 20 de impulse response do usuário. Carregue aqui seu próprio IR de caixa ou ambiente. Volume ajusta o nível; Low Cut e High Cut cortam graves e agudos."
   },
   "EQ:16777269": {
-    "name": "EQ-A",
-    "en": "A five-band graphic EQ centered on 125 Hz, 400 Hz, 800 Hz, 1.6 kHz and 4 kHz, with a Volume control. A good general shaper for guitar tone.",
-    "pt": "EQ gráfico de cinco bandas em 125 Hz, 400 Hz, 800 Hz, 1,6 kHz e 4 kHz, com controle de Volume. Bom para moldar o timbre geral da guitarra."
+    "name": "Guitar Mid EQ",
+    "en": "A 5-band guitar graphic EQ focused on the mids, for shaping body and bite. 125 Hz, 400 Hz, 800 Hz, 1.6 kHz and 4 kHz bands, each ±50, plus Volume.",
+    "pt": "EQ gráfico de 5 bandas para guitarra, focado nos médios, para moldar corpo e ataque. Bandas de 125 Hz, 400 Hz, 800 Hz, 1,6 kHz e 4 kHz, cada uma ±50, mais Volume."
   },
   "EQ:16777270": {
-    "name": "EQ-B",
-    "en": "A five-band graphic EQ with bands at 100 Hz, 500 Hz, 1 kHz, 3 kHz and 6 kHz plus Volume. Wider mid spacing makes it useful for sculpting presence and bite.",
-    "pt": "EQ gráfico de cinco bandas em 100 Hz, 500 Hz, 1 kHz, 3 kHz e 6 kHz, mais Volume. O espaçamento amplo nos médios ajuda a esculpir presença e mordida."
+    "name": "Guitar Wide EQ",
+    "en": "A 5-band guitar graphic EQ with a wider span, from low thump to top-end air. 100 Hz, 500 Hz, 1 kHz, 3 kHz and 6 kHz bands, each ±50, plus Volume.",
+    "pt": "EQ gráfico de 5 bandas para guitarra com faixa mais ampla, do peso dos graves ao ar dos agudos. Bandas de 100 Hz, 500 Hz, 1 kHz, 3 kHz e 6 kHz, cada uma ±50, mais Volume."
   },
   "EQ:16777273": {
-    "name": "EQ-C",
-    "en": "A five-band graphic EQ spanning 33 Hz to 8 kHz, with Volume. The very low band suits bass, while the top bands add air to guitar.",
-    "pt": "EQ gráfico de cinco bandas de 33 Hz a 8 kHz, com Volume. A banda bem grave serve ao baixo e as agudas dão ar à guitarra."
+    "name": "Bass Wide EQ",
+    "en": "A 5-band bass graphic EQ from deep sub to string click. 33 Hz, 150 Hz, 600 Hz, 2 kHz and 8 kHz bands, each ±50, plus Volume.",
+    "pt": "EQ gráfico de 5 bandas para baixo, do subgrave ao estalo das cordas. Bandas de 33 Hz, 150 Hz, 600 Hz, 2 kHz e 8 kHz, cada uma ±50, mais Volume."
   },
   "EQ:16777274": {
-    "name": "EQ-D",
-    "en": "A five-band graphic EQ at 50 Hz, 120 Hz, 400 Hz, 800 Hz and 4.5 kHz plus Volume, with extra control in the low end, handy for bass and thick tones.",
-    "pt": "EQ gráfico de cinco bandas em 50 Hz, 120 Hz, 400 Hz, 800 Hz e 4,5 kHz, mais Volume, com mais controle nos graves, útil para baixo e timbres grossos."
+    "name": "Bass Mid EQ",
+    "en": "A 5-band bass graphic EQ for punch and growl in the low mids. 50 Hz, 120 Hz, 400 Hz, 800 Hz and 4.5 kHz bands, each ±50, plus Volume.",
+    "pt": "EQ gráfico de 5 bandas para baixo, para punch e rosnado nos médios-graves. Bandas de 50 Hz, 120 Hz, 400 Hz, 800 Hz e 4,5 kHz, cada uma ±50, mais Volume."
   },
   "EQ:16777276": {
-    "name": "EQ-5B",
-    "en": "Inspired by Mesa/Boogie 5-band EQ. A classic five-band graphic EQ often used to sculpt a lead tone, with bands at 80 Hz, 240 Hz, 750 Hz, 2.2 kHz and 6.6 kHz.",
-    "pt": "Inspirado no Mesa/Boogie 5-band EQ. EQ gráfico clássico de cinco bandas, muito usado para esculpir timbre de solo, com bandas em 80 Hz, 240 Hz, 750 Hz, 2,2 kHz e 6,6 kHz."
+    "name": "Graphic EQ",
+    "gear": "Mesa/Boogie 5-band graphic EQ",
+    "en": "Inspired by Mesa/Boogie 5-band graphic EQ. The classic V-curve lead and metal shaper. 80 Hz, 240 Hz, 750 Hz, 2.2 kHz and 6.6 kHz bands, each ±50.",
+    "pt": "Inspirado no Mesa/Boogie 5-band graphic EQ. O clássico modelador em V para solo e metal. Bandas de 80 Hz, 240 Hz, 750 Hz, 2,2 kHz e 6,6 kHz, cada uma ±50."
   },
   "MOD:67108865": {
-    "name": "CHOR-1",
+    "name": "CHOR-VTG",
     "en": "Inspired by Boss CE-1 (chorus mode). The legendary early chorus: lush, warm and wide, the sound of 80s clean guitars. Depth and Rate set the motion, Volume the level, Sync locks to tempo.",
     "pt": "Inspirado no Boss CE-1 (chorus mode). O lendário chorus antigo: exuberante, quente e largo, o som das guitarras limpas dos anos 80. Depth e Rate definem o movimento, Volume o nível e Sync trava no tempo."
   },
   "MOD:67108866": {
-    "name": "CHOR-2",
+    "name": "CHOR-WIDE",
     "en": "Inspired by Boss DC-2. A dual-band chorus with a clear, shimmering sweep that leaves the low end intact. Mode picks the chorus voicing.",
     "pt": "Inspirado no Boss DC-2. Chorus de duas bandas com varredura clara e cintilante, que preserva os graves. Mode escolhe a voz do chorus."
   },
@@ -1020,17 +1060,17 @@
     "pt": "Inspirado no Boss CE-2B. Chorus analógico amigo do baixo, com varredura suave e delicada. Depth e Rate definem o movimento, Volume o nível e Sync trava no tempo."
   },
   "MOD:67108879": {
-    "name": "CHOR-3",
+    "name": "CHOR-TRI",
     "en": "An original three-voice chorus with independent depths for left, center and right for a wide stereo image. Mix, Rate and Filter set the tone, Sync locks to tempo.",
     "pt": "Chorus original de três vozes, com profundidades independentes para esquerda, centro e direita, criando uma imagem estéreo ampla. Mix, Rate e Filter definem o timbre e Sync trava no tempo."
   },
   "MOD:67108881": {
-    "name": "FLNG-1",
+    "name": "FLNG-JET",
     "en": "An original flanger with the swooshing, jet-plane sweep. Depth and Rate set the motion, Pre Delay and Feedback shape the resonance, Sync locks to tempo.",
     "pt": "Flanger original com aquela varredura de 'avião a jato'. Depth e Rate definem o movimento, Pre Delay e Feedback moldam a ressonância e Sync trava no tempo."
   },
   "MOD:67108883": {
-    "name": "FLNG-2",
+    "name": "FLNG-DEEP",
     "en": "An original flanger with a second voicing for a deeper, more metallic sweep. Depth and Rate set the motion, Pre Delay and Feedback shape the resonance, Sync locks to tempo.",
     "pt": "Flanger original com uma segunda voz, de varredura mais profunda e metálica. Depth e Rate definem o movimento, Pre Delay e Feedback moldam a ressonância e Sync trava no tempo."
   },
@@ -1040,22 +1080,22 @@
     "pt": "Combo original de flanger e tremolo num só slot. Flg Depth, Flg Rate e Feedback definem o flanger, Trm Depth e Trm Rate o tremolo, cada um com seu Sync."
   },
   "MOD:67108882": {
-    "name": "FLNG-3",
-    "en": "An original flanger with a third voicing for a smooth, classic sweep. Depth and Rate set the motion, Pre Delay and Feedback shape the resonance, Sync locks to tempo.",
-    "pt": "Flanger original com uma terceira voz, de varredura suave e clássica. Depth e Rate definem o movimento, Pre Delay e Feedback moldam a ressonância e Sync trava no tempo."
+    "name": "FLNG-BASS",
+    "en": "A flanger voiced for bass that keeps the low end solid while the sweep moves above it. Depth and Rate set the motion, Pre Delay and Feedback the resonance, Sync locks to tempo.",
+    "pt": "Flanger voltado para baixo, que mantém os graves firmes enquanto a varredura acontece acima deles. Depth e Rate definem o movimento, Pre Delay e Feedback a ressonância e Sync trava no tempo."
   },
   "MOD:67108887": {
-    "name": "VIB-1",
+    "name": "VIB-WOBBLE",
     "en": "An original vibrato that rocks the pitch up and down for a wobbling, seasick effect. Depth and Rate set the motion, Volume the level, Sync locks to tempo.",
     "pt": "Vibrato original que balança a afinação para cima e para baixo, num efeito ondulante. Depth e Rate definem o movimento, Volume o nível e Sync trava no tempo."
   },
   "MOD:67108885": {
-    "name": "VIB-2",
+    "name": "VIB-PURE",
     "en": "Inspired by Boss VB-2. A pure pitch vibrato with a smooth, vintage wobble. Depth and Rate set the intensity and speed, Sync locks to tempo.",
     "pt": "Inspirado no Boss VB-2. Vibrato puro de afinação, com ondulação suave e vintage. Depth e Rate ajustam intensidade e velocidade e Sync trava no tempo."
   },
   "MOD:67108886": {
-    "name": "VIB-3",
+    "name": "VIB-VTG",
     "en": "Inspired by Boss CE-1 (vibrato mode). The vibrato side of the legendary early chorus, deep and smooth. Depth and Rate set the motion, Volume the level, Sync locks to tempo.",
     "pt": "Inspirado no Boss CE-1 (vibrato mode). O lado vibrato do lendário chorus antigo, fundo e suave. Depth e Rate definem o movimento, Volume o nível e Sync trava no tempo."
   },
@@ -1065,7 +1105,7 @@
     "pt": "Inspirado no MXR Phase 90. O clássico phaser laranja, com varredura suave e giratória, ideal para rock e funk. Rate define a velocidade e Sync trava no tempo."
   },
   "MOD:67108890": {
-    "name": "PHAS-1",
+    "name": "PHAS-VTG",
     "en": "Inspired by Boss PH-1. A warm, vintage phaser with a smooth, gentle sweep. Depth and Rate set the intensity and speed, Sync locks to tempo.",
     "pt": "Inspirado no Boss PH-1. Phaser vintage e quente, com varredura suave e delicada. Depth e Rate ajustam intensidade e velocidade e Sync trava no tempo."
   },
@@ -1095,17 +1135,17 @@
     "pt": "Inspirado no Demeter Tremulator. Tremolo suave e de qualidade de estúdio, com pulso fundo e latejante. Depth e Rate ajustam intensidade e velocidade e Sync trava no tempo."
   },
   "MOD:67108902": {
-    "name": "TREM-1",
-    "en": "A tremolo that pulses the volume rhythmically, great for surf and vintage sounds. Depth and Rate set the intensity and speed, Volume the level, Sync locks to tempo.",
-    "pt": "Tremolo que pulsa o volume ritmicamente, ótimo para surf e sons vintage. Depth e Rate ajustam intensidade e velocidade, Volume o nível e Sync trava no tempo."
+    "name": "TREM-SINE",
+    "en": "A tremolo with a smooth sine-wave pulse, great for surf and vintage sounds. Depth and Rate set the intensity and speed, Volume the level, Sync locks to tempo.",
+    "pt": "Tremolo de pulso suave em onda senoidal, ótimo para surf e sons vintage. Depth e Rate definem intensidade e velocidade, Volume o nível e Sync trava no tempo."
   },
   "MOD:67108903": {
-    "name": "TREM-2",
-    "en": "A second tremolo voicing with a different pulse shape for a choppier or smoother feel. Depth and Rate set the intensity and speed, Volume the level, Sync locks to tempo.",
-    "pt": "Segunda voz de tremolo, com outra forma de pulso para sensação mais picotada ou suave. Depth e Rate ajustam intensidade e velocidade, Volume o nível e Sync trava no tempo."
+    "name": "TREM-TRI",
+    "en": "A tremolo with a triangle-wave pulse, more even and pronounced than the sine one. Depth and Rate set the intensity and speed, Volume the level, Sync locks to tempo.",
+    "pt": "Tremolo de pulso em onda triangular, mais uniforme e marcado que o senoidal. Depth e Rate definem intensidade e velocidade, Volume o nível e Sync trava no tempo."
   },
   "MOD:67108904": {
-    "name": "TREM-3",
+    "name": "TREM-BIAS",
     "en": "A tremolo with a Bias control, for the uneven, throbbing pulse of old tube amps. Depth and Rate set the intensity and speed, Bias shapes the pulse, Volume sets level.",
     "pt": "Tremolo com controle Bias, para o pulso irregular e latejante de amps valvulados antigos. Depth e Rate ajustam intensidade e velocidade, Bias molda o pulso e Volume o nível."
   },
@@ -1120,149 +1160,152 @@
     "pt": "Efeito lo-fi original que reduz taxa de amostragem e bits, para texturas digitais ásperas. Krush e Bit definem a destruição, Hi Cut e Lo Cut moldam o timbre e Mix mistura."
   },
   "DLY:184549377": {
-    "name": "DLY-A",
-    "en": "A clean, original digital delay for clear repeats that stay out of the way. Time and Feedback set the echoes, Mix the blend, Sync locks to tempo, Trail lets repeats ring out.",
-    "pt": "Delay digital original e limpo, com repetições claras que não atrapalham. Time e Feedback definem os ecos, Mix a mistura, Sync trava no tempo e Trail deixa as repetições morrerem naturalmente."
+    "name": "Warm Analog",
+    "en": "An analog-style delay with warm, darkening repeats that sit behind your playing. Mix, Time (20 ms to 4 s) and Feedback set the echoes, Sync locks to tempo, Trail lets them ring out.",
+    "pt": "Delay estilo analógico, com repetições quentes que escurecem e ficam atrás da sua execução. Mix, Time (20 ms a 4 s) e Feedback definem os ecos, Sync trava no tempo e Trail os deixa soar."
   },
   "DLY:184549376": {
-    "name": "DLY-B",
-    "en": "An original delay voiced differently from the clean digital one, for slightly darker, smoother repeats. Time and Feedback set the echoes, Mix the blend, Sync locks to tempo, Trail lets repeats ring out.",
-    "pt": "Delay original com voz diferente do digital limpo, com repetições um pouco mais escuras e suaves. Time e Feedback definem os ecos, Mix a mistura, Sync trava no tempo e Trail deixa as repetições morrerem naturalmente."
+    "name": "Pure Digital",
+    "en": "A clean digital delay with exact, full-range repeats. Great for rhythmic and dotted echoes. Mix, Time (20 ms to 4 s) and Feedback set the echoes, Sync and Trail.",
+    "pt": "Delay digital limpo, com repetições exatas e de faixa completa. Ótimo para ecos rítmicos e pontuados. Mix, Time (20 ms a 4 s) e Feedback definem os ecos, além de Sync e Trail."
   },
   "DLY:184549378": {
-    "name": "DLY-C",
-    "en": "An original delay with a third voicing for warm, rounded repeats. Time and Feedback set the echoes, Mix the blend, Sync locks to tempo, Trail lets repeats ring out.",
-    "pt": "Delay original com uma terceira voz, de repetições quentes e arredondadas. Time e Feedback definem os ecos, Mix a mistura, Sync trava no tempo e Trail deixa as repetições morrerem naturalmente."
+    "name": "Tape Echo",
+    "en": "A magnetic tape-style echo with soft, slightly saturated repeats. Great for rockabilly, ambient and vintage leads. Mix, Time and Feedback set the echoes, plus Sync and Trail.",
+    "pt": "Eco estilo fita magnética, com repetições suaves e levemente saturadas. Ótimo para rockabilly, ambiências e solos vintage. Mix, Time e Feedback definem os ecos, além de Sync e Trail."
   },
   "DLY:184549387": {
-    "name": "DLY-D",
-    "en": "An original delay with a fourth voicing, useful for tape-style or analog-leaning echoes. Time and Feedback set the echoes, Mix the blend, Sync locks to tempo, Trail lets repeats ring out.",
-    "pt": "Delay original com uma quarta voz, útil para ecos estilo fita ou analógico. Time e Feedback definem os ecos, Mix a mistura, Sync trava no tempo e Trail deixa as repetições morrerem naturalmente."
+    "name": "Tube Echo",
+    "en": "A tube-style echo with warm, rich repeats and a slight grit. Good for thickening leads and classic rock. Mix, Time and Feedback set the echoes, plus Sync and Trail.",
+    "pt": "Eco estilo valvulado, com repetições quentes e ricas e um leve grão. Bom para encorpar solos e rock clássico. Mix, Time e Feedback definem os ecos, além de Sync e Trail."
   },
   "DLY:184549405": {
-    "name": "BBD-ST",
-    "en": "Inspired by FAS BBD Stereo. A stereo analog-style bucket-brigade delay with dark, warm repeats. Time and Time R% set the two sides, Spread widens the image, Feedback, Mix and Level balance it.",
-    "pt": "Inspirado no FAS BBD Stereo. Delay estéreo de estilo analógico (BBD), com repetições escuras e quentes. Time e Time R% definem os dois lados, Spread alarga a imagem; Feedback, Mix e Level equilibram."
+    "name": "Stereo BBD",
+    "en": "A stereo bucket-brigade delay with dark, warm repeats and a wide image. Time and Time R% set the two sides, Spread the width, Feedback (±100), Mix and Level the blend, plus Sync and Trail.",
+    "pt": "Delay estéreo bucket-brigade, com repetições escuras e quentes e imagem larga. Time e Time R% definem os dois lados, Spread a largura, Feedback (±100), Mix e Level a mistura, além de Sync e Trail."
   },
   "DLY:184549380": {
-    "name": "DLY-E",
-    "en": "An original delay for general use, with a clear voice and straightforward controls. Time and Feedback set the echoes, Mix the blend, Sync locks to tempo, Trail lets repeats ring out.",
-    "pt": "Delay original de uso geral, com voz clara e controles diretos. Time e Feedback definem os ecos, Mix a mistura, Sync trava no tempo e Trail deixa as repetições morrerem naturalmente."
+    "name": "Ping-Pong",
+    "en": "A stereo ping-pong delay that bounces repeats between left and right. Great for wide, rhythmic leads. Mix, Time and Feedback set the echoes, plus Sync and Trail.",
+    "pt": "Delay estéreo ping-pong, que alterna as repetições entre esquerda e direita. Ótimo para solos largos e rítmicos. Mix, Time e Feedback definem os ecos, além de Sync e Trail."
   },
   "DLY:184549381": {
-    "name": "DLY-F",
-    "en": "An original delay without tempo sync, for free-running echoes. Time and Feedback set the echoes, Mix the blend, Trail lets repeats ring out.",
-    "pt": "Delay original sem sincronização de tempo, para ecos livres. Time e Feedback definem os ecos, Mix a mistura e Trail deixa as repetições morrerem naturalmente."
+    "name": "Slapback",
+    "en": "A short slapback echo, the classic rockabilly and country doubling. Time runs from 20 to 300 ms, Mix and Feedback set the blend and repeats, Trail lets it ring out.",
+    "pt": "Eco curto slapback, o clássico dobrado do rockabilly e do country. Time vai de 20 a 300 ms, Mix e Feedback definem a mistura e as repetições, e Trail deixa soar."
   },
   "DLY:184549382": {
-    "name": "SWEEP-D",
-    "en": "An original delay whose time is swept by an LFO for shimmering, tape-wobble or flange-like repeats. Sweep Depth and Sweep Rate set the motion, Time, Feedback and Mix the echoes.",
-    "pt": "Delay original cujo tempo é varrido por um LFO, para repetições cintilantes, de fita ondulando ou tipo flanger. Sweep Depth e Sweep Rate definem o movimento; Time, Feedback e Mix os ecos."
+    "name": "Sweep Echo",
+    "en": "A delay whose repeats are swept by a filter for moving, vocal echoes. Sweep Depth and Sweep Rate set the motion, Mix, Time and Feedback the echoes, Sweep Sync, Time Sync and Trail.",
+    "pt": "Delay cujas repetições são varridas por um filtro, para ecos que se movem e soam vocais. Sweep Depth e Sweep Rate definem o movimento, Mix, Time e Feedback os ecos, além de Sweep Sync, Time Sync e Trail."
   },
   "DLY:184549385": {
-    "name": "RING-D",
-    "en": "An original delay combined with a ring modulator for strange, metallic repeats. Dly Mix, Time and Feedback set the echoes, Ring Mix, Freq and Tone shape the modulation.",
-    "pt": "Delay original combinado com ring modulator, para repetições estranhas e metálicas. Dly Mix, Time e Feedback definem os ecos; Ring Mix, Freq e Tone moldam a modulação."
+    "name": "Ring Echo",
+    "en": "A delay fed through a ring modulator for metallic, sci-fi repeats. Dly Mix, Time and Feedback set the echoes, Ring Mix, Freq and Tone shape the ring, plus Sync and Trail.",
+    "pt": "Delay passado por um modulador em anel, para repetições metálicas e de ficção científica. Dly Mix, Time e Feedback definem os ecos, Ring Mix, Freq e Tone moldam o anel, além de Sync e Trail."
   },
   "DLY:184549388": {
-    "name": "DLY-T",
-    "en": "An original delay with a Tone control and Mode switch for choosing the character of the repeats. Time and Feedback set the echoes, Tone darkens or brightens them, Mix blends.",
-    "pt": "Delay original com controle de Tone e chave Mode para escolher o caráter das repetições. Time e Feedback definem os ecos, Tone escurece ou clareia e Mix mistura."
+    "name": "Multi-Head",
+    "en": "A multi-head tape echo: Mode picks one of 12 head combinations for rhythmic, cascading repeats. Mix, Time, Feedback and Tone shape the echoes, plus Sync and Trail.",
+    "pt": "Eco de fita com várias cabeças: Mode escolhe uma de 12 combinações de cabeças, para repetições rítmicas em cascata. Mix, Time, Feedback e Tone moldam os ecos, além de Sync e Trail."
   },
   "DLY:184549389": {
-    "name": "ANLG-D",
-    "en": "Inspired by Boss DM-2. A classic warm analog delay with dark, soft repeats that blend behind your playing. Time and Feedback set the echoes, Mix the blend, Sync locks to tempo, Trail lets repeats ring out.",
-    "pt": "Inspirado no Boss DM-2. Delay analógico clássico e quente, com repetições escuras e macias que se misturam ao fundo. Time e Feedback definem os ecos, Mix a mistura, Sync trava no tempo e Trail deixa as repetições morrerem naturalmente."
+    "name": "Classic Analog",
+    "gear": "Boss DM-2",
+    "en": "Inspired by Boss DM-2. A classic bucket-brigade analog delay with dark, soft repeats that melt into the mix. Mix, Time and Feedback set the echoes, plus Sync and Trail.",
+    "pt": "Inspirado no Boss DM-2. Delay analógico bucket-brigade clássico, com repetições escuras e suaves que se misturam ao som. Mix, Time e Feedback definem os ecos, além de Sync e Trail."
   },
   "DLY:184549394": {
-    "name": "ECHO-X",
-    "en": "Inspired by Maxon AD999. A detailed analog-style delay with a clear, musical voice and rich repeats. Time and Feedback set the echoes, Mix the blend, Sync locks to tempo, Trail lets repeats ring out.",
-    "pt": "Inspirado no Maxon AD999. Delay de estilo analógico e detalhado, com voz clara e musical e repetições ricas. Time e Feedback definem os ecos, Mix a mistura, Sync trava no tempo e Trail deixa as repetições morrerem naturalmente."
+    "name": "Rich Analog",
+    "gear": "Maxon AD999",
+    "en": "Inspired by Maxon AD999. A long, clear analog delay with rich, musical repeats. Great for leads that need space. Mix, Time and Feedback set the echoes, plus Sync and Trail.",
+    "pt": "Inspirado no Maxon AD999. Delay analógico longo e claro, com repetições ricas e musicais. Ótimo para solos que pedem espaço. Mix, Time e Feedback definem os ecos, além de Sync e Trail."
   },
   "DLY:184549396": {
-    "name": "MOD-D",
-    "en": "An original delay with built-in modulation for chorused, lush repeats. Time and Feedback set the echoes, Mod adds the movement, Tone shapes the color, Mix blends.",
-    "pt": "Delay original com modulação embutida, para repetições exuberantes e com chorus. Time e Feedback definem os ecos, Mod adiciona movimento, Tone molda a cor e Mix mistura."
+    "name": "Rack Mod",
+    "en": "A vintage rack-style delay with chorused, lush repeats. Great for 80s cleans and ambient leads. Mix, Time and Feedback set the echoes, Mod the movement, Tone the color, plus Sync and Trail.",
+    "pt": "Delay estilo rack vintage, com repetições exuberantes e com chorus. Ótimo para limpos dos anos 80 e solos ambientes. Mix, Time e Feedback definem os ecos, Mod o movimento, Tone a cor, além de Sync e Trail."
   },
   "DLY:184549414": {
-    "name": "LOFI-D",
-    "en": "An original lo-fi delay that crushes the repeats for gritty, digital echoes. Crush and Bit degrade the sound, Time and Feedback set the echoes, Mix blends.",
-    "pt": "Delay lo-fi original que esmaga as repetições, para ecos digitais ásperos. Crush e Bit degradam o som, Time e Feedback definem os ecos e Mix mistura."
+    "name": "Lo-Fi Echo",
+    "en": "A lo-fi delay that degrades the repeats into gritty, crushed echoes. Crush and Bit set the damage, Mix, Time and Feedback (±100) the echoes, plus Sync and Trail.",
+    "pt": "Delay lo-fi que degrada as repetições em ecos sujos e esmagados. Crush e Bit definem o estrago, Mix, Time e Feedback (±100) os ecos, além de Sync e Trail."
   },
   "DLY:184549416": {
-    "name": "DLY-L",
-    "en": "An original delay with a Level control, for adjusting how loud the repeats are on top of the mix. Time and Feedback set the echoes, Mix blends, Sync locks to tempo.",
-    "pt": "Delay original com controle de Level, para ajustar o volume das repetições além da mistura. Time e Feedback definem os ecos, Mix mistura e Sync trava no tempo."
+    "name": "Reverse",
+    "en": "A reverse delay that plays the repeats backwards, for swelling, psychedelic textures. Mix, Time and Feedback (±100) set the echoes, Level their volume, plus Sync and Trail.",
+    "pt": "Delay reverso, que toca as repetições ao contrário, para texturas psicodélicas que crescem. Mix, Time e Feedback (±100) definem os ecos, Level o volume deles, além de Sync e Trail."
   },
   "DLY:184549379": {
-    "name": "DLY-DUAL",
-    "en": "An original dual delay with two independent lines. Time A and Time B, Feedback A and B and Mix A and B shape each line, A Sync and B Sync lock them to tempo.",
-    "pt": "Delay duplo original, com duas linhas independentes. Time A e B, Feedback A e B e Mix A e B moldam cada linha; A Sync e B Sync travam no tempo."
+    "name": "Dual Delay",
+    "en": "Two independent delay lines in one block, for rhythmic or wide stereo patterns. Mix, Time and Feedback for A and for B, A Sync and B Sync lock each to tempo, Trail lets them ring out.",
+    "pt": "Duas linhas de delay independentes num só bloco, para padrões rítmicos ou estéreo largos. Mix, Time e Feedback para A e para B, A Sync e B Sync travam cada uma no tempo e Trail deixa soar."
   },
   "DLY:184549420": {
-    "name": "DIGI-D",
-    "en": "Inspired by TC Electronic 2290 Dynamic Digital Delay. A pristine rack-style digital delay with rich modulation, famous for its lush, ambient echoes. Time, Feedback and Mix set the echoes, Mod Rate and Depth add movement, Low Cut and High Cut shape the tone.",
-    "pt": "Inspirado no TC Electronic 2290 Dynamic Digital Delay. Delay digital de rack, cristalino e com modulação rica, famoso por ecos exuberantes e ambientes. Time, Feedback e Mix definem os ecos, Mod Rate e Depth adicionam movimento e Low Cut e High Cut moldam o timbre."
+    "name": "Rack Digital",
+    "gear": "TC Electronic 2290",
+    "en": "Inspired by TC Electronic 2290. A pristine studio rack digital delay with lush modulation. Mix, Time, Feedback, Mod Rate, Mod Depth, Phase Reverse, Low Cut, High Cut and Level, plus Sync and Trail.",
+    "pt": "Inspirado no TC Electronic 2290. Delay digital de rack de estúdio, cristalino e com modulação exuberante. Mix, Time, Feedback, Mod Rate, Mod Depth, Phase Reverse, Low Cut, High Cut e Level, além de Sync e Trail."
   },
   "RVB:201326603": {
-    "name": "VERB-1",
-    "en": "A reverb with separate Low Damp and Hi Damp controls and modulation for a lush, shimmering space. Mix, Pre Delay and Decay set the size, Mod adds movement.",
-    "pt": "Reverb com controles separados de Low Damp e Hi Damp e modulação, para um espaço exuberante e cintilante. Mix, Pre Delay e Decay definem o tamanho e Mod adiciona movimento."
+    "name": "Studio",
+    "en": "A polished studio reverb with a smooth, modulated tail for vocals-like leads and clean parts. Mix, Pre Delay (up to 300 ms), Decay, Low Damp, Hi Damp and Mod, plus Trail.",
+    "pt": "Reverb de estúdio refinado, com cauda suave e modulada, para solos e partes limpas. Mix, Pre Delay (até 300 ms), Decay, Low Damp, Hi Damp e Mod, além de Trail."
   },
   "RVB:201326604": {
-    "name": "VERB-2",
-    "en": "A second reverb voicing with Low Damp, Hi Damp and Mod for a smooth, spacious wash. Mix, Pre Delay and Decay set the size, Trail lets it ring out.",
-    "pt": "Segunda voz de reverb, com Low Damp, Hi Damp e Mod, para uma ambiência suave e espaçosa. Mix, Pre Delay e Decay definem o tamanho e Trail deixa a cauda terminar naturalmente."
+    "name": "Club",
+    "en": "The reverb of a small live club: short, warm and natural, adding life without washing out. Mix, Pre Delay, Decay, Low Damp, Hi Damp and Mod, plus Trail.",
+    "pt": "O reverb de um pequeno clube ao vivo: curto, quente e natural, dá vida sem embolar. Mix, Pre Delay, Decay, Low Damp, Hi Damp e Mod, além de Trail."
   },
   "RVB:201326592": {
-    "name": "ROOM",
-    "en": "An original small-room reverb that adds natural space without washing out the tone. Mix, Pre Delay and Decay set the amount and length, Trail lets it ring out.",
-    "pt": "Reverb original de sala pequena, que adiciona espaço natural sem borrar o timbre. Mix, Pre Delay e Decay definem a quantidade e o tamanho e Trail deixa a cauda terminar."
+    "name": "Room",
+    "en": "A small room reverb that adds natural space without blurring the tone. Good on rhythm parts. Mix, Pre Delay and Decay set the amount and length, Trail lets it ring out.",
+    "pt": "Reverb de sala pequena, que dá espaço natural sem borrar o timbre. Bom em bases. Mix, Pre Delay e Decay definem quantidade e duração, e Trail deixa a cauda soar."
   },
   "RVB:201326593": {
-    "name": "HALL",
-    "en": "An original hall reverb with a larger, more open space and a longer tail. Mix, Pre Delay and Decay set the amount and length, Trail lets it ring out.",
-    "pt": "Reverb original de salão, com espaço maior e mais aberto e cauda longa. Mix, Pre Delay e Decay definem a quantidade e o tamanho e Trail deixa a cauda terminar."
+    "name": "Hall",
+    "en": "A concert-hall reverb with a large, open space and a long, even tail. Great for leads and ballads. Mix, Pre Delay and Decay set the amount and length, plus Trail.",
+    "pt": "Reverb de sala de concerto, com espaço grande e aberto e cauda longa e uniforme. Ótimo para solos e baladas. Mix, Pre Delay e Decay definem quantidade e duração, além de Trail."
   },
   "RVB:201326594": {
-    "name": "PLATE",
-    "en": "An original plate-style reverb: smooth, bright and dense, great on vocals-like guitar leads. Mix, Pre Delay and Decay set the amount and length, Trail lets it ring out.",
-    "pt": "Reverb original estilo plate: suave, brilhante e densa, ótima em solos. Mix, Pre Delay e Decay definem a quantidade e o tamanho e Trail deixa a cauda terminar."
+    "name": "Church",
+    "en": "A church reverb with a huge, high-ceilinged space and a very long tail. Great for ambient swells and slow leads. Mix, Pre Delay and Decay, plus Trail.",
+    "pt": "Reverb de igreja, com espaço enorme de pé-direito alto e cauda muito longa. Ótimo para ambiências e solos lentos. Mix, Pre Delay e Decay, além de Trail."
   },
   "RVB:201326595": {
-    "name": "SPRING",
-    "en": "An original reverb with a bouncy, vintage-amp character. Mix and Decay set the amount and length, High Damp tames the top end, Trail lets it ring out.",
-    "pt": "Reverb original com caráter saltitante de amp vintage. Mix e Decay definem a quantidade e o tamanho, High Damp doma os agudos e Trail deixa a cauda terminar."
+    "name": "Plate",
+    "en": "A studio plate reverb: dense, smooth and bright, sitting well on leads and cleans. Mix and Decay set the amount and length, High Damp tames the top, Trail lets it ring out.",
+    "pt": "Reverb de placa de estúdio: denso, suave e brilhante, assenta bem em solos e limpos. Mix e Decay definem quantidade e duração, High Damp doma os agudos e Trail deixa soar."
   },
   "RVB:201326596": {
-    "name": "DARK",
-    "en": "An original reverb with a Tone control for dark or bright tails. Mix and Decay set the amount and length, Tone shades the sound, Trail lets it ring out.",
-    "pt": "Reverb original com controle de Tone, para caudas escuras ou brilhantes. Mix e Decay definem a quantidade e o tamanho, Tone dá a cor e Trail deixa a cauda terminar."
+    "name": "Spring",
+    "en": "A vintage amp spring reverb with a bouncy, splashy drip. Perfect for surf, rockabilly and clean twang. Mix and Decay set the amount and length, Tone the brightness, plus Trail.",
+    "pt": "Reverb de mola de amp vintage, com aquele respingo saltitante. Perfeito para surf, rockabilly e twang limpo. Mix e Decay definem quantidade e duração, Tone o brilho, além de Trail."
   },
   "RVB:201326598": {
-    "name": "SIMPLE-1",
-    "en": "A simple original reverb with only Mix and Decay, for quick, fuss-free ambience. Trail lets the tail ring out.",
-    "pt": "Reverb original simples, só com Mix e Decay, para ambiência rápida e sem complicação. Trail deixa a cauda terminar."
+    "name": "Airy Wash",
+    "en": "A simple, airy ambient reverb with a bright, open tail, quick to dial in. Mix and Decay are the only controls, Trail lets the tail ring out.",
+    "pt": "Reverb ambiente simples e arejado, com cauda brilhante e aberta, rápido de ajustar. Mix e Decay são os únicos controles, e Trail deixa a cauda soar."
   },
   "RVB:201326599": {
-    "name": "SIMPLE-2",
-    "en": "A second simple original reverb with a different color, controlled by Mix and Decay. Trail lets the tail ring out.",
-    "pt": "Segundo reverb original simples, com outra cor, controlado por Mix e Decay. Trail deixa a cauda terminar."
+    "name": "Deep Wash",
+    "en": "A simple, deep ambient reverb with a dark, enveloping tail for slow, moody parts. Mix and Decay are the only controls, Trail lets the tail ring out.",
+    "pt": "Reverb ambiente simples e profundo, com cauda escura e envolvente para partes lentas e climáticas. Mix e Decay são os únicos controles, e Trail deixa a cauda soar."
   },
   "RVB:201326600": {
-    "name": "SHIMR-1",
-    "en": "An original reverb with Lo End and Hi End controls for shaping the tail's tone. Mix, Pre Delay and Decay set the space, Trail lets it ring out.",
-    "pt": "Reverb original com controles de Lo End e Hi End para moldar o timbre da cauda. Mix, Pre Delay e Decay definem o espaço e Trail deixa a cauda terminar."
+    "name": "Mod Space",
+    "en": "A sweet modulated reverb with a gently moving tail, for dreamy cleans. Mix, Pre Delay and Decay set the space, Lo End and Hi End (±50) shape its tone, plus Trail.",
+    "pt": "Reverb modulado e doce, com cauda que se move suavemente, para limpos sonhadores. Mix, Pre Delay e Decay definem o espaço, Lo End e Hi End (±50) moldam o timbre, além de Trail."
   },
   "RVB:201326601": {
-    "name": "SHIMR-2",
-    "en": "A second original reverb with Lo End and Hi End controls, with a larger, airy feel. Mix, Pre Delay and Decay set the space, Trail lets it ring out.",
-    "pt": "Segundo reverb original com controles de Lo End e Hi End, de sensação maior e arejada. Mix, Pre Delay e Decay definem o espaço e Trail deixa a cauda terminar."
+    "name": "Shimmer",
+    "en": "A shimmer reverb that adds a glowing, pitched-up halo to the tail. Made for ambient pads and post-rock. Mix, Pre Delay and Decay, Lo End and Hi End (±50), plus Trail.",
+    "pt": "Reverb shimmer, que acrescenta à cauda um halo brilhante afinado para cima. Feito para pads ambientes e post-rock. Mix, Pre Delay e Decay, Lo End e Hi End (±50), além de Trail."
   },
   "RVB:201326613": {
-    "name": "VERB-3",
-    "en": "A third reverb voicing with Low Damp, Hi Damp and Mod for a deep, modulated space. Mix, Pre Delay and Decay set the size, Trail lets it ring out.",
-    "pt": "Terceira voz de reverb, com Low Damp, Hi Damp e Mod, para um espaço profundo e modulado. Mix, Pre Delay e Decay definem o tamanho e Trail deixa a cauda terminar."
+    "name": "Ambient",
+    "en": "A hazy, cloud-like ambient reverb with a soft, modulated wash. Great for swells and textures. Mix, Pre Delay (up to 300 ms), Decay, Low Damp, Hi Damp and Mod, plus Trail.",
+    "pt": "Reverb ambiente enevoado, como uma nuvem, com lavagem suave e modulada. Ótimo para swells e texturas. Mix, Pre Delay (até 300 ms), Decay, Low Damp, Hi Damp e Mod, além de Trail."
   },
   "CLONE:251658240": {
     "name": "Clone 1",
