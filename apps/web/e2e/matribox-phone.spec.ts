@@ -1,5 +1,5 @@
 import { devices, type Page } from '@playwright/test';
-import { parseMbPreset } from '@pocket-master/core';
+import { parseMbPreset, writeMatriboxPrst } from '@pocket-master/core';
 import { blockPanel, connectMatribox, expect, expectChain, pickCatalog, test } from './matribox-fixtures.ts';
 
 // A phone: narrow, touch, no hover (the chain's move arrows stay visible).
@@ -63,4 +63,65 @@ test('the model menu opens as a sheet inside the screen and the panels fit', asy
     const b = (await control.boundingBox())!;
     expect(b.x + b.width).toBeLessThanOrEqual(screen.width);
   }
+});
+
+test('tiles do not drag on touch, so a swipe scrolls the strip', async ({ page }) => {
+  await connectMatribox(page);
+  await pickCatalog(page);
+  for (const tile of await page.locator('.tiles .tile-unit').all()) await expect(tile).not.toHaveAttribute('draggable', 'true');
+  await expect(page.locator('.tiles')).toHaveCSS('touch-action', 'pan-x');
+});
+
+/** Vertical overlap of two boxes: they sit on the same row. */
+const sameRow = (a: { y: number; height: number }, b: { y: number; height: number }) => a.y < b.y + b.height && b.y < a.y + a.height;
+
+test('the preset header fits one row: secondary actions fold into a More menu that works', async ({ page, unit }) => {
+  await connectMatribox(page);
+  const head = page.locator('.preset-head');
+  const more = head.getByRole('button', { name: 'More actions' });
+  const box = async (name: string) => (await head.getByRole('button', { name, exact: true }).boundingBox())!;
+  const save = await box('Save…');
+  expect(sameRow(await box('Undo'), save)).toBe(true);
+  expect(sameRow(save, (await more.boundingBox())!)).toBe(true);
+  expect(sameRow(save, (await head.getByRole('slider', { name: 'Patch volume' }).boundingBox())!)).toBe(true);
+  expect(await sideways(page)).toBeLessThanOrEqual(0);
+  await expect(head.getByRole('button', { name: 'Export preset' })).toBeHidden();
+  await expect(head.getByRole('button', { name: 'Read', exact: true })).toBeHidden();
+
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
+  await more.tap();
+  await expect(more).toHaveAttribute('aria-expanded', 'true');
+  const download = page.waitForEvent('download');
+  await head.getByRole('button', { name: 'Export preset' }).tap();
+  expect((await download).suggestedFilename()).toBe('17C Drive AD.prst');
+  await expect(head.getByRole('button', { name: 'Export preset' })).toBeHidden();
+
+  await more.tap();
+  const reads = unit.received.length;
+  await head.getByRole('button', { name: 'Read', exact: true }).tap();
+  await expect.poll(() => unit.received.length).toBeGreaterThan(reads);
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
+
+  // Import picks its file from the folded menu; its dialog still opens.
+  const file = { name: 'drive.prst', mimeType: 'application/octet-stream', buffer: Buffer.from(writeMatriboxPrst(parseMbPreset(unit.editBuffer))) };
+  await page.getByLabel('Choose a Matribox preset file (.prst)').setInputFiles(file);
+  await expect(page.getByRole('dialog', { name: 'Import a preset file' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Import a preset file' })).toBeHidden();
+
+  await more.tap();
+  await page.keyboard.press('Escape');
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
+  await expect(more).toBeFocused();
+});
+
+test.describe('in Portuguese', () => {
+  test.use({ locale: 'pt-BR' });
+  test('the More menu speaks Portuguese', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: '17C Drive AD' })).toBeVisible();
+    await page.getByRole('button', { name: 'Mais ações' }).tap();
+    await expect(page.getByRole('button', { name: 'Exportar preset' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Ler', exact: true })).toBeVisible();
+  });
 });

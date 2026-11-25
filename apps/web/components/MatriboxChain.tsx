@@ -6,6 +6,7 @@ import { mbFxidHex, mbLookKey, mbModelGroups, parseMbModelValue } from '@/lib/ma
 import { PickerList } from './ModelPicker';
 import { PedalTile, TileMove, TileStrip } from './TileStrip';
 import { useI18n } from './I18n';
+import { useTileDrag } from './useTileDrag';
 
 interface Props {
   chain: readonly MbResolvedBlock[];
@@ -26,7 +27,7 @@ export const mbTileModel = (block: MbResolvedBlock, userSlot: string | undefined
 
 /**
  * The Matribox's signal chain as the pedals of the Pocket Master's strip: a click selects the
- * block, the LED switches it, the arrows move it, and the last tile adds a block (with the
+ * block, the LED switches it, a drag (or the arrows) moves it, and the last tile adds a block (with the
  * catalog, while the unit has a free slot).
  */
 export function MatriboxChain({ chain, catalog, selected, disabled, userSlot, onSelect, onOn, onMove, onAdd }: Props) {
@@ -36,6 +37,10 @@ export function MatriboxChain({ chain, catalog, selected, disabled, userSlot, on
   const menuRef = useRef<HTMLDivElement>(null);
   const groups = useMemo(() => (catalog ? mbModelGroups(catalog) : []), [catalog]);
   const canAdd = catalog !== null && chain.length < MB_SLOTS;
+  // One move write per drop; a drop on the tile's own place writes nothing.
+  const drag = useTileDrag(!disabled, (from, to) => {
+    if (from !== to) onMove(from, to);
+  });
   const closeAdd = (refocus: boolean) => {
     setAdding(false);
     if (refocus) addRef.current?.focus();
@@ -66,8 +71,9 @@ export function MatriboxChain({ chain, catalog, selected, disabled, userSlot, on
       {chain.map((block, at) => {
         const name = `${block.position}. ${block.module}`;
         const model = mbTileModel(block, userSlot(block));
+        const { className, ...dragProps } = drag(at, at);
         return (
-          <li key={block.slot} className="tile-unit mb-unit">
+          <li key={block.slot} className={`tile-unit mb-unit${className}`} {...dragProps}>
             <PedalTile
               tint={`mb-${mbLookKey(block)}`}
               icon={mbLookKey(block)}
@@ -96,7 +102,7 @@ export function MatriboxChain({ chain, catalog, selected, disabled, userSlot, on
       })}
       {chain.length === 0 && <li className="tile-unit mb-unit mb-chain-empty muted small">{t('mb.empty')}</li>}
       {canAdd && (
-        <li className="tile-unit mb-unit">
+        <li className="tile-unit mb-unit mb-unit-add">
           <button
             ref={addRef}
             type="button"

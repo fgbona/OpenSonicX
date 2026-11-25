@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { MB_PRESET_COUNT, mbPresetLabel, resolveMbPreset, writeMatriboxPrst, type MbPreset } from '@pocket-master/core';
 import { downloadJson, downloadText } from '@/lib/backupStore';
 import { mbBackupFileName } from '@/lib/matriboxBackups';
@@ -68,87 +69,91 @@ export function MatriboxPresetFile({ mb }: { mb: Matribox }) {
         {t('mb.importPreset')}
         <input type="file" hidden accept={MB_PRESET_FILE_ACCEPT} aria-label={t('mb.importPick')} disabled={disabled} onChange={(e) => void pick(e.currentTarget)} />
       </label>
-      <Dialog open={picked !== null} title={t('mb.importTitle')} onClose={close} locked={importing}>
-        {!picked ? null : 'error' in picked ? (
-          <>
-            <p className="alert" role="alert">
-              {picked.file}: {te(picked.error)}
-            </p>
-            <div className="sheet-actions">
-              <button type="button" className="btn btn-primary" onClick={close}>
-                {t('action.done')}
-              </button>
-            </div>
-          </>
-        ) : done ? (
-          <>
-            <p>{t('mb.imported', { slot: label, name: picked.preset.name })}</p>
-            {backupOffer}
-            <div className="sheet-actions">
-              <button type="button" className="btn btn-primary" onClick={close}>
-                {t('action.done')}
-              </button>
-            </div>
-          </>
-        ) : (
-          <form
-            className="sheet-form"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (confirmed && (await mb.importPreset(target, picked.preset))) setDone(true);
-            }}
-          >
-            <div className="sheet-note">
-              <p>
-                <strong>{t('mb.importHolds', { name: picked.preset.name, file: picked.file })}</strong>
-              </p>
-              <p>
-                {t('mb.chain')}:{' '}
-                {resolveMbPreset(picked.preset, mb.catalog ?? { modules: [] })
-                  .chain.map((b) => (b.model ? `${b.module} ${b.model.name}` : b.module))
-                  .join(' → ') || t('mb.empty')}
-              </p>
-            </div>
-            <label className="field">
-              <span>{t('save.slot')}</span>
-              <select
-                value={target}
-                onChange={(e) => {
-                  setTarget(Number(e.target.value));
-                  setConfirmed(false);
-                }}
-                disabled={importing}
-              >
-                {Array.from({ length: MB_PRESET_COUNT }, (_, i) => (
-                  <option key={i} value={i}>
-                    {mbPresetLabel(i)} · {unit.names[i]?.name ?? ''}
-                    {i === unit.current ? ` ${t('save.loaded')}` : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {mb.edited && <p className="small">{t('mb.importEdited', { slot: mbPresetLabel(unit.current) })}</p>}
-            <label className="mb-confirm">
-              <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} disabled={importing} />
-              <span>{t('mb.importConfirm', { slot: label, name: unit.names[target]?.name ?? '' })}</span>
-            </label>
-            {mb.error && (
+      {/* On <body>: the buttons may sit in the header's folded menu, which hides its box. */}
+      {createPortal(
+        <Dialog open={picked !== null} title={t('mb.importTitle')} onClose={close} locked={importing}>
+          {!picked ? null : 'error' in picked ? (
+            <>
               <p className="alert" role="alert">
-                {te(mb.error)}
+                {picked.file}: {te(picked.error)}
               </p>
-            )}
-            {mb.error && backupOffer}
-            <div className="sheet-actions">
-              <button type="button" className="btn" onClick={close} disabled={importing}>
-                {t('action.cancel')}
-              </button>
-              <button type="submit" className="btn btn-danger" disabled={importing || !confirmed}>
-                {t(importing ? 'mb.importing' : 'mb.importSubmit', { slot: label })}
-              </button>
-            </div>
-          </form>
-        )}
-      </Dialog>
+              <div className="sheet-actions">
+                <button type="button" className="btn btn-primary" onClick={close}>
+                  {t('action.done')}
+                </button>
+              </div>
+            </>
+          ) : done ? (
+            <>
+              <p>{t('mb.imported', { slot: label, name: picked.preset.name })}</p>
+              {backupOffer}
+              <div className="sheet-actions">
+                <button type="button" className="btn btn-primary" onClick={close}>
+                  {t('action.done')}
+                </button>
+              </div>
+            </>
+          ) : (
+            <form
+              className="sheet-form"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (confirmed && (await mb.importPreset(target, picked.preset))) setDone(true);
+              }}
+            >
+              <div className="sheet-note">
+                <p>
+                  <strong>{t('mb.importHolds', { name: picked.preset.name, file: picked.file })}</strong>
+                </p>
+                <p>
+                  {t('mb.chain')}:{' '}
+                  {resolveMbPreset(picked.preset, mb.catalog ?? { modules: [] })
+                    .chain.map((b) => (b.model ? `${b.module} ${b.model.name}` : b.module))
+                    .join(' → ') || t('mb.empty')}
+                </p>
+              </div>
+              <label className="field">
+                <span>{t('save.slot')}</span>
+                <select
+                  value={target}
+                  onChange={(e) => {
+                    setTarget(Number(e.target.value));
+                    setConfirmed(false);
+                  }}
+                  disabled={importing}
+                >
+                  {Array.from({ length: MB_PRESET_COUNT }, (_, i) => (
+                    <option key={i} value={i}>
+                      {mbPresetLabel(i)} · {unit.names[i]?.name ?? ''}
+                      {i === unit.current ? ` ${t('save.loaded')}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {mb.edited && <p className="small">{t('mb.importEdited', { slot: mbPresetLabel(unit.current) })}</p>}
+              <label className="mb-confirm">
+                <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} disabled={importing} />
+                <span>{t('mb.importConfirm', { slot: label, name: unit.names[target]?.name ?? '' })}</span>
+              </label>
+              {mb.error && (
+                <p className="alert" role="alert">
+                  {te(mb.error)}
+                </p>
+              )}
+              {mb.error && backupOffer}
+              <div className="sheet-actions">
+                <button type="button" className="btn" onClick={close} disabled={importing}>
+                  {t('action.cancel')}
+                </button>
+                <button type="submit" className="btn btn-danger" disabled={importing || !confirmed}>
+                  {t(importing ? 'mb.importing' : 'mb.importSubmit', { slot: label })}
+                </button>
+              </div>
+            </form>
+          )}
+        </Dialog>,
+        document.body,
+      )}
     </>
   );
 }

@@ -445,7 +445,7 @@ button, select { font: inherit; color: inherit; }
 .tile-move button:disabled { opacity: 0.3; cursor: default; }
 
 /* Touch screens have no hover and no HTML drag and drop: keep the move arrows visible, and let a
-   swipe scroll the chain (tiles are not draggable there, see ChainTiles). */
+   swipe scroll the chain (tiles are not draggable there, see useTileDrag). */
 @media (hover: none) {
   .tiles { touch-action: pan-x; }
   .tiles-editable .tile-unit { padding-bottom: 26px; cursor: default; }

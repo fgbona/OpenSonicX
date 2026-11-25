@@ -27,9 +27,27 @@
 .mb-head-end .mb-head-actions { padding-bottom: 8px; }
 .mb-style { margin-left: 10px; padding: 2px 8px; border-radius: 980px; background: var(--fill); color: var(--label-2); font-size: 0.6875rem; }
 label.btn { display: inline-block; }
+/* Secondary actions: in the row on wide screens, folded under ⋯ on a phone (MatriboxMore). */
+.mb-more { display: contents; }
+.mb-more-toggle { display: none; }
+.mb-more-menu { display: contents; }
+@media (max-width: 720px) {
+  .mb-head-end { flex-wrap: nowrap; gap: 12px; }
+  .mb-head-end .fields { width: auto; }
+  .mb-more { display: block; position: relative; }
+  .mb-more-toggle { display: inline-flex; }
+  .mb-more-menu {
+    display: none; position: absolute; z-index: 30; top: calc(100% + 6px); right: 0; min-width: max-content;
+    flex-direction: column; align-items: stretch; gap: 6px; padding: 8px;
+    background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow);
+  }
+  :root[data-theme='dark'] .mb-more-menu { background: #191c21; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.04); }
+  .mb-more.is-open .mb-more-menu { display: flex; }
+  .mb-more-menu .btn { text-align: left; }
+}
 
-/* Chain strip: tiles do not drag here; the last one adds a block. */
-.tiles-editable .mb-unit { cursor: default; }
+/* Chain strip: the last tile adds a block (it does not drag). */
+.tiles-editable .mb-unit-add { cursor: default; }
 .mb-chain-empty { align-items: center; padding: 0 8px; }
 .mb-tile-add {
   align-content: center; border-style: dashed; background: transparent; box-shadow: none; color: var(--label-2);
