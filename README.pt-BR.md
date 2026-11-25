@@ -117,13 +117,27 @@ Todo menu mostra o nome que a pedaleira usa ao lado do que ele é, agrupado por 
   `/Applications/Matribox II PRO.app/Contents/Frameworks/App.framework/Resources/flutter_assets/assets/alg/alg_data.json`)
   e ele fica naquele navegador; o app desktop lê do app instalado (ou de `MATRIBOX_CATALOG`). Sem
   ele, os presets e as cadeias aparecem mesmo assim, pelo número do módulo.
-  A aparência é a do editor da Pocket Master: a cadeia como uma fileira de pedais (cada módulo
-  na sua cor, um LED que o liga e desliga, setas para movê-lo, um último bloco para adicionar),
-  um painel para o bloco selecionado com o menu de modelos (só os modelos daquele módulo,
+  A aparência é a do editor da Pocket Master: a cadeia como blocos de pedal (cada módulo na sua
+  cor, um LED que o liga e desliga, setas para movê-lo, um último bloco para adicionar). Os
+  blocos quebram em linhas, em zigue-zague: cada linha se lê da esquerda para a direita e um cabo
+  desce do fim de uma linha para o começo da próxima, então uma cadeia cheia (12 blocos) cabe em
+  duas linhas no computador, sem rolar para o lado. Arraste um bloco com o mouse para mudá-lo de
+  lugar (um movimento enviado à unidade; o Desfazer cobre; na tela de toque ficam as setas). Um
+  painel mostra o bloco selecionado, com o menu de modelos (só os modelos daquele módulo,
   agrupados por tipo, com o equipamento real ao lado; *Adicionar* pede primeiro o tipo de bloco,
-  depois o modelo) e os parâmetros como knobs, chaves e seletores pequenos, e os blocos AMP vestidos como o
-  amplificador em que o modelo se baseia, lido do seu catálogo (painel dourado Marshall, tweed
-  ou blackface Fender, chapa xadrez Mesa…; só materiais e cores, sem logotipos).
+  depois o modelo) e os parâmetros como knobs, chaves e seletores pequenos. Os blocos AMP são
+  vestidos como o amplificador em que o modelo se baseia, lido do seu catálogo (painel dourado
+  Marshall, tweed ou blackface Fender, chapa xadrez Mesa…; só materiais e cores, sem logotipos).
+  No celular, Exportar preset, Importar preset… e Ler ficam num menu ⋯, e o cabeçalho cabe numa
+  linha só.
+  O editor acompanha o que você faz na própria unidade: trocar de preset, ligar ou desligar um
+  bloco, girar o knob 1/2 (um parâmetro) ou o knob 3 (volume do patch) aparece no editor sem
+  precisar ler de novo.
+  Uma **biblioteca de timbres**, como a da Pocket Master: *Guardar timbre* salva a cadeia carregada
+  neste navegador, com nome e anotações; *Carregar* manda um timbre guardado de volta ao preset
+  carregado, num único passo de Desfazer (nunca grava um slot); e a biblioteca inteira se exporta
+  e se importa num arquivo JSON. O assistente de timbre também guarda e carrega. Carregar
+  precisa do catálogo.
   O volume do patch, quais blocos os footswitches A-D ligam e desligam, as entradas do pedal de
   expressão (bloco, parâmetro, mínimo, máximo) e uma linha de afinador / tap tempo / BPM também
   estão lá (conferidos em uma unidade até agora; afinador e andamento vão como os MIDI Control
@@ -134,6 +148,13 @@ Todo menu mostra o nome que a pedaleira usa ao lado do que ele é, agrupado por 
   o que mudou, e salvar continua passando pela janela de Salvar que você confirma.
 
 ## O que funciona onde
+
+- **Matribox II Pro, conferido na unidade do dono:** leitura dos presets, edições ao vivo
+  (parâmetros, liga/desliga, modelos, adicionar, remover, mover), salvar num slot, importar e
+  exportar preset inteiro, backups, e volume do patch, footswitches e pedal de expressão. **Ainda
+  não conferido na unidade:** acompanhar mudanças feitas na unidade (troca de preset, bloco
+  ligado/desligado, knobs), o *Guardar* e o *Carregar* da biblioteca de timbres, e o
+  zigue-zague com um preset longo (está coberto por testes numa unidade simulada). Trate como experimental.
 
 - **Firmware da pedaleira:** testado na **V1.3.3**. O editor lê a versão da pedaleira (aparece em
   *Opções globais*) e avisa quando é outra, que pode se comportar diferente.

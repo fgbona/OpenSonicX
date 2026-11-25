@@ -118,13 +118,25 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
   `/Applications/Matribox II PRO.app/Contents/Frameworks/App.framework/Resources/flutter_assets/assets/alg/alg_data.json`)
   and it stays in that browser; the desktop app reads it from the installed app (or
   `MATRIBOX_CATALOG`). Without it the presets and chains still show, by module number.
-  It looks like the Pocket Master's editor: the chain as a strip of pedals (each module in its
-  own colour, an LED that switches it, arrows to move it, a last tile to add a block), one panel
-  for the selected block with its model menu (only that module's models, grouped by type, with
-  the real gear beside each; *Add* asks for the block type first, then the model) and its
-  parameters as knobs, switches and small selectors, and AMP blocks dressed like the amp their
-  model is based on, read from your catalog (Marshall gold panel, Fender tweed or blackface,
-  Mesa diamond plate…; materials and colours only, no logos).
+  It looks like the Pocket Master's editor: the chain as pedal tiles (each module in its own
+  colour, an LED that switches it, arrows to move it, a last tile to add a block). The tiles
+  wrap in a snake, each row read left to right with a cable bending from the end of one row to
+  the start of the next, so a full chain of 12 blocks fits on two rows on a desktop and no
+  sideways scrolling is needed. Drag a tile to a new place with the mouse (one move to the unit,
+  Undo covers it; touch screens keep the arrows). One panel shows the selected block with its
+  model menu (only that module's models, grouped by type, with the real gear beside each; *Add*
+  asks for the block type first, then the model) and its parameters as knobs, switches and
+  small selectors, and AMP blocks dressed like the amp their model is based on, read from your
+  catalog (Marshall gold panel, Fender tweed or blackface, Mesa diamond plate…; materials and
+  colours only, no logos). On a phone, Export preset, Import preset… and Read fold under a ⋯
+  menu so the header stays on one row.
+  It follows what you do on the unit itself: loading another preset, switching a block on or
+  off, turning knob 1/2 (a parameter) or knob 3 (patch volume) shows in the editor without a
+  read.
+  A **tone library**, like the Pocket Master's: *Keep tone* stores the loaded chain in this
+  browser under a name and notes, *Load* sends a kept tone back to the loaded preset as one
+  Undo step (it never writes a slot), and the whole library exports to and imports from one JSON
+  file. The tone assistant keeps and loads tones too. Loading needs the catalog.
   The patch volume, which blocks footswitches A-D toggle, the expression-pedal entries (block,
   parameter, min, max) and a tuner / tap tempo / BPM row are there too (checked on one unit so far;
   tuner and tempo go as the manual's MIDI Control Changes).
@@ -134,6 +146,13 @@ Every menu shows the pedal's own name next to what it is, grouped by style:
   goes through the Save dialog for you to confirm.
 
 ## What works where
+
+- **Matribox II Pro, checked on the owner's unit:** reading presets, live edits (parameters,
+  on/off, models, add, remove, move), saving to a slot, whole-preset import and export, backups,
+  and the patch volume, footswitch and expression assignments. **Not yet checked on the unit:**
+  following changes made on the unit (preset switch, block on/off, knobs), the tone library's
+  *Keep* and *Load*, and the snake layout with a long preset (it is covered by tests against a
+  simulated unit). Treat these as experimental.
 
 - **Pedal firmware:** tested on **V1.3.3**. The editor reads the version from the pedal
   (shown in *Global options*) and warns when it is another one, which may behave differently.

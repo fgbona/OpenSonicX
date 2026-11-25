@@ -100,6 +100,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Documentation
 
+- README, README.pt-BR and `docs/matribox.md`: the Matribox II Pro editor's current look and
+  features (snake chain, drag to reorder, ⋯ menu on a phone, following the unit, tone library),
+  with what is checked on the owner's unit and what is not yet. README media is unchanged: the
+  media script covers the Pocket Master only.
+
 - `docs/matribox.md`: how the official editor converts a NAM capture into a Matribox CLONE
   `.clo`. Calling the installed editor's converter rebuilds the captured upload byte for byte.
   Its reference DI is the same as ours, and its fit is a different, single-level algorithm.
