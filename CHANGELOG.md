@@ -196,7 +196,14 @@ and the project uses [Semantic Versioning](https://semver.org/).
   product name or non-Latin text through as gear; `models.json` regenerated. New core tests:
   no gear is an original, an IR file, another maker's product or a bare number, and no model
   name is a numbered placeholder.
-
+- Matribox block panels: the knobs of a row no longer sit at different heights. Knobs showing a
+  range caption ("0 … 500") were taller than the ones without, and the row's `align-items:
+  flex-end` pushed the shorter ones (and the switches and selectors, e.g. DYN Threshold/Ratio,
+  RVB Trail) down. A panel with range captions now gives every control the same four rows (value,
+  64 px dial area, label, caption) and top-aligns them, with a switch or selector centred on the
+  dial row, so dials and labels share one line per wrapped row, on desktop and phone. The caption
+  also got its own small style. The Pocket Master panels, which have no captions, are unchanged.
+  New e2e `matribox-knob-align.spec.ts`.
 - Web e2e under parallel load: the axe and pixel-contrast tests (`a11y.spec.ts`) timed out at 30 s
   when many workers shared the CPU, and passed alone. Cause: `e2e/contrast.ts` shipped every pixel
   of every screenshot to the page as a JS array of arrays and sorted it there, and added a new
