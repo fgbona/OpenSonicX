@@ -70,6 +70,8 @@ export async function turnKnob(knob: Locator, value: number) {
     await knob.press(key);
     await expect(knob).toHaveAttribute('aria-valuenow', String(now));
   };
+  // A knob ignores keys while the editor is busy (a read or a chain edit still running).
+  await expect(knob).toHaveAttribute('aria-disabled', 'false');
   await knob.focus();
   await press('Home', 0);
   for (let i = 0; i < Math.floor((value - min) / tenth); i++) await press('PageUp', tenth);
