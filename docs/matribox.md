@@ -226,20 +226,77 @@ captures 1 to 4.
 | `01 00 05 01` + u32 slot + u32 param + f32 | A knob turned on the unit: same shape as the host's set param | Hardware capture: knob 1 and 2 turns hit the slot and parameter section 2 names | High |
 | `03 00 05 01` + u32 value | Knob 3 turned: values 42, 82, 83, 52, 53 (0..100). The patch volume: the official editor's volume slider sends this same message (capture mb-01) | Hardware capture, mb-01 | High |
 | `07 00 05 01` + 12 × u8 | Every slot's on/off (section 5 at 724) after a footswitch press | Hardware capture: one bit changes per press, matching section 8 | High |
+| `02 00 05 01` + u32 slot + u32 0/1 | One block toggled on the unit: same shape as the host's on/off | Capture mb-17c (both sides): slot 1 off, then on 1.7 s later, no host frame around them, after a "preset edited" notice. Why this one and not the bulk `07` message (stomp mode, a CTRL switch, the touch screen?) is not known | High (layout), low (trigger) |
 | `08 00 05 01` + 18 bytes `07 FF FF 00 FF FF 00 00 \| 00 00 C8 42 \| 00 × 8` | Unknown (holds f32 100.0; expression pedal or toe switch?) | Once, hardware capture | Low |
 | `01 00 0A 01` + u32 index | Preset changed on the unit | Hardware capture | High |
 | `04 00 04 01` + 156 bytes | The assignment tables after a chain edit: section 2 bytes 4..9 or 4..8, section 7 from 5 or 4, section 8 rows (from 9): 6 + 90 + 60 or 5 + 91 + 60 bytes. Sent before the chain notice on add, remove and change model, not on a move | Captures 2, 3, 4: always the empty tables of an empty preset, so the one-byte ambiguity stays | High (content), medium (which byte is left out) |
 | cmd `11`, `00 08 00 00` + u32 | "Preset edited" flag: 1 after an edit, 0 after a save | 1 after edits (hardware capture, capture 2); 0 sent 60 ms after the save in capture 1 (so a save does get this one notice); the editor reads it on connect (flag-1 `11` read) | Medium |
 | cmd `11`, `00 52 00 00` + u32 | Unknown flag, toggled 1, 0, 1 within 4 s while nothing else was sent | Capture 2 (unit side only) | Low |
 
-### Other connect reads (flag 0, no argument)
+**Following the unit.** `parseMbNotice` (core, `notice.ts`) decodes the rows above marked high
+(preset change, `02` and `07` on/off, knob 1/2 set param, knob 3 volume, the "preset edited" flag);
+tested on the captured frames (`packages/core/test/fixtures/matribox-notices.txt`). The link hands
+every message no request took to `onNotice` (between requests too). The preset-change notice has
+the bytes of the select echo and of the current-preset reply, so the link's own answers are taken
+first. The web editor (`useMatribox`) re-reads the loaded preset when the unit loads another one
+(once: the unit sends it twice) and applies the block, knob and volume notices to what it shows
+without a read. Not followed yet: chain edits and saves made on the unit (never captured), the
+expression pedal (`08 00 05 01`, not decoded) and the `00 52` flag.
 
-| cmd | Size | What we see | Confidence |
-|-----|------|-------------|------------|
-| `11` | 52 | Bytes, small values (`02`, `01`, `32` = 50, `0C` = 12, `FF FF`): global settings? | Low |
-| `13` | 10 | `00 00 07 00 00 00 3C 00 00 5D` | Unknown |
-| `16` | 124 | 31 float32: 1, 80, 0.71, then groups of (on, frequency, Q, gain) such as (1, 250 Hz, 1, -1), (1, 5000 Hz, 1, 1), (0, 20000 Hz, 0.71, 0): a global EQ? | Low |
-| `16` (flag 1, `01 00 00 16`) | 8 | `00 00 00 00 01 00 00 00` | Unknown |
+### Other connect reads (flag 0, no argument): the global settings
+
+The official editor's reads `02 11 08`, `04 11 08` and `07 11 08` (checksum, type, length) are the
+argument-less flag-0 reads of cmd `11`, `13` and `16` (the checksum is the sum of the data nibbles:
+`1+1`, `1+3`, `1+6`). The official editor's binary has a "global settings" window and names
+requests for "global data" and "global EQ", and writes for both; its global EQ model has an on
+switch, a volume and an output, a low cut (switch, frequency, Q), four bands (switch, frequency,
+Q, gain) and a high cut (switch, frequency, Q). So these three tables are the globals.
+
+**Every connect captured holds the same tables** (cap3, cap5, cap6 and mb-01, 2026-11-24), save one byte (cmd `11` byte 35, below). No capture changes a
+global, and **no capture holds a host write to a global**: every host write captured is flag 1 or
+2 cmd `10`, cmd `05`, or an upload (cmd `14`, `18`). So the write command is unknown and no global
+write exists in core. The field layout below is a reading of one set of values against the manual's
+list (firmware V1.2.2, "Global settings"): only the captures in
+[matribox-captures.md](matribox-captures.md#global-settings-and-pedal-side-changes) can settle it.
+No parser in core either: until a field is matched to a setting, it would only rename bytes.
+
+**cmd `11`, 52 bytes** (the general settings). All bytes not listed are 0.
+
+| Byte | Value | Reading | Confidence |
+|------|-------|---------|------------|
+| 2 | `02` | An enumeration: MIDI In Source "Mixed" (TRS, USB, Mixed = 2)? Input Mode? | Low |
+| 5, 9 | `01`, `01` | Switches or enumerations (Input Mode E.GT = 1? Auto CAB on?) | Low |
+| 11 | `32` (50) | A 0..100 level: AUX Level, or Brightness (the manual's screens show 50) | Low |
+| 14 | `0C` (12) | Unknown (a dB level with an offset? display time?) | Unknown |
+| 15, 20, 21, 22 | `01` | Switches or enumerations | Unknown |
+| 35 | `00` in cap3 (the first session), `01` in cap5, cap6 and mb-01 | A setting the owner changed between those sessions: in mb-09 the unit was in stomp mode, so maybe Current Mode (Preset = 0, Stomp = 1) | Low |
+| 44, 45 | `02`, `04` | Enumerations (Clock Source? USB mode?) | Unknown |
+| 48, 49 | `FF FF` | "None" for two choices: EXT FS 1 / 2 tap functions? | Low |
+
+The MIDI channels (Omni by default, four of them), the language, the display time and the
+switches of the manual are among the zeros or the `01`s; nothing tells which yet.
+
+**cmd `13`, 10 bytes**: `00 00 07 00 00 00 3C 00 00 5D`. Unknown: global tempo (switch and BPM)
+is the manual's other global and 120 is not in it as a byte (`3C` = 60, `5D` = 93).
+
+**cmd `16`, 124 bytes: the global EQ**, 31 float32 LE:
+
+| Offset | Values | Reading | Confidence |
+|--------|--------|---------|------------|
+| 0, 4, 8 | 1, 80, 0.71 | Unknown head: on switch, volume or output? (the manual's level is 0..100) | Low |
+| 12..27 | 0, 20, 0.71, 0 | Low cut: switch **off**, 20 Hz (its lowest), Q 0.71, an unused gain | Medium |
+| 28..43 | 1, 250, 1, -1 | Band 1: switch, frequency (Hz), Q, gain (dB) | Medium |
+| 44..59 | 1, 500, 0.71, 0 | Band 2 (the manual's default 500 Hz, Q 0.7) | Medium |
+| 60..75 | 1, 1000, 0.71, 0 | Band 3 (default 1000 Hz) | Medium |
+| 76..91 | 1, 5000, 1, 1 | Band 4 (default 5000 Hz) | Medium |
+| 92..107 | 0, 20000, 0.71, 0 | High cut: switch off, 20000 Hz (its highest) | Medium |
+| 108..123 | 1, 8000, 0.71, 50 | Unknown tail: 50 fits a 0..100 level, not a gain (±20 dB) | Low |
+
+The (switch, frequency, Q, gain) groups match the manual's ranges and defaults; which end holds
+the EQ's on switch and its level is open.
+
+**flag 1, cmd `16`, argument `01 00 00 16`** (the editor's last connect read): `00 00 00 00 01 00 00 00`.
+Unknown (the global EQ's on switch?).
 
 ## MCP tools
 

@@ -8,6 +8,16 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Matribox II Pro: the editor follows what is done on the unit itself. Core `parseMbNotice`
+  decodes the messages the unit sends on its own (another preset loaded, one block or every
+  block's on/off, knob 1/2 parameter turns, knob 3 patch volume, the "preset edited" flag), from
+  the owner's captures; `MatriboxLink.onNotice` hands them over, between requests too, after the
+  link has taken its own answers (the preset-change notice has the select echo's bytes). The web
+  editor re-reads the loaded preset once when the unit loads another (the unit says it twice) and
+  shows block, knob and volume changes without a read. Docs: the global settings tables (cmd
+  `11`, `13`, `16`) analysed as far as the captures allow (no parser or write: no capture changes
+  a global), and a capture list to settle them.
+
 - Matribox II Pro editor: drag a chain tile to a new place, as on the Pocket Master's strip. A
   drop is one move-block write to the unit, then the usual read-back; a blue line shows where the
   tile lands, the ADD tile neither drags nor takes a drop, and Undo covers the move like an arrow

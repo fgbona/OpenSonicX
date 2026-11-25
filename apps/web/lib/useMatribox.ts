@@ -27,7 +27,7 @@ import {
   type MidiPort,
   type Progress,
 } from '@pocket-master/core';
-import { readLoaded, readUnit, saveToSlot, serialQueue, withBlockOn, withParam, type MbBackup, type MbUnit } from './matribox';
+import { readLoaded, readUnit, saveToSlot, serialQueue, withBlockOn, withNotice, withParam, type MbBackup, type MbUnit } from './matribox';
 import { applyOps } from './matriboxOps';
 import type { MbOp } from './matriboxPlan';
 import { keepMbBackup, loadMbBackups, storeMbBackups } from './matriboxBackups';
@@ -92,6 +92,30 @@ export function useMatribox(port: MidiPort | null, desktop: boolean) {
   }, []);
 
   const refresh = useCallback(() => run('Reading', async (unit) => patch({ unit: await readUnit(unit), edited: false })), [run, patch]);
+
+  // Follow what is done on the unit itself: another preset loaded (read again), blocks, knobs, volume.
+  const currentRef = useRef<number | null>(null);
+  const current = state.unit?.current ?? null;
+  useEffect(() => {
+    currentRef.current = current;
+  }, [current]);
+  useEffect(() => {
+    if (!link) return;
+    link.onNotice((notice) => {
+      if (notice.kind === 'edited') return patch({ edited: notice.edited });
+      if (notice.kind !== 'preset') {
+        setState((s) => (s.unit ? { ...s, edited: true, unit: { ...s.unit, preset: withNotice(s.unit.preset, notice) } } : s));
+        return;
+      }
+      if (notice.index === currentRef.current) return; // the unit sends it twice
+      currentRef.current = notice.index;
+      void run('Loading', async (unit) => {
+        await reloadLoaded(unit);
+        patch({ edited: false });
+      });
+    });
+    return () => link.onNotice(null);
+  }, [link, run, reloadLoaded, patch]);
 
   useEffect(() => {
     if (link) void refresh();

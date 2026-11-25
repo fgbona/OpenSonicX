@@ -195,6 +195,20 @@ export class FakeMatribox {
     if (this.echoes) this.#reply(replyFrames(wrapMbMessage(3, 0x14, [slot, 0, 0, 0, this.irStatus, 0, 0, 0, 0, 0, 0, 0])));
   }
 
+  /** Sends a frame on the unit's own (a notice: footswitch, knob), as if used on the unit. */
+  emit(frame: Uint8Array): void {
+    setImmediate(() => this.#receiver?.(frame));
+  }
+
+  /**
+   * Something done on the unit itself (`01 00 0A 01` + u32 preset, `02 00 05 01` + slot + on/off…):
+   * applied like the host's write, and the notice frame the unit sends for it returned (not sent).
+   */
+  onUnit(data: ArrayLike<number>): Uint8Array {
+    this.#apply(0x10, Uint8Array.from(data));
+    return replyFrames(wrapMbMessage(1, 0x10, data))[0] as Uint8Array;
+  }
+
   listen(receiver: (bytes: Uint8Array) => void): void {
     this.#receiver = receiver;
   }

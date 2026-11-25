@@ -13,7 +13,7 @@ declare global {
   interface Window {
     __pedalSend(port: string, bytes: number[]): Promise<number[][]>;
     /** Plugs a pedal's ports in (fresh port objects, like after a power cycle) or pulls them out. */
-    __midi: { plug(name: string): void; unplug(name: string): void };
+    __midi: { plug(name: string): void; unplug(name: string): void; receive(name: string, bytes: number[]): void };
   }
 }
 
@@ -32,7 +32,7 @@ export function installFakeMidi({ plugged, denials }: FakeMidiOptions) {
     // One packet after the other, a few ms apart, like the USB link.
     replies.forEach((r, i) => setTimeout(() => to()?.({ data: Uint8Array.from(r) }), 5 + 5 * i));
   const access = { inputs: new Map<string, object>(), outputs: new Map<string, object>(), sysexEnabled: true, onstatechange: null as ((e: { port: object }) => void) | null };
-  const ports = new Map<string, { input: { id: string; state: string }; output: { id: string; state: string } }>();
+  const ports = new Map<string, { input: { id: string; state: string }; output: { id: string; state: string }; listener: () => Listener }>();
   const plug = (name: string) => {
     serial += 1;
     let listener: Listener = null;
@@ -57,7 +57,7 @@ export function installFakeMidi({ plugged, denials }: FakeMidiOptions) {
         void window.__pedalSend(name, Array.from(bytes)).then((replies) => deliver(replies, () => (input.state === 'connected' ? listener : null)));
       },
     };
-    ports.set(name, { input, output });
+    ports.set(name, { input, output, listener: () => listener });
     access.inputs.set(input.id, input);
     access.outputs.set(output.id, output);
     access.onstatechange?.({ port: input });
@@ -75,7 +75,12 @@ export function installFakeMidi({ plugged, denials }: FakeMidiOptions) {
     }
   };
   plugged.forEach(plug);
-  window.__midi = { plug, unplug };
+  // A message the device sends on its own (a footswitch pressed on it), not as an answer.
+  const receive = (name: string, bytes: number[]) => {
+    const pair = ports.get(name);
+    if (pair) deliver([bytes], pair.listener);
+  };
+  window.__midi = { plug, unplug, receive };
   let refusals = denials;
   Object.defineProperty(navigator, 'requestMIDIAccess', {
     value: async () => {

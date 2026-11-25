@@ -8,13 +8,15 @@
  * `02 00 00 10` (capture mb-20); a user IR upload (flag 1, cmd 0x14, paged: mbIrUpload) with
  * flag 3, the same cmd, `slot, status, 0`. A save gets no answer: send it with post and check it by reading the slot back. A MIDI Control
  * Change (control) gets none either. Anything else
- * the unit sends meanwhile (footswitch and knob notifications) is skipped. One request at a time:
- * callers queue their calls.
+ * the unit sends meanwhile, or while no request runs, goes to the `onNotice` handler when it is a
+ * notice the unit sends on its own (parseMbNotice: preset change, block toggle, knob turn…).
+ * One request at a time: callers queue their calls.
  */
 import type { MidiPort } from '../link.ts';
 import { joinMbPages, MB_READ, MB_REPLY, MB_WRITE, parseMbFrame, type MbFrame } from './frame.ts';
 import { unwrapMbMessage } from './message.ts';
 import { isMbControlChange } from './cc.ts';
+import { parseMbNotice, type MbNotice } from './notice.ts';
 
 export interface MatriboxLink {
   /** Sends a read request frame (mbRead…) and resolves with the reply's decompressed data. */
@@ -32,6 +34,11 @@ export interface MatriboxLink {
   post(frame: Uint8Array): void;
   /** Sends one MIDI Control Change (mbControlChange; tuner, tempo, looper…): the unit sends no answer. */
   control(message: Uint8Array): void;
+  /**
+   * Hands every notice the unit sends on its own (not an answer to a request) to `handler`; null
+   * stops. While set, the link keeps listening on the port between requests.
+   */
+  onNotice(handler: ((notice: MbNotice) => void) | null): void;
 }
 
 export const MATRIBOX_TIMEOUT_MS = 3000;
@@ -72,19 +79,40 @@ function tryParse(bytes: Uint8Array): MbFrame | null {
 }
 
 export function matriboxLink(port: MidiPort, timeoutMs: number = MATRIBOX_TIMEOUT_MS): MatriboxLink {
+  let noticeHandler: ((notice: MbNotice) => void) | null = null;
+  let exchanging = false;
+  /** A message no request took: a notice for the handler, or nothing. */
+  const toNotice = (joined: Uint8Array) => {
+    if (!noticeHandler) return;
+    let notice: MbNotice | null;
+    try {
+      notice = parseMbNotice(unwrapMbMessage(joined));
+    } catch {
+      return; // ponytail: a damaged message nobody asked for is dropped; the next read shows the truth
+    }
+    if (notice) noticeHandler(notice);
+  };
+  /** Between requests: the unit's notices are single-page messages. */
+  const idle = (bytes: Uint8Array) => {
+    const page = tryParse(bytes);
+    if (page && page.type === MB_REPLY && page.offset === 0 && page.payload.length === page.total) toNotice(page.payload);
+  };
+  const listenIdle = () => port.listen(noticeHandler ? idle : null);
   /** Sends `frames` and resolves with the data of the first message `answer` takes. */
   const exchange = async (frames: readonly Uint8Array[], answer: Answer, what: string, noAnswer: string): Promise<Uint8Array> => {
     return new Promise((resolve, reject) => {
       let pages: MbFrame[] = [];
+      exchanging = true;
       const finish = (error: Error | null, data?: Uint8Array) => {
         clearTimeout(timer);
-        port.listen(null);
+        exchanging = false;
+        listenIdle();
         if (error) reject(error);
         else resolve(data as Uint8Array);
       };
       const timer = setTimeout(() => finish(new Error(`Matribox II PRO did not ${noAnswer} (${what}) within ${timeoutMs} ms. Is it on, and is the official editor closed?`)), timeoutMs);
       const onMessage = (joined: Uint8Array) => {
-        if (joined[0] !== answer.flag || joined[3] !== answer.cmd) return;
+        if (joined[0] !== answer.flag || joined[3] !== answer.cmd) return toNotice(joined);
         let data: Uint8Array;
         try {
           data = unwrapMbMessage(joined).data;
@@ -92,6 +120,7 @@ export function matriboxLink(port: MidiPort, timeoutMs: number = MATRIBOX_TIMEOU
           return finish(new Error(`Matribox II PRO sent a damaged reply (${what}): ${(error as Error).message}`));
         }
         if (answer.accepts(data)) finish(null, data);
+        else toNotice(joined);
       };
       port.listen((bytes) => {
         const page = tryParse(bytes);
@@ -140,6 +169,10 @@ export function matriboxLink(port: MidiPort, timeoutMs: number = MATRIBOX_TIMEOU
     control: (message) => {
       if (!isMbControlChange(message)) throw new Error('Matribox link: control sends one Control Change message only');
       port.send(message);
+    },
+    onNotice: (handler) => {
+      noticeHandler = handler;
+      if (!exchanging) listenIdle();
     },
   };
 }
