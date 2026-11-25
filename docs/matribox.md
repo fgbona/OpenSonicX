@@ -707,6 +707,21 @@ are plugged in (an open connection is kept until its pedal is unplugged; see `fi
 `apps/web/lib/midi.ts`). The Matribox editor (`apps/web/components/Matribox*.tsx`, `lib/useMatribox.ts`,
 `lib/matribox.ts`) talks through core's `matriboxLink`, the same request rules as the MCP server,
 and sends only the official editor's reads and the core write builders, one request at a time.
+The page looks like the Pocket Master's. The chain is a wrapping grid of tiles (module drawing and
+colour, model, an LED that switches the block, arrows, a last *Add* tile), laid out as a snake:
+each row reads left to right and a cable behind the tiles bends from the end of one row to the
+start of the next, so no sideways scroll. Dragging a tile is one move-block write plus the usual
+read-back (`useTileDrag`, shared with the Pocket Master; touch keeps the arrows). A block's model
+menu lists only its module's models grouped by the catalog's model types; *Add* asks for the
+module, then the model. On a phone, Export, Import and Read fold under a ⋯ menu. The editor also
+follows the unit: `MatriboxLink.onNotice` hands over what the unit sends by itself (see "The unit's own messages"), so a preset switch (one re-read), block on/off, knob 1/2 and the
+patch volume show without a read. Status on the owner's unit: following the unit's own changes,
+the tone library's Keep/Load and the snake with a long preset are **not yet checked** there.
+The tone library (`components/MatriboxLibrary.tsx`): *Keep tone* reads the edit buffer and keeps
+it in this browser (key `pocket-master-editor.matriboxLibrary.v1`) with a name and notes; *Load*
+sends a kept chain to the loaded preset as one Undo step through the validated writes (needs the
+catalog) and never writes a slot; the library exports to and imports from `matribox-library.json`.
+The tone assistant uses the same library.
 A parameter drag sends only the newest value once the previous write is confirmed. After a chain
 edit or a preset select it reads the loaded preset again. Save reads the slot, keeps it as a
 backup in the browser (localStorage, newest 20, same JSON as the MCP server's backups), and stores
