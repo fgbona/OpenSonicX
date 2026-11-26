@@ -68,7 +68,15 @@ byte the 160-byte table leaves out: call it `mb-26-chain-with-assignments.mmon`.
 
 ## Global settings and pedal-side changes
 
-**Done (2026-11-25):** mb-30 … mb-44 are decoded in [matribox.md](matribox.md#other-connect-reads-flag-0-no-argument-the-global-settings) and "The unit's own messages". Still open: mb-29 (baseline) was empty; mb-37 was taken on the unit (Global Tempo cannot be enabled from the official editor), so a host-side tempo change with Global Tempo already on (mb-37b) is wanted; one capture of an EQ band other than 2 (gain) would open bands 1, 3 and 4.
+**Done (2026-11-25):** mb-30 … mb-44 are decoded in [matribox.md](matribox.md#other-connect-reads-flag-0-no-argument-the-global-settings) and "The unit's own messages". Still open: mb-29 (baseline) was empty; mb-37 was taken on the unit (Global Tempo cannot be enabled from the official editor), so a host-side tempo change with Global Tempo already on (mb-37b) is wanted.
+
+**Cross-checked (2026-11-26)** against zxmarcos/waveod and zxmarcos/matribox-studio (MIT): the EQ
+words (cuts, shelves, the four bands), the Global Tempo writes (`25`, `26`) and the MIDI channel
+index settled bands 1, 3 and 4 without a capture. Two readings changed: mb-34's write was `00 61`
+(index 0, the **TRS** input, though the owner's field said USB), and mb-33's 1 is **Preset** (the
+byte was 0 before the owner went Stomp → Preset). Wanted, to close them: `mb-46-midi-usb-ch.mmon`
+(the official editor's MIDI channel fields, TRS and USB each Omni → 3, which byte moves for which)
+and a look at the unit's GLOBAL page for Current Mode after a switch made from OpenSonicX.
 
 What was open before the 2026-11-25 captures ([matribox.md](matribox.md#other-connect-reads-flag-0-no-argument-the-global-settings)):
 the global tables (cmd `11`, `13`, `16`) are read on every connect but never changed in a capture,

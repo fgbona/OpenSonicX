@@ -8,10 +8,13 @@
  * the chain notice of a model changed on the unit and the save made on the unit; capture 2's
  * `00 52` message is the Current Mode changed on the unit, the shape of the host's global write.
  *
+ * cmd 0x13 is the drum machine's state, the reply to the editor's connect read (layout cross-checked
+ * against zxmarcos/waveod, MIT); decoded here for whoever reads it, not followed by the editor.
+ *
  * The preset-change notice has the same bytes as the unit's echo of a host select and its reply to
  * the current-preset read: a link must take those for itself first and pass on only the rest.
  */
-import { MB_GLOBAL_TEMPO_ID, MB_GLOBALS, type MbGlobalSetting } from './globals.ts';
+import { MB_GLOBALS, type MbGlobalSetting } from './globals.ts';
 import type { MbMessage } from './message.ts';
 import { MB_SLOTS } from './write.ts';
 
@@ -28,10 +31,18 @@ export type MbNotice =
   | { readonly kind: 'volume'; readonly value: number }
   /** cmd 0x11, `00 08 00 00` + u32: 1 once the loaded preset is edited, 0 after a save. */
   | { readonly kind: 'edited'; readonly edited: boolean }
-  /** cmd 0x11, `00 <id> 00 00` + i32: a global setting changed on the unit (the host's write has this shape). */
+  /** cmd 0x11, `<index> <id> 00 00` + i32: a global setting changed on the unit (the host's write has this shape; the tempo's BPM in mb-37). */
   | { readonly kind: 'global'; readonly setting: MbGlobalSetting; readonly value: number }
-  /** cmd 0x11, `00 26 00 00` + u32: the Global Tempo turned on the unit (BPM; mb-37). */
-  | { readonly kind: 'globalTempo'; readonly bpm: number }
+  /** cmd 0x13, 10 bytes: u8 playing, 0, u16 genre, u16 pattern, u16 BPM, u8 follows the tempo, u8 volume 0..100. */
+  | {
+      readonly kind: 'drum';
+      readonly playing: boolean;
+      readonly genre: number;
+      readonly pattern: number;
+      readonly bpm: number;
+      readonly follow: boolean;
+      readonly volume: number;
+    }
   /** `00 00 04 01` + chain (89 bytes): the chain changed on the unit (a model, mb-42, mb-44); read the preset again. */
   | { readonly kind: 'chain' }
   /** cmd 0x05, u32 index + 17-byte name: the loaded preset saved on the unit (mb-44). */
@@ -40,16 +51,23 @@ export type MbNotice =
 /** The chain notice: `00 00 04 01` + 12 order + 12 modules + 12 u32 fxids + 12 on/off + 1 focus. */
 const CHAIN_NOTICE_SIZE = 4 + 12 + 12 + 48 + 12 + 1;
 const SAVE_NOTICE_SIZE = 4 + 17;
-const GLOBAL_BY_ID = new Map<number, MbGlobalSetting>(Object.entries(MB_GLOBALS).map(([setting, { id }]) => [id, setting as MbGlobalSetting]));
+const EDITED = 0x0800;
+const DRUM_SIZE = 10;
+/** Settings by their u16 `<index> <id>`. */
+const GLOBAL_BY_SUB = new Map<number, MbGlobalSetting>(Object.entries(MB_GLOBALS).map(([setting, { id, index }]) => [(id << 8) | index, setting as MbGlobalSetting]));
 
-/** cmd 0x11, `00 <id> 00 00` + i32: the edited flag, a global setting or the global tempo. */
+/** cmd 0x11, `<index> <id> 00 00` + i32: the edited flag or a global setting. */
 function generalNotice(data: Uint8Array, view: DataView): MbNotice | null {
-  if (data.length !== 8 || data[0] !== 0 || data[2] !== 0 || data[3] !== 0) return null;
-  const id = data[1] as number;
-  if (id === 0x08) return { kind: 'edited', edited: view.getUint32(4, true) !== 0 };
-  if (id === MB_GLOBAL_TEMPO_ID) return { kind: 'globalTempo', bpm: view.getUint32(4, true) };
-  const setting = GLOBAL_BY_ID.get(id);
+  if (data.length !== 8 || data[2] !== 0 || data[3] !== 0) return null;
+  const sub = view.getUint16(0, true);
+  if (sub === EDITED) return { kind: 'edited', edited: view.getUint32(4, true) !== 0 };
+  const setting = GLOBAL_BY_SUB.get(sub);
   return setting ? { kind: 'global', setting, value: view.getInt32(4, true) } : null;
+}
+
+function drumState(view: DataView): MbNotice {
+  const u16 = (at: number) => view.getUint16(at, true);
+  return { kind: 'drum', playing: view.getUint8(0) !== 0, genre: u16(2), pattern: u16(4), bpm: u16(6), follow: view.getUint8(8) !== 0, volume: view.getUint8(9) };
 }
 
 const head = (data: Uint8Array) => Array.from(data.subarray(0, 4), (b) => b.toString(16).padStart(2, '0')).join('');
@@ -61,8 +79,9 @@ const nameOf = (field: Uint8Array) => {
 
 /** The notice a message from the unit carries; null for anything else (replies, unknown notices). */
 export function parseMbNotice({ flag, cmd, data }: MbMessage): MbNotice | null {
-  if (flag !== 1) return null;
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  if (cmd === 0x13) return data.length === DRUM_SIZE ? drumState(view) : null; // the read's reply (flag 0)
+  if (flag !== 1) return null;
   const u32 = (at: number) => view.getUint32(at, true);
   if (cmd === 0x11) return generalNotice(data, view);
   if (cmd === 0x05) return data.length === SAVE_NOTICE_SIZE ? { kind: 'saved', index: u32(0), name: nameOf(data.subarray(4)) } : null;

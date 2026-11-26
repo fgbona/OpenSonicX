@@ -1,13 +1,13 @@
 # Sonicake Matribox II Pro, owner's unit (2026-11-25): frames of the official editor's global settings window
 # (MIDI Monitor), copied as captured, one per line: '<name> <frame hex>'. Host frames ('To Matribox II PRO') from
-# captures mb-30 (Input Level 0 -> +5 dB, last of the drag), mb-31 (AUX Level 0 -> 50 -> 80, last of the drag), mb-33 (Current Mode), mb-34 (MIDI Input Ch (USB) Omni -> 5),
+# captures mb-30 (Input Level 0 -> +5 dB, last of the drag), mb-31 (AUX Level 0 -> 50 -> 80, last of the drag), mb-33 (Current Mode), mb-34 (MIDI Input Ch Omni -> 5; the owner's label said USB, but it is `00 61`: TRS in, see docs/matribox.md),
 # mb-35 (MIDI In Source Mixed -> USB Only), mb-36 (Input Mode E.GT -> Line), mb-38 (global EQ band 2 gain 0 -> +3 dB),
 # mb-39 (global EQ level 50 -> 70, last of the drag; EQ off, then on). The unit echoed each one, but the EQ on/off,
 # which it answered with 'eq-on-answer-*' (unit frames).
 aux-level-80 F0 21 25 4D 50 00 00 26 12 14 00 00 00 00 01 00 00 00 00 01 01 00 0C 00 00 00 00 00 00 01 09 00 00 02 04 00 00 00 00 05 00 00 00 00 00 00 00 01 01 00 00 00 00 F7
 input-level-5 F0 21 25 4D 50 00 00 23 12 14 00 00 00 00 01 00 00 00 00 01 01 00 0C 00 00 00 00 00 00 01 09 00 00 02 01 00 00 00 00 00 05 00 00 00 00 00 00 01 01 00 00 00 00 F7
 current-mode-1 F0 21 25 4D 50 00 00 23 12 14 00 00 00 00 01 00 00 00 00 01 01 00 0C 00 00 00 00 00 00 01 09 00 00 05 02 00 00 00 00 00 01 00 00 00 00 00 00 01 01 00 00 00 00 F7
-midi-channel-usb-5 F0 21 25 4D 50 00 00 27 12 14 00 00 00 00 01 00 00 00 00 01 01 00 0C 00 00 00 00 00 00 01 09 00 00 06 01 00 00 00 00 00 05 00 00 00 00 00 00 01 01 00 00 00 00 F7
+midi-in-trs-5 F0 21 25 4D 50 00 00 27 12 14 00 00 00 00 01 00 00 00 00 01 01 00 0C 00 00 00 00 00 00 01 09 00 00 06 01 00 00 00 00 00 05 00 00 00 00 00 00 01 01 00 00 00 00 F7
 midi-source-1 F0 21 25 4D 50 00 00 24 12 14 00 00 00 00 01 00 00 00 00 01 01 00 0C 00 00 00 00 00 00 01 09 00 00 06 02 00 00 00 00 00 01 00 00 00 00 00 00 01 01 00 00 00 00 F7
 input-mode-2 F0 21 25 4D 50 00 00 21 12 14 00 00 00 00 01 00 00 00 00 01 01 00 0C 00 00 00 00 00 00 01 09 00 00 02 02 00 00 00 00 00 02 00 00 00 00 00 00 01 01 00 00 00 00 F7
 eq-band2-gain-3 F0 21 25 4D 50 00 00 37 12 14 00 00 00 00 02 00 00 00 00 01 06 00 0C 00 00 00 00 00 00 01 09 00 0E 00 00 00 00 00 00 00 00 00 00 04 00 04 00 01 01 00 00 00 00 F7

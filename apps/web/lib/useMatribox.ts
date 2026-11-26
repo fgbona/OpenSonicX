@@ -37,7 +37,7 @@ import { applyOps } from './matriboxOps';
 import type { MbOp } from './matriboxPlan';
 import { keepMbBackup, loadMbBackups, storeMbBackups } from './matriboxBackups';
 import { importToSlot } from './matriboxPresetFile';
-import { readGlobals, withEqGain, withEqLevel, withEqOn, withGlobal, withGlobalTempo } from './matriboxGlobals';
+import { readGlobals, TEMPO_NOT_ACCEPTED, withEqGain, withEqLevel, withEqOn, withGlobal } from './matriboxGlobals';
 
 export interface MatriboxState {
   readonly unit: MbUnit | null;
@@ -121,7 +121,7 @@ export function useMatribox(port: MidiPort | null) {
     link.onNotice((notice) => {
       if (notice.kind === 'edited') return patch({ edited: notice.edited });
       if (notice.kind === 'global') return patchGlobals((g) => withGlobal(g, notice.setting, notice.value));
-      if (notice.kind === 'globalTempo') return patchGlobals((g) => withGlobalTempo(g, notice.bpm));
+      if (notice.kind === 'drum') return; // the drum machine is not shown
       if (notice.kind === 'saved') {
         const saved = { name: notice.name, style: '' };
         setState((s) => {
@@ -248,7 +248,10 @@ export function useMatribox(port: MidiPort | null) {
       sendGlobal(
         setting,
         (g) => withGlobal(g, setting, value),
-        (unit) => unit.write(mbSetGlobal(setting, value)),
+        (unit) =>
+          unit.write(mbSetGlobal(setting, value)).catch((e: unknown) => {
+            throw setting === 'tempoOn' && value === 1 ? new Error(TEMPO_NOT_ACCEPTED, { cause: e }) : e;
+          }),
       ),
     [sendGlobal],
   );
