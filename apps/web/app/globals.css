@@ -363,6 +363,12 @@ button, select { font: inherit; color: inherit; }
 .spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--fill-strong); border-top-color: var(--blue); animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* Tone assistant busy bubble: a knob glyph that turns (a gentle pulse instead under reduced motion). */
+.assistant-busy { display: flex; align-items: center; gap: 8px; margin: 0; }
+.assistant-busy-dial { flex: none; animation: spin 1.6s linear infinite; }
+.assistant-busy-time { font-variant-numeric: tabular-nums; }
+@keyframes busy-pulse { 50% { opacity: 0.4; } }
+
 /* App layout: presets sidebar + main column */
 .layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 0; align-items: start; }
 .layout-single { grid-template-columns: minmax(0, 1fr); }
@@ -550,6 +556,7 @@ button, select { font: inherit; color: inherit; }
   .sheet[open] { animation: none; }
   .btn, .switch, .switch-knob, .chain-unit, .chain-move, .param-slider::-webkit-slider-thumb { transition: none; }
   .spinner { animation-duration: 2.4s; }
+  .assistant-busy-dial { animation: busy-pulse 1.8s ease-in-out infinite; }
 }
 @media (prefers-reduced-transparency: reduce) {
   .toolbar { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
@@ -956,6 +963,11 @@ button, select { font: inherit; color: inherit; }
 .assistant-key .field { flex: 1; min-width: 220px; }
 .assistant-messages { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-height: min(70vh, 720px); overflow: auto; }
 .assistant-message { padding: 8px 12px; border-radius: var(--radius-small); background: var(--surface-2); white-space: pre-wrap; }
+.assistant-message .md { white-space: normal; }
+.assistant-message .md p, .assistant-message .md ul, .assistant-message .md ol { margin: 0 0 6px; }
+.assistant-message .md > :last-child { margin-bottom: 0; }
+.assistant-message .md ul, .assistant-message .md ol { padding-left: 20px; }
+.assistant-message .md code { font-family: ui-monospace, monospace; font-size: 0.9em; background: var(--fill); padding: 0 4px; border-radius: 4px; }
 .assistant-message.is-user { background: color-mix(in srgb, var(--blue) 14%, transparent); justify-self: end; max-width: 85%; }
 .assistant-message.is-error { background: color-mix(in srgb, var(--red) 12%, transparent); }
 .assistant-message .changes { margin-top: 8px; }

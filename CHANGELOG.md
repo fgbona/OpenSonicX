@@ -6,6 +6,21 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Tone assistant: the "working" bubble now has a small amp-knob dial that turns while the assistant
+  builds the tone, and shows the seconds elapsed after 3 s ("Working on it... 12 s" / "Montando... 12 s").
+  With reduced motion the dial pulses gently instead of turning. The bubble is a `role="status"`
+  region and the glyph is `aria-hidden`.
+
+### Fixed
+
+- Tone assistant: replies no longer show raw Markdown. A tiny parser (no HTML injection, no new
+  dependency) renders bold, italic, inline code, bullet and numbered lists and line breaks as React
+  elements; anything else, including HTML-looking text, stays plain text.
+- The privacy note under the assistant only mentions Google's free-plan use of the conversation when
+  a Gemini key is in play (or no key is set up yet), not with only an Anthropic or Groq key.
+
 ### Fixed
 
 - Matribox II Pro: **a failed write no longer piles blocks up on the unit.** The owner's assistant
