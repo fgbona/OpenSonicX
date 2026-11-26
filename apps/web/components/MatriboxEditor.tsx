@@ -1,9 +1,11 @@
 'use client';
 
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import { MB_CATALOG, mbAssignments, mbPresetLabel, resolveMbPreset, type MbResolvedBlock, type MidiPort } from '@pocket-master/core';
+import { MB_CATALOG, MB_SLOTS, mbAssignments, mbPresetLabel, resolveMbPreset, type MbResolvedBlock, type MidiPort } from '@pocket-master/core';
 import { ccChannelOf } from '@/lib/matriboxGlobals';
 import { mbLookKey } from '@/lib/matriboxLook';
+import { mbRigBlocks } from '@/lib/rigBlocks';
+import { useRigLook } from '@/lib/rigLook';
 import { useMatribox } from '@/lib/useMatribox';
 import { useMatriboxHistory } from '@/lib/useMatriboxHistory';
 import { useTone3000 } from '@/lib/useTone3000';
@@ -13,7 +15,8 @@ import { MatriboxAssistant } from './MatriboxAssistant';
 import { MatriboxBackupAll } from './MatriboxBackupAll';
 import { MatriboxBackups } from './MatriboxBackups';
 import { MatriboxBlockPanel } from './MatriboxBlockPanel';
-import { MatriboxChain } from './MatriboxChain';
+import { MatriboxAddMenu } from './MatriboxAddMenu';
+import { MatriboxChain, mbTileModel } from './MatriboxChain';
 import { type CloneProposal, MatriboxClones } from './MatriboxClones';
 import { MatriboxControls } from './MatriboxControls';
 import { MatriboxDrums } from './MatriboxDrums';
@@ -28,6 +31,7 @@ import { MatriboxPresetFile } from './MatriboxPresetFile';
 import { MatriboxPresets } from './MatriboxPresets';
 import { MatriboxQuickKnobs } from './MatriboxQuickKnobs';
 import { MatriboxSaveDialog } from './MatriboxSaveDialog';
+import { RigView } from './rig/RigView';
 import { useI18n } from './I18n';
 
 /** The Matribox II Pro editor, shown when the connected pedal is one. */
@@ -84,6 +88,22 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
     if (added.length === 1 && now.length === before.slots.length + 1) setSelected(added[0] ?? null);
   }, [current, slots]);
   const block = chain.find((b) => b.slot === selected) ?? chain.find((b) => mbLookKey(b) === 'amp') ?? chain[0] ?? null;
+  // The new look (preview): the settings' switch, or ?rig=1.
+  const rig = useRigLook();
+  const dspLoad = <MatriboxDspLoad chain={chain} overload={mb.overload} onClose={mb.clearOverload} />;
+
+  const blockPanel = unit && block && (
+    <MatriboxBlockPanel
+      block={block}
+      values={unit.preset.chain.find((b) => b.slot === block.slot)?.values ?? []}
+      userSlot={userSlot}
+      disabled={disabled}
+      onParam={history.setParam}
+      onOn={(s, on) => void history.setOn(s, on)}
+      onModel={(s, m, f) => void history.changeModel(s, m, f)}
+      onRemove={(p) => void history.removeBlock(p)}
+    />
+  );
 
   return (
     <div className={unit ? 'layout' : 'layout layout-single'}>
@@ -126,28 +146,45 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
                   </>
                 }
               />
-              <MatriboxChain
-                chain={chain}
-                selected={block?.slot ?? null}
-                disabled={disabled}
-                userSlot={userSlot}
-                onSelect={setSelected}
-                onOn={(s, on) => void history.setOn(s, on)}
-                onMove={(a, b) => void history.moveBlock(a, b)}
-                onAdd={(m, fxid) => void history.addBlock(chain.length, m, fxid)}
-              />
-              <MatriboxDspLoad chain={chain} overload={mb.overload} onClose={mb.clearOverload} />
-              {block && (
-                <MatriboxBlockPanel
-                  block={block}
-                  values={unit.preset.chain.find((b) => b.slot === block.slot)?.values ?? []}
-                  userSlot={userSlot}
+              {rig ? (
+                <RigView
+                  blocks={mbRigBlocks(chain, (b) => mbTileModel(b, userSlot(b)))}
+                  selected={block?.slot ?? null}
+                  label={mbPresetLabel(unit.current)}
+                  name={unit.preset.name}
+                  tempo={assignments.tempo}
+                  volume={assignments.volume}
                   disabled={disabled}
-                  onParam={history.setParam}
+                  onSelect={setSelected}
                   onOn={(s, on) => void history.setOn(s, on)}
-                  onModel={(s, m, f) => void history.changeModel(s, m, f)}
-                  onRemove={(p) => void history.removeBlock(p)}
+                  onParam={history.setParam}
+                  settings={<MatriboxGlobals mb={mb} icon />}
+                  load={dspLoad}
+                  panel={blockPanel}
+                  edit={{
+                    onMove: (a, b) => void history.moveBlock(a, b),
+                    onRemove: (p) => void history.removeBlock(p),
+                    add:
+                      chain.length < MB_SLOTS
+                        ? (isInside, onClose) => <MatriboxAddMenu userSlot={userSlot} isInside={isInside} onClose={onClose} onAdd={(m, fxid) => void history.addBlock(chain.length, m, fxid)} />
+                        : undefined,
+                  }}
                 />
+              ) : (
+                <>
+                  <MatriboxChain
+                    chain={chain}
+                    selected={block?.slot ?? null}
+                    disabled={disabled}
+                    userSlot={userSlot}
+                    onSelect={setSelected}
+                    onOn={(s, on) => void history.setOn(s, on)}
+                    onMove={(a, b) => void history.moveBlock(a, b)}
+                    onAdd={(m, fxid) => void history.addBlock(chain.length, m, fxid)}
+                  />
+                  {dspLoad}
+                  {blockPanel}
+                </>
               )}
             </section>
             <MatriboxFootswitches

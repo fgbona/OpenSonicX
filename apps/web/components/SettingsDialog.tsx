@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { type GlobalSetting, type GlobalSettings, readGlobals, setGlobal, type PocketMasterLink } from '@pocket-master/core';
 import { Dialog } from './Dialog';
 import { Knob } from './Knob';
+import { RigLookSwitch } from './rig/RigLookSwitch';
 import { useI18n } from './I18n';
 import type { Exclusive } from '@/lib/install';
 import type { MessageKey } from '@/lib/i18n';
@@ -86,6 +87,7 @@ export function SettingsDialog({ open, firmware, onClose, exclusive, writeGlobal
   const off = busy || values === null;
   return (
     <Dialog open={open} title={t('settings.title')} onClose={onClose} locked={busy}>
+      <RigLookSwitch />
       {values === null ? (
         <p className="muted">{busy ? t('settings.reading') : t('settings.unreadable')}</p>
       ) : (
