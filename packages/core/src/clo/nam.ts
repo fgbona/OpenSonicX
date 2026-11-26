@@ -34,6 +34,8 @@ export interface WavenetLayerArray {
 export interface Wavenet {
   readonly arrays: readonly WavenetLayerArray[];
   readonly headScale: number;
+  /** The rate the capture was trained at (the file's `sample_rate`; 48 kHz when it has none). */
+  readonly sampleRate?: number;
 }
 
 type Json = Record<string, unknown>;
@@ -113,7 +115,10 @@ function layerActs(cfg: Json, n: number): Activation[] {
 }
 
 /** Unwraps a SlimmableContainer to its highest-quality submodel (the last of equal maxima). */
-function effectiveModel(root: Json): { config: Json; weights: number[] } {
+function effectiveModel(root: Json, outerRate?: number): { config: Json; weights: number[]; sampleRate?: number } {
+  const rate = root.sample_rate;
+  if (rate !== undefined && rate !== null && (typeof rate !== 'number' || !Number.isFinite(rate) || rate < 8000 || rate > 384000)) throw new Error('.nam: "sample_rate" must be a rate in Hz');
+  const sampleRate = (rate as number | undefined) ?? outerRate;
   if (root.architecture === 'SlimmableContainer') {
     const subs = ((root.config as Json | undefined)?.submodels ?? []) as Json[];
     if (subs.length === 0) throw new Error('.nam: empty SlimmableContainer');
@@ -126,7 +131,7 @@ function effectiveModel(root: Json): { config: Json; weights: number[] } {
         bestVal = v;
       }
     }
-    return effectiveModel(best.model as Json);
+    return effectiveModel(best.model as Json, sampleRate);
   }
   if (root.architecture !== undefined && root.architecture !== 'WaveNet') {
     throw new Error(`only WaveNet captures can be converted for the pedal (this one is ${String(root.architecture)})`);
@@ -134,7 +139,7 @@ function effectiveModel(root: Json): { config: Json; weights: number[] } {
   const weights = root.weights;
   if (!Array.isArray(weights) || weights.some((w) => typeof w !== 'number')) throw new Error('.nam: weights must be a list of numbers');
   if (!root.config || typeof root.config !== 'object') throw new Error('.nam: missing config');
-  return { config: root.config as Json, weights: weights as number[] };
+  return { config: root.config as Json, weights: weights as number[], ...(sampleRate !== undefined ? { sampleRate } : {}) };
 }
 
 /** Parses .nam JSON text into a WaveNet the converter can run. */
@@ -146,7 +151,7 @@ export function parseNam(text: string): Wavenet {
     throw new Error('not a .nam file (invalid JSON)');
   }
   if (!root || typeof root !== 'object') throw new Error('not a .nam file');
-  const { config, weights } = effectiveModel(root as Json);
+  const { config, weights, sampleRate } = effectiveModel(root as Json);
   const cur = new Cursor(weights);
   const headScale = typeof config.head_scale === 'number' ? config.head_scale : 1;
   const layersCfg = config.layers;
@@ -175,5 +180,5 @@ export function parseNam(text: string): Wavenet {
     const [headW, headB] = cur.conv1d(channels, headOut, headKs, headBias);
     return { rechannelW, layers, headW, headB, channels };
   });
-  return { arrays, headScale };
+  return { arrays, headScale, sampleRate: sampleRate ?? 48000 };
 }

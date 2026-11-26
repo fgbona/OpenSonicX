@@ -32,7 +32,7 @@
     },
     "test": {
       "dependsOn": ["transit"],
-      "env": ["SKIP_CLO_PARITY"],
+      "env": ["SKIP_CLO_PARITY", "MATRIBOX_CLO_AB"],
       "passThroughEnv": ["UPDATE_MCP_CONTRACT"]
     },
     "typecheck": {

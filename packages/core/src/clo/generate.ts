@@ -19,6 +19,8 @@ export interface CloArrays {
   readonly arrayB: Float32Array;
   /** [posmax, negmax, posRate, negRate], float32-rounded. */
   readonly gains: readonly [number, number, number, number];
+  /** IIR 2 (b0, b1, b2, a1, a2); CLO_BIQUAD, the 40 Hz high-pass at 48 kHz, when absent. */
+  readonly biquad?: readonly number[];
 }
 
 /** The reference DI (float32, 44.1 kHz) at 48 kHz in float64, capped at what the fit reads. */
