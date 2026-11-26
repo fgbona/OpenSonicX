@@ -22,7 +22,16 @@ and the project uses [Semantic Versioning](https://semver.org/).
   an Apple-silicon Mac for that model (the model run is most of it; the fit about 2 s). Not yet
   wired to an upload and not yet heard on the owner's unit; the Pocket Master's converter is
   unchanged. `.nam` parsing now reads `sample_rate`, and a `.clo` can carry its own IIR 2.
-
+- Matribox II Pro, Global options: Global Tempo can be switched and its BPM set (40..300); when
+  the unit does not confirm the switch, the editor says to accept it on the unit's screen (the
+  unit asks there first, and answers 0 while it has no BPM). All four global EQ band gains are
+  writable (words 10, 14, 18, 22), MIDI Input Ch (TRS) is offered beside USB, and Brightness and
+  the low and high cut frequencies are shown. Core: the general table gives `brightness`,
+  `midiInTrs`, `midiInUsb`, `tempoOn`, `tempoBpm`; the EQ table gives `lowCut`, `lowShelf`,
+  `bands`, `highShelf`, `highCut`; `parseMbNotice` decodes the cmd 0x13 drum machine state
+  (`kind: 'drum'`, not shown). Protocol facts cross-checked against zxmarcos/waveod and
+  zxmarcos/matribox-studio (MIT); the new writes are not captured from the official editor and not
+  yet checked on the owner's unit.
 - Matribox II Pro: **Global options** (the header, beside the preset file buttons; on a phone
   under ⋯). Decoded from the owner's captures of the official editor's global settings window
   (mb-30 … mb-39): Input Mode, Input Level, AUX Level, footswitch mode (Preset / Stomp), MIDI
@@ -221,6 +230,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Matribox II Pro, Global options: footswitch mode was read inverted (byte 35 is 0 Stomp,
+  1 Preset); the MIDI channel the editor wrote (`00 61`) and read (byte 36) is the TRS input, not
+  USB: USB is `01 61`, byte 38, and the tuner and tempo Control Changes now follow it; the EQ words
+  3..6 and 23..26 are the low and high shelves, not the cuts (the cuts are words 0..2 and 27..29).
+  Switching the global EQ to the state it is in no longer waits for an answer the unit never sends.
 - Matribox II Pro model names and texts: the cabinets, EQs, delays, reverbs and pitch/filter
   models no longer show numbered placeholders ("4x12 #25", "EQ-A", "DLY-T", "VERB-1",
   "SIMPLE-1"), and three reverbs whose names had slipped one place (Church, Plate, Spring) now

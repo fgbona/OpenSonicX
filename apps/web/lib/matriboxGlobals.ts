@@ -3,6 +3,7 @@
  * connect, changed by the editor's writes and by the unit's own notices. Pure updates only.
  */
 import { mbReadGlobalState, type MatriboxLink, type MbGlobalSetting, type MbGlobalState } from '@pocket-master/core';
+import { en } from './messages.ts';
 
 /** The three global reads; null (logged) when the unit does not answer them, so the editor still opens. */
 export async function readGlobals(link: MatriboxLink): Promise<MbGlobalState | null> {
@@ -16,9 +17,6 @@ export async function readGlobals(link: MatriboxLink): Promise<MbGlobalState | n
 
 export const withGlobal = (g: MbGlobalState, setting: MbGlobalSetting, value: number): MbGlobalState => ({ ...g, general: { ...g.general, [setting]: value } });
 
-/** The unit sends its global tempo only while it is on (mb-37). */
-export const withGlobalTempo = (g: MbGlobalState, bpm: number): MbGlobalState => ({ ...g, general: { ...g.general, tempo: { on: true, bpm } } });
-
 export const withEqLevel = (g: MbGlobalState, level: number): MbGlobalState => ({ ...g, eq: { ...g.eq, level } });
 
 export const withEqGain = (g: MbGlobalState, band: number, gain: number): MbGlobalState => ({ ...g, eq: { ...g.eq, bands: g.eq.bands.map((b, i) => (i === band ? { ...b, gain } : b)) } });
@@ -26,4 +24,7 @@ export const withEqGain = (g: MbGlobalState, band: number, gain: number): MbGlob
 export const withEqOn = (g: MbGlobalState, eqOn: boolean): MbGlobalState => ({ ...g, eqOn });
 
 /** The unit's MIDI channel for the editor's Control Changes: its USB input channel, or null for Omni (any channel). */
-export const ccChannelOf = (g: MbGlobalState | null): number | null => (g && g.general.midiChannelUsb >= 1 ? g.general.midiChannelUsb : null);
+export const ccChannelOf = (g: MbGlobalState | null): number | null => (g && g.general.midiInUsb >= 1 ? g.general.midiInUsb : null);
+
+/** Global Tempo switched on but not confirmed: the unit asks on its screen first (or has no BPM yet). */
+export const TEMPO_NOT_ACCEPTED = en['error.mbTempoNotAccepted'];

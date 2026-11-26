@@ -25,6 +25,7 @@ const EXACT: ReadonlyArray<[string, MessageKey]> = [
   [en['error.closedDuringSave'], 'error.closedDuringSave'],
   [en['error.storage'], 'error.storage'],
   [en['error.storageImport'], 'error.storageImport'],
+  [en['error.mbTempoNotAccepted'], 'error.mbTempoNotAccepted'],
   // Raised by @pocket-master/core when a preset file is read.
   ['not a Pocket Master preset file', 'error.notPresetFile'],
   ['not a Pocket Master preset file (invalid JSON)', 'error.notPresetFile'],

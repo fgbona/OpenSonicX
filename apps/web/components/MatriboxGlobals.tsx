@@ -1,15 +1,43 @@
 'use client';
 
 import { useState } from 'react';
-import { MB_GLOBALS, type MbGlobalSetting } from '@pocket-master/core';
+import { MB_GLOBALS, type MbEqBand, type MbGlobalSetting } from '@pocket-master/core';
 import type { Matribox } from '@/lib/useMatribox';
 import { Dialog } from './Dialog';
 import { Segmented } from './SettingsDialog';
 import { useI18n } from './I18n';
 
-/** Band 2 (index 1) is the only band whose gain write was captured (mb-38). */
-const WRITABLE_BAND = 1;
 const CHANNELS = Array.from({ length: 17 }, (_, i) => i);
+/** The cut filters' frequencies that mean off (19 Hz low, 20001 Hz high). */
+const LOW_CUT_OFF = 19;
+const HIGH_CUT_OFF = 20001;
+const { tempoBpm } = MB_GLOBALS;
+
+function Switch(p: { label: string; on: boolean; disabled: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <div className="settings-row">
+      <span className="settings-label">{p.label}</span>
+      <button type="button" role="switch" aria-checked={p.on} aria-label={p.label} className={`switch${p.on ? ' switch-on' : ''}`} disabled={p.disabled} onClick={() => p.onChange(!p.on)}>
+        <span className="switch-knob" />
+      </button>
+    </div>
+  );
+}
+
+function ChannelSelect(p: { label: string; value: number; disabled: boolean; onChange: (v: number) => void }) {
+  return (
+    <label className="settings-row">
+      <span className="settings-label">{p.label}</span>
+      <select className="param-select" value={p.value} disabled={p.disabled} onChange={(e) => p.onChange(Number(e.target.value))}>
+        {CHANNELS.map((c) => (
+          <option key={c} value={c}>
+            {c === 0 ? 'Omni' : c}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
 
 function Slider(p: { label: string; value: number; min: number; max: number; unit?: string; disabled: boolean; onChange: (v: number) => void }) {
   const fill = ((p.value - p.min) / (p.max - p.min)) * 100;
@@ -36,7 +64,7 @@ function Slider(p: { label: string; value: number; min: number; max: number; uni
 /**
  * Global options of the Matribox II Pro: the settings whose write was captured from the official
  * editor (core globals.ts), read when the editor connects and kept up to date with what is changed
- * on the unit. Each change is one write, confirmed by the unit; Global Tempo is shown only.
+ * on the unit. Each change is one write, confirmed by the unit; brightness and the EQ's frequencies are shown only.
  */
 export function MatriboxGlobals({ mb }: { mb: Matribox }) {
   const { t, te } = useI18n();
@@ -45,6 +73,7 @@ export function MatriboxGlobals({ mb }: { mb: Matribox }) {
   const off = mb.busy !== null || !g;
   const general = g?.general;
   const set = (setting: MbGlobalSetting) => (v: number) => mb.setGlobal(setting, v);
+  const hz = (b: MbEqBand, offAt: number) => (b.on && b.frequency !== offAt ? `${Math.round(b.frequency)} Hz` : t('mbGlobal.cutOff'));
   return (
     <>
       <button
@@ -85,25 +114,27 @@ export function MatriboxGlobals({ mb }: { mb: Matribox }) {
             </section>
             <section className="settings-group" aria-label={t('mbGlobal.functions')}>
               <h3>{t('mbGlobal.functions')}</h3>
-              <Segmented label={t('mbGlobal.mode')} value={general.currentMode} options={['Preset', 'Stomp']} disabled={off} onChange={set('currentMode')} />
-              <div className="settings-row">
-                <span className="settings-label">{t('mbGlobal.tempo')}</span>
-                <span className="param-value">{general.tempo.on && general.tempo.bpm !== null ? t('mbGlobal.tempoOn', { bpm: general.tempo.bpm }) : t('block.off')}</span>
-              </div>
+              <Segmented label={t('mbGlobal.mode')} value={general.currentMode} options={['Stomp', 'Preset']} disabled={off} onChange={set('currentMode')} />
+              <Switch label={t('mbGlobal.tempo')} on={general.tempoOn !== 0} disabled={off} onChange={(on) => mb.setGlobal('tempoOn', on ? 1 : 0)} />
+              <Slider
+                label={t('mbGlobal.tempoBpm')}
+                value={Math.min(Math.max(general.tempoBpm, tempoBpm.min), tempoBpm.max)}
+                min={tempoBpm.min}
+                max={tempoBpm.max}
+                unit="BPM"
+                disabled={off}
+                onChange={set('tempoBpm')}
+              />
               <p className="muted small">{t('mbGlobal.tempoNote')}</p>
+              <div className="settings-row">
+                <span className="settings-label">{t('mbGlobal.brightness')}</span>
+                <span className="param-value">{general.brightness} %</span>
+              </div>
             </section>
             <section className="settings-group" aria-label="MIDI">
               <h3>MIDI</h3>
-              <label className="settings-row">
-                <span className="settings-label">{t('mbGlobal.channel')}</span>
-                <select className="param-select" value={general.midiChannelUsb} disabled={off} onChange={(e) => mb.setGlobal('midiChannelUsb', Number(e.target.value))}>
-                  {CHANNELS.map((c) => (
-                    <option key={c} value={c}>
-                      {c === 0 ? 'Omni' : c}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <ChannelSelect label={t('mbGlobal.channel')} value={general.midiInUsb} disabled={off} onChange={set('midiInUsb')} />
+              <ChannelSelect label={t('mbGlobal.channelTrs')} value={general.midiInTrs} disabled={off} onChange={set('midiInTrs')} />
               <label className="settings-row">
                 <span className="settings-label">{t('mbGlobal.source')}</span>
                 <select className="param-select" value={general.midiSource} disabled={off} onChange={(e) => mb.setGlobal('midiSource', Number(e.target.value))}>
@@ -118,20 +149,7 @@ export function MatriboxGlobals({ mb }: { mb: Matribox }) {
             </section>
             <section className="settings-group" aria-label={t('mbGlobal.eq')}>
               <h3>{t('mbGlobal.eq')}</h3>
-              <div className="settings-row">
-                <span className="settings-label">{t('mbGlobal.eqOn')}</span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={g.eqOn}
-                  aria-label={t('mbGlobal.eqOn')}
-                  className={`switch${g.eqOn ? ' switch-on' : ''}`}
-                  disabled={off}
-                  onClick={() => mb.setEqOn(!g.eqOn)}
-                >
-                  <span className="switch-knob" />
-                </button>
-              </div>
+              <Switch label={t('mbGlobal.eqOn')} on={g.eqOn} disabled={off} onChange={mb.setEqOn} />
               <Slider label={t('mbGlobal.eqLevel')} value={g.eq.level} min={0} max={100} disabled={off} onChange={mb.setEqLevel} />
               {g.eq.bands.map((b, i) => (
                 <Slider
@@ -141,11 +159,11 @@ export function MatriboxGlobals({ mb }: { mb: Matribox }) {
                   min={-20}
                   max={20}
                   unit="dB"
-                  disabled={off || i !== WRITABLE_BAND}
+                  disabled={off}
                   onChange={(v) => mb.setEqGain(i, v)}
                 />
               ))}
-              <p className="muted small">{t('mbGlobal.bandNote')}</p>
+              <p className="muted small">{t('mbGlobal.cuts', { low: hz(g.eq.lowCut, LOW_CUT_OFF), high: hz(g.eq.highCut, HIGH_CUT_OFF) })}</p>
             </section>
           </div>
         )}

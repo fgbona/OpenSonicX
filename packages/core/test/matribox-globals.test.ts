@@ -37,7 +37,7 @@ test('the global setting writes rebuild the captured host frames byte for byte',
   assert.equal(toHex(mbSetGlobal('inputLevel', 5)), captured('input-level-5'));
   assert.equal(toHex(mbSetGlobal('auxLevel', 80)), captured('aux-level-80'));
   assert.equal(toHex(mbSetGlobal('currentMode', 1)), captured('current-mode-1'));
-  assert.equal(toHex(mbSetGlobal('midiChannelUsb', 5)), captured('midi-channel-usb-5'));
+  assert.equal(toHex(mbSetGlobal('midiInTrs', 5)), captured('midi-in-trs-5')); // `00 61`: the TRS input (owner's label said USB)
   assert.equal(toHex(mbSetGlobal('midiSource', 1)), captured('midi-source-1'));
   assert.equal(toHex(mbSetGlobal('inputMode', 2)), captured('input-mode-2'));
 });
@@ -47,6 +47,20 @@ test('the global EQ writes rebuild the captured host frames byte for byte', () =
   assert.equal(toHex(mbSetGlobalEqLevel(70)), captured('eq-level-70'));
   assert.equal(toHex(mbSetGlobalEqOn(false)), captured('eq-on-0'));
   assert.equal(toHex(mbSetGlobalEqOn(true)), captured('eq-on-1'));
+});
+
+const sentData = (frame: Uint8Array) => toHex(unwrapMbMessage(parseMbFrame(frame).payload).data);
+
+test('the writes not captured follow the same rules: channel index, tempo, every band gain', () => {
+  // The low byte of the setting is its index: MIDI In USB is the second channel of `61`.
+  assert.equal(sentData(mbSetGlobal('midiInUsb', 5)), '01 61 00 00 05 00 00 00');
+  assert.equal(sentData(mbSetGlobal('tempoOn', 1)), '00 25 00 00 01 00 00 00');
+  assert.equal(sentData(mbSetGlobal('tempoBpm', 120)), '00 26 00 00 78 00 00 00');
+  // Band gains are words 10, 14, 18, 22 (band 2 captured at 14).
+  assert.deepEqual(
+    [0, 1, 2, 3].map((b) => sentData(mbSetGlobalEqGain(b, 0)).slice(0, 2)),
+    ['0A', '0E', '12', '16'],
+  );
 });
 
 test('the unit answers the EQ switch with 00 00 00 00 + u32, not an echo', () => {
@@ -59,7 +73,10 @@ test('writes outside what was captured are refused before anything is sent', () 
   assert.throws(() => mbSetGlobal('midiSource', 0), /midiSource/); // TRS Only: the editor's Control Changes need USB
   assert.throws(() => mbSetGlobal('inputLevel', 21), /inputLevel/);
   assert.throws(() => mbSetGlobal('inputLevel', 1.5), /inputLevel/);
-  assert.throws(() => mbSetGlobal('midiChannelUsb', 17), /midiChannelUsb/);
+  assert.throws(() => mbSetGlobal('midiInUsb', 17), /midiInUsb/);
+  assert.throws(() => mbSetGlobal('tempoBpm', 39), /tempoBpm/);
+  assert.throws(() => mbSetGlobal('tempoBpm', 301), /tempoBpm/);
+  assert.throws(() => mbSetGlobal('tempoOn', 2), /tempoOn/);
   assert.throws(() => mbSetGlobalEqGain(4, 0), /band/);
   assert.throws(() => mbSetGlobalEqGain(0, 21), /gain/);
   assert.throws(() => mbSetGlobalEqLevel(101), /level/);
@@ -106,17 +123,21 @@ test('the general table decodes to the settings changed in mb-30 … mb-38', () 
     auxLevel: 80,
     inputMode: 2,
     currentMode: 1,
-    midiChannelUsb: 5,
+    midiInTrs: 5,
+    midiInUsb: 0,
     midiSource: 2,
-    tempo: { on: true, bpm: 100 },
+    tempoOn: 1,
+    tempoBpm: 100,
+    brightness: 80,
   });
   const off = generalTable();
   off.set([0xff, 0xff, 0], 48); // the first sessions: never set, off
-  assert.deepEqual(parseMbGlobals(off).tempo, { on: false, bpm: null });
+  off.set([9, 0], 38); // MIDI In USB is an i16 at 38
+  assert.deepEqual([parseMbGlobals(off).tempoOn, parseMbGlobals(off).tempoBpm, parseMbGlobals(off).midiInUsb], [0, 0xffff, 9]);
   assert.throws(() => parseMbGlobals(new Uint8Array(51)), /52/);
 });
 
-test('the global EQ table decodes to its level and its switch, frequency, Q and gain groups', () => {
+test('the global EQ table decodes to its cuts, shelves, bands and level', () => {
   const words = [1, 80, 0.71, 0, 20, 0.71, 0, 1, 250, 1, -1, 1, 500, 0.71, 3, 1, 1000, 0.71, 0, 1, 5000, 1, 1, 0, 20000, 0.71, 0, 1, 8000, 0.71, 70];
   const eq = parseMbGlobalEq(new Uint8Array(new Float32Array(words).buffer));
   assert.equal(eq.level, 70);
@@ -130,10 +151,14 @@ test('the global EQ table decodes to its level and its switch, frequency, Q and 
     ],
   );
   assert.equal(Math.round(eq.bands[1]!.q * 100), 71);
-  assert.deepEqual([eq.lowCut.on, eq.lowCut.frequency, eq.highCut.on, eq.highCut.frequency], [false, 20, false, 20000]);
+  // Words 0..2 low cut, 3..6 low shelf, 23..26 high shelf, 27..29 high cut.
+  assert.deepEqual([eq.lowCut.on, eq.lowCut.frequency, eq.lowShelf.on, eq.lowShelf.frequency], [true, 80, false, 20]);
+  assert.deepEqual([eq.highShelf.on, eq.highShelf.frequency, eq.highCut.on, eq.highCut.frequency], [false, 20000, true, 8000]);
+  assert.equal(Math.round(eq.highCut.q * 100), 71);
   assert.throws(() => parseMbGlobalEq(new Uint8Array(120)), /124/);
 });
 
+const key = (frame: Uint8Array) => toHex(frame).replaceAll(' ', '').toLowerCase();
 const linked = (fake: FakeMatribox) => matriboxLink({ send: (b) => fake.send(b), listen: (r) => fake.listen(r ?? (() => undefined)) }, 1000);
 
 test('the link reads the globals from the simulated unit and every write is confirmed and kept', async () => {
@@ -143,14 +168,20 @@ test('the link reads the globals from the simulated unit and every write is conf
   assert.equal(before.general.midiSource, 2);
   assert.equal(before.eqOn, true);
   await link.write(mbSetGlobal('inputLevel', -3));
-  await link.write(mbSetGlobal('midiChannelUsb', 7));
+  await link.write(mbSetGlobal('midiInUsb', 7));
+  await link.write(mbSetGlobal('tempoBpm', 120));
+  await link.write(mbSetGlobal('tempoOn', 1));
   await link.write(mbSetGlobalEqGain(1, 3));
+  await link.write(mbSetGlobalEqGain(3, -4));
   await link.write(mbSetGlobalEqLevel(70));
   await mbWriteGlobalEqOn(link, false);
   const after = await mbReadGlobalState(link);
   assert.equal(after.general.inputLevel, -3);
-  assert.equal(after.general.midiChannelUsb, 7);
+  assert.equal(after.general.midiInUsb, 7);
+  assert.equal(after.general.midiInTrs, 0);
+  assert.deepEqual([after.general.tempoOn, after.general.tempoBpm], [1, 120]);
   assert.equal(after.eq.bands[1]?.gain, 3);
+  assert.equal(after.eq.bands[3]?.gain, -4);
   assert.equal(after.eq.level, 70);
   assert.equal(after.eqOn, false);
 });
@@ -159,4 +190,16 @@ test('an EQ switch the unit does not take is an error', async () => {
   const fake = new FakeMatribox();
   fake.ignoresEqSwitch = true;
   await assert.rejects(mbWriteGlobalEqOn(linked(fake), false), /global EQ/);
+});
+
+test('switching the EQ to the state it is in sends no write (the unit would not answer it)', async () => {
+  const fake = new FakeMatribox();
+  await mbWriteGlobalEqOn(linked(fake), true); // already on
+  assert.ok(!fake.received.includes(key(mbSetGlobalEqOn(true))), 'no switch write sent');
+});
+
+test('Global Tempo cannot be switched on before it has a BPM: the unit answers 0, not an echo', async () => {
+  const fake = new FakeMatribox(); // BPM never set
+  await assert.rejects(linked(fake).write(mbSetGlobal('tempoOn', 1)), /did not confirm/);
+  assert.equal(fake.globals.general[MB_GLOBALS.tempoOn.at], 0);
 });
