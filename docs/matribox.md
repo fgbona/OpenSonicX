@@ -794,7 +794,7 @@ Builders in `packages/core/src/matribox/write.ts`; tests compare them with the c
 
 | Write | cmd | Data | Evidence |
 |-------|-----|------|----------|
-| Set param | 10 | `01 00 05 01` + u32 slot + u32 param ID + f32 value | Host frames, byte-exact; owner's unit ✓ |
+| Set param | 10 | `01 00 05 01` + u32 slot + u32 parameter **order** + f32 value; echoed with the widget ID | Host frames, byte-exact; owner's unit ✓; order vs ID: capture mb-46, waveod / matribox-studio |
 | On/off | 10 | `02 00 05 01` + u32 slot + u32 0/1 | Host frames, byte-exact; owner's unit ✓ |
 | Select | 10 | `01 00 0A 01` + u32 index (60D = 239) | Host frames, byte-exact; owner's unit ✓ |
 | Add block | 10 | `01 00 04 01` + `FF` + u8 position + u8 module + u32 fxid | Host frame (capture 4); owner's unit ✓ |
@@ -811,6 +811,15 @@ Builders in `packages/core/src/matribox/write.ts`; tests compare them with the c
 | Global EQ switch | 16 | `01 00 00 16` + u32; answered `00 00 00 00` + u32 | Host frames (mb-39), byte-exact; not yet checked on the unit |
 | Whole preset | 10, **flag 2** | u32 index + 1207-byte body (`.prst` tags), paged | Host pages (capture mb-20); answered by cmd `17`; not yet sent by us |
 
+- Set param names the parameter by its **order** in the model's list (the catalog's parameters
+  sorted by widget ID: 0, 1, 2 …), and the unit echoes it with the **widget ID** (its knob position
+  in sec5): stock FUN_000213CC / FUN_0002048C, as zxmarcos/waveod and zxmarcos/matribox-studio
+  reimplement them. They differ where a model's IDs skip: every CAB and IR (Volume, Low Cut, High
+  Cut at IDs 1, 5, 6 = order 0, 1, 2), the Peavey 5150 (Presence ID 6 = order 5), DLY 6 and 13,
+  FREQ 2 and 4. An order past the list lands on ID 0 (capture mb-46, 2026-11-26: ID 5 sent as the
+  order to a CAB, echoed `… 02 00 00 00 00 00 00 00 …` = slot 2, ID 0). Every captured set param
+  before was on a model with IDs 0, 1, 2 …, where both are the same. The expression and quick-knob
+  assignments likely take the order too (waveod's sub_exp): not changed yet, unchecked.
 - Set param and on/off address the **storage slot**, not the chain position (capture 2: the delay
   was slot 1 while first in the chain). Add, move and remove take **chain positions** (0-based):
   "from" `FF` adds, "to" `FF` removes. The unit picks the storage slot of an added block.

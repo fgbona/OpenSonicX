@@ -36,7 +36,7 @@ function carried(frame: Uint8Array) {
 }
 
 test("set param, block on/off and select rebuild the official editor's frames byte for byte", () => {
-  assert.equal(toHex(mbSetParam(2, 0, 31)), toHex(HOST[2] as Uint8Array));
+  assert.equal(toHex(mbSetParam(2, null, 0, 31)), toHex(HOST[2] as Uint8Array));
   assert.equal(toHex(mbSetBlockOn(1, false)), toHex(HOST[3] as Uint8Array));
   assert.equal(toHex(mbSelectPreset(0x42)), toHex(HOST[5] as Uint8Array));
 });
@@ -48,9 +48,9 @@ test('cmd 05 (save) rebuilds the captured host frame: u32 index + 17-byte name f
 
 test('set param, on/off and select match capture 2', () => {
   assert.deepEqual(carried(mbSelectPreset(0xef)), echo('select-60D'));
-  assert.deepEqual(carried(mbSetParam(0, 0, 41)), echo('param-slot0-id0-41'));
-  assert.deepEqual(carried(mbSetParam(0, 0, 53)), echo('param-slot0-id0-53'));
-  assert.deepEqual(carried(mbSetParam(1, 0, 45)), echo('param-slot1-id0-45'));
+  assert.deepEqual(carried(mbSetParam(0, null, 0, 41)), echo('param-slot0-id0-41'));
+  assert.deepEqual(carried(mbSetParam(0, null, 0, 53)), echo('param-slot0-id0-53'));
+  assert.deepEqual(carried(mbSetParam(1, null, 0, 45)), echo('param-slot1-id0-45'));
   assert.deepEqual(carried(mbSetBlockOn(1, false)), echo('on-slot1-off'));
 });
 
@@ -76,9 +76,9 @@ test("chain edits rebuild the official editor's host frames byte for byte", () =
 });
 
 test('the builders refuse what the unit cannot hold', () => {
-  assert.throws(() => mbSetParam(12, 0, 1), /slot/);
-  assert.throws(() => mbSetParam(0, 15, 1), /parameter id/);
-  assert.throws(() => mbSetParam(0, 0, Number.NaN), /finite/);
+  assert.throws(() => mbSetParam(12, null, 0, 1), /slot/);
+  assert.throws(() => mbSetParam(0, null, 15, 1), /parameter id/);
+  assert.throws(() => mbSetParam(0, null, 0, Number.NaN), /finite/);
   assert.throws(() => mbSetBlockOn(-1, true), /slot/);
   assert.throws(() => mbSelectPreset(240), /preset/);
   assert.throws(() => mbSavePreset(0, ''), /name/);

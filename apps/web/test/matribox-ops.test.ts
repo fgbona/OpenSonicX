@@ -19,7 +19,7 @@ test("applyOps writes a whole tone through the unit's chain edits and lands on i
     { module: 'AMP', model: 'Fake Plexi', on: false },
     { module: 'DLY', model: 'Fake Echo' },
   ]);
-  const after = await applyOps(link, transition(catalog, before, tone));
+  const after = await applyOps(link, catalog, transition(catalog, before, tone));
   assert.deepEqual(shape(after.chain), [
     [3, 0x03000010, true],
     [4, 0x0700001a, false],
@@ -30,7 +30,7 @@ test("applyOps writes a whole tone through the unit's chain edits and lands on i
   assert.deepEqual(parseMbPreset(fake.editBuffer).chain, after.chain);
 
   // Undo: the old chain again, with every value the catalog names.
-  const back = await applyOps(link, transition(catalog, after.chain, before));
+  const back = await applyOps(link, catalog, transition(catalog, after.chain, before));
   assert.deepEqual(shape(back.chain), shape(before));
   // Widget IDs per block of the fake catalog (the CAB at 4 is unknown: the unit's defaults stay).
   const named: [number, number[]][] = [
@@ -49,12 +49,12 @@ test('applyOps addresses the storage slot of each chain position', async () => {
   const fake = new FakeMatribox();
   const link = unitLink(fake);
   // Drive AD's DRV sits in slot 0 at position 2.
-  const after = await applyOps(link, [
+  const after = await applyOps(link, catalog, [
     { kind: 'param', position: 1, id: 0, value: 42 },
     { kind: 'on', position: 1, on: true },
   ]);
   assert.deepEqual([after.chain[1]!.slot, after.chain[1]!.values[0], after.chain[1]!.on], [0, 42, true]);
-  await assert.rejects(applyOps(link, [{ kind: 'param', position: 9, id: 0, value: 1 }]), /no block at position 10/);
+  await assert.rejects(applyOps(link, catalog, [{ kind: 'param', position: 9, id: 0, value: 1 }]), /no block at position 10/);
 });
 
 /** A link whose `failAt`-th set-param/on write the unit applies without confirming it (the owner's timeouts). */
@@ -126,4 +126,27 @@ test('applyChain plans from what the unit holds and skips values it already has'
   assert.equal(built, 3);
   await applyChain(link, catalog, TONE()); // the same tone again: only reads
   assert.equal(writes, built);
+});
+
+test('a block whose widget IDs skip gets its values (mb-46: the unit takes the order, echoes the ID)', async () => {
+  const fake = new FakeMatribox();
+  fake.catalog = catalog; // the unit's own addressing
+  // Fake Plexi's Master is widget ID 5, its second parameter; Fake 4x12's Volume is ID 1, its first.
+  const tone = planTone(catalog, [
+    { module: 'AMP', model: 'Fake Plexi', params: [{ name: 'Master', value: 66 }] },
+    { module: 'CAB', model: 'Fake 4x12', params: [{ name: 'Volume', value: 80 }] },
+  ]);
+  const after = await applyChain(unitLink(fake), catalog, tone);
+  assert.equal(after.chain[0]!.values[5], 66);
+  assert.equal(after.chain[1]!.values[1], 80);
+});
+
+test('a write that fails names its block, model, parameter and value', async () => {
+  const fake = new FakeMatribox();
+  const before = parseMbPreset(fake.editBuffer).chain;
+  await assert.rejects(applyChain(flakyLink(fake, 1), catalog, TONE()), (e: unknown) => {
+    assert.match((e as Error).message, /^Block 1 \(DRV Fake Fuzz\), Fuzz = 70: Matribox II PRO did not confirm the write/);
+    return true;
+  });
+  assert.deepEqual(shape(parseMbPreset(fake.editBuffer).chain), shape(before));
 });

@@ -23,6 +23,20 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Matribox II Pro: **a value write to a CAB, an IR, the Peavey 5150 amp or any model whose
+  parameter IDs skip now reaches the right knob and is confirmed.** The owner's "Van Halen, Jump"
+  tone failed every time (capture mb-46): the CAB's Low Cut (widget ID 5) was sent as is, but the
+  unit takes a parameter's *order* in its model's list (Volume, Low Cut, High Cut = 0, 1, 2) and
+  echoes the widget ID (stock FUN_000213CC / FUN_0002048C, as zxmarcos/waveod and matribox-studio
+  reimplement them). Order 5 is past the CAB's three, so the unit echoed ID 0 and the write timed
+  out; a CAB's Volume (ID 1) would even have moved its Low Cut. `mbSetParam` now takes the slot's
+  model, sends the order, refuses an ID the model does not have, and the link checks the echo
+  against the widget ID (web editor, assistant, Undo/Redo and the MCP server).
+- Matribox II Pro: a write the unit answers for another parameter of the same block is refused at
+  once with that said, not after 3 s; a write that fails names its block, model, parameter and
+  value ("Block 3 (CAB …), Low Cut = 80: …") and logs the frame sent and the unit's last 10
+  messages to the console. The timeout, rollback and loop-guard messages read in Portuguese too.
+
 - Matribox II Pro: **a failed write no longer piles blocks up on the unit.** The owner's assistant
   run ("timbre do Slash em Sweet Child", Claude Haiku, then Sonnet on an empty preset) ended with
   12 blocks on the unit (the planned WAH, AMP, CAB, DLY, RVB three times over) while the editor

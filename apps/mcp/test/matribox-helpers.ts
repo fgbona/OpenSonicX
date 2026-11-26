@@ -40,6 +40,7 @@ export const fakeLink = (fake = new FakeMatribox(), timeoutMs = 1000) => {
 
 export async function connected(options: { catalog?: MbCatalog; ports?: readonly string[]; convertClone?: CloneConverter } = {}) {
   const fake = new FakeMatribox();
+  fake.catalog = options.catalog ?? CATALOG; // set params by order, echoed by widget ID, like the unit
   const link = fakeLink(fake);
   const dir = mkdtempSync(join(tmpdir(), 'mb-tools-'));
   const backups = join(dir, 'b');

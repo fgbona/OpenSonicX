@@ -55,6 +55,8 @@ export function findModel(catalog: MbCatalog, name: string, module?: MbModule): 
 
 export interface ParamWrite {
   readonly slot: number;
+  /** The slot's model (the unit takes a parameter's order in its list: core mbSetParam); null when unknown. */
+  readonly model: MbModel | null;
   readonly id: number;
   readonly value: number;
 }
@@ -62,7 +64,7 @@ export interface ParamWrite {
 /** Every parameter of `model` in `slot`: the given values (checked), the catalog default for the rest. */
 export function modelValues(model: MbModel, slot: number, given: Readonly<Record<string, number>> = {}): readonly ParamWrite[] {
   const values = new Map(Object.entries(given).map(([name, value]) => [checkParam(model, name, value).id, value]));
-  return model.params.map((p) => ({ slot, id: p.id, value: values.get(p.id) ?? p.defaultValue }));
+  return model.params.map((p) => ({ slot, model, id: p.id, value: values.get(p.id) ?? p.defaultValue }));
 }
 
 /** "Gain 70, Tone 0" for a model's parameter writes. */

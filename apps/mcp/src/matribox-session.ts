@@ -234,7 +234,7 @@ export class MatriboxSession {
   }
 
   static #paramFrames(params: readonly ParamWrite[]): Uint8Array[] {
-    return params.map((p) => mbSetParam(p.slot, p.id, p.value));
+    return params.map((p) => mbSetParam(p.slot, p.model, p.id, p.value));
   }
 
   /** One parameter of a block of the loaded preset, by name, within the catalog's range. */
@@ -244,7 +244,7 @@ export class MatriboxSession {
       const block = findBlock(preset, options.block);
       const model = knownModel(block);
       const param = checkParam(model, options.parameter, options.value);
-      await unit.write(mbSetParam(block.slot, param.id, options.value));
+      await unit.write(mbSetParam(block.slot, model, param.id, options.value));
       const before = block.params.find((p) => p.id === param.id)?.value;
       return experimental([`${block.module} ${model.name}: ${param.name} ${before === undefined ? '' : `${round(before)} → `}${round(options.value)}`]);
     });
@@ -363,7 +363,7 @@ export class MatriboxSession {
   /** The values a block of the loaded preset holds, for the parameters its model names (none for an unknown model). */
   #valuesOf(catalog: MbCatalog, block: MbPreset['chain'][number], slot: number): readonly ParamWrite[] {
     const model = catalog.modules.find((m) => m.index === block.moduleIndex)?.models.find((m) => m.fxid === block.fxid);
-    return (model?.params ?? []).map((p) => ({ slot, id: p.id, value: block.values[p.id] ?? p.defaultValue }));
+    return (model?.params ?? []).map((p) => ({ slot, model: model ?? null, id: p.id, value: block.values[p.id] ?? p.defaultValue }));
   }
 
   /** Removes every block from the end, adds `blocks` in order, then writes each one's values and on/off by its new slot. */
