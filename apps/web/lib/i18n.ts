@@ -45,11 +45,45 @@ const PREFIXES: ReadonlyArray<[string, MessageKey]> = [
 /** Core messages with values inside, by pattern; the named groups fill the placeholders. */
 const PATTERNS: ReadonlyArray<[RegExp, MessageKey]> = [
   [/^saved, but (?<slot>P\d\d) is named "(?<got>.*)" instead of "(?<want>.*)"$/, 'error.savedOtherName'],
+  [/^Matribox II PRO did not confirm the write \((?<what>[^)]*)\) within (?<ms>\d+) ms\. Is it on, and is the official editor closed\?$/, 'error.mbNoConfirm'],
+  [/^Matribox II PRO took the write for parameter (?<got>\d+) instead of (?<want>\d+) \(slot (?<slot>\d+)\): the block's model has no such parameter\.$/, 'error.mbWrongParam'],
   [/^Could not download the reference DI for the conversion \(HTTP (?<status>\d+)\)\.$/, 'error.cloneDi'],
 ];
 
+/** A failed write as matriboxOps.ts names it, and its rollback: their reasons are translated in turn. */
+const COMPOSED: ReadonlyArray<[RegExp, MessageKey]> = [
+  [/^(?<reason>.*) Nothing was applied: the Matribox is back as it was\.$/s, 'error.mbRolledBack'],
+  [/^(?<reason>.*) The change stopped part way and could not be undone \((?<rollback>.*)\): the screen shows what the Matribox holds now\.$/s, 'error.mbNotUndone'],
+  [/^Block (?<n>\d+) \((?<block>.*?)\), (?<change>[^:]+): (?<reason>.*)$/s, 'error.mbWriteBlock'],
+];
+/** What a failed write was changing (matriboxOps.ts describeOp); a parameter's "Low Cut = 80" stays as it is. */
+const CHANGES: ReadonlyArray<[RegExp, MessageKey]> = [
+  [/^on$/, 'mb.change.on'],
+  [/^off$/, 'mb.change.off'],
+  [/^add$/, 'mb.change.add'],
+  [/^remove$/, 'mb.change.remove'],
+  [/^model change$/, 'mb.change.model'],
+  [/^move to (?<to>\d+)$/, 'mb.change.move'],
+];
+
+function translateChange(lang: Lang, change: string): string {
+  for (const [pattern, key] of CHANGES) {
+    const match = pattern.exec(change);
+    if (match) return translate(lang, key, match.groups ?? {});
+  }
+  return change;
+}
+
 /** Translates errors raised by the web layer; protocol and decoder errors stay as they are. */
 export function translateError(lang: Lang, text: string): string {
+  for (const [pattern, key] of COMPOSED) {
+    const groups = pattern.exec(text)?.groups;
+    if (!groups) continue;
+    const vars = Object.fromEntries(
+      Object.entries(groups).map(([name, value]) => [name, name === 'reason' || name === 'rollback' ? translateError(lang, value) : name === 'change' ? translateChange(lang, value) : value]),
+    );
+    return translate(lang, key, vars);
+  }
   const exact = EXACT.find(([source]) => source === text);
   if (exact) return translate(lang, exact[1]);
   for (const [pattern, key] of PATTERNS) {

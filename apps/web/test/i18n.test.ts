@@ -72,3 +72,21 @@ test('a save whose name check failed is told in Portuguese, with the slot and bo
     'Gravado, mas a pedaleira informa que o P38 se chama “Noise Wall” em vez de “QClean”. Confira na pedaleira; se o nome estiver certo lá, está tudo bem.',
   );
 });
+
+test('a failed Matribox write and its rollback read in Portuguese, the reason too', () => {
+  const failure =
+    'Block 3 (CAB Marshall 4x12), Low Cut = 80: Matribox II PRO did not confirm the write (flag 1, cmd 0x10) within 3000 ms. Is it on, and is the official editor closed? Nothing was applied: the Matribox is back as it was.';
+  assert.equal(
+    translateError('pt', failure),
+    'Bloco 3 (CAB Marshall 4x12), Low Cut = 80: A Matribox II PRO não confirmou a gravação (flag 1, cmd 0x10) em 3000 ms. Ela está ligada, com o editor oficial fechado? Nada foi aplicado: a Matribox voltou a ser como era.',
+  );
+  assert.equal(translateError('en', failure), failure);
+  assert.equal(
+    translateError(
+      'pt',
+      "Block 2 (AMP Plexi), on: Matribox II PRO took the write for parameter 0 instead of 5 (slot 2): the block's model has no such parameter. The change stopped part way and could not be undone (boom): the screen shows what the Matribox holds now.",
+    ),
+    'Bloco 2 (AMP Plexi), ligar: A Matribox II PRO aplicou a gravação ao parâmetro 0 em vez do 5 (slot 2): o modelo do bloco não tem esse parâmetro. A mudança parou no meio e não pôde ser desfeita (boom): a tela mostra o que a Matribox tem agora.',
+  );
+  assert.equal(translateError('pt', 'Block 4 (DLY Echo), move to 2: x'), 'Bloco 4 (DLY Echo), mover para 2: x');
+});

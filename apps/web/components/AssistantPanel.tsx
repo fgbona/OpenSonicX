@@ -192,7 +192,7 @@ function KeySetup({
 
 /** Chat that builds tones on the pedal from a description, with the person's own free AI keys. */
 export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assistant.privacy' }: Props) {
-  const { t, lang } = useI18n();
+  const { t, te, lang } = useI18n();
   const [keys, setKeys] = useState<Partial<Record<Provider, string>>>({});
   const [paid, setPaid] = useState<readonly PaidEntry[]>([]);
   const [order, setOrder] = useState<readonly string[]>([]);
@@ -345,10 +345,10 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
                   : error instanceof RegionError
                     ? t('assistant.region')
                     : error instanceof ToolLoopError
-                      ? t('assistant.toolLoop', { tool: error.tool, reason: error.reason })
+                      ? t('assistant.toolLoop', { tool: error.tool, reason: te(error.reason) })
                       : error instanceof StepLimitError
                         ? t('assistant.stepLimit')
-                        : t('assistant.error', { reason: error instanceof Error ? error.message : String(error) });
+                        : t('assistant.error', { reason: te(error instanceof Error ? error.message : String(error)) });
       // The next answer is told this one was cut, so a model does not lose the request (the preset it gets is current).
       setTurns((h) => [...h, { role: 'user', text: message }, { role: 'assistant', text: `(This answer was interrupted: ${error instanceof Error ? error.message : String(error)})` }]);
       const link = error instanceof RegionError ? { href: REGIONS, text: t('assistant.regionLink') } : undefined;

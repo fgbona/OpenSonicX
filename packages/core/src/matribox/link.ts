@@ -25,6 +25,7 @@
 import type { MidiPort } from '../link.ts';
 import { joinMbPages, MB_READ, MB_REPLY, MB_WRITE, parseMbFrame, type MbFrame } from './frame.ts';
 import { mbReadPresetTempo, unwrapMbMessage } from './message.ts';
+import { mbParamEchoId } from './write.ts';
 import { isMbControlChange } from './cc.ts';
 import { parseMbNotice, type MbNotice } from './notice.ts';
 
@@ -72,16 +73,28 @@ const isChainEdit = (data: Uint8Array) => (data[0] === 0x01 || data[0] === 0x02)
 const SET_PARAM = Uint8Array.of(0x01, 0x00, 0x05, 0x01);
 const SET_ON = Uint8Array.of(0x02, 0x00, 0x05, 0x01);
 /**
- * A set param (`01 00 05 01` + slot + id + f32) or on/off (`02 00 05 01` + slot + u32): the unit
+ * A set param (`01 00 05 01` + slot + order + f32) or on/off (`02 00 05 01` + slot + u32): the unit
  * echoes the value it kept (snapped to the step, clamped to the range), so the echo names the same
- * slot (and id) but may carry another value; the caller reads the preset back for the value.
+ * slot (and parameter) but may carry another value; the caller reads the preset back for the value.
+ * A set param's echo names the widget ID, not the order the frame carries (mbSetParam, mbParamEchoId).
  */
-const sameTarget = (data: Uint8Array, sent: Uint8Array) => {
-  const head = startsWith(sent, SET_PARAM) ? 12 : startsWith(sent, SET_ON) ? 8 : 0;
-  return head > 0 && data.length === sent.length && startsWith(data, sent.subarray(0, head));
+const sameTarget = (data: Uint8Array, sent: Uint8Array, echoId: number | undefined) => {
+  if (data.length !== sent.length) return false;
+  if (startsWith(sent, SET_ON)) return startsWith(data, sent.subarray(0, 8));
+  return startsWith(sent, SET_PARAM) && startsWith(data, sent.subarray(0, 8)) && u32At(data, 8) === (echoId ?? u32At(sent, 8));
 };
+const u32At = (b: Uint8Array, at: number) => ((b[at] ?? 0) | ((b[at + 1] ?? 0) << 8) | ((b[at + 2] ?? 0) << 16) | ((b[at + 3] ?? 0) << 24)) >>> 0;
 /** The unit's answer to a write: its echo, or its chain notice for a chain edit. */
-const confirms = (data: Uint8Array, sent: Uint8Array) => equal(data, sent) || sameTarget(data, sent) || (isChainEdit(sent) && startsWith(data, CHAIN_NOTICE));
+const confirms = (data: Uint8Array, sent: Uint8Array, echoId?: number) => equal(data, sent) || sameTarget(data, sent, echoId) || (isChainEdit(sent) && startsWith(data, CHAIN_NOTICE));
+/**
+ * The echo of a set param that names the slot but another parameter: the unit took the write for a
+ * parameter the model does not have (mb-46: it echoed ID 0). That parameter id, or null.
+ */
+const otherParam = (data: Uint8Array, sent: Uint8Array, echoId: number | undefined): number | null =>
+  startsWith(sent, SET_PARAM) && data.length === sent.length && startsWith(data, sent.subarray(0, 8)) && !sameTarget(data, sent, echoId) ? u32At(data, 8) : null;
+/** Messages from the unit kept for a failed exchange's log. */
+const HEARD_KEPT = 10;
+const hexOf = (b: Uint8Array) => Array.from(b, (x) => x.toString(16).padStart(2, '0')).join(' ');
 /** The unit's answer to a whole-preset write: flag 0, cmd 0x17, `02 00 00 10`. */
 const PRESET_ACK = { flag: 0, cmd: 0x17, data: Uint8Array.of(0x02, 0x00, 0x00, 0x10) };
 /** The unit acknowledges an upload with this flag (captures mb-17, mb-17b, mb-17c). */
@@ -91,6 +104,8 @@ interface Answer {
   readonly flag: number;
   readonly cmd: number;
   readonly accepts: (data: Uint8Array) => boolean;
+  /** Why an answer of the flag and cmd that `accepts` refused is a refusal of the request; null when it is not. */
+  readonly refuses?: (data: Uint8Array) => string | null;
 }
 
 /** The message the host frames carry (one or more pages of type `type`). */
@@ -156,6 +171,8 @@ export function matriboxLink(port: MidiPort, timeoutMs: number = MATRIBOX_TIMEOU
   const exchange = async (frames: readonly Uint8Array[], answer: Answer, what: string, noAnswer: string, wait: number = timeoutMs): Promise<Uint8Array> => {
     return new Promise((resolve, reject) => {
       let pages: MbFrame[] = [];
+      /** The unit's last messages, for the log of a failed exchange. */
+      let heard: string[] = [];
       exchanging = true;
       const finish = (error: Error | null, data?: Uint8Array) => {
         clearTimeout(timer);
@@ -164,8 +181,18 @@ export function matriboxLink(port: MidiPort, timeoutMs: number = MATRIBOX_TIMEOU
         if (error) reject(error);
         else resolve(data as Uint8Array);
       };
-      const timer = setTimeout(() => finish(new Error(`Matribox II PRO did not ${noAnswer} (${what}) within ${wait} ms. Is it on, and is the official editor closed?`)), wait);
+      const failed = (message: string) => {
+        console.error(`Matribox: ${message}\nsent: ${frames.map(hexOf).join(' | ')}\nheard (last ${HEARD_KEPT}, decompressed):\n${heard.join('\n') || '(nothing)'}`);
+        finish(new Error(message));
+      };
+      const timer = setTimeout(() => failed(`Matribox II PRO did not ${noAnswer} (${what}) within ${wait} ms. Is it on, and is the official editor closed?`), wait);
       const onMessage = (joined: Uint8Array) => {
+        try {
+          const m = unwrapMbMessage(joined);
+          heard = [...heard, `flag ${m.flag} cmd ${hex(m.cmd)}: ${hexOf(m.data)}`].slice(-HEARD_KEPT);
+        } catch {
+          heard = [...heard, `damaged: ${hexOf(joined)}`].slice(-HEARD_KEPT);
+        }
         if (joined[0] !== answer.flag || joined[3] !== answer.cmd) return toNotice(joined);
         let data: Uint8Array;
         try {
@@ -173,8 +200,10 @@ export function matriboxLink(port: MidiPort, timeoutMs: number = MATRIBOX_TIMEOU
         } catch (error) {
           return finish(new Error(`Matribox II PRO sent a damaged reply (${what}): ${(error as Error).message}`));
         }
-        if (answer.accepts(data)) finish(null, data);
-        else toNotice(joined);
+        if (answer.accepts(data)) return finish(null, data);
+        const refused = answer.refuses?.(data);
+        if (refused) return failed(refused);
+        toNotice(joined);
       };
       port.listen((bytes) => {
         const page = tryParse(bytes);
@@ -198,13 +227,21 @@ export function matriboxLink(port: MidiPort, timeoutMs: number = MATRIBOX_TIMEOU
     });
   };
   /** The request's own flag and cmd, its data checked by `accepts`. */
-  const own = async (frame: Uint8Array, type: number, accepts: (data: Uint8Array, sent: Uint8Array) => boolean, noAnswer: string) => {
+  const own = async (frame: Uint8Array, type: number, accepts: (data: Uint8Array, sent: Uint8Array) => boolean, noAnswer: string, refuses?: (data: Uint8Array, sent: Uint8Array) => string | null) => {
     const want = sentMessage([frame], type);
-    return exchange([frame], { flag: want.flag, cmd: want.cmd, accepts: (data) => accepts(data, want.data) }, `flag ${want.flag}, cmd ${hex(want.cmd)}`, noAnswer);
+    const answer: Answer = { flag: want.flag, cmd: want.cmd, accepts: (data) => accepts(data, want.data), refuses: refuses && ((data) => refuses(data, want.data)) };
+    return exchange([frame], answer, `flag ${want.flag}, cmd ${hex(want.cmd)}`, noAnswer);
   };
   return {
     read: (request) => own(request, MB_READ, startsWith, 'answer the read'),
-    write: async (frame) => void (await own(frame, MB_WRITE, confirms, 'confirm the write')),
+    write: async (frame) => {
+      const echoId = mbParamEchoId(frame);
+      const refuses = (data: Uint8Array, sent: Uint8Array) => {
+        const got = otherParam(data, sent, echoId);
+        return got === null ? null : `Matribox II PRO took the write for parameter ${got} instead of ${echoId ?? u32At(sent, 8)} (slot ${u32At(sent, 4)}): the block's model has no such parameter.`;
+      };
+      await own(frame, MB_WRITE, (data, sent) => confirms(data, sent, echoId), 'confirm the write', refuses);
+    },
     writePreset: async (frames) => {
       const sent = sentMessage(frames, MB_WRITE);
       const ack = { ...PRESET_ACK, accepts: (data: Uint8Array) => equal(data, PRESET_ACK.data) };

@@ -41,12 +41,37 @@ function checkPreset(index: number): number {
   return isIn(index, MB_PRESET_COUNT) ? index : fail(`preset index must be 0..${MB_PRESET_COUNT - 1}, got ${index}`);
 }
 
-/** One parameter of a storage slot (not a chain position) in the loaded preset: `01 00 05 01` + slot + id + f32. */
-export function mbSetParam(slot: number, paramId: number, value: number): Uint8Array {
+/** A model's parameters, as the catalog lists them (by widget ID): enough to address one on the wire. */
+export interface MbParamList {
+  readonly params: readonly { readonly id: number }[];
+}
+
+/**
+ * The frames mbSetParam built, with the widget ID the unit's echo names (the frame carries the
+ * order): the link checks the echo with it. In process only, like the frames themselves.
+ */
+const echoIds = new WeakMap<Uint8Array, number>();
+/** The widget ID the echo of a set-param frame from mbSetParam names; undefined for any other frame. */
+export const mbParamEchoId = (frame: Uint8Array): number | undefined => echoIds.get(frame);
+
+/**
+ * One parameter of a storage slot (not a chain position) in the loaded preset: `01 00 05 01` + slot +
+ * u32 order + f32. The unit takes the parameter's ORDER in the model's list, not its widget ID, and
+ * echoes the widget ID (stock FUN_000213CC / FUN_0002048C, reimplemented in zxmarcos/waveod and
+ * zxmarcos/matribox-studio, MIT): they differ where a model's IDs skip, every CAB and IR (1, 5, 6),
+ * the Peavey 5150 and a few more. Capture mb-46 (2026-11-26): widget ID 5 (a CAB's Low Cut) sent as
+ * is, the unit took it for order 5, past the CAB's three, and echoed ID 0. `model` is the slot's
+ * model; null when the catalog does not know it (its IDs are taken for the order).
+ */
+export function mbSetParam(slot: number, model: MbParamList | null, paramId: number, value: number): Uint8Array {
   checkSlot(slot);
   if (!isIn(paramId, PARAMS_PER_SLOT)) fail(`parameter id must be 0..${PARAMS_PER_SLOT - 1}, got ${paramId}`);
   if (!Number.isFinite(value)) fail(`value must be a finite number, got ${value}`);
-  return write(SET_CMD, [0x01, 0x00, 0x05, 0x01, ...u32(slot), ...u32(paramId), ...float32LE(value)]);
+  const order = model ? model.params.findIndex((p) => p.id === paramId) : paramId;
+  if (order < 0) fail(`the model has no parameter id ${paramId} (its ids: ${model?.params.map((p) => p.id).join(', ') || 'none'})`);
+  const frame = write(SET_CMD, [0x01, 0x00, 0x05, 0x01, ...u32(slot), ...u32(order), ...float32LE(value)]);
+  echoIds.set(frame, paramId);
+  return frame;
 }
 
 /** Turns a storage slot's block on or off: `02 00 05 01` + slot + state. */
