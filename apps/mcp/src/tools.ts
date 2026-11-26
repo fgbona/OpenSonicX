@@ -485,7 +485,8 @@ const mbBlock = z.string().describe('Block of the loaded preset: its 1-based pos
 const mbModule = z.string().describe('Module name: DYN, FREQ, WAH, DRV, AMP, CAB, IR, EQ, MOD, DLY, RVB, CLONE, FXLOOP, FXSND, FXRTN or VOL');
 const mbPreset = z.string().describe('Preset label, 1A..60D (four per bank)');
 const mbLive = (what: string) => `Matribox II Pro: ${what} The change is live in the loaded preset; nothing is stored until matribox_save_preset. ${MB_EXPERIMENTAL}`;
-const mbPickModels = 'Pick models by their origin (the real gear they are based on) from matribox_list_models.';
+const mbPickModels =
+  'Pick models by their origin (the real gear they are based on) from matribox_list_models. The unit\'s DSP is limited (past it it shows "System overloaded" and switches every block off): a chain past its estimated DSP budget, or with more than 2 CAB/IR/CLONE blocks, is refused with what to drop; keep chains lean.';
 
 /** The Matribox II Pro's writes: live edits of the loaded preset, select, and save (confirmed, with a backup). */
 function registerMatriboxWrites(server: McpServer, options: ServerOptions, matribox: () => MatriboxSession): void {

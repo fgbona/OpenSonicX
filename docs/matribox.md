@@ -630,6 +630,41 @@ estimator, not a 5.7 dB offset.
 - *Port `startClone` approximately* (the stages above, decompiled further) and judge it by ear,
   not bytes.
 
+**Port of `startClone` (waveod, 2026-11-26).** waveod (github.com/zxmarcos/waveod, MIT, Marcos
+Medeiros) reconstructed the editor's fit from the same library (`tools/clonefit/clonefit.cpp`,
+`docs/clone_fit.md`) and reports it within 0.05 % (saturator) and 0.1 dB (IRs) of the editor's
+own on an A1 model. `packages/core/src/clo/startclone.ts` and `startclone-dsp.ts` port it, with
+our WaveNet (`wavenet.ts`, run in blocks and prewarmed on a receptive field of silence like
+NeuralAmpModelerCore) and our r8brain port for the IRs (`r8b.ts`):
+
+1. The DI at the `.nam`'s `sample_rate` (24-bit), the model run once at level 1, its output
+   x 0.31 at 16 bits.
+2. IIR 1 identity, IIR 2 the 40 Hz Butterworth high-pass at that rate (float32 math; at 48 kHz it
+   is the `CLO_BIQUAD` every captured `.clo` carries).
+3. The output's mean and trend removed (float32 sums), the onset after the 6 s click, the
+   saturator `A (1 - e^(-k x))` per polarity from the 0-5 s sine's 0.1 s peaks (A the largest, k
+   the small-signal slope, then the best of 0.8 .. 1.2 x k).
+4. Welch transfer estimates (Hamming 0.125 s, nfft 2048) of the IR-less model against the output
+   on the quiet noise and on the loud sweep through a cabinet-like FIR; their ratio starts IR 1.
+5. `iterAmpCoeff` on the sweep (3), the quiet noise (2) and the pink noise (5): spectral shape
+   moved between IR 1 (128 taps) and IR 2 (2048 taps), both minimum phase, kept at the best mean
+   |ln| residual over 512 mel frequencies, 80 Hz - 10 kHz.
+6. IR 2 corrected from the averaged spectra over the guitar (50-70 s), its energy matched, x 4.
+7. Both IRs to 44.1 kHz (r8brain).
+
+Against the official `5 RECTIFIER` capture (local test `clo-startclone-ab.test.ts`, run with
+`MATRIBOX_CLO_AB=1`; the files stay private): gains `0.08581 / 0.08643 / 744.3 / 750.3` vs
+`0.08583 / 0.08635 / 747.0 / 753.1`, IIR 2 identical, arrayB within 0.49 dB per 1/3 octave from
+40 Hz to 12.5 kHz, arrayA's shape within 0.5 dB from 160 Hz to 4 kHz. **Open:** arrayA is about
+4 dB under the official's at 1 kHz, up to +1.2 dB in the bass and up to 6 dB high above 6 kHz
+(where it is 20-40 dB down). The divergence is the quiet-noise pass: ours keeps its second
+iteration, which moves 4.6 dB from IR 1 into IR 2 (residual 0.024 vs 0.032). Rejecting that pass
+(a best residual carried over from the sweep pass) puts arrayA within 0.14 dB in level and 0.1 dB
+above 1 kHz, but arrayB then misses by 0.86 dB at 2-5 kHz, so neither is the editor's exact rule.
+Simulated on the reference DI, the faithful port plays the guitar and pink-noise sections within
+0.7 dB per 1/3 octave and 0.1 dB in level of the official capture, and the -62 dBFS noise 2.2 dB
+quieter. The fit takes about 2 s; the model run is most of the ~35 s.
+
 **What would help from the owner:** (1) a yes/no on calling the installed editor's converter;
 (2) an A/B by ear on the unit of the official `.clo` vs ours for the same NAM (ours could be
 sent by an experimental tool); (3) for an approximate port, a second real capture of the
@@ -794,6 +829,49 @@ it reads the loaded preset again. Undo and Redo cover the chain edits only (the 
 chains). The model catalog is built in (below): nothing is picked or loaded. The e2e tests
 (`apps/web/e2e/matribox.spec.ts`) run the editor against the simulated unit with it.
 
+## DSP load (an estimate)
+
+A preset of 12 blocks made the owner's unit show "CAUTION! System overloaded" (2026-11-26). The
+unit sends no load meter over USB; what is known comes from zxmarcos/matribox-studio
+(`docs/firmware/audio-engine.md`, `docs/effects/testing.md`) and zxmarcos/waveod
+(`src/engine/overload.h`, `docs/bench.md`, `docs/stock_port.md`, `docs/clone_fit.md`), both MIT,
+© 2026 Marcos Medeiros:
+
+| Fact | Value | Confidence |
+|------|-------|------------|
+| Audio block | 64 frames at 44.1 kHz = 1.451 ms = 870 748 cycles of the 600 MHz Cortex-M7 | High |
+| CPU overload rule (stock app) | three blocks in a row over 1.25 ms: every slot switched off (bypassed, not removed), the preset marked edited, the warning shown | High (reimplemented in waveod) |
+| Chain budget | the app's own work ≈ 165 µs, so the chain gets ≈ 1 ms ≈ 600 000 cycles | Medium |
+| Measured costs (stock) | Cab/IR ≈ 190 µs (≈ 114 k cycles), factory Clone ≈ 125 k, the 63 amps 3.78 M in all (≈ 60 k each) | Medium (single measurements) |
+| Memory rule | inserting or replacing a block checks the module pools first: Cab/IR ≈ 70 KB and Clone ≈ 74 KB of the 192 KB fast RAM, so a third CAB/IR/CLONE is refused with the warning | Medium-high |
+| Overload notice | flag 1, cmd `11`, `00 07 00 00` + u32: 1 the DSP ran out, 2 a block refused for memory (matribox-studio's editor reads it; waveod's firmware sends it with 2). A flag-1 read of the same sub returns and clears it | Medium (not captured on the owner's unit) |
+
+`mbDspLoad` (core, `matribox/dsp-load.ts`) is therefore an **estimate**: one cost per module (no
+per-model numbers exist), the measured ones above for AMP, CAB, IR and CLONE and our guesses,
+set high on purpose, for the rest (DYN 25 k, FREQ 80 k, WAH 25 k, DRV 45 k, EQ 20 k, MOD 45 k,
+DLY 50 k, RVB 100 k, routing and VOL 5 k), summed over every block (bypassed ones too: a
+footswitch can switch them on) against 600 k cycles. The guesses were set so that a typical
+12-block chain (DYN, FREQ, two DRV, AMP, CAB, EQ, two MOD, DLY, RVB, VOL) comes out at 106%, as the
+owner's overloaded; "Drive AD" (6 blocks) is 58%. Levels: `high` from 85%, `over` past 100% or
+with more than 2 CAB/IR/CLONE blocks.
+
+- **Editor**: under the chain, "Estimated DSP load: N%" with a meter, a note near the limit and a
+  warning past it; nothing is blocked (the person decides). When the unit sends the overload
+  notice the editor shows it (`parseMbNotice`, `kind: 'overload'`) until closed; after a CPU
+  overload the unit's own on/off notices already show every block off.
+- **Tone assistant and MCP tools** (`mbCheckDspLoad`): `build_tone` and `edit_preset` (web), and
+  `matribox_build_tone`, `matribox_add_block` and `matribox_set_model` (MCP) refuse a chain that is
+  past the limit and heavier than the one loaded, before anything is sent, saying the estimate and
+  the heaviest modules to drop; near the limit the answer ends with a note. An edit that adds no
+  load (a knob, a removal) is never refused. The preset text the assistant reads carries the
+  estimate, and the tool descriptions and instructions tell it to keep chains lean.
+- **Simulated unit**: refuses a third CAB/IR/CLONE with the overload notice (2); with
+  `cpuOverload` it switches every block off past the estimate, with the notice (1).
+
+To make it better: the owner's 12-block preset (which blocks) and the chains that do or do not
+overload on the unit would calibrate the guesses; per-model costs need a measurement on the unit
+(waveod's bench runs only on its own firmware, not used here).
+
 ## Phases
 
 The same gates as the Pocket Master: each phase is validated by the owner on his unit before the
@@ -865,5 +943,7 @@ in the same schema (`packages/core/test/matribox-fake-catalog.ts`).
 
 ## Clean room
 
-Community projects about this unit exist online, but none has a license, so none of their code is
+Community projects about this unit exist online; most have no license, so none of their code is
 used here. Reading them for ideas is allowed; the code is our own, written from our captures.
+zxmarcos/waveod and zxmarcos/matribox-studio are MIT (© 2026 Marcos Medeiros): their protocol
+facts and the DSP figures above are used with attribution (THIRD_PARTY_NOTICES.md).

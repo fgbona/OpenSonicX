@@ -13,6 +13,7 @@ import { MatriboxBackups } from './MatriboxBackups';
 import { MatriboxBlockPanel } from './MatriboxBlockPanel';
 import { MatriboxChain } from './MatriboxChain';
 import { MatriboxControls } from './MatriboxControls';
+import { MatriboxDspLoad } from './MatriboxDspLoad';
 import { MatriboxExpression } from './MatriboxExpression';
 import { MatriboxFootswitches } from './MatriboxFootswitches';
 import { MatriboxGlobals } from './MatriboxGlobals';
@@ -166,6 +167,7 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
                     onMove={(a, b) => void history.moveBlock(a, b)}
                     onAdd={(m, fxid) => void history.addBlock(chain.length, m, fxid)}
                   />
+                  <MatriboxDspLoad chain={chain} overload={mb.overload} onClose={mb.clearOverload} />
                   {blockPanel}
                 </>
               )}

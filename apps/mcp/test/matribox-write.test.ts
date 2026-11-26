@@ -152,6 +152,15 @@ test('matribox_build_tone validates everything before sending anything', async (
     [[{ ...block, params: { Gain: -1 } }], /Gain must be 0\.\.100, got -1/],
     [[{ ...block, params: { Fuzz: 1 } }], /no parameter "Fuzz"/],
     [Array(13).fill(block), /at most 12 blocks/],
+    [Array(12).fill({ module: 'AMP', model: 'Fake Plexi' }), /past the unit's DSP: estimated DSP load 120%.*heaviest: AMP ~10%/],
+    [
+      [
+        { module: 'CAB', model: 'Fake 4x12' },
+        { module: 'IR', model: 'User IR 1' },
+        { module: 'CLONE', model: 'Clone 1' },
+      ],
+      /3 CAB\/IR\/CLONE blocks/,
+    ],
   ];
   for (const [blocks, message] of cases) {
     const result = await client.callTool({ name: 'matribox_build_tone', arguments: { blocks } });
@@ -224,6 +233,21 @@ test('matribox_remove_block and matribox_move_block edit the chain by position',
     [1, 1, 0],
     [1, 4, 0xff],
   ]);
+});
+
+test('matribox_add_block and matribox_set_model refuse a third CAB/IR/CLONE before sending it', async () => {
+  const { client, fake } = await connected();
+  assert.match(await call(client, 'matribox_add_block', { module: 'IR', model: 'User IR 1' }), /Added IR User IR 1 at 7/); // with the CAB: two
+  const sent = writes(fake);
+  for (const [name, args] of [
+    ['matribox_add_block', { module: 'CLONE', model: 'Clone 1' }],
+    ['matribox_set_model', { block: 'DRV', model: 'Clone 1' }],
+  ] as const) {
+    const result = await client.callTool({ name, arguments: args });
+    assert.equal(result.isError, true, name);
+    assert.match(text(result), /3 CAB\/IR\/CLONE blocks; the Matribox II Pro has memory for 2/);
+  }
+  assert.equal(writes(fake), sent);
 });
 
 test('the block tools refuse what the chain cannot take, sending nothing', async () => {
