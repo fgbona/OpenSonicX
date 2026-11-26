@@ -205,3 +205,9 @@
 /* Clones panel: the 10 slots, then the name and slot of the capture to write. */
 .mb-clones { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 2px 12px; font-size: 0.875rem; }
 .mb-clone-form { display: flex; flex-wrap: wrap; gap: 8px 12px; }
+
+/* Global options: the less used groups fold (MatriboxGlobals FoldedGroup). */
+details.settings-group { display: block; }
+details.settings-group > summary { cursor: pointer; }
+details.settings-group > summary h3 { display: inline; }
+details.settings-group > * + * { margin-top: 10px; }

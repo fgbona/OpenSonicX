@@ -14,8 +14,9 @@
  * than it sends (1366 = ceil(1024 * 4 / 3) is a guess at why). Checked on three captured uploads:
  * a real 48 kHz IR (the only one where 1366 is the one count that fits), a silence and an impulse.
  */
-import { buildMbFrames, MB_WRITE } from './frame.ts';
-import { MB_IR_SLOTS, wrapMbMessage } from './message.ts';
+import { buildMbFrame, buildMbFrames, MB_WRITE } from './frame.ts';
+import type { MatriboxLink } from './link.ts';
+import { MB_IR_SLOTS, mbReadIrNames, parseMbIrNames, wrapMbMessage } from './message.ts';
 import { parseWav } from '../ir-upload.ts';
 import { r8bResample } from './r8b.ts';
 
@@ -83,4 +84,27 @@ export function mbIrUploadData(slot: number, name: string, wav: Uint8Array): Uin
 /** The frames of the upload (literal LZO1X, 183-byte pages); the unit answers flag 3, cmd 0x14, `slot, 1, 0`. */
 export function mbIrUpload(slot: number, name: string, wav: Uint8Array): Uint8Array[] {
   return buildMbFrames(MB_WRITE, wrapMbMessage(1, IR_CMD, mbIrUploadData(slot, name, wav)));
+}
+
+/**
+ * The rename of user IR `slot` (0-based): flag 2, cmd 0x14, u32 slot + 20-byte NUL-padded name, which
+ * the unit does not answer (zxmarcos/waveod, editor/media_msgs.c; the clone rename's shape, cmd 0x18).
+ */
+export function mbRenameIr(slot: number, name: string): Uint8Array {
+  if (!Number.isInteger(slot) || slot < 0 || slot >= MB_IR_SLOTS) throw new RangeError(`IR slot must be 0..${MB_IR_SLOTS - 1}, got ${slot}`);
+  const data = new Uint8Array(4 + NAME_FIELD);
+  new DataView(data.buffer).setUint32(0, slot, true);
+  data.set(
+    Array.from(checkMbIrName(name), (c) => c.charCodeAt(0)),
+    4,
+  );
+  return buildMbFrame(MB_WRITE, wrapMbMessage(2, IR_CMD, data));
+}
+
+/** Renames user IR `slot` (0-based) and reads the names back to check it; resolves with them. */
+export async function mbWriteIrName(link: MatriboxLink, slot: number, name: string): Promise<readonly string[]> {
+  link.post(mbRenameIr(slot, name));
+  const names = parseMbIrNames(await link.read(mbReadIrNames()));
+  if (names[slot]?.trim() !== name.trim()) throw new Error(`User IR ${slot + 1} shows "${names[slot]?.trim() ?? ''}" after the rename, not "${name.trim()}"`);
+  return names;
 }

@@ -43,6 +43,16 @@ export function MatriboxAssistant({ mb, history, proposeSave, proposeClone, t3k 
           return read;
         },
         undo: () => latest.current.history.undo(),
+        drums: async (change) => {
+          const now = latest.current.mb;
+          if (!change) {
+            if (!now.drum) throw new Error('The drum machine did not answer.');
+            return now.drum;
+          }
+          const state = await now.setDrum(change);
+          if (!state) throw new Error('The Matribox did not take the drum machine change (see the error above the chain).');
+          return state;
+        },
         proposeSave: (index, name) => latest.current.proposeSave(index, name),
         cloneNames: () => latest.current.mb.unit?.cloneNames ?? [],
         proposeClone: ({ slot, name, source }) => latest.current.proposeClone(slot, name, source),

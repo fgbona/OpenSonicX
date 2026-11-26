@@ -92,3 +92,45 @@ test('Global Tempo switched on but not accepted on the unit says so', async ({ p
   await dialog.getByRole('switch', { name: 'Global tempo' }).click();
   await expect(dialog.getByRole('alert')).toContainText("accept it on the unit's screen", { timeout: 10_000 });
 });
+
+test('the folded groups write USB audio, EXP 2, MIDI outputs and clock, Auto CAB and bank select', async ({ page, unit }) => {
+  const dialog = await openGlobals(page);
+  const general = () => unit.globals.general;
+  await dialog.getByRole('switch', { name: 'Auto CAB' }).click(); // the simulated unit starts with it on
+  await expect.poll(() => general()[MB_GLOBALS.autoCab.at]).toBe(0);
+  await dialog.getByRole('radiogroup', { name: 'Bank select' }).getByRole('radio', { name: 'Immediate' }).click();
+  await expect.poll(() => general()[MB_GLOBALS.bankMode.at]).toBe(1);
+
+  // Folded until opened: the less used settings stay out of the way.
+  await expect(dialog.getByRole('slider', { name: /^Recording level/ })).toBeHidden();
+  await dialog.getByText('USB audio', { exact: true }).click();
+  await dialog.getByRole('slider', { name: /^Recording level/ }).fill('-4');
+  await expect.poll(() => general()[MB_GLOBALS.usbRecLevel.at]).toBe(0xfc);
+  await dialog.getByRole('slider', { name: /^Monitor level/ }).fill('3');
+  await expect.poll(() => general()[MB_GLOBALS.usbMonitorLevel.at]).toBe(3);
+  await dialog.getByRole('switch', { name: 'Record AUX IN too' }).click();
+  await expect.poll(() => general()[MB_GLOBALS.usbRecAux.at]).toBe(0);
+  await dialog.getByRole('radiogroup', { name: 'Recording L' }).getByRole('radio', { name: 'Dry' }).click();
+  await expect.poll(() => general()[MB_GLOBALS.usbRecWetL.at]).toBe(0);
+
+  await dialog.getByText('EXP 2 and external footswitches', { exact: true }).click();
+  await expect(dialog.getByRole('combobox', { name: 'External footswitch 1' })).toHaveCount(0);
+  await dialog.getByRole('radiogroup', { name: 'EXP 2 jack' }).getByRole('radio', { name: 'Two footswitches' }).click();
+  await expect.poll(() => general()[MB_GLOBALS.exp2Jack.at]).toBe(2);
+  await dialog.getByRole('combobox', { name: 'External footswitch 1' }).selectOption({ label: 'Tap tempo' });
+  await expect.poll(() => general()[MB_GLOBALS.extFs1.at]).toBe(8);
+  await dialog.getByRole('combobox', { name: 'External footswitch 2' }).selectOption({ label: 'Tuner' });
+  await expect.poll(() => general()[MB_GLOBALS.extFs2.at]).toBe(7);
+
+  await dialog.getByText('MIDI outputs and clock', { exact: true }).click();
+  await dialog.getByRole('combobox', { name: 'Output channel (USB)' }).selectOption({ label: 'Off' });
+  await expect.poll(() => [general()[MB_GLOBALS.midiOutUsb.at], general()[MB_GLOBALS.midiOutUsb.at + 1]]).toEqual([0xff, 0xff]);
+  await dialog.getByRole('combobox', { name: 'Output channel (TRS)' }).selectOption({ label: '2' });
+  await expect.poll(() => general()[MB_GLOBALS.midiOutTrs.at]).toBe(2);
+  await dialog.getByRole('combobox', { name: 'Clock source' }).selectOption({ label: 'Internal' });
+  await expect.poll(() => general()[MB_GLOBALS.clockSource.at]).toBe(0);
+  await dialog.getByRole('switch', { name: 'Send clock (USB)' }).click();
+  await expect.poll(() => general()[MB_GLOBALS.clockOut.at]).toBe(2);
+  await dialog.getByRole('switch', { name: 'Send clock (TRS)' }).click();
+  await expect.poll(() => general()[MB_GLOBALS.clockOut.at]).toBe(3);
+});

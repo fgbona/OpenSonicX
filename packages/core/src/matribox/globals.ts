@@ -66,6 +66,34 @@ export const MB_GLOBALS = {
   tempoOn: def(0x25, 50, 0, 1),
   /** Global Tempo BPM, 40..300 (u16; `FF FF` while never set). The unit sends it when it is turned there (mb-37). */
   tempoBpm: def(0x26, 48, 40, 300, 0, true),
+  // The rest from zxmarcos/waveod (editor/global_msgs.c, fw/globals_format.h; MIT), not captured: each is
+  // echoed with the value the unit keeps. Left out: USB audio mode (0x06, never answered), language,
+  // display and standby, and 0x5101 (the same byte as 0x5100).
+  /** Auto CAB: the CAB follows the AMP model (0 off, 1 on). */
+  autoCab: def(0x05, 5, 0, 1),
+  /** USB recording level, dB -20..+20. */
+  usbRecLevel: def(0x31, 18, -20, 20),
+  /** USB playback (monitor) level into the outputs, dB -20..+20. */
+  usbMonitorLevel: def(0x32, 19, -20, 20),
+  /** AUX IN goes into the USB recording too (0/1). */
+  usbRecAux: def(0x33, 20, 0, 1),
+  /** USB recording channel L (1) / R (2): 0 dry guitar, 1 processed. */
+  usbRecWetL: def(0x34, 21, 0, 1, 0),
+  usbRecWetR: def(0x34, 22, 0, 1, 1),
+  /** What the EXP 2 jack takes: 0 expression pedal, 1 one footswitch, 2 two footswitches. */
+  exp2Jack: def(0x41, 24, 0, 2, 1),
+  /** Function of external footswitch 1 / 2 on the EXP 2 jack (MB_FS_FUNCTIONS ids). */
+  extFs1: def(0x42, 25, 0, 35, 0),
+  extFs2: def(0x42, 27, 0, 35, 2),
+  /** Bank select mode (manual's "Bank Sel Mode"): 0 Wait, 1 Initial (order assumed from the manual). */
+  bankMode: def(0x51, 33, 0, 1),
+  /** MIDI output channel on TRS / USB: -1 off, 0 Omni, 1..16 (i16). */
+  midiOutTrs: def(0x61, 40, -1, 16, 2, true),
+  midiOutUsb: def(0x61, 42, -1, 16, 3, true),
+  /** MIDI clock source: 0 internal, 1 TRS only, 2 USB only, 3 external, 4 mixed. */
+  clockSource: def(0x63, 45, 0, 4),
+  /** MIDI clock out: bit 0 TRS, bit 1 USB. */
+  clockOut: def(0x64, 46, 0, 3),
 } satisfies Record<string, MbGlobalDef>;
 export type MbGlobalSetting = keyof typeof MB_GLOBALS;
 
