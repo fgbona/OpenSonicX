@@ -25,8 +25,11 @@ interface Props {
 /** What a tile says under the module: the model, the user IR or capture it plays, or the raw model id. */
 export const mbTileModel = (block: MbResolvedBlock, userSlot: string | undefined) => userSlot ?? block.model?.name ?? mbFxidHex(block.fxid).slice(2);
 
-/** The cable through the wrapped tiles, drawn again whenever the chain or its width changes. */
-function useSnakeLine(deps: readonly unknown[]) {
+/**
+ * The cable through the wrapped tiles, drawn again whenever the chain or its width changes.
+ * `tiles` picks the list's tiles; each one's parent is the box the bends keep clear of.
+ */
+export function useSnakeLine(deps: readonly unknown[], tiles = ':scope > .tile-unit > .tile') {
   const wrap = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLOListElement>(null);
   const [path, setPath] = useState('');
@@ -37,12 +40,12 @@ function useSnakeLine(deps: readonly unknown[]) {
     const draw = () => {
       const at = box.getBoundingClientRect();
       // The unit's box keeps the bends clear of the move arrows under a tile; the cable runs through the tile's middle.
-      const tiles = Array.from(ol.querySelectorAll(':scope > .tile-unit > .tile'), (el) => {
+      const boxes = Array.from(ol.querySelectorAll(tiles), (el) => {
         const r = (el.parentElement as HTMLElement).getBoundingClientRect();
         const t = el.getBoundingClientRect();
         return { left: t.left - at.left, right: t.right - at.left, top: r.top - at.top, bottom: r.bottom - at.top, mid: (t.top + t.bottom) / 2 - at.top };
       });
-      setPath(snakePath(tiles));
+      setPath(snakePath(boxes));
     };
     draw();
     const observer = new ResizeObserver(draw);

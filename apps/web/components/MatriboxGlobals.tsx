@@ -66,7 +66,8 @@ function Slider(p: { label: string; value: number; min: number; max: number; uni
  * editor (core globals.ts), read when the editor connects and kept up to date with what is changed
  * on the unit. Each change is one write, confirmed by the unit; brightness and the EQ's frequencies are shown only.
  */
-export function MatriboxGlobals({ mb }: { mb: Matribox }) {
+/** `icon`: a gear button (the rig view's header) instead of the labelled one. */
+export function MatriboxGlobals({ mb, icon = false }: { mb: Matribox; icon?: boolean }) {
   const { t, te } = useI18n();
   const [open, setOpen] = useState(false);
   const g = mb.globals;
@@ -78,14 +79,23 @@ export function MatriboxGlobals({ mb }: { mb: Matribox }) {
     <>
       <button
         type="button"
-        className="btn"
+        className={icon ? 'rig-icon-button' : 'btn'}
+        aria-label={icon ? t('settings.open') : undefined}
         disabled={mb.busy !== null}
         onClick={() => {
           mb.clearError();
           setOpen(true);
         }}
       >
-        {t('settings.open')}
+        {icon ? (
+          <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+            <circle cx="10" cy="10" r="2.6" />
+            <path d="M10 2.5v2.2M10 15.3v2.2M2.5 10h2.2M15.3 10h2.2M4.7 4.7l1.6 1.6M13.7 13.7l1.6 1.6M4.7 15.3l1.6-1.6M13.7 6.3l1.6-1.6" />
+            <circle cx="10" cy="10" r="5.4" />
+          </svg>
+        ) : (
+          t('settings.open')
+        )}
       </button>
       <Dialog open={open} title={t('settings.title')} onClose={() => setOpen(false)}>
         {!g || !general ? (

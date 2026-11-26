@@ -21,6 +21,7 @@ import { MatriboxLibrary } from './MatriboxLibrary';
 import { MatriboxPresetFile } from './MatriboxPresetFile';
 import { MatriboxPresets } from './MatriboxPresets';
 import { MatriboxSaveDialog } from './MatriboxSaveDialog';
+import { RigView } from './rig/RigView';
 import { useI18n } from './I18n';
 
 /** The Matribox II Pro editor, shown when the connected pedal is one. */
@@ -73,6 +74,22 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
     if (added.length === 1 && now.length === before.slots.length + 1) setSelected(added[0] ?? null);
   }, [current, slots]);
   const block = chain.find((b) => b.slot === selected) ?? chain.find((b) => mbLookKey(b) === 'amp') ?? chain[0] ?? null;
+  // The rig look is a design preview, opened with ?rig=1; read after mount, so the server's page stays the classic one.
+  const [rig, setRig] = useState(false);
+  useEffect(() => setRig(new URLSearchParams(window.location.search).get('rig') === '1'), []);
+
+  const blockPanel = unit && block && (
+    <MatriboxBlockPanel
+      block={block}
+      values={unit.preset.chain.find((b) => b.slot === block.slot)?.values ?? []}
+      userSlot={userSlot}
+      disabled={disabled}
+      onParam={history.setParam}
+      onOn={(s, on) => void history.setOn(s, on)}
+      onModel={(s, m, f) => void history.changeModel(s, m, f)}
+      onRemove={(p) => void history.removeBlock(p)}
+    />
+  );
 
   return (
     <div className={unit ? 'layout' : 'layout layout-single'}>
@@ -85,6 +102,12 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
         )}
         <p className="mb-banner" role="status">
           {t('mb.experimental')}
+          {rig && (
+            <>
+              {' '}
+              <a href="?">{t('rig.classic')}</a>
+            </>
+          )}
         </p>
         {!unit || !assignments ? (
           <p className="muted">{t(mb.busy ? 'status.reading' : 'mb.notRead')}</p>
@@ -115,27 +138,36 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
                   </>
                 }
               />
-              <MatriboxChain
-                chain={chain}
-                selected={block?.slot ?? null}
-                disabled={disabled}
-                userSlot={userSlot}
-                onSelect={setSelected}
-                onOn={(s, on) => void history.setOn(s, on)}
-                onMove={(a, b) => void history.moveBlock(a, b)}
-                onAdd={(m, fxid) => void history.addBlock(chain.length, m, fxid)}
-              />
-              {block && (
-                <MatriboxBlockPanel
+              {rig ? (
+                <RigView
+                  chain={chain}
                   block={block}
-                  values={unit.preset.chain.find((b) => b.slot === block.slot)?.values ?? []}
-                  userSlot={userSlot}
+                  label={mbPresetLabel(unit.current)}
+                  name={unit.preset.name}
+                  tempo={assignments.tempo}
+                  volume={assignments.volume}
                   disabled={disabled}
-                  onParam={history.setParam}
+                  userSlot={userSlot}
+                  onSelect={setSelected}
                   onOn={(s, on) => void history.setOn(s, on)}
-                  onModel={(s, m, f) => void history.changeModel(s, m, f)}
-                  onRemove={(p) => void history.removeBlock(p)}
+                  onParam={history.setParam}
+                  settings={<MatriboxGlobals mb={mb} icon />}
+                  panel={blockPanel}
                 />
+              ) : (
+                <>
+                  <MatriboxChain
+                    chain={chain}
+                    selected={block?.slot ?? null}
+                    disabled={disabled}
+                    userSlot={userSlot}
+                    onSelect={setSelected}
+                    onOn={(s, on) => void history.setOn(s, on)}
+                    onMove={(a, b) => void history.moveBlock(a, b)}
+                    onAdd={(m, fxid) => void history.addBlock(chain.length, m, fxid)}
+                  />
+                  {blockPanel}
+                </>
               )}
             </section>
             <MatriboxFootswitches footswitches={assignments.footswitches} chain={chain} disabled={disabled} onFootswitch={(f, s, on) => void mb.assignFootswitch(f, s, on)} />

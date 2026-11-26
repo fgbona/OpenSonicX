@@ -1,0 +1,108 @@
+/* Rig view (preview, ?rig=1): the preset on a device screen, the chain as gear drawings on a snake
+   from IN to OUT, the selected block's controls in a strip. components/rig/. */
+.rig {
+  --rig-screen: #ffffff;
+  --rig-well: var(--surface-2);
+  --rig-accent: var(--yellow);
+  --rig-edge: rgba(0, 0, 0, 0.45);
+  --rig-cell: 72px;
+  --rig-gap: 22px;
+  display: grid; gap: 16px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .rig { --rig-screen: #161618; --rig-well: #232326; --rig-edge: rgba(255, 255, 255, 0.4); }
+}
+:root[data-theme='dark'] .rig { --rig-screen: #161618; --rig-well: #232326; --rig-edge: rgba(255, 255, 255, 0.4); }
+
+.rig-screen {
+  display: grid; gap: 18px; padding: 14px 16px 18px; border-radius: 22px;
+  background: var(--rig-screen); box-shadow: var(--shadow), inset 0 0 0 0.5px var(--separator);
+}
+.rig-head { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
+.rig-title { margin: 0; font-family: var(--font-display); font-size: 1.0625rem; font-weight: 600; text-align: center; letter-spacing: -0.01em; }
+.rig-label { color: var(--rig-accent); }
+.rig-head-end { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.rig-bpm { font-size: 0.8125rem; font-variant-numeric: tabular-nums; color: var(--label-2); white-space: nowrap; }
+.rig-icon-button {
+  display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; border: none; border-radius: 9px;
+  background: var(--fill); color: var(--label); cursor: pointer; transition: transform 120ms ease-out, background 160ms ease-out;
+}
+.rig-icon-button:hover { background: var(--fill-strong); }
+.rig-icon-button:active { transform: scale(0.94); }
+.rig-icon-button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.rig-head > .rig-icon-button { justify-self: start; }
+
+/* The chain: wrapped rows, the wire behind the gear (MatriboxChain's snake). */
+.rig-chain { position: relative; padding: 8px 4px; }
+.rig-wire { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.rig-wire path { fill: none; stroke: var(--rig-accent); stroke-width: 1.5; stroke-linecap: round; opacity: 0.85; }
+.rig-list {
+  position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 26px var(--rig-gap);
+  max-width: calc(var(--cols) * var(--rig-cell) + (var(--cols) - 1) * var(--rig-gap)); margin: 0 auto; padding: 0; list-style: none;
+}
+.rig-list > li { display: grid; place-items: center; width: var(--rig-cell); height: var(--rig-cell); }
+.rig-node { position: relative; z-index: 1; }
+.rig-socket {
+  display: grid; gap: 4px; justify-items: center; padding: 6px 8px; border-radius: 8px;
+  background: var(--rig-well); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.04em; color: var(--label-2);
+}
+.rig-socket-level { width: 28px; height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--rig-accent) var(--level), var(--fill-strong) var(--level)); }
+.rig-block {
+  display: grid; place-items: center; width: var(--rig-cell); height: var(--rig-cell); padding: 2px; border: none;
+  border-radius: 16px; background: var(--rig-screen); cursor: pointer;
+  transition: box-shadow 220ms cubic-bezier(0.2, 0.8, 0.3, 1), transform 220ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.rig-block .rig-icon { width: 100%; height: 100%; transition: opacity 200ms ease-out, filter 200ms ease-out; }
+.rig-block:hover { transform: translateY(-1px); }
+.rig-block:active { transform: scale(0.96); }
+.rig-block.is-selected { box-shadow: 0 0 0 2px var(--rig-accent); }
+.rig-block.is-off .rig-icon { opacity: 0.4; filter: grayscale(0.7); }
+.rig-block:focus-visible, .rig-icon-button:focus-visible, .rig-dot:focus-visible, .rig-switch:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--blue) 60%, transparent); outline-offset: 3px;
+}
+
+/* The selected block's strip. */
+.rig-detail { display: grid; gap: 14px; padding: 12px 14px 10px; border-radius: 16px; background: var(--rig-well); }
+.rig-detail-head { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; animation: rig-in 240ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+.rig-switch.switch-on { background: var(--green); }
+.rig-model { margin: 0; text-align: center; font-weight: 600; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rig-module { margin-right: 6px; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.04em; color: var(--label-2); }
+.rig-params { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; animation: rig-in 240ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+.rig-param { display: grid; gap: 4px; justify-items: center; min-width: 0; }
+.rig-param-value { font-size: 0.9375rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.rig-param-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: var(--label-2); }
+.rig-range { width: 100%; height: 22px; margin: 0; background: transparent; cursor: pointer; -webkit-appearance: none; appearance: none; }
+.rig-range::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(to right, var(--rig-accent) var(--fill), var(--fill-strong) var(--fill)); }
+.rig-range::-moz-range-track { height: 6px; border-radius: 3px; background: var(--fill-strong); }
+.rig-range::-moz-range-progress { height: 6px; border-radius: 3px; background: var(--rig-accent); }
+.rig-range::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -4px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); }
+.rig-range::-moz-range-thumb { width: 14px; height: 14px; border: none; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); }
+.rig-range:focus-visible { outline: none; }
+.rig-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 60%, transparent); }
+.rig-range:disabled { cursor: default; opacity: 0.6; }
+.rig-empty { margin: 0; text-align: center; font-size: 0.8125rem; color: var(--label-2); }
+.rig-pages { display: flex; justify-content: center; gap: 4px; }
+/* 24px targets around 7px dots. */
+.rig-dot { width: 24px; height: 24px; padding: 0; border: none; background: transparent; cursor: pointer; display: grid; place-items: center; }
+.rig-dot::after { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--label-3); transition: background 160ms ease-out, transform 160ms ease-out; }
+.rig-dot.is-on::after { background: var(--rig-accent); transform: scale(1.15); }
+@keyframes rig-in { from { opacity: 0; transform: translateY(4px); } }
+
+@media (max-width: 520px) {
+  .rig { --rig-cell: 56px; --rig-gap: 14px; }
+  .rig-screen { padding: 12px 10px 14px; border-radius: 18px; }
+  .rig-bpm { font-size: 0.75rem; }
+  .rig-params { gap: 6px; }
+  .rig-param-name { font-size: 0.6875rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rig-detail-head, .rig-params { animation: none; }
+  .rig-block, .rig-block .rig-icon, .rig-icon-button, .rig-dot::after { transition: none; }
+  .rig-block:hover, .rig-block:active { transform: none; }
+}
+
+/* Icon sheet (app/preview/rig-icons, development only). */
+.rig-sheet { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; padding: 24px; }
+.rig-sheet-row { display: grid; gap: 8px; padding: 12px; border-radius: 14px; background: var(--rig-screen); }
+.rig-sheet-row h2 { font-size: 0.875rem; }
+.rig-sheet-icons { display: flex; gap: 10px; }
