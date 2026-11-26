@@ -102,6 +102,7 @@
 .rig-classic:hover { text-decoration: underline; }
 .rig-classic:focus-visible { outline: 3px solid color-mix(in srgb, var(--blue) 60%, transparent); outline-offset: 2px; }
 .rig-look { margin-bottom: 18px; }
+.rig-trademarks { max-width: 60ch; margin: 0 auto; text-align: center; font-size: 0.6875rem; color: var(--label-2); }
 
 /* The selected block's strip. */
 .rig-detail { display: grid; gap: 14px; padding: 12px 14px 10px; border-radius: 16px; background: var(--rig-well); }
@@ -109,9 +110,7 @@
 .rig-icon-button:disabled { cursor: default; opacity: 0.4; }
 .rig-detail-head { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; animation: rig-in 240ms cubic-bezier(0.2, 0.8, 0.3, 1); }
 .rig-switch.switch-on { background: var(--green); }
-.rig-model { display: grid; margin: 0; text-align: center; font-weight: 600; font-size: 1rem; min-width: 0; }
-.rig-model, .rig-model-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rig-model-name { font-size: 0.75rem; font-weight: 500; color: var(--label-2); }
+.rig-model { min-width: 0; margin: 0; text-align: center; font-weight: 600; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rig-module { margin-right: 6px; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.04em; color: var(--label-2); }
 .rig-params { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; animation: rig-in 240ms cubic-bezier(0.2, 0.8, 0.3, 1); }
 .rig-param { display: grid; gap: 4px; justify-items: center; min-width: 0; }

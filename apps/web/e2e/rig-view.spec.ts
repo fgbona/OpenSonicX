@@ -77,12 +77,12 @@ test('the chain shows as tagged gear between IN and OUT, with the DSP load; a cl
   await expect(gear(page, 3, 'AMP')).toHaveAttribute('aria-pressed', 'true');
   await gear(page, 2, 'DRV').click();
   await expect(gear(page, 2, 'DRV')).toHaveAttribute('aria-pressed', 'true');
-  // The real gear leads the strip ("Based on …"); our model name follows, smaller.
+  // The strip names the gear the model is based on, plain; our model name stays in the gear's name.
   const model = rig.locator('.rig-model');
   if (MODELS.drive.basedOn) {
-    await expect(model).toContainText(`DRV Based on ${MODELS.drive.basedOn}`);
-    await expect(model.locator('.rig-model-name')).toHaveText(MODELS.drive.name);
+    await expect(model).toHaveText(`DRV ${MODELS.drive.basedOn}`);
     await expect(gear(page, 2, 'DRV')).toHaveAccessibleName(`Edit 2. DRV: ${MODELS.drive.name}, Based on ${MODELS.drive.basedOn}`);
+    await expect(rig.getByText('Product names are trademarks of their owners', { exact: false })).toHaveCount(1);
   } else await expect(model).toHaveText(`DRV ${MODELS.drive.name}`);
   await expect(rig.getByRole('slider')).toHaveCount(Math.min(5, MODELS.drive.params.length));
 });
@@ -208,12 +208,12 @@ test.describe('pictures', () => {
     await items.nth(1).dispatchEvent('dragend', { dataTransfer: data });
   });
 
-  test('detail strip, based-on line', async ({ page }) => {
+  test('detail strip, gear line and trademark note', async ({ page }) => {
     const rig = await openRig(page);
     for (const theme of ['dark', 'light'] as const) {
       await setTheme(page, theme);
       await gear(page, 2, 'DRV').click();
-      await rig.locator('.rig-detail').screenshot({ path: `${SHOTS}/strip-based-on-${theme}.png`, animations: 'disabled' });
+      await rig.locator('.rig-detail').screenshot({ path: `${SHOTS}/strip-gear-${theme}.png`, animations: 'disabled' });
     }
   });
 

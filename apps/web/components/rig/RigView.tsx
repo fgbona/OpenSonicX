@@ -231,6 +231,7 @@ export function RigView({ blocks, selected, label, name, tempo, volume, disabled
         )}
       </div>
       {expanded && block && <div className="rig-panel">{panel}</div>}
+      {blocks.some((b) => b.basedOn) && <p className="rig-trademarks">{t('rig.trademarks')}</p>}
       <button type="button" className="rig-classic" onClick={() => setRigLook(false)}>
         {t('rig.classic')}
       </button>
