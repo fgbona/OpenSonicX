@@ -16,11 +16,13 @@ import { MatriboxBlockPanel } from './MatriboxBlockPanel';
 import { MatriboxChain } from './MatriboxChain';
 import { type CloneProposal, MatriboxClones } from './MatriboxClones';
 import { MatriboxControls } from './MatriboxControls';
+import { MatriboxDrums } from './MatriboxDrums';
 import { MatriboxDspLoad } from './MatriboxDspLoad';
 import { MatriboxExpression } from './MatriboxExpression';
 import { MatriboxFootswitches } from './MatriboxFootswitches';
 import { MatriboxGlobals } from './MatriboxGlobals';
 import { MatriboxHeader } from './MatriboxHeader';
+import { MatriboxIrs } from './MatriboxIrs';
 import { MatriboxLibrary } from './MatriboxLibrary';
 import { MatriboxPresetFile } from './MatriboxPresetFile';
 import { MatriboxPresets } from './MatriboxPresets';
@@ -159,6 +161,7 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
             <MatriboxQuickKnobs quickKnobs={assignments.quickKnobs} chain={chain} disabled={disabled} onAssign={(k, target, p) => void mb.assignQuickKnob(k, target, p)} />
             <MatriboxExpression expression={assignments.expression} chain={chain} disabled={disabled} onExpression={(a) => void mb.assignExpression(a)} />
             <MatriboxControls tempo={assignments.tempo} unitChannel={ccChannelOf(mb.globals)} onControl={(m) => void mb.control(m)} />
+            <MatriboxDrums mb={mb} />
             <MatriboxSaveDialog
               open={saveOpen}
               current={proposal?.index ?? unit.current}
@@ -174,6 +177,7 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
             <MatriboxAssistant mb={mb} history={history} proposeSave={proposeSave} proposeClone={proposeClone} t3k={t3k} />
             <MatriboxLibrary mb={mb} history={history} />
             <MatriboxClones mb={mb} t3k={t3k} proposal={cloneProposal} onProposalEnd={() => setCloneProposal(null)} />
+            <MatriboxIrs mb={mb} />
             <MatriboxBackupAll mb={mb} loaded={mbPresetLabel(unit.current)} />
           </>
         )}

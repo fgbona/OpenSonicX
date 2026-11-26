@@ -114,3 +114,19 @@ test('the CC tools refuse a missing or out-of-range value', async () => {
   }
   assert.deepEqual(fake.controls, []);
 });
+
+test('matribox_set_drums starts a beat for practice, read back from the unit', async () => {
+  const { client, fake } = await connected();
+  const out = await call(client, 'matribox_set_drums', { play: true, rhythm: 'rock', bpm: 100 });
+  assert.match(out, /^Drum machine: playing · Rock: Rock 1 · 100 BPM · volume 50$/m);
+  assert.match(out, EXPERIMENTAL);
+  assert.deepEqual(fake.drum, { playing: true, genre: 0, pattern: 0, bpm: 100, follow: false, volume: 50 });
+  assert.match(await call(client, 'matribox_set_drums', {}), /^Drum machine: playing/m);
+  assert.match(await call(client, 'matribox_set_drums', { rhythm: 'dubstep' }), /no drum rhythm is called "dubstep"/);
+});
+
+test('matribox_rename_ir renames a user IR slot, checked in the names read back', async () => {
+  const { client } = await connected();
+  assert.match(await call(client, 'matribox_rename_ir', { slot: 2, name: 'V30 57' }), /^User IR 2 is now "V30 57"\.$/m);
+  assert.match(await call(client, 'matribox_list_irs'), /^User IR 2: V30 57$/m);
+});

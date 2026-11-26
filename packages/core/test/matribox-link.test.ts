@@ -18,7 +18,7 @@ test('the link joins a paged reply, skips unrelated notifications and returns th
 });
 
 test('the link times out with a clear error when the unit does not answer', async () => {
-  await assert.rejects(link(new FakeMatribox(), 50).read(mbRequest(0, 0x13)), /Matribox II PRO did not answer.*cmd 0x13/);
+  await assert.rejects(link(new FakeMatribox(), 50).read(mbRequest(0, 0x1e)), /Matribox II PRO did not answer.*cmd 0x1e/);
 });
 
 test('the link refuses a read that is not a read request, and post refuses anything but a write', async () => {

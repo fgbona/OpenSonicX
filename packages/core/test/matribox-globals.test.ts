@@ -129,12 +129,42 @@ test('the general table decodes to the settings changed in mb-30 … mb-38', () 
     tempoOn: 1,
     tempoBpm: 100,
     brightness: 80,
+    // From waveod's layout, as the owner's unit holds them: Auto CAB on, USB records AUX and both channels processed, mixed clock.
+    autoCab: 1,
+    usbRecLevel: 0,
+    usbMonitorLevel: 0,
+    usbRecAux: 1,
+    usbRecWetL: 1,
+    usbRecWetR: 1,
+    exp2Jack: 0,
+    extFs1: 0,
+    extFs2: 0,
+    bankMode: 0,
+    midiOutTrs: 0,
+    midiOutUsb: 0,
+    clockSource: 4,
+    clockOut: 0,
   });
   const off = generalTable();
   off.set([0xff, 0xff, 0], 48); // the first sessions: never set, off
   off.set([9, 0], 38); // MIDI In USB is an i16 at 38
   assert.deepEqual([parseMbGlobals(off).tempoOn, parseMbGlobals(off).tempoBpm, parseMbGlobals(off).midiInUsb], [0, 0xffff, 9]);
   assert.throws(() => parseMbGlobals(new Uint8Array(51)), /52/);
+});
+
+test('the settings from waveod: index and id as the firmware takes them, signed values two-complement', () => {
+  assert.equal(sentData(mbSetGlobal('autoCab', 0)), '00 05 00 00 00 00 00 00');
+  assert.equal(sentData(mbSetGlobal('usbRecLevel', -3)), '00 31 00 00 FD FF FF FF');
+  assert.equal(sentData(mbSetGlobal('usbRecWetR', 0)), '01 34 00 00 00 00 00 00');
+  assert.equal(sentData(mbSetGlobal('exp2Jack', 2)), '01 41 00 00 02 00 00 00');
+  assert.equal(sentData(mbSetGlobal('extFs2', 8)), '02 42 00 00 08 00 00 00');
+  assert.equal(sentData(mbSetGlobal('midiOutUsb', -1)), '03 61 00 00 FF FF FF FF'); // off
+  assert.equal(sentData(mbSetGlobal('clockOut', 3)), '00 64 00 00 03 00 00 00');
+  assert.throws(() => mbSetGlobal('clockSource', 5), RangeError);
+  const t = new Uint8Array(52);
+  t.set([0xff, 0xff], 42);
+  t[18] = 0xfb;
+  assert.deepEqual([parseMbGlobals(t).midiOutUsb, parseMbGlobals(t).usbRecLevel], [-1, -5]);
 });
 
 test('the global EQ table decodes to its cuts, shelves, bands and level', () => {

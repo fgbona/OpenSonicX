@@ -8,6 +8,12 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
+  mbDrumChangeOf,
+  mbDrumText,
+  mbReadDrumState,
+  mbWriteDrum,
+  mbWriteIrName,
+  type MbDrumRequest,
   checkMbPresetName,
   mbPresetLabel,
   mbReadCloneNames,
@@ -186,6 +192,20 @@ export class MatriboxSession {
     };
     const prepared = await prepareMatriboxClone(bytes, sourceName, options, convert); // all before the unit is opened
     return this.#use((unit) => uploadMatriboxClone(unit, options.slot, prepared, options.replace));
+  }
+
+  /** Renames user IR `slot` (1..20), checked in the names read back; the IR itself stays. */
+  renameIr(options: { slot: number; name: string }): Promise<string> {
+    return this.#use(async (unit) => {
+      const names = await mbWriteIrName(unit, options.slot - 1, options.name);
+      return experimental([`User IR ${options.slot} is now "${names[options.slot - 1]?.trim() ?? ''}".`]);
+    });
+  }
+
+  /** The drum machine: changes it (checked before the unit is opened) and reads it back; no change only reads it. */
+  setDrums(request: MbDrumRequest): Promise<string> {
+    const change = mbDrumChangeOf(request);
+    return this.#use(async (unit) => experimental([mbDrumText(change ? await mbWriteDrum(unit, change) : await mbReadDrumState(unit))]));
   }
 
   listCaptures(): Promise<string> {
