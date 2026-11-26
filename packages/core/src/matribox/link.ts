@@ -16,12 +16,14 @@
  * zxmarcos/waveod src/editor/server.c, MIT): the same notice again is held, the newest kept, and
  * sent only after 150 ms without one or once 10 are held; mb-42 got a gain knob 0.4 s and 3..4
  * steps apart. Any other notice the unit sends lets the held one out first, and the answer to a
- * patch-volume read is one: while knob notices come, the link sends that read every `flushMs`
- * (0: never), until `FLUSH_QUIET_POLLS` reads bring none. Its answer reaches `onNotice` as a volume notice.
+ * preset-tempo read is one: while knob notices come (knobs 1..3: param and volume), the link sends
+ * that read every `flushMs` (0: never), until `FLUSH_QUIET_POLLS` reads bring none. Its answer is
+ * no notice, so it differs from every knob's (a patch-volume read could not let knob 3's out) and
+ * reaches no one.
  */
 import type { MidiPort } from '../link.ts';
 import { joinMbPages, MB_READ, MB_REPLY, MB_WRITE, parseMbFrame, type MbFrame } from './frame.ts';
-import { mbReadPatchVolume, unwrapMbMessage } from './message.ts';
+import { mbReadPresetTempo, unwrapMbMessage } from './message.ts';
 import { isMbControlChange } from './cc.ts';
 import { parseMbNotice, type MbNotice } from './notice.ts';
 
@@ -109,7 +111,7 @@ export function matriboxLink(port: MidiPort, timeoutMs: number = MATRIBOX_TIMEOU
     flushTimer = null;
     if (!noticeHandler || quietPolls-- <= 0) return;
     flushTimer = setTimeout(flush, flushMs); // first: the answer can bring a knob notice (knobTurning) at once
-    port.send(mbReadPatchVolume());
+    port.send(mbReadPresetTempo());
   };
   /** A knob notice came: keep letting the next ones out until the knob stops. */
   const knobTurning = () => {
@@ -127,7 +129,7 @@ export function matriboxLink(port: MidiPort, timeoutMs: number = MATRIBOX_TIMEOU
       return; // ponytail: a damaged message nobody asked for is dropped; the next read shows the truth
     }
     if (!notice) return;
-    if (notice.kind === 'param') knobTurning();
+    if (notice.kind === 'param' || notice.kind === 'volume') knobTurning();
     noticeHandler(notice);
   };
   /** Between requests: the unit's notices are single-page messages. */

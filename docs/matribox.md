@@ -266,9 +266,11 @@ of the current-preset reply, so the link's own answers are taken first; the same
 chain notice answering our chain edits and the echo of our global writes. The web editor
 (`useMatribox`) re-reads the loaded preset when the unit loads another one (once: the unit sends it
 twice) or changes its chain (once per burst), applies the block, knob and volume notices to what it
-shows without a read (the link reads the patch volume every 50 ms while knob notices come: the unit
-holds a repeated knob notice back for up to 150 ms or 10 steps, stock FUN_0003568C per waveod, and
-lets it out before any other notice), updates the Global options from a global or tempo notice, and takes a save
+shows without a read (the link reads the preset tempo, `04 00 05 01`, every 50 ms while knob or
+volume notices come: the unit holds a repeated notice, same cmd and first word, back for up to 150 ms
+or 10 steps, stock FUN_0003568C per waveod, and lets it out before any other notice; the tempo read
+is a pure read answered through that queue, waveod sub 0x01050004, and no notice has its shape, so
+it lets out knob 3's volume notice too, which a patch-volume read could not, and its answer is dropped), updates the Global options from a global or tempo notice, and takes a save
 made on the unit into the preset list and the header. Unknown kinds (the expression pedal's `08`
 message, the 160-byte assignments, unknown global ids) are dropped. Captures mb-40 (preset by
 footswitch) and mb-41 (stomp mode, footswitch A: the bulk `07` message, after a "preset edited"
