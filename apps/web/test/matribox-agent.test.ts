@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { matriboxLink, mbAssignments, parseMbPreset, type MbPreset } from '@pocket-master/core';
+import { matriboxLink, mbAssignments, parseMbPreset, type MbPreset, type TonePage } from '@pocket-master/core';
 import { FakeMatribox } from '../../../packages/core/test/fake-matribox.ts';
 import { FAKE_CATALOG } from '../../../packages/core/test/matribox-fake-catalog.ts';
 import { askedToSaveMb, matriboxAgent, type MbAgentHost } from '../lib/matriboxAgent.ts';
+import { cloneNameFromFile, firstEmptyClone, pickToneModel } from '../lib/cloneSource.ts';
 import { requestTexts } from '../lib/assistant.ts';
 import { mbTone, withTone, type MbTone } from '../lib/matriboxLibrary.ts';
 
@@ -19,6 +20,18 @@ function host() {
   const past: MbPreset[] = [];
   const saves: [number, string][] = [];
   let tones: MbTone[] = [];
+  const clones: { slot: number; name: string; source: unknown }[] = [];
+  const searches: string[] = [];
+  let answer: 'uploaded' | 'cancelled' = 'uploaded';
+  let signedIn = true;
+  const page: TonePage = {
+    tones: [
+      { id: 7, title: 'Rectifier Crunch', gear: 'amp', format: 'nam', makes: [], creator: 'ana', modelsCount: 2, downloads: 5, url: 'https://www.tone3000.com/tones/7', image: null, description: '' },
+    ],
+    page: 1,
+    totalPages: 1,
+    total: 1,
+  };
   const h: MbAgentHost = {
     snapshot: () => ({ current, preset, catalog }),
     apply: async (chain) => {
@@ -43,6 +56,18 @@ function host() {
       saves.push([index, name]);
       return 'saved';
     },
+    cloneNames: () => ['Clone 1', 'Plexi', 'Clone 3', ...Array.from({ length: 7 }, (_, i) => `Clone ${i + 4}`)],
+    proposeClone: async (p) => {
+      clones.push(p);
+      return answer;
+    },
+    tone3000: {
+      signedIn: () => signedIn,
+      find: async (query) => {
+        searches.push(query);
+        return page;
+      },
+    },
     tones: () => tones,
     keepTone: async (name, notes) => {
       tones = withTone(tones, mbTone(preset, name, notes, `kept-${tones.length}`));
@@ -52,6 +77,14 @@ function host() {
     h,
     sent,
     saves,
+    clones,
+    searches,
+    answer: (a: 'uploaded' | 'cancelled') => {
+      answer = a;
+    },
+    signOut: () => {
+      signedIn = false;
+    },
     tones: () => tones,
     load: (n: number) => {
       current = n;
@@ -241,4 +274,92 @@ test('set_controls checks every change before sending anything', async () => {
     assert.match(r.text, message);
   }
   assert.equal(s.sent.length, 0);
+});
+
+test('upload_clone checks slot, name and source before the person is asked, and passes the slot 0-based', async () => {
+  const s = host();
+  const agent = matriboxAgent(s.h);
+  const run = agent.runner();
+  assert.equal(agent.acts.has('upload_clone'), true);
+  const url = 'https://example.com/amp.nam';
+  const bad: [unknown, RegExp][] = [
+    [{ slot: 0, name: 'x', url }, /slot must be an integer 1\.\.10/],
+    [{ slot: 11, name: 'x', url }, /slot must be/],
+    [{ slot: 1.5, name: 'x', url }, /slot must be/],
+    [{ slot: 3, name: '', url }, /clone name/],
+    [{ slot: 3, name: 'Ação', url }, /clone name/],
+    [{ slot: 3, name: 'x'.repeat(17), url }, /clone name/],
+    [{ slot: 3, name: 'x' }, /exactly one source/],
+    [{ slot: 3, name: 'x', url, toneId: 7 }, /exactly one source/],
+    [{ slot: 3, name: 'x', url: 'http://example.com/a.nam' }, /https/],
+    [{ slot: 3, name: 'x', url, modelId: 1 }, /https link/],
+    [{ slot: 3, name: 'x', toneId: 0 }, /toneId/],
+    [{ slot: 3, name: 'x', toneId: 7, modelId: 'a' }, /modelId/],
+  ];
+  for (const [args, message] of bad) {
+    const r = await run('upload_clone', args);
+    assert.equal(r.ok, false);
+    assert.match(r.text, message);
+  }
+  assert.equal(s.clones.length, 0);
+
+  assert.deepEqual(await run('upload_clone', { slot: 3, name: 'Rect Crunch', url }), { ok: true, text: 'The person wrote "Rect Crunch" to CLONE 3.' });
+  assert.deepEqual(s.clones, [{ slot: 2, name: 'Rect Crunch', source: { url } }]);
+  s.answer('cancelled');
+  assert.deepEqual(await run('upload_clone', { slot: 10, name: 'Tone', toneId: 7, modelId: 9 }), {
+    ok: true,
+    text: 'The person closed the Clones dialog; CLONE 10 is unchanged.',
+  });
+  assert.deepEqual(s.clones[1], { slot: 9, name: 'Tone', source: { toneId: 7, modelId: 9 } });
+  assert.match(agent.instructions(false), /upload_clone/);
+});
+
+test('list_clones shows the names, an empty slot as empty', async () => {
+  const run = matriboxAgent(host().h).runner();
+  const r = await run('list_clones', {});
+  assert.equal(r.ok, true);
+  assert.match(r.text, /^CLONE 1: \(empty\)\nCLONE 2: Plexi\nCLONE 3: \(empty\)\n/);
+  assert.equal(r.text.split('\n').length, 10);
+});
+
+test('search_tone3000 lists tones with their creator and credit, and tells the person to sign in when they are not', async () => {
+  const s = host();
+  const agent = matriboxAgent(s.h);
+  const run = agent.runner();
+  const r = await run('search_tone3000', { query: ' Rectifier ' });
+  assert.equal(r.ok, true);
+  assert.deepEqual(s.searches, ['Rectifier']);
+  assert.match(r.text, /^- id 7: "Rectifier Crunch" by ana · gear amp · 2 models · https:\/\/www\.tone3000\.com\/tones\/7\n/);
+  assert.match(r.text, /TONE3000.*creator/);
+  assert.equal((await run('search_tone3000', { query: '  ' })).ok, false);
+  s.signOut();
+  const out = await run('search_tone3000', { query: 'x' });
+  assert.equal(out.ok, false);
+  assert.match(out.text, /sign in to TONE3000 in the Clones panel/);
+  // Without TONE3000 set up the tool is not offered.
+  const bare = matriboxAgent({ ...s.h, tone3000: undefined });
+  assert.equal(
+    bare.tools.some((t) => t.name === 'search_tone3000'),
+    false,
+  );
+  assert.equal(
+    agent.tools.some((t) => t.name === 'search_tone3000'),
+    true,
+  );
+});
+
+test('clone names and TONE3000 models are picked by simple rules', () => {
+  assert.equal(cloneNameFromFile('Mesa Rectifier Crunch (v2).nam'), 'Mesa Rectifier C');
+  assert.equal(cloneNameFromFile('Amp ção.nam'), 'Amp o');
+  assert.equal(firstEmptyClone(['A', 'Clone 2', 'B', 'Clone 4']), 1);
+  assert.equal(firstEmptyClone(Array.from({ length: 10 }, (_, i) => `n${i}`)), 0);
+  const models = [
+    { id: 1, name: 'Std', size: 'standard', url: 'u1', architecture: '1' },
+    { id: 2, name: 'Lite', size: 'lite', url: 'u2', architecture: '1' },
+  ];
+  assert.equal(pickToneModel(models, 2).url, 'u2');
+  assert.throws(() => pickToneModel(models), /several models.*1: Std \(standard\); 2: Lite/);
+  assert.throws(() => pickToneModel(models, 5), /no model 5/);
+  assert.throws(() => pickToneModel([]), /no models/);
+  assert.equal(pickToneModel([models[0]!]).id, 1);
 });
