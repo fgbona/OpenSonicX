@@ -7,7 +7,10 @@
  * with that index): only a selected slot reads what it stores.
  * A whole-preset write (flag 2, paged) is stored in the slot it names, like the unit, and answered with cmd 0x17.
  * A user IR upload (flag 1, cmd 0x14, paged) renames its slot in the IR table and is acknowledged
- * with flag 3, cmd 0x14, `slot, 1, 0`, as captures mb-17, mb-17b and mb-17c show.
+ * with flag 3, cmd 0x14, `slot, 1, 0`, as captures mb-17, mb-17b and mb-17c show. A clone upload (flag 1,
+ * cmd 0x18, 49 pages, capture mb-19) does the same in the clone table, acknowledged with flag 3, cmd 0x18;
+ * a clone rename (flag 2, cmd 0x18: u32 slot + 20-byte name) renames the slot and is not answered (waveod).
+ * Anything else, a clone delete or the bootloader message among them, throws.
  * The global tables answer their argument-less reads (cmd 0x11, 0x16) and follow the global writes
  * (flag 1 cmd 0x11 setting, flag 2 cmd 0x16 EQ value: echoed; flag 1 cmd 0x16 EQ switch: answered
  * `00 00 00 00` + u32, and not at all when it is already so), as captures mb-30 … mb-39 show. Like the
@@ -24,12 +27,14 @@ import {
   fromHex,
   joinMbPages,
   MB_GLOBALS,
+  MB_CLONE_SLOTS,
   MB_IR_SLOTS,
   MB_PAGE_SIZE,
   MB_READ,
   MB_BIG_MEMORY_MAX,
   MB_WRITE,
   mbDspLoad,
+  mbReadCloneNames,
   mbReadIrNames,
   mbReadPreset,
   mbReadPresetNames,
@@ -145,6 +150,10 @@ export class FakeMatribox {
   readonly irUploads: Uint8Array[] = [];
   /** The status the unit answers an IR upload with (1 = stored). */
   irStatus = 1;
+  /** Every clone upload received, decompressed (8872 bytes). */
+  readonly cloneUploads: Uint8Array[] = [];
+  /** The status the unit answers a clone upload with (1 = stored). */
+  cloneStatus = 1;
   /** When set, a whole-preset write to this index is acknowledged but not stored (to test the read-back). */
   dropsPresetWriteTo: number | null = null;
   /** When false the unit stores whole-preset writes but does not acknowledge them. */
@@ -158,6 +167,7 @@ export class FakeMatribox {
   #eqOn = true;
   #pages: ReturnType<typeof parseMbFrame>[] = [];
   #irNames = dataOf(this.#replies.get(key(mbReadIrNames()))!);
+  #cloneNames = dataOf(this.#replies.get(key(mbReadCloneNames()))!);
   #names = dataOf(this.#replies.get(key(mbReadPresetNames()))!);
   #current = 0x42;
   /** Stored presets by number (1211 bytes, number first). */
@@ -199,6 +209,7 @@ export class FakeMatribox {
       if (!joined) return;
       const message = unwrapMbMessage(joined);
       if (message.flag === 1 && message.cmd === 0x14) this.#irUpload(message.data);
+      else if (message.flag === 1 && message.cmd === 0x18) this.#cloneUpload(message.data);
       else this.#wholePreset(message);
       return;
     }
@@ -206,6 +217,12 @@ export class FakeMatribox {
     if (frame.type === MB_WRITE && message.cmd === 0x05) {
       if (!this.dropsSaves) this.#apply(message.cmd, message.data);
       return; // the unit answers a save with nothing
+    }
+    if (frame.type === MB_WRITE && message.flag === 2 && message.cmd === 0x18) {
+      const slot = u32(message.data, 0);
+      if (message.data.length !== 24 || slot >= MB_CLONE_SLOTS) throw new Error('fake Matribox: bad clone rename');
+      this.#cloneNames = patched(this.#cloneNames, MB_CLONE_SLOTS * 8 + slot * 17, this.#name17(message.data, 4));
+      return; // no answer
     }
     if (frame.type === MB_WRITE) {
       const global = this.#globalWrite(message);
@@ -250,6 +267,22 @@ export class FakeMatribox {
     const name = Uint8Array.from({ length: 17 }, (_, i) => (i < 16 ? (data[12 + i] as number) : 0));
     if (this.irStatus === 1) this.#irNames = patched(this.#irNames, MB_IR_SLOTS * 8 + slot * 17, name);
     if (this.echoes) this.#reply(replyFrames(wrapMbMessage(3, 0x14, [slot, 0, 0, 0, this.irStatus, 0, 0, 0, 0, 0, 0, 0])));
+  }
+
+  /** A 17-byte name field from a 20-byte one at `at`. */
+  #name17(data: Uint8Array, at: number): Uint8Array {
+    return Uint8Array.from({ length: 17 }, (_, i) => (i < 16 ? (data[at + i] as number) : 0));
+  }
+
+  /** u32 slot, u32 0, u32 byte sum of the .clo, 20-byte name, the 8840-byte .clo: the slot takes the name; flag-3 ack. */
+  #cloneUpload(data: Uint8Array): void {
+    this.#pages = [];
+    const slot = u32(data, 0);
+    const sum = data.subarray(32).reduce((s, b) => s + b, 0);
+    if (data.length !== 8872 || slot >= MB_CLONE_SLOTS || u32(data, 8) !== sum) throw new Error('fake Matribox: bad clone upload');
+    this.cloneUploads.push(data);
+    if (this.cloneStatus === 1) this.#cloneNames = patched(this.#cloneNames, MB_CLONE_SLOTS * 8 + slot * 17, this.#name17(data, 12));
+    if (this.echoes) this.#reply(replyFrames(wrapMbMessage(3, 0x18, [slot, 0, 0, 0, this.cloneStatus, 0, 0, 0, 0, 0, 0, 0])));
   }
 
   /** Sends a frame on the unit's own (a notice: footswitch, knob), as if used on the unit. */
@@ -312,6 +345,7 @@ export class FakeMatribox {
     const argHex = hexOf(arg);
     if (flag === 1 && cmd === 0x10 && argHex === '00000a01') return answer(this.#names);
     if (flag === 0 && cmd === 0x14 && arg.length === 0) return answer(this.#irNames);
+    if (flag === 0 && cmd === 0x18 && arg.length === 0) return answer(this.#cloneNames);
     if (flag === 0 && cmd === 0x11 && arg.length === 0) return answer(this.#general);
     if (flag === 0 && cmd === 0x16 && arg.length === 0) return answer(this.#eq);
     if (flag === 1 && cmd === 0x16 && argHex === EQ_SWITCH) return answer([0, 0, 0, 0, this.#eqOn ? 1 : 0, 0, 0, 0]);

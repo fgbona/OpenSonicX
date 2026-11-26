@@ -5,6 +5,7 @@ import { CLO_BIQUAD, decodeClo, encodeClo } from '../src/clo/codec.ts';
 import { parseNam } from '../src/clo/nam.ts';
 import { convolve, dft, hpf40, iirRun, interp1, linspace, minPhase, sat4x, smoothdata, smoothFreq, tfestimate } from '../src/clo/startclone-dsp.ts';
 import { runWavenetBlocks, startClone, startCloneArrays } from '../src/clo/startclone.ts';
+import { noise, sectionsDi } from './clo-sections-di.ts';
 
 const close = (got: number, want: number, tol: number, what = '') => assert.ok(Math.abs(got - want) <= tol, `${what} ${got} vs ${want} (tol ${tol})`);
 const db = (v: number) => 20 * Math.log10(v);
@@ -22,17 +23,6 @@ const firMag = (h: readonly number[], bins: number) =>
     return Math.hypot(re, im);
   });
 
-/** Deterministic white noise (xorshift + Box-Muller). */
-function noise(n: number, rms: number, seed = 0x5eed): Float64Array {
-  let s = seed;
-  const uni = () => {
-    s ^= s << 13;
-    s ^= s >>> 17;
-    s ^= s << 5;
-    return ((s >>> 0) + 0.5) / 4294967296;
-  };
-  return Float64Array.from({ length: n }, () => rms * Math.sqrt(-2 * Math.log(uni())) * Math.cos(2 * Math.PI * uni()));
-}
 
 test('IIR 2 at 48 kHz is the 40 Hz high-pass every .clo carries', () => {
   const q = hpf40(48000);
@@ -163,24 +153,6 @@ test('parseNam reads sample_rate and refuses a nonsense one', () => {
   assert.throws(() => parseNam(JSON.stringify({ ...json, sample_rate: 'fast' })), /sample_rate/);
 });
 
-/** A DI with the reference's sections, at `fs`. */
-function sectionsDi(fs: number): Float64Array {
-  const d = new Float64Array(70 * fs);
-  for (let i = 0; i < 5 * fs; i++) {
-    const t = i / fs;
-    d[i] = 10 ** ((t < 1 ? -60 + 30 * t : -30 + 7.5 * (t - 1)) / 20) * Math.sin(2 * Math.PI * 300 * t);
-  }
-  d[6 * fs] = 1;
-  d.set(noise(15 * fs - 1, 0.0008, 1), 6 * fs + 1);
-  for (let i = 0; i < 5 * fs; i++) {
-    const t = i / fs;
-    const k = Math.log(500);
-    d[23 * fs + i] = 0.5623 * Math.min(1, Math.min(t, 5 - t) / 0.01) * Math.sin(((2 * Math.PI * 20 * 5) / k) * (Math.exp((t * k) / 5) - 1));
-  }
-  d.set(noise(20 * fs, 0.05, 2), 30 * fs);
-  d.set(noise(20 * fs, 0.15, 3), 50 * fs);
-  return d;
-}
 
 test('startClone recovers a clone chain it is fitted to', { timeout: 120_000 }, () => {
   const fs = 16000;
