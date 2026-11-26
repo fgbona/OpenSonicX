@@ -33,7 +33,7 @@ test('the notices the unit sent on its own decode to what was done on the unit',
 
 test("the unit's own changes of 2026-11-25 decode: a global setting, the global tempo, a chain, a save", () => {
   assert.deepEqual(notice('global'), { kind: 'global', setting: 'currentMode', value: 1 }); // capture 2
-  assert.deepEqual(notice('tempo'), { kind: 'globalTempo', bpm: 100 }); // mb-37
+  assert.deepEqual(notice('tempo'), { kind: 'global', setting: 'tempoBpm', value: 100 }); // mb-37
   assert.deepEqual(notice('chain'), { kind: 'chain' }); // mb-42: the model knob of a block screen
   assert.deepEqual(notice('saved'), { kind: 'saved', index: 239, name: 'TESTE OSX' }); // mb-44: saved to 60D
   // Unknown global ids and the expression pedal's message (mb-43: the same bytes for every move) stay dropped.
@@ -41,6 +41,13 @@ test("the unit's own changes of 2026-11-25 decode: a global setting, the global 
   assert.equal(parseMbNotice({ flag: 1, cmd: 0x10, data: Uint8Array.of(8, 0, 5, 1, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, ...new Uint8Array(12)) }), null);
   assert.equal(parseMbNotice({ flag: 1, cmd: 0x05, data: Uint8Array.of(0xef, 0, 0, 0) }), null);
   assert.equal(parseMbNotice({ flag: 1, cmd: 0x10, data: Uint8Array.of(0, 0, 4, 1, 0xff) }), null);
+});
+
+test('the drum machine state (cmd 0x13, 10 bytes) decodes', () => {
+  // The connect read's reply in every capture (mb-30 … mb-39).
+  const data = Uint8Array.of(0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x5d);
+  assert.deepEqual(parseMbNotice({ flag: 0, cmd: 0x13, data }), { kind: 'drum', playing: false, genre: 7, pattern: 0, bpm: 60, follow: false, volume: 93 });
+  assert.equal(parseMbNotice({ flag: 0, cmd: 0x13, data: data.subarray(0, 9) }), null);
 });
 
 test('replies, other flags and short data are not notices', () => {

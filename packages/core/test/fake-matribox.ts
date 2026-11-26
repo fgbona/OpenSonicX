@@ -10,7 +10,8 @@
  * with flag 3, cmd 0x14, `slot, 1, 0`, as captures mb-17, mb-17b and mb-17c show.
  * The global tables answer their argument-less reads (cmd 0x11, 0x16) and follow the global writes
  * (flag 1 cmd 0x11 setting, flag 2 cmd 0x16 EQ value: echoed; flag 1 cmd 0x16 EQ switch: answered
- * `00 00 00 00` + u32), as captures mb-30 … mb-39 show.
+ * `00 00 00 00` + u32, and not at all when it is already so), as captures mb-30 … mb-39 show. Like the
+ * unit (zxmarcos/waveod), Global Tempo stays off and its echo says 0 while it has no BPM.
  * Never a real device.
  */
 import { readFileSync } from 'node:fs';
@@ -18,7 +19,6 @@ import {
   expand,
   fromHex,
   joinMbPages,
-  MB_GLOBAL_TEMPO_ID,
   MB_GLOBALS,
   MB_IR_SLOTS,
   MB_PAGE_SIZE,
@@ -27,6 +27,7 @@ import {
   mbReadIrNames,
   mbReadPreset,
   mbReadPresetNames,
+  type MbGlobalSetting,
   parseMbFrame,
   toHex,
   unwrapMbMessage,
@@ -106,8 +107,9 @@ const GENERAL = (() => {
 /** The global EQ of the first sessions: 31 float32 (head, low cut, bands 1..4, high cut, tail with the level). */
 const EQ = [1, 80, 0.71, 0, 20, 0.71, 0, 1, 250, 1, -1, 1, 500, 0.71, 0, 1, 1000, 0.71, 0, 1, 5000, 1, 1, 0, 20000, 0.71, 0, 1, 8000, 0.71, 50];
 const EQ_SWITCH = '01000016';
-/** Byte of each global setting the unit takes a write of, by id (the global tempo's BPM too: notices only). */
-const GENERAL_AT = new Map<number, number>([...Object.values(MB_GLOBALS).map(({ id, at }) => [id, at] as const), [MB_GLOBAL_TEMPO_ID, 48]]);
+/** Each global setting the unit takes a write of, by its u16 `<index> <id>`. */
+const GLOBAL_BY_SUB = new Map(Object.values(MB_GLOBALS).map((d) => [(d.id << 8) | d.index, d] as const));
+const le32 = (n: number) => [n & 0xff, (n >> 8) & 0xff, (n >> 16) & 0xff, (n >> 24) & 0xff];
 
 /** A copy of `data` with `bytes` written at `at`. */
 function patched(data: Uint8Array, at: number, bytes: ArrayLike<number>): Uint8Array {
@@ -200,7 +202,7 @@ export class FakeMatribox {
     if (frame.type === MB_WRITE) {
       const global = this.#globalWrite(message);
       if (global) {
-        if (this.echoes) this.#reply(replyFrames(wrapMbMessage(message.flag, message.cmd, global)));
+        if (this.echoes && global.length > 0) this.#reply(replyFrames(wrapMbMessage(message.flag, message.cmd, global)));
         return;
       }
       const notice = this.#apply(message.cmd, message.data);
@@ -256,25 +258,32 @@ export class FakeMatribox {
     return replyFrames(wrapMbMessage(1, 0x10, data))[0] as Uint8Array;
   }
 
-  /** A global setting changed on the unit (`00 <id> 00 00` + i32): applied, and the notice frame it sends returned. */
-  onUnitGlobal(id: number, value: number): Uint8Array {
-    const data = Uint8Array.of(0, id, 0, 0, value & 0xff, (value >> 8) & 0xff, (value >> 16) & 0xff, (value >> 24) & 0xff);
+  /** A global setting changed on the unit (`<index> <id> 00 00` + i32): applied, and the notice frame it sends returned. */
+  onUnitGlobal(setting: MbGlobalSetting, value: number): Uint8Array {
+    const { id, index } = MB_GLOBALS[setting];
+    const data = Uint8Array.of(index, id, 0, 0, ...le32(value));
     this.#globalWrite({ flag: 1, cmd: 0x11, data });
     return replyFrames(wrapMbMessage(1, 0x11, data))[0] as Uint8Array;
   }
 
-  /** A global write: what the unit answers (its echo, or the EQ switch's answer); null when it is not one. */
+  /**
+   * A global write: what the unit answers (its echo, or the EQ switch's answer; empty for no answer),
+   * null when it is not one.
+   */
   #globalWrite({ flag, cmd, data }: { flag: number; cmd: number; data: Uint8Array }): Uint8Array | null {
-    const at = GENERAL_AT.get(data[1] as number);
-    if (flag === 1 && cmd === 0x11 && data.length === 8 && at !== undefined) {
-      this.#general = patched(this.#general, at, at === 48 ? data.subarray(4, 6) : [data[4] as number]); // the tempo is a u16
-      return data;
+    const setting = data.length === 8 ? GLOBAL_BY_SUB.get((data[0] as number) | ((data[1] as number) << 8)) : undefined;
+    if (flag === 1 && cmd === 0x11 && setting) {
+      const bpm = (this.#general[48] as number) | ((this.#general[49] as number) << 8);
+      const value = setting === MB_GLOBALS.tempoOn && !(bpm >= 40 && bpm <= 300) ? 0 : new DataView(data.buffer, data.byteOffset).getInt32(4, true);
+      this.#general = patched(this.#general, setting.at, le32(value).slice(0, setting.wide ? 2 : 1));
+      return Uint8Array.from([...data.subarray(0, 4), ...le32(value)]);
     }
     if (flag === 2 && cmd === 0x16 && data.length === 8 && u32(data, 0) < 31) {
       this.#eq = patched(this.#eq, u32(data, 0) * 4, data.subarray(4, 8));
       return data;
     }
     if (flag === 1 && cmd === 0x16 && data.length === 8 && hexOf(data.subarray(0, 4)) === EQ_SWITCH) {
+      if ((u32(data, 4) !== 0) === this.#eqOn) return new Uint8Array(0); // already so: the unit answers nothing
       if (!this.ignoresEqSwitch) this.#eqOn = u32(data, 4) !== 0;
       return Uint8Array.of(0, 0, 0, 0, this.#eqOn ? 1 : 0, 0, 0, 0);
     }

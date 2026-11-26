@@ -232,7 +232,8 @@ captures 1 to 4.
 | `04 00 04 01` + 156 bytes | The assignment tables after a chain edit: section 2 bytes 4..9 or 4..8, section 7 from 5 or 4, section 8 rows (from 9): 6 + 90 + 60 or 5 + 91 + 60 bytes. Sent before the chain notice on add, remove and change model, not on a move | Captures 2, 3, 4: always the empty tables of an empty preset, so the one-byte ambiguity stays | High (content), medium (which byte is left out) |
 | cmd `11`, `00 08 00 00` + u32 | "Preset edited" flag: 1 after an edit, 0 after a save | 1 after edits (hardware capture, capture 2); 0 sent 60 ms after the save in capture 1 (so a save does get this one notice); the editor reads it on connect (flag-1 `11` read) | Medium |
 | cmd `11`, `00 <id> 00 00` + i32 | A global setting changed on the unit: the host's global write (below), e.g. `00 52` Current Mode toggled 1, 0, 1 in capture 2 | Capture 2 (unit side only); shape of mb-30 … mb-36 | High (`00 52`), medium (other ids: not seen from the unit) |
-| cmd `11`, `00 26 00 00` + u32 BPM | The Global Tempo turned on the unit (103 … 120 … 100) | mb-37 (17 notices, unit side only) | High |
+| cmd `11`, `00 26 00 00` + u32 BPM | The Global Tempo turned on the unit (103 … 120 … 100): the `26` global setting | mb-37 (17 notices, unit side only) | High |
+| cmd `13`, 10 bytes | The drum machine's state (the reply to the connect read): u8 playing, 0, u16 genre, u16 pattern, u16 BPM, u8 follows the tempo, u8 volume. `parseMbNotice` decodes it (`kind: 'drum'`); the editor does not show it | Every connect read: `00 00 07 00 00 00 3C 00 00 5D` = stopped, genre 7, pattern 0, 60 BPM, not following, volume 93; layout from zxmarcos/waveod | High (layout), medium (values: never changed in a capture) |
 | `00 00 04 01` + chain (89 bytes) | A chain change made on the unit: the model knob of a block screen (one notice per model passed, each after the 160-byte `04 00 04 01` assignments) and a model change before a save | mb-42, mb-44 | High |
 | cmd `05`, u32 index + 17-byte name | The loaded preset saved on the unit (after the "preset edited" flag goes to 0): the host's save shape | mb-44 (saved to 60D) | High |
 
@@ -264,9 +265,21 @@ mb-32 (a read-back with nothing changed in the editor) and the first sessions' t
 "before". Core: `packages/core/src/matribox/globals.ts`, byte-exact with the captured host frames
 (`packages/core/test/fixtures/matribox-globals.txt`); the simulated unit answers and follows them.
 
-**Global writes.** One setting is flag 1, cmd `11`, `00 <id> 00 00` + i32 (`mbSetGlobal`); the
-unit echoes it, and sends the same message by itself when the setting changes on the unit. The
-official editor streams it while a slider moves (mb-30, mb-31), as it does the patch volume.
+Protocol facts cross-checked against zxmarcos/waveod and zxmarcos/matribox-studio (MIT): a
+reimplemented Matribox II Pro firmware and an editor whose global ids come from the official app.
+In their notation our header `[flag, 0, 0, cmd]` is one u32 (flag 1, cmd `11` = `0x11000001`) and
+our `<index> <id> 00 00` is their u32 sub (`01 61` = `0x6101`).
+
+**Global writes.** One setting is flag 1, cmd `11`, `<index> <id> 00 00` + i32 (`mbSetGlobal`): `<id>`
+is the setting, `<index>` its channel (MIDI channels: 0 In TRS, 1 In USB, 2 Out TRS, 3 Out USB; 0
+for the rest). The unit echoes it with the value it kept, and sends the same message by itself when
+the setting changes on the unit. The official editor streams it while a slider moves (mb-30,
+mb-31), as it does the patch volume; the unit leaves out an answer equal to the previous one within
+150 ms (mb-30: 30 writes, 6 echoes), so the editor sends the newest value only after the echo of the
+one before, and a missing echo ends in the link's timeout.
+
+**Never sent** (waveod): flag 1, cmd `11`, `<n> 90 00 00` deletes clone capture n; flag `0E`, cmd `05`
+restarts the unit in its bootloader. The core has no builder for either.
 
 **cmd `11`, 52 bytes** (the general settings, `parseMbGlobals`). All bytes not listed are 0.
 
@@ -275,28 +288,31 @@ official editor streams it while a slider moves (mb-30, mb-31), as it does the p
 | 14 | Input Level | `21` | dB as int8, -20..+20 (manual); written as i32 | mb-30: writes 0 → 5, the byte read back 5 (12 in the first sessions) | High (+), medium (negatives: two-complement, not captured) |
 | 15 | Input Mode | `22` | 0 A.GT, 1 E.GT, 2 Line | mb-36: E.GT 1 → Line 2; 0 from the manual's order | High (1, 2), medium (0) |
 | 47 | AUX Level | `24` | 0..100 | mb-31 (retaken): writes 81 → 0 → 50 → 80. Bytes 11 and 47 both went to 80 while AUX Level and Brightness were changed (mb-31, mb-32); 47 was the 0 the owner's AUX Level started from, 11 the manual's Brightness 50 | High (write), medium (byte) |
-| 35 | Current Mode (footswitch mode) | `52` | 0 Preset, 1 Stomp | mb-33 wrote 1; 1 in every session the unit was in stomp mode (mb-09, mb-41) | Medium-high |
-| 36 | MIDI Input Ch (USB) | `61` | 0 Omni, 1..16 | mb-34: Omni → 5 | High |
+| 35 | Current Mode (footswitch mode) | `52` | 0 Stomp, 1 Preset | mb-33: the byte was 0 (mb-30, mb-32), the owner switched Stomp → Preset and the editor wrote 1; waveod's firmware (`0 = stomp`) and matribox-studio agree. Was 0 Preset / 1 Stomp until 2026-11-26: mb-09 and mb-41 hold no table read, so that reading had no capture behind it | Medium-high |
+| 36..37 | MIDI Input Ch (TRS) | `61`, index 0 | i16: 0 Omni, 1..16 | mb-34: the owner's field was labelled "Input Ch (USB)", but the editor wrote `00 61` (index 0) and byte 36 went 0 → 5; waveod and matribox-studio (the official app's names) make index 0 the TRS input | High (write, byte), medium (TRS: the label disagrees) |
+| 38..39 | MIDI Input Ch (USB) | `61`, index 1 | i16: 0 Omni, 1..16 | 0 in every capture; `01 61` from waveod, not captured | Medium |
+| 40..43 | MIDI Output Ch (TRS, USB) | `61`, index 2, 3 | i16: -1 off, 1..16 (waveod) | 0 in every capture; not offered | Medium |
 | 44 | MIDI In Source | `62` | 0 TRS Only, 1 USB Only, 2 Mixed | mb-35: Mixed 2 → USB Only 1 (then put back); 0 from the manual's order | High (1, 2), medium (0) |
-| 48..49, 50 | Global Tempo: u16 BPM (`FF FF` while never set), on | `26` (notice) | BPM; 0/1 | Between mb-36 and mb-38 the tempo was enabled and set to 100: `FF FF 00` → `64 00 01`. mb-37 holds only the unit's `00 26 00 00` + BPM notices | Medium-high (read), none (write) |
-| 11 | Brightness? | | 50 → 80 | Changed on the unit in mb-32 (the official editor does not offer it) | Medium |
+| 48..49 | Global Tempo BPM | `26` | u16 40..300 (`FF FF` while never set) | Between mb-36 and mb-38 the tempo was set to 100: `FF FF` → `64 00`. mb-37: the unit's `00 26 00 00` + BPM notices; the write and its echo from waveod | High (read), medium (write: not captured) |
+| 50 | Global Tempo on | `25` | 0/1; the unit reads and answers 0 while the BPM is not set | `00` → `01` with the BPM above; mb-45: the unit sent `00 25 00 00 00` by itself. Write from waveod | High (read), medium (write) |
+| 11 | Brightness | `14` (read only) | percent | Changed on the unit in mb-32 (the official editor does not offer it), 50 → 80; waveod: the screen's backlight, a read with no write | High |
 | 2, 5, 9, 20..22, 45 | Unknown | | `02`, `01`, `01`, `01`, `04` | Never changed | Unknown |
 
-**Global Tempo is not written by us.** In the official editor, switching Global Tempo on switched
-itself off again at once; on the unit, enabling it asks for a confirmation on the unit's screen
-before it works (owner, 2026-11-25). So enabling it from a host looks refused until confirmed on the
-unit, and no host write of the tempo or its switch was captured (mb-37 was taken on the unit). The
-editor shows its state and BPM read-only and follows the unit's tempo notices. A host-side BPM change
-with Global Tempo already on (mb-37b) would decode the write.
+**Global Tempo.** `00 25` switches it (0/1) and `00 26` sets its BPM (40..300); the unit echoes
+both (waveod; no host write captured: mb-37 was taken on the unit). In the official editor,
+switching Global Tempo on switched itself off again at once; on the unit, enabling it asks for a
+confirmation on the unit's screen before it works (owner, 2026-11-25), and the unit answers `00 25`
+with 0 while it has no BPM. So the editor sends the BPM as set, and when the switch's echo does not
+come it says to accept it on the unit's screen (the settings are read again).
 
 **MIDI In Source and the editor.** The editor's tuner, tap tempo and BPM controls are MIDI Control
 Changes over USB: with "TRS Only" the unit would ignore them (the SysEx editing itself is not a
 MIDI message the setting governs, but that is not checked). So the builder refuses 0 and Global
 options offers USB Only and Mixed only. The editor's Control Change channel follows MIDI Input Ch
-(USB) when it is not Omni, so changing it does not cut the tuner and tempo off.
+(USB) (byte 38) when it is not Omni, so changing it does not cut the tuner and tempo off.
 
-**cmd `13`, 10 bytes**: `00 00 07 00 00 00 3C 00 00 5D`. Unchanged by every setting captured,
-global tempo included: not decoded.
+**cmd `13`, 10 bytes**: the drum machine's state (above, "The unit's own messages"):
+`00 00 07 00 00 00 3C 00 00 5D` in every capture.
 
 **cmd `16`, 124 bytes: the global EQ** (`parseMbGlobalEq`), 31 float32 LE. One value is written as
 flag 2, cmd `16`, u32 **word index** + f32 (`mbSetGlobalEqGain`, `mbSetGlobalEqLevel`); the unit
@@ -304,28 +320,30 @@ echoes it.
 
 | Words | Values (first sessions) | Reading | Evidence | Confidence |
 |-------|-------------------------|---------|----------|------------|
-| 0..2 | 1, 80, 0.71 | Unknown head (not the switch: it stayed 1 with the EQ off) | | Unknown |
-| 3..6 | 0, 20, 0.71, 0 | Low cut: switch, frequency, Q, unused gain | Manual ranges | Medium |
-| 7..10 | 1, 250, 1, -1 | Band 1: switch, frequency (Hz), Q, gain (dB) | | Medium |
+| 0..2 | 1, 80, 0.71 | Low cut: switch, frequency 19..20000 Hz (19 = off), Q | waveod's EQ order | High |
+| 3..6 | 0, 20, 0.71, 0 | Low shelf: switch, frequency, Q, gain | waveod | High |
+| 7..10 | 1, 250, 1, -1 | Band 1: switch, frequency 20..20000 Hz, Q 0.1..10, gain -20..+20 dB | waveod | High |
 | 11..14 | 1, 500, 0.71, 0 | Band 2; word 14 = gain | mb-38: write word 14 = 3.0, read back +3 dB | High |
-| 15..18, 19..22 | 1, 1000, 0.71, 0; 1, 5000, 1, 1 | Bands 3 and 4 | Same layout | Medium |
-| 23..26 | 0, 20000, 0.71, 0 | High cut | | Medium |
-| 27..29 | 1, 8000, 0.71 | Unknown | | Unknown |
+| 15..18, 19..22 | 1, 1000, 0.71, 0; 1, 5000, 1, 1 | Bands 3 and 4 | Same layout, waveod | High |
+| 23..26 | 0, 20000, 0.71, 0 | High shelf: switch, frequency, Q, gain | waveod | High |
+| 27..29 | 1, 8000, 0.71 | High cut: switch, frequency 20..20001 Hz (20001 = off), Q | waveod | High |
 | 30 | 50 | Level, 0..100 | mb-39: writes word 30 = 50 … 70, read back 70 | High |
 
-Only band 2's gain write was captured, so Global options lets that one change and shows bands 1, 3
-and 4 read-only (the same word rule would give gains at words 10, 18 and 22: one capture of another
-band, or a check on the unit, would open them).
+The gains of bands 1..4 are words 10, 14, 18, 22; Global options writes all four (band 2's write
+was captured, the others follow the same rule and waveod's handler, which clamps the value to the
+word's range and echoes what it kept). The cuts' frequencies are shown, not written.
 
 **The EQ switch**: flag 1, cmd `16`, `01 00 00 16` + u32 0/1 (`mbSetGlobalEqOn`), read with the same
 argument. The unit answers both with `00 00 00 00` + u32, not an echo (mb-39: off, then on), so the
-link's `ask` takes the answer by its shape and `mbWriteGlobalEqOn` checks it holds the new state.
+link's `ask` takes the answer by its shape and `mbWriteGlobalEqOn` checks it holds the new state. A
+write to the state the switch is already in gets **no answer** (waveod), so `mbWriteGlobalEqOn`
+reads the switch first and sends nothing then.
 
 **In the editor**: *Global options* (header, beside the preset file buttons; on a phone under ⋯) is
 read on connect (`mbReadGlobalState`, a failure leaves the editor usable and the dialog says it
-could not read) and offers Input Mode, Input Level, AUX Level, Current Mode, MIDI Input Ch (USB),
-MIDI In Source (USB Only, Mixed), the global EQ switch, its level and band 2's gain; Global Tempo is
-shown only. Each change is one write, the newest value only while a slider moves; a write the unit
+could not read) and offers Input Mode, Input Level, AUX Level, Current Mode, Global Tempo (switch
+and BPM), MIDI Input Ch (USB and TRS), MIDI In Source (USB Only, Mixed), the global EQ switch, its
+level and the gains of bands 1..4; brightness and the cut filters are shown only. Each change is one write, the newest value only while a slider moves; a write the unit
 does not confirm shows the error and the globals are read again. Not checked on the owner's unit yet.
 
 ## MCP tools
@@ -641,8 +659,8 @@ Builders in `packages/core/src/matribox/write.ts`; tests compare them with the c
 | Footswitch | 10 | `01 00 08 01` + u32 switch (A = 0) + u32 slot + u32 1/0 | Host frames (mb-09), byte-exact; not yet sent by us |
 | Expression assign | 10 | `02 00 07 01` + u32 group + u32 position + u32 slot + u32 param + f32 min + f32 max (range ignored) | Host frame (mb-04), byte-exact; owner's unit ✓ |
 | Expression min / max | 10 | `03 00 07 01` / `04 00 07 01` + u32 group + u32 position + f32 | Host frames (mb-04), byte-exact; owner's unit ✓ |
-| Global setting | 11 | `00 <id> 00 00` + i32 (ids above) | Host frames (mb-30, mb-31, mb-33 … mb-36), byte-exact; not yet checked on the unit |
-| Global EQ value | 16, **flag 2** | u32 word + f32 | Host frames (mb-38, mb-39), byte-exact; not yet checked on the unit |
+| Global setting | 11 | `<index> <id> 00 00` + i32 (ids above) | Host frames (mb-30, mb-31, mb-33 … mb-36), byte-exact; MIDI In USB and Global Tempo from waveod; not yet checked on the unit |
+| Global EQ value | 16, **flag 2** | u32 word + f32 | Host frames (mb-38, mb-39), byte-exact; bands 1, 3, 4 from waveod; not yet checked on the unit |
 | Global EQ switch | 16 | `01 00 00 16` + u32; answered `00 00 00 00` + u32 | Host frames (mb-39), byte-exact; not yet checked on the unit |
 | Whole preset | 10, **flag 2** | u32 index + 1207-byte body (`.prst` tags), paged | Host pages (capture mb-20); answered by cmd `17`; not yet sent by us |
 

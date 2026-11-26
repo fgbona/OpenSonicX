@@ -3,15 +3,21 @@
  * official editor's global settings window (captures mb-30 … mb-39, 2026-11-25).
  *
  * - The general table: flag 0, cmd 0x11, no argument; 52 bytes, one byte per setting.
- * - One setting: flag 1, cmd 0x11, `00 <id> 00 00` + i32 value; the unit echoes it. The unit sends
- *   the same message by itself when the setting changes on the unit (capture 2: Current Mode).
+ * - One setting: flag 1, cmd 0x11, `<index> <id> 00 00` + i32 value; the unit echoes it. The unit sends
+ *   the same message by itself when the setting changes on the unit (capture 2: Current Mode). `<index> <id>`
+ *   is a u16 whose high byte is the setting and low byte its channel (MIDI: 0 In TRS, 1 In USB); index 0
+ *   for the rest. The unit leaves out an answer equal to the one before it within 150 ms (the link's
+ *   timeout covers it).
  * - The global EQ table: flag 0, cmd 0x16, no argument; 31 float32 LE.
  * - One EQ value: flag 2, cmd 0x16, u32 word index into that table + f32; the unit echoes it.
  * - The EQ switch: flag 1, cmd 0x16, `01 00 00 16` + u32 0/1, read with the same argument; the unit
- *   answers both with `00 00 00 00` + u32, not an echo.
+ *   answers both with `00 00 00 00` + u32, not an echo, and answers nothing when it is already so.
  *
- * Only the settings whose write was captured can be written. Builders are byte-exact with the captured
- * host frames (test/fixtures/matribox-globals.txt).
+ * Protocol facts cross-checked against zxmarcos/waveod and zxmarcos/matribox-studio (MIT).
+ * Never send: flag 1 cmd 0x11 `<n> 90 00 00` (deletes clone capture n); flag 0x0E cmd 0x05 (bootloader).
+ *
+ * Builders are byte-exact with the captured host frames (test/fixtures/matribox-globals.txt) where a
+ * write was captured; the others (MIDI In USB, Global Tempo, EQ bands 1, 3, 4) follow the same rules.
  */
 import { buildMbFrame, float32LE, MB_WRITE, readFloat32LE } from './frame.ts';
 import type { MatriboxLink } from './link.ts';
@@ -22,42 +28,53 @@ const EQ_CMD = 0x16;
 export const MB_GENERAL_SIZE = 52;
 export const MB_EQ_SIZE = 124;
 
+/** A writable setting: id and index (the write's second and first byte), its byte in the general table, its range. */
+export interface MbGlobalDef {
+  readonly id: number;
+  readonly index: number;
+  readonly at: number;
+  /** A 16-bit value (bytes `at`, `at + 1`, LE) rather than one byte; signed when `min` is negative. */
+  readonly wide: boolean;
+  readonly min: number;
+  readonly max: number;
+}
+const def = (id: number, at: number, min: number, max: number, index = 0, wide = false): MbGlobalDef => ({ id, index, at, wide, min, max });
+
 /**
- * Each setting whose write was captured: its id (the write's second byte), its byte in the general
- * table and the values it may be written with. MIDI In Source 0 ("TRS Only") is left out: the
- * editor's Control Changes (tuner, tempo) come over USB and would stop.
+ * The settings the editor writes. MIDI In Source 0 ("TRS Only") is left out: the editor's Control
+ * Changes (tuner, tempo) come over USB and would stop.
  */
 export const MB_GLOBALS = {
   /** dB, -20..+20 (manual); +5 captured (mb-30), negatives as two-complement. */
-  inputLevel: { id: 0x21, at: 14, min: -20, max: 20 },
+  inputLevel: def(0x21, 14, -20, 20),
   /**
    * 0..100 (mb-31). Its byte is 47, not 11: both went from their first values to 80 while AUX Level
    * (0 for the owner) and Brightness (the manual's 50) were changed; 47 was the 0.
    */
-  auxLevel: { id: 0x24, at: 47, min: 0, max: 100 },
+  auxLevel: def(0x24, 47, 0, 100),
   /** 0 A.GT, 1 E.GT, 2 Line (the manual's order; 1 and 2 seen). */
-  inputMode: { id: 0x22, at: 15, min: 0, max: 2 },
-  /** Footswitch mode: 0 Preset, 1 Stomp. */
-  currentMode: { id: 0x52, at: 35, min: 0, max: 1 },
-  /** MIDI Input Ch (USB): 0 Omni, 1..16. */
-  midiChannelUsb: { id: 0x61, at: 36, min: 0, max: 16 },
+  inputMode: def(0x22, 15, 0, 2),
+  /** Footswitch mode: 0 Stomp, 1 Preset (mb-33 went Stomp -> Preset with a 1; waveod agrees). */
+  currentMode: def(0x52, 35, 0, 1),
+  /** MIDI input channel on the TRS jack: 0 Omni, 1..16 (i16; mb-34's write `00 61`). */
+  midiInTrs: def(0x61, 36, 0, 16, 0, true),
+  /** MIDI input channel on USB: 0 Omni, 1..16 (i16; `01 61`, not captured). */
+  midiInUsb: def(0x61, 38, 0, 16, 1, true),
   /** MIDI In Source: 0 TRS Only (read only), 1 USB Only, 2 Mixed. */
-  midiSource: { id: 0x62, at: 44, min: 1, max: 2 },
-} as const;
+  midiSource: def(0x62, 44, 1, 2),
+  /** Global Tempo on (1) or off; the unit answers 0 while it has no BPM, and asks on its screen to accept it. */
+  tempoOn: def(0x25, 50, 0, 1),
+  /** Global Tempo BPM, 40..300 (u16; `FF FF` while never set). The unit sends it when it is turned there (mb-37). */
+  tempoBpm: def(0x26, 48, 40, 300, 0, true),
+} satisfies Record<string, MbGlobalDef>;
 export type MbGlobalSetting = keyof typeof MB_GLOBALS;
 
-/**
- * Global Tempo: read, not written (mb-37 holds only the unit's notices, `00 26 00 00` + u32 BPM, sent
- * while the tempo is turned on the unit; no host write). Bytes 48..49 u16 BPM (FFFF while never set), 50 on.
- */
-export const MB_GLOBAL_TEMPO_ID = 0x26;
-const TEMPO_AT = 48;
-const TEMPO_ON_AT = 50;
-const NO_TEMPO = 0xffff;
+/** Byte 11: the screen brightness in percent (read only: the unit takes no write of it). */
+const BRIGHTNESS_AT = 11;
 
 export type MbGlobals = { readonly [K in MbGlobalSetting]: number } & {
-  /** Global Tempo (read only): on, and its BPM (null while never set). */
-  readonly tempo: { readonly on: boolean; readonly bpm: number | null };
+  /** Screen brightness, percent (read only; changed on the unit in mb-32). */
+  readonly brightness: number;
 };
 
 export interface MbEqBand {
@@ -70,9 +87,15 @@ export interface MbEqBand {
 export interface MbGlobalEq {
   /** 0..100. */
   readonly level: number;
+  /** Words 0..2: switch, frequency (19 = off), Q; no gain. */
   readonly lowCut: MbEqBand;
-  /** Bands 1..4. */
+  /** Words 3..6. */
+  readonly lowShelf: MbEqBand;
+  /** Bands 1..4 (words 7..22). */
   readonly bands: readonly MbEqBand[];
+  /** Words 23..26. */
+  readonly highShelf: MbEqBand;
+  /** Words 27..29: switch, frequency (20001 = off), Q; no gain. */
   readonly highCut: MbEqBand;
 }
 
@@ -82,10 +105,11 @@ export interface MbGlobalState {
   readonly eqOn: boolean;
 }
 
-/** Word of the low cut's switch; each group is switch, frequency, Q, gain: low cut, bands 1..4, high cut. */
+/** Words: low cut 0..2, then groups of switch, frequency, Q, gain: low shelf, bands 1..4, high shelf; high cut 27..29. */
 const FIRST_GROUP = 3;
 const GROUP = 4;
 const GAIN = 3;
+const HIGH_CUT = 27;
 const LEVEL_WORD = 30;
 export const MB_EQ_BANDS = 4;
 const GAIN_DB = 20;
@@ -105,16 +129,16 @@ export const mbReadGlobalEq = (): Uint8Array => mbRequest(0, EQ_CMD);
 /** The global EQ switch read. */
 export const mbReadGlobalEqOn = (): Uint8Array => mbRequest(1, EQ_CMD, EQ_SWITCH);
 
-/** One global setting: `00 <id> 00 00` + i32 (captures mb-30, mb-31, mb-33 … mb-36). */
+/** One global setting: `<index> <id> 00 00` + i32 (captures mb-30, mb-31, mb-33 … mb-36). */
 export function mbSetGlobal(setting: MbGlobalSetting, value: number): Uint8Array {
-  const { id, min, max } = MB_GLOBALS[setting];
+  const { id, index, min, max } = MB_GLOBALS[setting];
   if (!Number.isInteger(value) || !inRange(value, min, max)) fail(`${setting} must be an integer ${min}..${max}, got ${value}`);
-  return buildMbFrame(MB_WRITE, wrapMbMessage(1, GENERAL_CMD, [0x00, id, 0x00, 0x00, ...le32(value)]));
+  return buildMbFrame(MB_WRITE, wrapMbMessage(1, GENERAL_CMD, [index, id, 0x00, 0x00, ...le32(value)]));
 }
 
 const eqWrite = (word: number, value: number) => buildMbFrame(MB_WRITE, wrapMbMessage(2, EQ_CMD, [...le32(word), ...float32LE(value)]));
 
-/** The gain of EQ band `band` (0..3 = bands 1..4), -20..+20 dB (capture mb-38: band 2, +3 dB). */
+/** The gain of EQ band `band` (0..3 = bands 1..4, words 10, 14, 18, 22), -20..+20 dB (capture mb-38: band 2, +3 dB). */
 export function mbSetGlobalEqGain(band: number, gain: number): Uint8Array {
   if (!Number.isInteger(band) || !inRange(band, 0, MB_EQ_BANDS - 1)) fail(`EQ band must be 0..${MB_EQ_BANDS - 1}, got ${band}`);
   if (!inRange(gain, -GAIN_DB, GAIN_DB)) fail(`EQ gain must be -${GAIN_DB}..${GAIN_DB} dB, got ${gain}`);
@@ -141,28 +165,29 @@ export function parseMbGlobalEqOn(data: Uint8Array): boolean {
 /** The general table (52 bytes). */
 export function parseMbGlobals(data: Uint8Array): MbGlobals {
   if (data.length !== MB_GENERAL_SIZE) throw new Error(`the global settings table must be ${MB_GENERAL_SIZE} bytes, got ${data.length}`);
-  const byte = (at: number) => data[at] as number;
-  const tempo = byte(TEMPO_AT) | (byte(TEMPO_AT + 1) << 8);
-  return {
-    inputLevel: (byte(MB_GLOBALS.inputLevel.at) << 24) >> 24,
-    auxLevel: byte(MB_GLOBALS.auxLevel.at),
-    inputMode: byte(MB_GLOBALS.inputMode.at),
-    currentMode: byte(MB_GLOBALS.currentMode.at),
-    midiChannelUsb: byte(MB_GLOBALS.midiChannelUsb.at),
-    midiSource: byte(MB_GLOBALS.midiSource.at),
-    tempo: { on: byte(TEMPO_ON_AT) !== 0, bpm: tempo === NO_TEMPO ? null : tempo },
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  const value = ({ at, wide, min }: MbGlobalDef) => {
+    if (wide) return min < 0 ? view.getInt16(at, true) : view.getUint16(at, true);
+    return min < 0 ? view.getInt8(at) : view.getUint8(at);
   };
+  const settings = Object.fromEntries(Object.entries(MB_GLOBALS).map(([name, d]) => [name, value(d)])) as { [K in MbGlobalSetting]: number };
+  return { ...settings, brightness: data[BRIGHTNESS_AT] as number };
 }
 
 /** The global EQ table (124 bytes). */
 export function parseMbGlobalEq(data: Uint8Array): MbGlobalEq {
   if (data.length !== MB_EQ_SIZE) throw new Error(`the global EQ table must be ${MB_EQ_SIZE} bytes, got ${data.length}`);
   const word = (i: number) => readFloat32LE(data, i * 4);
-  const group = (g: number): MbEqBand => {
-    const at = FIRST_GROUP + g * GROUP;
-    return { on: word(at) !== 0, frequency: word(at + 1), q: word(at + 2), gain: word(at + GAIN) };
+  const band = (at: number, gain: boolean): MbEqBand => ({ on: word(at) !== 0, frequency: word(at + 1), q: word(at + 2), gain: gain ? word(at + GAIN) : 0 });
+  const group = (g: number) => band(FIRST_GROUP + g * GROUP, true);
+  return {
+    level: word(LEVEL_WORD),
+    lowCut: band(0, false),
+    lowShelf: group(0),
+    bands: Array.from({ length: MB_EQ_BANDS }, (_, i) => group(i + 1)),
+    highShelf: group(MB_EQ_BANDS + 1),
+    highCut: band(HIGH_CUT, false),
   };
-  return { level: word(LEVEL_WORD), lowCut: group(0), bands: Array.from({ length: MB_EQ_BANDS }, (_, i) => group(i + 1)), highCut: group(MB_EQ_BANDS + 1) };
 }
 
 /** The three global reads, as the official editor sends them on connect. */
@@ -173,7 +198,11 @@ export async function mbReadGlobalState(link: MatriboxLink): Promise<MbGlobalSta
   return { general, eq, eqOn };
 }
 
-/** Switches the global EQ and checks the unit's answer holds the new state. */
+/**
+ * Switches the global EQ and checks the unit's answer holds the new state. The unit answers nothing
+ * when the switch is already in that state, so it is read first and left alone then.
+ */
 export async function mbWriteGlobalEqOn(link: MatriboxLink, on: boolean): Promise<void> {
+  if (parseMbGlobalEqOn(await link.ask(mbReadGlobalEqOn(), isEqOnAnswer)) === on) return;
   if (parseMbGlobalEqOn(await link.ask(mbSetGlobalEqOn(on), isEqOnAnswer)) !== on) throw new Error(`the Matribox did not switch the global EQ ${on ? 'on' : 'off'}`);
 }
