@@ -48,7 +48,11 @@ export function mbCloneUploadData(slot: number, name: string, clo: Uint8Array): 
   const data = new Uint8Array(32 + clo.length);
   const view = new DataView(data.buffer);
   view.setUint32(0, slot, true);
-  view.setUint32(8, clo.reduce((sum, b) => sum + b, 0), true);
+  view.setUint32(
+    8,
+    clo.reduce((sum, b) => sum + b, 0),
+    true,
+  );
   data.set(nameField(name), 12);
   data.set(clo, 32);
   return data;

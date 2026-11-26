@@ -351,7 +351,7 @@ function receptiveField(model: Wavenet): number {
  * NeuralAmpModelerCore's prewarm, the model first hears a receptive field of silence, so its
  * output starts settled instead of with the start-up transient of an all-zero state.
  */
-export function runWavenetBlocks(x: Float64Array, model: Wavenet, block = 1 << 18): Float64Array {
+export function runWavenetBlocks(x: Float64Array, model: Wavenet, block = 1 << 18, onBlock?: (done: number, total: number) => void): Float64Array {
   const warm = receptiveField(model);
   const padded = new Float64Array(warm + x.length);
   padded.set(x, warm);
@@ -359,6 +359,7 @@ export function runWavenetBlocks(x: Float64Array, model: Wavenet, block = 1 << 1
   for (let at = 0; at < x.length; at += block) {
     const end = Math.min(x.length, at + block);
     out.set(runWavenet(padded.slice(at, warm + end), model).subarray(warm), at);
+    onBlock?.(end, x.length);
   }
   return out;
 }
@@ -375,9 +376,9 @@ export function diAtRate(di44100: Float32Array, fs: number): Float64Array {
 }
 
 /** The model's output x 0.31, kept at 16 bits as the editor's WAV. */
-export function renderTarget(model: Wavenet, di: Float64Array): Float64Array {
+export function renderTarget(model: Wavenet, di: Float64Array, onBlock?: (done: number, total: number) => void): Float64Array {
   const gain = f32(MODEL_OUTPUT_GAIN);
-  return runWavenetBlocks(di, model).map((v) => lround(clamp1(f32(f32(v) * gain)) * 32767) / 32768);
+  return runWavenetBlocks(di, model, 1 << 18, onBlock).map((v) => lround(clamp1(f32(f32(v) * gain)) * 32767) / 32768);
 }
 
 /** An IR at `fs` resampled to the device's 44.1 kHz, `taps` long. */
@@ -401,10 +402,19 @@ export function startCloneArrays(r: StartCloneResult, fs: number): CloArrays {
   };
 }
 
-/** The whole Matribox conversion: .nam text and the 70 s reference DI (float32, 44.1 kHz) -> .clo arrays. */
-export function generateMatriboxClo(namJson: string, di44100: Float32Array): CloArrays {
+/** Share of the conversion the model run takes; the fit is the rest (about 2 s of ~35). */
+const MODEL_SHARE = 0.94;
+
+/**
+ * The whole Matribox conversion: .nam text and the 70 s reference DI (float32, 44.1 kHz) -> .clo
+ * arrays. `onProgress` gets the share done, 0..1, as the model runs and once the fit is done.
+ */
+export function generateMatriboxClo(namJson: string, di44100: Float32Array, onProgress?: (fraction: number) => void): CloArrays {
   const model = parseNam(namJson);
   const fs = model.sampleRate ?? 48000;
   const x = diAtRate(di44100, fs);
-  return startCloneArrays(startClone(x, renderTarget(model, x), fs), fs);
+  const y = renderTarget(model, x, (done, total) => onProgress?.((MODEL_SHARE * done) / total));
+  const arrays = startCloneArrays(startClone(x, y, fs), fs);
+  onProgress?.(1);
+  return arrays;
 }

@@ -23,7 +23,6 @@ const firMag = (h: readonly number[], bins: number) =>
     return Math.hypot(re, im);
   });
 
-
 test('IIR 2 at 48 kHz is the 40 Hz high-pass every .clo carries', () => {
   const q = hpf40(48000);
   [q.b0, q.b1, q.b2, q.a1, q.a2].forEach((c, i) => close(c, CLO_BIQUAD[i]!, 1e-9, `coefficient ${i}`));
@@ -152,7 +151,6 @@ test('parseNam reads sample_rate and refuses a nonsense one', () => {
   assert.equal(parseNam(JSON.stringify(noRate)).sampleRate, 48000);
   assert.throws(() => parseNam(JSON.stringify({ ...json, sample_rate: 'fast' })), /sample_rate/);
 });
-
 
 test('startClone recovers a clone chain it is fitted to', { timeout: 120_000 }, () => {
   const fs = 16000;

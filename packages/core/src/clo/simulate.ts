@@ -10,6 +10,8 @@
  * convolution at unity gain) and JavaScript has no fused multiply-add. Checked against waveod's C
  * block on a random capture and a noise DI: the difference is 98 dB under the output.
  */
+import { syntheticDi } from './synthetic-di.ts';
+
 const STORED = 0x2000;
 const BLOCK = 64;
 const IR2_MAX = 1024;
@@ -138,11 +140,26 @@ export interface CloCheck {
 }
 
 const SILENT_DB = -70;
-const CLIP_PEAK = 1;
+/**
+ * The block computes in float, so a peak over 1 is not broken by itself: the official editor's
+ * capture of 5 RECTIFIER peaks at 1.35 on the reference DI's noise sections and 0.82 (-13.5 dB RMS)
+ * on its guitar. Refused: a sustained level near full scale, or peaks 12 dB over it.
+ */
+const LOUD_DB = -3;
+const CLIP_PEAK = 4;
+
+/**
+ * The probe checkClo is meant for: 3 s of the synthetic DI at a quarter of its level (peaks of
+ * -12 dBFS, like a guitar's). The official 5 RECTIFIER capture plays it at -13.9 dB RMS, as it
+ * plays the reference DI's guitar section (-13.5 dB), so no 12 MB download is needed to check.
+ */
+export function cloProbe(): Float32Array {
+  return syntheticDi(3 * 44100).map((v) => v * 0.25);
+}
 
 /**
  * A sanity check of a conversion before it is uploaded: the CLONE block simulated on `probe` (a DI
- * at a guitar's level, 44.1 kHz) must not be silent, clip or produce NaN.
+ * at a guitar's level, 44.1 kHz: cloProbe) must not be silent, far too loud or produce NaN.
  */
 export function checkClo(clo: Uint8Array, probe: Float32Array): CloCheck {
   const y = simulateClo(clo, probe);
@@ -155,6 +172,6 @@ export function checkClo(clo: Uint8Array, probe: Float32Array): CloCheck {
   const rmsDb = 10 * Math.log10(energy / Math.max(1, y.length) + 1e-30);
   if (!Number.isFinite(energy)) return { ok: false, rmsDb, peak, problem: 'broken' };
   if (rmsDb < SILENT_DB) return { ok: false, rmsDb, peak, problem: 'silent' };
-  if (peak >= CLIP_PEAK) return { ok: false, rmsDb, peak, problem: 'clipped' };
+  if (peak > CLIP_PEAK || rmsDb > LOUD_DB) return { ok: false, rmsDb, peak, problem: 'clipped' };
   return { ok: true, rmsDb, peak };
 }

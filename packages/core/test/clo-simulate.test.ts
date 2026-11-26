@@ -9,7 +9,7 @@ import { encodeClo } from '../src/clo/codec.ts';
 import { Fft } from '../src/clo/fft.ts';
 import { parseNam } from '../src/clo/nam.ts';
 import { resample } from '../src/clo/resample.ts';
-import { checkClo, simulateClo } from '../src/clo/simulate.ts';
+import { checkClo, cloProbe, simulateClo } from '../src/clo/simulate.ts';
 import { diAtRate, generateMatriboxClo, renderTarget } from '../src/clo/startclone.ts';
 import { noise, sectionsDi } from './clo-sections-di.ts';
 
@@ -70,7 +70,10 @@ test('the Matribox conversion of ref_input.nam plays like the model through the 
   const namJson = readFileSync(new URL('./fixtures/clo/ref_input.nam', import.meta.url), 'utf8');
   const model = parseNam(namJson);
   const fs = model.sampleRate ?? 48000;
-  const clo = encodeClo(generateMatriboxClo(namJson, Float32Array.from(sectionsDi(44100))));
+  const progress: number[] = [];
+  const clo = encodeClo(generateMatriboxClo(namJson, Float32Array.from(sectionsDi(44100)), (f) => progress.push(f)));
+  assert.ok(progress.length > 2 && progress.every((f, i) => f > (progress[i - 1] ?? 0)), `progress ${progress}`);
+  assert.equal(progress.at(-1), 1);
   // a short synthetic DI at a guitar's level, 44.1 kHz
   const di = Float32Array.from(noise(44100, 0.05, 7));
   const played = simulateClo(clo, di);
@@ -85,5 +88,5 @@ test('the Matribox conversion of ref_input.nam plays like the model through the 
   // loose: the fit is judged on the reference DI's sections, this DI is plain noise (measured: +0.2 .. +5.3 dB, the bass high)
   for (const [f, d] of diffs) assert.ok(Math.abs(d) < 6, `${f} Hz: ${d.toFixed(1)} dB off the level`);
   assert.ok(Math.abs(level) < 3, `level ${level.toFixed(2)} dB`);
-  assert.equal(checkClo(clo, di).ok, true);
+  assert.equal(checkClo(clo, cloProbe()).ok, true);
 });

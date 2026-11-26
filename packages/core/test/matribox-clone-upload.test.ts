@@ -11,16 +11,23 @@ import { matriboxLink } from '../src/matribox/link.ts';
 import { unwrapMbMessage } from '../src/matribox/message.ts';
 import { FakeMatribox } from './fake-matribox.ts';
 
-const clo = encodeClo({ arrayA: Float32Array.from({ length: 128 }, (_, i) => (i === 0 ? 0.5 : 0)), arrayB: Float32Array.from({ length: 2048 }, (_, i) => 0.9 ** i), gains: [0.0858, 0.0863, 747, 753] });
+const clo = encodeClo({
+  arrayA: Float32Array.from({ length: 128 }, (_, i) => (i === 0 ? 0.5 : 0)),
+  arrayB: Float32Array.from({ length: 2048 }, (_, i) => 0.9 ** i),
+  gains: [0.0858, 0.0863, 747, 753],
+});
 const link = (fake: FakeMatribox) => matriboxLink({ send: (b) => fake.send(b), listen: (r) => fake.listen(r ?? (() => undefined)) }, 1000);
 const u32 = (d: Uint8Array, at: number) => new DataView(d.buffer, d.byteOffset).getUint32(at, true);
 
-test('the upload is mb-19\'s layout: slot, 0, byte sum of the .clo, 20-byte name, the .clo; 49 pages of flag 1 cmd 0x18', () => {
+test("the upload is mb-19's layout: slot, 0, byte sum of the .clo, 20-byte name, the .clo; 49 pages of flag 1 cmd 0x18", () => {
   const data = mbCloneUploadData(9, '5 RECTIFIER', clo);
   assert.equal(data.length, 8872);
   assert.equal(u32(data, 0), 9);
   assert.equal(u32(data, 4), 0);
-  assert.equal(u32(data, 8), clo.reduce((s, b) => s + b, 0));
+  assert.equal(
+    u32(data, 8),
+    clo.reduce((s, b) => s + b, 0),
+  );
   assert.equal(new TextDecoder().decode(data.subarray(12, 32)).replace(/\0+$/, ''), '5 RECTIFIER');
   assert.deepEqual(data.subarray(32), clo);
   const frames = mbCloneUpload(9, '5 RECTIFIER', clo);
@@ -36,7 +43,7 @@ test('slot, name and .clo are checked before anything is built', () => {
   assert.throws(() => mbCloneUploadData(0, 'x'.repeat(17), clo), /name/);
   assert.throws(() => mbCloneUploadData(0, 'a', clo.slice(0, 100)), /8840/);
   const bad = clo.slice();
-  bad[700] ^= 1;
+  bad[700] = (bad[700] ?? 0) ^ 1;
   assert.throws(() => mbCloneUploadData(0, 'a', bad), /CRC/);
   assert.throws(() => mbRenameClone(-1, 'a'), /slot/);
 });
