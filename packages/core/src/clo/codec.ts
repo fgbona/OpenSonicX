@@ -16,13 +16,16 @@ const MAGIC = 0x49535456; // 'VTSI'
 const HEADER = 136;
 const ARRAY_A = 128;
 const ARRAY_B = 2048;
-/** The pedal runs only the first 512 taps of arrayB; the upload carries just those. */
+/**
+ * The Pocket Master runs only the first 512 taps of arrayB, so its profile upload carries just
+ * those. (The Matribox II Pro plays 1024 of the 2048 a .clo stores and takes the whole file.)
+ */
 export const UPLOAD_ARRAY_B_TAPS = 512;
 const BIQUAD_AT = 64;
 const GAINS_AT = 104;
 const ARRAY_A_AT = 136;
 const ARRAY_B_AT = 648;
-/** The fixed DC-block high-pass every .clo carries (b0, b1, b2, a1, a2). */
+/** The DC-block high-pass a .clo carries (b0, b1, b2, a1, a2): 40 Hz Butterworth at 48 kHz. */
 export const CLO_BIQUAD = [0.9963043928146362, -1.9926087856292725, 0.9963043928146362, -1.9925950765609741, 0.9926224946975708] as const;
 
 export const PROFILE_SLOTS = 5;
@@ -49,7 +52,7 @@ export function encodeClo(arrays: CloArrays, arrayBTaps: number = ARRAY_B): Uint
   v.setUint32(4, size, true);
   v.setUint32(20, size - HEADER, true);
   v.setFloat64(24, 1, true);
-  CLO_BIQUAD.forEach((c, i) => v.setFloat64(BIQUAD_AT + 8 * i, c, true));
+  (arrays.biquad ?? CLO_BIQUAD).forEach((c, i) => v.setFloat64(BIQUAD_AT + 8 * i, c, true));
   arrays.gains.forEach((g, i) => v.setFloat32(GAINS_AT + 4 * i, g, true));
   v.setUint32(124, ARRAY_A, true);
   v.setUint32(128, ARRAY_A, true);
