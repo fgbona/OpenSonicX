@@ -33,6 +33,7 @@ import {
   MB_READ,
   MB_BIG_MEMORY_MAX,
   MB_WRITE,
+  mbAssignments,
   mbDspLoad,
   mbReadCloneNames,
   mbReadIrNames,
@@ -40,6 +41,7 @@ import {
   mbReadPresetNames,
   type MbGlobalSetting,
   parseMbFrame,
+  parseMbPreset,
   toHex,
   unwrapMbMessage,
   wrapMbMessage,
@@ -350,6 +352,7 @@ export class FakeMatribox {
     if (flag === 0 && cmd === 0x16 && arg.length === 0) return answer(this.#eq);
     if (flag === 1 && cmd === 0x16 && argHex === EQ_SWITCH) return answer([0, 0, 0, 0, this.#eqOn ? 1 : 0, 0, 0, 0]);
     if (flag === 1 && cmd === 0x10 && argHex === '01000a01') return answer([...arg, ...[this.#current, 0, 0, 0]]);
+    if (flag === 1 && cmd === 0x10 && argHex === '03000501') return answer([...arg, mbAssignments(parseMbPreset(this.#edit)).volume, 0, 0, 0]);
     if (flag === 0 && cmd === 0x10 && arg.length === 4) {
       const number = u32(arg, 0);
       if (number >= 240) return null;
