@@ -31,6 +31,8 @@ import type { MessageKey } from '@/lib/i18n';
 import { Changes, DIFF_KEY } from './PresetFiles';
 import { PaidProviders } from './PaidProviders';
 import { AnswerOrder } from './AnswerOrder';
+import { Markdown } from './Markdown';
+import { AssistantBusy } from './AssistantBusy';
 import { InfoTip } from './InfoTip';
 import { useI18n } from './I18n';
 
@@ -256,6 +258,8 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
   // Where the text goes: the providers with a key, by name (all of them before any key is set up).
   const withKey = (Object.keys(allKeys) as Provider[]).map((p) => providerName(p, t('assistant.paidTag')));
   const providers = (withKey.length > 0 ? withKey : [...Object.values(FREE_NAME), ...PAID.map((p) => p.name)]).join(', ');
+  // Google's free-plan training note only applies when a Gemini key is in play (or none is set up yet).
+  const googleNote = withKey.length === 0 || 'gemini' in allKeys ? ` ${t('assistant.privacyGemini')}` : '';
   /** Each provider's own usage page: the free ones', then the paid ones' (spend and limits). */
   const usageLinks = [
     ...SETUP.filter((s) => keys[s.provider]).map((s) => ({ provider: s.provider as Provider, href: s.usage })),
@@ -481,7 +485,10 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
                 </button>
               )}
             </div>
-            <p className="muted small">{t(privacy, { providers })}</p>
+            <p className="muted small">
+              {t(privacy, { providers })}
+              {googleNote}
+            </p>
           </>
         ) : (
           <>
@@ -506,8 +513,8 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
             <ol ref={list} className="assistant-messages" aria-live="polite">
               {messages.map((m, i) => (
                 <li key={i} className={`assistant-message is-${m.role}`}>
-                  <p>
-                    {m.text}
+                  <div>
+                    {m.role === 'assistant' ? <Markdown text={m.text} /> : m.text}
                     {m.link && (
                       <>
                         {' '}
@@ -516,7 +523,7 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
                         </a>
                       </>
                     )}
-                  </p>
+                  </div>
                   {m.changes && m.changes.length > 0 && <Changes differences={m.changes} label={label} title={t('assistant.changes')} />}
                   {m.role === 'assistant' && m.changes?.length === 0 && <p className="muted small">{t('assistant.noChanges')}</p>}
                   {m.model && (
@@ -528,7 +535,7 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
               ))}
               {working && (
                 <li className="assistant-message is-assistant">
-                  <p className="muted">{t('assistant.thinking')}</p>
+                  <AssistantBusy />
                 </li>
               )}
             </ol>
@@ -561,7 +568,10 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
                 </span>
               ))}
             </p>
-            <p className="muted small">{t(privacy, { providers })}</p>
+            <p className="muted small">
+              {t(privacy, { providers })}
+              {googleNote}
+            </p>
           </>
         )}
       </div>

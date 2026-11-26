@@ -493,3 +493,49 @@ test('keys can be kept for this session only, and all forgotten at once', async 
   expect(await stored()).toEqual([null, false]);
   await expect(geminiSetup(page).getByLabel('Gemini API key')).toBeVisible();
 });
+
+for (const reduced of [false, true]) {
+  test(`while the assistant works a status bubble shows a turning dial (${reduced ? 'reduced motion' : 'normal motion'}) and goes away with the answer`, async ({ page, pedal }) => {
+    await page.emulateMedia({ reducedMotion: reduced ? 'reduce' : 'no-preference' });
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    await page.route('https://generativelanguage.googleapis.com/**', async (route: Route) => {
+      if (route.request().url().includes('/models')) return route.fulfill({ json: { models: [] } });
+      await gate;
+      return route.fulfill({ json: say('Done.').body });
+    });
+    await connect(page, pedal);
+    await addKey(page);
+    await ask(page, 'anything');
+    const busy = panel(page).getByRole('status').filter({ hasText: 'Working on it…' });
+    await expect(busy).toBeVisible();
+    const dial = busy.locator('svg.assistant-busy-dial');
+    await expect(dial).toHaveAttribute('aria-hidden', 'true');
+    const animation = () => dial.evaluate((el) => getComputedStyle(el).animationName);
+    expect(await animation()).toBe(reduced ? 'busy-pulse' : 'spin');
+    await expect(busy.getByText(/^\d+ s$/)).toBeVisible({ timeout: 6000 });
+    release();
+    await expect(panel(page).getByText('Done.')).toBeVisible();
+    await expect(busy).toBeHidden();
+  });
+}
+
+test('replies render bold and lists instead of raw Markdown, and never as HTML', async ({ page, pedal }) => {
+  await fakeGemini(page, [say('**Amp:** Calif DualM\n- Gain 70\n- Bass 40\n<img src=x onerror=alert(1)>')]);
+  await connect(page, pedal);
+  await addKey(page);
+  await ask(page, 'hi');
+  const reply = panel(page).locator('.assistant-message.is-assistant .md');
+  await expect(reply.locator('strong')).toHaveText('Amp:');
+  await expect(reply.locator('li')).toHaveText(['Gain 70', 'Bass 40']);
+  await expect(reply.locator('img')).toHaveCount(0);
+  await expect(reply).toContainText('<img src=x onerror=alert(1)>');
+});
+
+test('the Gemini free-plan privacy sentence only shows when a Google key is in play', async ({ page, pedal }) => {
+  await fakeGroq(page, []);
+  await connect(page, pedal);
+  await expect(panel(page).locator('p.muted.small', { hasText: 'go to the provider of your key' })).toContainText("On Gemini's free plan");
+  await addGroqKey(page);
+  await expect(panel(page).locator('p.muted.small', { hasText: 'go to the provider of your key' })).not.toContainText('Gemini');
+});
