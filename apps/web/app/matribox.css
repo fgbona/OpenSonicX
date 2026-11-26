@@ -24,7 +24,11 @@
 /* Estimated DSP load under the chain: a quiet line, orange near the limit, red past it. */
 .mb-dsp { display: flex; flex-direction: column; gap: 6px; }
 .mb-dsp-load { display: flex; align-items: center; gap: 10px; color: var(--label-2); font-size: 0.8125rem; }
-.mb-dsp-load meter { flex: 1; max-width: 240px; height: 8px; }
+.mb-dsp-bar { flex: 1; max-width: 240px; height: 8px; border-radius: 4px; background: var(--fill-3, rgba(127, 127, 127, 0.25)); overflow: hidden; }
+.mb-dsp-fill { display: block; height: 100%; border-radius: inherit; background: var(--green); transition: width 0.2s ease; }
+.mb-dsp-high .mb-dsp-fill { background: var(--orange); }
+.mb-dsp-over .mb-dsp-fill { background: var(--red); }
+@media (prefers-reduced-motion: reduce) { .mb-dsp-fill { transition: none; } }
 .mb-dsp-high { color: var(--orange); }
 .mb-dsp-over { color: var(--red); font-weight: 600; }
 .mb-dsp-warning { margin: 0; color: var(--label-2); font-size: 0.8125rem; }
