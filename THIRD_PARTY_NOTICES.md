@@ -6,7 +6,9 @@ https://github.com/zxmarcos/waveod (a reimplemented Matribox II Pro firmware) an
 https://github.com/zxmarcos/matribox-studio (an editor and SDK for the unit). Used here: protocol
 facts cross-checked against them (docs/matribox.md) and the DSP figures behind the estimated DSP
 load (`packages/core/src/matribox/dsp-load.ts`: the overload rule, the chain budget, the measured
-costs of the stock Cab/IR, Clone and amps, the memory rule). Both are under this license:
+costs of the stock Cab/IR, Clone and amps, the memory rule), and the layout of the preset's assignment
+sections and the writes of footswitch functions and quick knobs (`packages/core/src/matribox/write.ts`,
+`assignments.ts`). Both are under this license:
 
 MIT License
 

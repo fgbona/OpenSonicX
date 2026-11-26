@@ -8,6 +8,21 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Matribox II Pro: the AI tone assistant (web and the desktop AI connection) can make a tone
+  live-ready. New tools `get_controls` and `set_controls` (footswitch toggling a block, footswitch
+  function, CTRL 1-4 membership, expression-pedal entry with heel/toe %, quick knob on a parameter,
+  BPM or the patch volume), every change checked before anything is sent (footswitch A..D, CTRL
+  1..4, knob 1..3, entry 1..9, block and parameter names, min <= max). MCP: new
+  `matribox_assign_ctrl`, `matribox_set_footswitch_function`, `matribox_assign_quick_knob`;
+  `matribox_get_assignments` also lists footswitch functions, CTRL groups and quick knobs.
+- Matribox II Pro editor: the footswitch panel is now **Footswitches and CTRL** (what each
+  footswitch runs in stomp mode, and the blocks in CTRL 1-4), and a new **Quick knobs** panel.
+- Core: `mbAssignments` decodes sections 2 (quick knobs), 3 (stomp-mode footswitch functions) and
+  8 as CTRL 1-4; new writes `mbSetFootswitchFunction` (`01/02 00 03 01`), `mbAssignQuickKnob`
+  (`01 00 02 01` target, `02 00 02 01` parameter), `mbFootswitchToggleWrites`,
+  `mbAssignmentsText`, `MB_FS_FUNCTIONS`. Layouts and writes from zxmarcos/waveod's reimplemented
+  firmware (MIT, see THIRD_PARTY_NOTICES.md); not captured from the official editor nor checked on
+  the owner's unit yet. The simulated unit takes them.
 - Matribox II Pro: **NAM -> clone (.clo) conversion the official editor's way** (core
   `generateMatriboxClo`, `packages/core/src/clo/startclone.ts`), a TypeScript port of waveod's
   reconstruction of the editor's `HTKPA::startClone` (github.com/zxmarcos/waveod, MIT, Marcos
@@ -147,6 +162,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Matribox II Pro, core: `mbAssignFootswitch` is now `mbAssignCtrl` (same bytes): section 8 holds
+  CTRL groups, which footswitches A-D run by default (FS A = CTRL 1). `MbAssignments.footswitches`
+  now holds each switch's press/hold function; the slots are in `ctrl`.
+  `matribox_assign_footswitch` goes through the CTRL the switch runs (a switch on another
+  function is set to its own CTRL first). `mbExpressionWrites` refuses min above max.
 - Matribox II Pro: the model catalog is built in, in the web app, the PWA, the desktop app and the
   MCP server; nothing has to be installed, picked or loaded. Core exports `MB_CATALOG`, built from
   `packages/core/src/matribox/models.json` (our clean functional map: module and model ids, our
