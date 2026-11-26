@@ -21,11 +21,13 @@ import {
   mbSetGlobalEqGain,
   mbSetGlobalEqLevel,
   mbSetPatchVolume,
+  mbUploadClone,
   mbWriteGlobalEqOn,
   parseMbPreset,
   withMbVolume,
   type MatriboxLink,
   type MbBackupAll,
+  type MbCloneStep,
   type MbExpressionAssignment,
   type MbGlobalSetting,
   type MbGlobalState,
@@ -420,9 +422,23 @@ export function useMatribox(port: MidiPort | null) {
     [run, track, settle],
   );
 
+  /**
+   * Writes a .clo into CLONE slot `slot` (0-based) under `name`, checked by the unit's answer and the
+   * names read back; overwriting cannot be undone (callers confirm first). False when it failed.
+   */
+  const uploadClone = useCallback(
+    (slot: number, clo: Uint8Array, name: string, onProgress?: (step: MbCloneStep) => void) =>
+      run('Uploading', async (unit) => {
+        const cloneNames = await mbUploadClone(unit, slot, clo, { name, onProgress });
+        setState((s) => (s.unit ? { ...s, unit: { ...s.unit, cloneNames } } : s));
+      }),
+    [run],
+  );
+
   return {
     ...state,
     refresh,
+    uploadClone,
     select,
     setParam,
     setOn,

@@ -123,7 +123,10 @@ waveod (https://github.com/zxmarcos/waveod) reconstructs how the official Valeto
 fits a NAM capture to the clone engine (tools/clonefit/clonefit.cpp and docs/clone_fit.md, its
 reading of HTKPA::startClone). That fit and its DSP helpers are ported to TypeScript in
 packages/core/src/clo/startclone.ts and startclone-dsp.ts (the Matribox II Pro conversion). Its
-license:
+rebuild of the firmware's CLONE block (src/blocks/clone/clone.c) is ported, not bit for bit, in
+packages/core/src/clo/simulate.ts, and its notes on the clone upload and rename messages
+(src/editor/media_msgs.c, studio/waveod_studio/protocol.py) are used in
+packages/core/src/matribox/clone.ts. Its license:
 
 MIT License
 

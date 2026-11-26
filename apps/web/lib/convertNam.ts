@@ -3,7 +3,7 @@
  * workers, then the fit in one more. The reference DI is downloaded from SonicMaster once, kept in
  * Cache Storage, and checked by SHA-256 every time it is used.
  */
-import { parseNam, parseReferenceDi, PROBE_LEVELS, REFERENCE_DI, type CloArrays } from '@pocket-master/core';
+import { decodeClo, parseNam, parseReferenceDi, PROBE_LEVELS, REFERENCE_DI, type CloArrays, type CloCheck } from '@pocket-master/core';
 
 const CACHE = 'pocket-master-reference-di-v1';
 
@@ -35,10 +35,12 @@ function stopAll(): void {
   running.clear();
 }
 
+// Built from lib/convert.worker.ts by `npm run build:worker` (Turbopack does not bundle workers).
+const newWorker = () => new Worker(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/convert-worker.js`, { type: 'module' });
+
 function runJob<T>(message: unknown, transfer: Transferable[] = []): Promise<T> {
   return new Promise((resolve, reject) => {
-    // Built from lib/convert.worker.ts by `npm run build:worker` (Turbopack does not bundle workers).
-    const worker = new Worker(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/convert-worker.js`, { type: 'module' });
+    const worker = newWorker();
     running.add(worker);
     worker.onmessage = (e: MessageEvent<{ ok: boolean; error?: string } & T>) => {
       worker.terminate();
@@ -77,4 +79,72 @@ export async function convertNam(namJson: string, onStage?: (s: ConvertStage) =>
   onStage?.({ stage: 'fit' });
   const { arrays } = await runJob<{ arrays: CloArrays }>({ kind: 'finish', di48, responses });
   return arrays;
+}
+
+export interface MatriboxClone {
+  /** The .clo to upload (8840 bytes). */
+  readonly clo: Uint8Array;
+  /** The simulated CLONE block on the reference DI's guitar: silent, far too loud or broken is refused. */
+  readonly check: CloCheck;
+}
+
+export class ConversionCancelled extends Error {
+  constructor() {
+    super('Conversion cancelled.');
+  }
+}
+
+/** One Matribox job in its own worker: progress messages until the result; `signal` terminates it. */
+function runMatriboxJob(
+  message: { kind: 'matribox' | 'check' } & Record<string, unknown>,
+  onProgress?: (fraction: number) => void,
+  signal?: AbortSignal,
+): Promise<{ clo?: Uint8Array; check: CloCheck }> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(new ConversionCancelled());
+    const worker = newWorker();
+    const stop = () => {
+      worker.terminate();
+      reject(new ConversionCancelled());
+    };
+    signal?.addEventListener('abort', stop, { once: true });
+    const done = () => {
+      worker.terminate();
+      signal?.removeEventListener('abort', stop);
+    };
+    worker.onmessage = (e: MessageEvent<{ progress?: number; ok?: boolean; error?: string; clo?: Uint8Array; check: CloCheck }>) => {
+      if (e.data.progress !== undefined) return onProgress?.(e.data.progress);
+      done();
+      if (e.data.ok) resolve(e.data);
+      else reject(new Error(e.data.error ?? 'conversion failed'));
+    };
+    worker.onerror = (e) => {
+      done();
+      reject(new Error(e.message || 'conversion worker failed'));
+    };
+    worker.postMessage(message);
+  });
+}
+
+/**
+ * .nam JSON -> a Matribox CLONE capture the official editor's way (generateMatriboxClo, about 35 s
+ * off the main thread), checked through the simulated CLONE block. `onStage` reports the download
+ * and the conversion's share done; aborting `signal` stops the worker.
+ */
+export async function convertNamForMatribox(namJson: string, onStage?: (s: { stage: 'download' } | { stage: 'convert'; fraction: number }) => void, signal?: AbortSignal): Promise<MatriboxClone> {
+  parseNam(namJson); // refuse unsupported captures before downloading 12 MB
+  onStage?.({ stage: 'download' });
+  const di = await referenceDi();
+  if (signal?.aborted) throw new ConversionCancelled();
+  onStage?.({ stage: 'convert', fraction: 0 });
+  const { clo, check } = await runMatriboxJob({ kind: 'matribox', namJson, di }, (fraction) => onStage?.({ stage: 'convert', fraction }), signal);
+  if (!clo) throw new Error('the conversion gave no capture');
+  return { clo, check };
+}
+
+/** A .clo file checked (size, magic, CRC), then played through the simulated CLONE block in a worker. */
+export async function checkCloFile(clo: Uint8Array, signal?: AbortSignal): Promise<MatriboxClone> {
+  decodeClo(clo);
+  const { check } = await runMatriboxJob({ kind: 'check', clo }, undefined, signal);
+  return { clo, check };
 }

@@ -5,7 +5,7 @@
  * by the unit's echo (same flag, cmd and data), except a chain edit (01/02 00 04 01: add, move,
  * remove, change model), which the unit answers with its chain notice (00 00 04 01 + the new chain).
  * The whole-preset write (flag 2, paged: mbWritePreset) is answered with flag 0, cmd 0x17,
- * `02 00 00 10` (capture mb-20); a user IR upload (flag 1, cmd 0x14, paged: mbIrUpload) with
+ * `02 00 00 10` (capture mb-20); a user IR or clone upload (flag 1, cmd 0x14 / 0x18, paged: mbIrUpload, mbCloneUpload) with
  * flag 3, the same cmd, `slot, status, 0`. A save gets no answer: send it with post and check it by reading the slot back. A MIDI Control
  * Change (control) gets none either. Anything else
  * the unit sends meanwhile, or while no request runs, goes to the `onNotice` handler when it is a
@@ -28,8 +28,9 @@ export interface MatriboxLink {
   /**
    * Sends the pages of an upload (mbIrUpload: flag 1, cmd 0x14) and resolves with the unit's
    * acknowledgement: flag 3, the same cmd, `u32 slot, u32 status, u32 0` (status 1 = stored).
+   * `timeoutMs` overrides the link's for this upload (a clone capture takes the unit longer to store).
    */
-  upload(frames: readonly Uint8Array[]): Promise<Uint8Array>;
+  upload(frames: readonly Uint8Array[], timeoutMs?: number): Promise<Uint8Array>;
   /**
    * Sends a read or write frame whose answer does not repeat it, and resolves with the data of the
    * first message of its flag and cmd that `accepts` takes: the argument-less global tables (told
@@ -105,7 +106,7 @@ export function matriboxLink(port: MidiPort, timeoutMs: number = MATRIBOX_TIMEOU
   };
   const listenIdle = () => port.listen(noticeHandler ? idle : null);
   /** Sends `frames` and resolves with the data of the first message `answer` takes. */
-  const exchange = async (frames: readonly Uint8Array[], answer: Answer, what: string, noAnswer: string): Promise<Uint8Array> => {
+  const exchange = async (frames: readonly Uint8Array[], answer: Answer, what: string, noAnswer: string, wait: number = timeoutMs): Promise<Uint8Array> => {
     return new Promise((resolve, reject) => {
       let pages: MbFrame[] = [];
       exchanging = true;
@@ -116,7 +117,7 @@ export function matriboxLink(port: MidiPort, timeoutMs: number = MATRIBOX_TIMEOU
         if (error) reject(error);
         else resolve(data as Uint8Array);
       };
-      const timer = setTimeout(() => finish(new Error(`Matribox II PRO did not ${noAnswer} (${what}) within ${timeoutMs} ms. Is it on, and is the official editor closed?`)), timeoutMs);
+      const timer = setTimeout(() => finish(new Error(`Matribox II PRO did not ${noAnswer} (${what}) within ${wait} ms. Is it on, and is the official editor closed?`)), wait);
       const onMessage = (joined: Uint8Array) => {
         if (joined[0] !== answer.flag || joined[3] !== answer.cmd) return toNotice(joined);
         let data: Uint8Array;
@@ -162,11 +163,11 @@ export function matriboxLink(port: MidiPort, timeoutMs: number = MATRIBOX_TIMEOU
       const ack = { ...PRESET_ACK, accepts: (data: Uint8Array) => equal(data, PRESET_ACK.data) };
       await exchange(frames, ack, `flag ${sent.flag}, cmd ${hex(sent.cmd)}`, 'acknowledge the preset write');
     },
-    upload: async (frames) => {
+    upload: async (frames, wait) => {
       const sent = sentMessage(frames, MB_WRITE);
       const slot = sent.data.subarray(0, 4);
       const ack = { flag: UPLOAD_ACK_FLAG, cmd: sent.cmd, accepts: (data: Uint8Array) => startsWith(data, slot) };
-      return exchange(frames, ack, `flag ${sent.flag}, cmd ${hex(sent.cmd)}`, 'acknowledge the upload');
+      return exchange(frames, ack, `flag ${sent.flag}, cmd ${hex(sent.cmd)}`, 'acknowledge the upload', wait);
     },
     ask: (frame, accepts) => own(frame, parseMbFrame(frame).type, (data) => accepts(data), 'answer'),
     post: (frame) => {

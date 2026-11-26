@@ -6,12 +6,15 @@ import { ccChannelOf } from '@/lib/matriboxGlobals';
 import { mbLookKey } from '@/lib/matriboxLook';
 import { useMatribox } from '@/lib/useMatribox';
 import { useMatriboxHistory } from '@/lib/useMatriboxHistory';
+import { useTone3000 } from '@/lib/useTone3000';
 import { useUndoKeys } from '@/lib/useUndoKeys';
+import type { CloneSource } from '@/lib/cloneSource';
 import { MatriboxAssistant } from './MatriboxAssistant';
 import { MatriboxBackupAll } from './MatriboxBackupAll';
 import { MatriboxBackups } from './MatriboxBackups';
 import { MatriboxBlockPanel } from './MatriboxBlockPanel';
 import { MatriboxChain } from './MatriboxChain';
+import { type CloneProposal, MatriboxClones } from './MatriboxClones';
 import { MatriboxControls } from './MatriboxControls';
 import { MatriboxDspLoad } from './MatriboxDspLoad';
 import { MatriboxExpression } from './MatriboxExpression';
@@ -53,6 +56,10 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
     savedRef.current ||= ok;
     return ok;
   };
+  // The assistant's capture upload: the Clones panel, filled in; the person confirms the overwrite there.
+  const t3k = useTone3000();
+  const [cloneProposal, setCloneProposal] = useState<CloneProposal | null>(null);
+  const proposeClone = (slot: number, name: string, source: CloneSource) => new Promise<'uploaded' | 'cancelled'>((resolve, reject) => setCloneProposal({ slot, name, source, resolve, reject }));
   const unit = mb.unit;
   const chain = useMemo(() => (unit ? resolveMbPreset(unit.preset, MB_CATALOG).chain : []), [unit]);
   const assignments = useMemo(() => (unit ? mbAssignments(unit.preset) : null), [unit]);
@@ -164,8 +171,9 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
               onSave={save}
               onClose={closeSave}
             />
-            <MatriboxAssistant mb={mb} history={history} proposeSave={proposeSave} />
+            <MatriboxAssistant mb={mb} history={history} proposeSave={proposeSave} proposeClone={proposeClone} t3k={t3k} />
             <MatriboxLibrary mb={mb} history={history} />
+            <MatriboxClones mb={mb} t3k={t3k} proposal={cloneProposal} onProposalEnd={() => setCloneProposal(null)} />
             <MatriboxBackupAll mb={mb} loaded={mbPresetLabel(unit.current)} />
           </>
         )}

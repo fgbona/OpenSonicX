@@ -8,6 +8,20 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Matribox II Pro: **NAM captures into the CLONE slots.** The editor's Clones panel lists the 10
+  slots by name, takes a `.nam` (converted with `generateMatriboxClo` in a web worker, about 35 s,
+  with progress and Cancel) or a ready `.clo`, plays it through a simulated CLONE block to refuse
+  one that is silent, far too loud or broken, and writes it to the chosen slot only after a
+  confirmation (an overwrite cannot be undone: the unit cannot send a capture back). The tone
+  assistant's `upload_clone` (a link the person gave or a TONE3000 tone; also `search_tone3000` and
+  `list_clones`) opens that panel filled in, and only the person's confirmation writes; the desktop
+  app's AI connection offers it as `matribox_upload_clone`. The MCP server gets its own
+  `matribox_upload_clone` (a file in `~/.pocket-master-editor/nams`, an https link or a TONE3000
+  tone; confirm `CLONE<slot>`, an occupied slot only with `replace: true`; the conversion runs in a
+  worker thread). Core: `mbUploadClone` (flag 1, cmd 0x18, 49 pages, status 1 checked, the rename
+  flag 2 cmd 0x18 from waveod, names read back), `simulateClo` / `checkClo` / `cloProbe` (a port of
+  waveod's bit-exact firmware CLONE block, 98 dB under its output on a random capture), and
+  `generateMatriboxClo` reports progress. Experimental: no upload of ours is checked on the unit yet.
 - Matribox II Pro: the AI tone assistant (web and the desktop AI connection) can make a tone
   live-ready. New tools `get_controls` and `set_controls` (footswitch toggling a block, footswitch
   function, CTRL 1-4 membership, expression-pedal entry with heel/toe %, quick knob on a parameter,
@@ -35,7 +49,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
   1/3 octave from 40 Hz to 12.5 kHz (was up to 14.6 dB), arrayA's shape within 0.5 dB from 160 Hz
   to 4 kHz (was up to 22 dB) but its level still about 4 dB under the official's. About 35 s on
   an Apple-silicon Mac for that model (the model run is most of it; the fit about 2 s). Not yet
-  wired to an upload and not yet heard on the owner's unit; the Pocket Master's converter is
+  heard on the owner's unit; the Pocket Master's converter is
   unchanged. `.nam` parsing now reads `sample_rate`, and a `.clo` can carry its own IIR 2.
 - Matribox II Pro: **estimated DSP load** under the chain ("Estimated DSP load: 74%", a meter, a
   note from 85% and a warning past 100% or with more than 2 CAB/IR/CLONE blocks), after a

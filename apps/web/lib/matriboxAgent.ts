@@ -4,8 +4,22 @@
  * them against the catalog and sends them through its validated writes as one Undo step. Saving
  * only opens the editor's Save dialog.
  */
-import { CHAT_INSTRUCTIONS_THOROUGH, checkMbPresetName, mbCheckDspLoad, mbPresetLabel, parseMbPresetLabel, type ChatTool, type JsonSchema, type MbCatalog, type MbPreset } from '@pocket-master/core';
+import {
+  CHAT_INSTRUCTIONS_THOROUGH,
+  checkMbCloneName,
+  checkMbPresetName,
+  mbCheckDspLoad,
+  MB_CLONE_SLOTS,
+  mbPresetLabel,
+  parseMbPresetLabel,
+  type ChatTool,
+  type JsonSchema,
+  type MbCatalog,
+  type MbPreset,
+  type TonePage,
+} from '@pocket-master/core';
 import { SAVE_VERB, type ToneAgent } from './assistant.ts';
+import { isEmptyClone, type CloneSource } from './cloneSource.ts';
 import type { Lang } from './i18n.ts';
 import { type ControlChange, controlWrites, MB_FS_FUNCTION_NAMES, mbControlsText } from './matriboxAssign.ts';
 import { findTone, tonePreset, type MbTone } from './matriboxLibrary.ts';
@@ -28,6 +42,16 @@ export interface MbAgentHost {
   tones(): readonly MbTone[];
   /** Keeps the sound as the unit plays it now in the tone library (nothing is written to the unit). */
   keepTone(name: string, notes: string): Promise<void>;
+  /** The 10 CLONE slot names as the unit lists them (an empty slot is "Clone n"). */
+  cloneNames(): readonly string[];
+  /**
+   * Opens the Clones panel filled in (`slot` is 0-based): it loads and converts the source, and the
+   * person confirms the overwrite. Resolves with what the person did; throws with the reason when
+   * the source could not be loaded or converted.
+   */
+  proposeClone(proposal: { readonly slot: number; readonly name: string; readonly source: CloneSource }): Promise<'uploaded' | 'cancelled'>;
+  /** TONE3000 search, when the editor has it set up. */
+  tone3000?: { signedIn(): boolean; find(query: string): Promise<TonePage> };
 }
 
 const object = (properties: Record<string, JsonSchema>, required: string[]): JsonSchema => ({ type: 'object', properties, required });
@@ -170,10 +194,32 @@ export const MB_CHAT_TOOLS: readonly ChatTool[] = [
       'name',
     ]),
   },
+  { name: 'list_clones', description: 'The names of the 10 CLONE slots (capture slots) of the Matribox; an empty slot shows as empty.', parameters: NONE },
+  {
+    name: 'search_tone3000',
+    description:
+      "Searches TONE3000 for NAM amp/pedal captures (only when the person is signed in to TONE3000 in the editor's Clones panel). Returns id, title, creator, gear, number of models and link; credit TONE3000 and the creator when you recommend one.",
+    parameters: object({ query: { type: 'string', description: 'What to look for, e.g. "Mesa Rectifier"' } }, ['query']),
+  },
+  {
+    name: 'upload_clone',
+    description:
+      "Proposes writing a NAM capture (.nam) or a .clo to a CLONE slot, for gear the unit has no model of: the editor's Clones panel opens filled in, converts it (about half a minute) and writes only if the person confirms the overwrite. Give exactly one source: url, or toneId (with modelId when the tone has several models).",
+    parameters: object(
+      {
+        slot: { type: 'integer', description: 'CLONE slot, 1..10', minimum: 1, maximum: MB_CLONE_SLOTS },
+        name: { type: 'string', description: 'Capture name, 1..16 printable ASCII characters' },
+        url: { type: 'string', description: 'https link to a .nam or .clo the person gave' },
+        toneId: { type: 'integer', description: 'TONE3000 tone id, from search_tone3000' },
+        modelId: { type: 'integer', description: 'TONE3000 model id of that tone (needed only when it has several)' },
+      },
+      ['slot', 'name'],
+    ),
+  },
 ];
 
-/** The tools that change the sound (or open the Save dialog). */
-const ACTS = new Set(['build_tone', 'edit_preset', 'set_controls', 'undo_edit', 'save_preset', 'load_saved_tone', 'keep_tone']);
+/** The tools that change the sound (or open the Save dialog or the Clones panel). */
+const ACTS = new Set(['build_tone', 'edit_preset', 'set_controls', 'undo_edit', 'save_preset', 'load_saved_tone', 'keep_tone', 'upload_clone']);
 
 const INSTRUCTIONS = [
   'You are the tone assistant of an editor for the Sonicake Matribox II Pro guitar multi-effects. The person usually describes a sound (an artist, a record, a song, or words like "warmer").',
@@ -184,6 +230,7 @@ const INSTRUCTIONS = [
   'Do not ask for details the person did not give: make reasonable choices, say briefly what you chose and why, naming the real gear, and invite them to ask for adjustments by ear.',
   'The editor shows every change live, and the person can undo. Nothing is stored until save_preset, which opens the editor\'s Save dialog for the person to confirm; propose it only when the person asks to save (e.g. "on 12A"). Never say a tone is saved unless save_preset answered that the person saved it.',
   'A kept tone in the first message is reused with load_saved_tone only when it matches the request: the same instrument, part and reference, as its notes and gear show; a name that merely mentions the band is not enough, and when in doubt, build the tone. When the person says a tone sounds right, offer to keep it with keep_tone, naming the reference in notes.',
+  'For gear the unit has no model of, find a NAM capture (search_tone3000, or a link the person gives) and propose it with upload_clone: the editor opens its Clones panel to convert it (about half a minute) and the person confirms the overwrite of the CLONE slot. Never say a capture is written unless upload_clone says the person wrote it.',
   'Use as few calls as possible: build_tone and edit_preset already return the resulting preset. Answer in the language the person writes in, in two to four short sentences.',
 ].join(' ');
 
@@ -215,6 +262,13 @@ function tonesText(host: MbAgentHost, catalog: MbCatalog): string {
     .join('\n');
 }
 
+/** Tone results, one a line, with the credit TONE3000's terms ask for. */
+function tonesFound(page: TonePage): string {
+  if (page.tones.length === 0) return 'No NAM captures found on TONE3000 for that search.';
+  const lines = page.tones.map((t) => `- id ${t.id}: "${t.title}" by ${t.creator || 'unknown'} · gear ${t.gear || 'unknown'} · ${t.modelsCount} model${t.modelsCount === 1 ? '' : 's'} · ${t.url}`);
+  return `${lines.join('\n')}\nFrom TONE3000 (tone3000.com); name TONE3000 and the creator when you recommend one.`;
+}
+
 const field = (args: unknown, name: string): unknown => (typeof args === 'object' && args !== null ? (args as Record<string, unknown>)[name] : undefined);
 
 /** Sends `chain` once its estimated DSP load is checked (mbCheckDspLoad throws past the limit); a warning near it ends the answer. */
@@ -222,6 +276,21 @@ async function applyChecked(host: MbAgentHost, before: readonly MbChainBlock[], 
   const note = mbCheckDspLoad(before, chain);
   const text = now(await host.apply(chain));
   return note ? `${text}\n\n${note}` : text;
+}
+
+/** Exactly one source: an https `url`, or a `toneId` (with an optional `modelId`). */
+function cloneSourceOf(args: unknown): CloneSource {
+  const url = field(args, 'url') ?? undefined;
+  const toneId = field(args, 'toneId') ?? undefined;
+  const modelId = field(args, 'modelId') ?? undefined;
+  if ((url === undefined) === (toneId === undefined)) throw new Error('give exactly one source: url, or toneId');
+  if (url !== undefined) {
+    if (typeof url !== 'string' || !/^https:\/\/\S+$/.test(url) || modelId !== undefined) throw new Error('url must be an https link (and modelId goes with toneId)');
+    return { url };
+  }
+  if (!Number.isInteger(toneId) || (toneId as number) < 1) throw new Error('toneId must be a positive integer');
+  if (modelId !== undefined && (!Number.isInteger(modelId) || (modelId as number) < 1)) throw new Error('modelId must be a positive integer');
+  return modelId === undefined ? { toneId: toneId as number } : { toneId: toneId as number, modelId: modelId as number };
 }
 
 async function run(host: MbAgentHost, name: string, args: unknown): Promise<string> {
@@ -272,6 +341,26 @@ async function run(host: MbAgentHost, name: string, args: unknown): Promise<stri
       const done = await host.proposeSave(index, presetName);
       return done === 'saved' ? `The person saved it to ${label} "${presetName}".` : `The person closed the Save dialog without saving; ${label} is unchanged.`;
     }
+    case 'list_clones': {
+      const names = host.cloneNames();
+      return Array.from({ length: MB_CLONE_SLOTS }, (_, i) => `CLONE ${i + 1}: ${isEmptyClone(i, names[i] ?? '') ? '(empty)' : (names[i] ?? '').trim()}`).join('\n');
+    }
+    case 'search_tone3000': {
+      if (!host.tone3000) throw new Error('TONE3000 is not set up in this editor.');
+      const query = String(field(args, 'query') ?? '').trim();
+      if (!query) throw new Error('query must not be empty');
+      if (!host.tone3000.signedIn()) throw new Error('the person is not signed in to TONE3000: ask them to sign in to TONE3000 in the Clones panel, then search again.');
+      return tonesFound(await host.tone3000.find(query));
+    }
+    case 'upload_clone': {
+      const slot = field(args, 'slot');
+      if (!Number.isInteger(slot) || (slot as number) < 1 || (slot as number) > MB_CLONE_SLOTS) throw new Error(`slot must be an integer 1..${MB_CLONE_SLOTS}`);
+      const cloneName = checkMbCloneName(String(field(args, 'name') ?? ''));
+      const source = cloneSourceOf(args);
+      const label = `CLONE ${slot}`;
+      const done = await host.proposeClone({ slot: (slot as number) - 1, name: cloneName, source });
+      return done === 'uploaded' ? `The person wrote "${cloneName}" to ${label}.` : `The person closed the Clones dialog; ${label} is unchanged.`;
+    }
     default:
       throw new Error(`unknown tool "${name}"`);
   }
@@ -283,7 +372,7 @@ export function matriboxAgent(host: MbAgentHost): ToneAgent {
     return mbPresetText(s.preset, s.catalog);
   };
   return {
-    tools: MB_CHAT_TOOLS,
+    tools: host.tone3000 ? MB_CHAT_TOOLS : MB_CHAT_TOOLS.filter((t) => t.name !== 'search_tone3000'),
     acts: ACTS,
     instructions: (thorough) => (thorough ? `${INSTRUCTIONS} ${CHAT_INSTRUCTIONS_THOROUGH}` : INSTRUCTIONS),
     context: (thorough) => {

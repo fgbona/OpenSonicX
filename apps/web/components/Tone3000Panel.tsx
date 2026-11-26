@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { Tone } from '@pocket-master/core';
 import { InstallDialog } from './InstallDialog';
+import { Tone3000Login } from './Tone3000SignIn';
 import { useI18n } from './I18n';
 import { useTone3000 } from '@/lib/useTone3000';
 import type { Exclusive, InstallSource } from '@/lib/install';
@@ -75,21 +76,7 @@ export function Tone3000Panel({ connected, busy, irNames, profileNames, exclusiv
         {!t3k.configured ? (
           <p className="muted small">{t('t3k.notConfigured')}</p>
         ) : !t3k.signedIn ? (
-          t3k.login ? (
-            <div className="t3k-login" role="status">
-              <p>{t('t3k.code', { link: t3k.login.verificationUri, code: t3k.login.userCode })}</p>
-              <p>
-                <a className="btn btn-primary btn-small" href={t3k.login.verificationUriComplete} target="_blank" rel="noreferrer">
-                  {t3k.login.userCode}
-                </a>{' '}
-                <span className="muted small">{t('t3k.waiting')}</span>
-              </p>
-            </div>
-          ) : (
-            <button type="button" className="btn btn-primary" onClick={t3k.signIn}>
-              {t('t3k.signIn')}
-            </button>
-          )
+          <Tone3000Login t3k={t3k} />
         ) : (
           <>
             <form

@@ -121,6 +121,9 @@ export function useTone3000() {
     [token],
   );
 
+  /** A search that only returns the page (the assistant's), without touching the panel's results. */
+  const find = useCallback(async (query: string, format: 'nam' | 'ir', page = 1): Promise<TonePage> => searchTones(await token(), { query, format, page }), [token]);
+
   const models = useCallback(async (toneId: number): Promise<ToneModel[]> => listModels(await token(), toneId), [token]);
   const download = useCallback(async (url: string): Promise<Uint8Array> => downloadModel(await token(), url), [token]);
 
@@ -134,6 +137,7 @@ export function useTone3000() {
     signIn: () => void signIn(),
     signOut,
     search,
+    find,
     models,
     download,
     clearError: () => setError(null),
