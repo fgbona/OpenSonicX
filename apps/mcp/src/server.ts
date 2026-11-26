@@ -3,7 +3,8 @@ import { appendFile, mkdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { nodeConverter } from './convert.ts';
+import { nodeConverter, referenceDi } from './convert.ts';
+import { nodeCloneConverter } from './matribox-clone.ts';
 import { connectMatribox, midiPortNames } from './devices.ts';
 import { MatriboxSession } from './matribox-session.ts';
 import { connectPocketMaster } from './midi.ts';
@@ -23,6 +24,11 @@ const timings = join(home, 'timings.log');
 await mkdir(home, { recursive: true });
 const onTiming = ({ tool, ms, ok }: { tool: string; ms: number; ok: boolean }) =>
   void appendFile(timings, `${new Date().toISOString()} ${tool} ${ms} ms${ok ? '' : ' (error)'}\n`).catch((e) => console.error('could not write timings', e));
-const matribox = new MatriboxSession(() => connectMatribox(), { backups: join(home, 'backups'), presets: join(home, 'presets', 'matribox'), irs: join(home, 'irs') });
+const matribox = new MatriboxSession(
+  () => connectMatribox(),
+  { backups: join(home, 'backups'), presets: join(home, 'presets', 'matribox'), irs: join(home, 'irs') },
+  undefined,
+  nodeCloneConverter(() => referenceDi(join(home, 'cache'))),
+);
 await createServer(session, { onTiming, matribox, midiPorts: midiPortNames }).connect(new StdioServerTransport());
 console.error(`Sonicake pedals MCP server ready (files in ${home})`);

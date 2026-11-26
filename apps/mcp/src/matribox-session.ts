@@ -49,6 +49,7 @@ import {
 import { assignCtrl, assignExpression, assignFootswitch, assignQuickKnob, CC_NOTE, setFootswitchFunction, describeAssignments, setExpressionRange, setVolume } from './matribox-live.ts';
 import { MATRIBOX_DEVICE, readMatriboxBackup, readMatriboxBackupAll, readMatriboxPrst, writeMatriboxBackupAll, writeMatriboxPrstFile } from './matribox-files.ts';
 import { prepareMatriboxIr, uploadMatriboxIr, type MatriboxIrOptions } from './matribox-ir.ts';
+import { prepareMatriboxClone, uploadMatriboxClone, type CloneConverter, type MatriboxCloneOptions } from './matribox-clone.ts';
 import type { MatriboxConnection } from './devices.ts';
 import { checkParam, describeValues, EXPERIMENTAL, findBlock, findModel, findModule, gear, knownModel, modelTitle, modelValues, planTone, type ParamWrite, type ToneBlock } from './matribox-edit.ts';
 
@@ -108,10 +109,13 @@ export class MatriboxSession {
   readonly #connect: () => MatriboxConnection | Promise<MatriboxConnection>;
   readonly #catalog: MbCatalog;
   readonly #folders: MatriboxFolders;
+  readonly #convertClone: CloneConverter | undefined;
   #queue: Promise<unknown> = Promise.resolve();
 
-  constructor(connect: () => MatriboxConnection | Promise<MatriboxConnection>, folders: MatriboxFolders, catalog: MbCatalog = MB_CATALOG) {
+  /** `convertClone` turns a .nam into a .clo (nodeCloneConverter); without it only .clo files upload. */
+  constructor(connect: () => MatriboxConnection | Promise<MatriboxConnection>, folders: MatriboxFolders, catalog: MbCatalog = MB_CATALOG, convertClone?: CloneConverter) {
     this.#connect = connect;
+    this.#convertClone = convertClone;
     this.#catalog = catalog;
     this.#folders = folders;
   }
@@ -172,6 +176,16 @@ export class MatriboxSession {
   async loadIr(options: MatriboxIrOptions): Promise<string> {
     const prepared = await prepareMatriboxIr(this.#folders.irs, options); // checked before the unit is opened
     return this.#use((unit) => uploadMatriboxIr(unit, options.slot, prepared, options.replace));
+  }
+
+  /** A .nam (converted) or .clo into CLONE `slot` (1..10), checked through the simulated block first; see matribox-clone.ts. */
+  async uploadClone(bytes: Uint8Array, sourceName: string, options: MatriboxCloneOptions): Promise<string> {
+    const convert: CloneConverter = (nam, onProgress) => {
+      if (!this.#convertClone) throw new Error('this server cannot convert .nam files; give a .clo');
+      return this.#convertClone(nam, onProgress);
+    };
+    const prepared = await prepareMatriboxClone(bytes, sourceName, options, convert); // all before the unit is opened
+    return this.#use((unit) => uploadMatriboxClone(unit, options.slot, prepared, options.replace));
   }
 
   listCaptures(): Promise<string> {

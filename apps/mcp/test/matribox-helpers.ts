@@ -7,6 +7,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { matriboxLink, type MbCatalog } from '@pocket-master/core';
 import { fakeCatalog, fakeModel as model, fakeParam as w } from '../../../packages/core/test/matribox-fake-catalog.ts';
 import { FakeMatribox } from '../../../packages/core/test/fake-matribox.ts';
+import type { CloneConverter } from '../src/matribox-clone.ts';
 import { MatriboxSession } from '../src/matribox-session.ts';
 import { Session } from '../src/session.ts';
 import { createServer } from '../src/tools.ts';
@@ -37,19 +38,20 @@ export const fakeLink = (fake = new FakeMatribox(), timeoutMs = 1000) => {
   return matriboxLink(ports, timeoutMs);
 };
 
-export async function connected(options: { catalog?: MbCatalog; ports?: readonly string[] } = {}) {
+export async function connected(options: { catalog?: MbCatalog; ports?: readonly string[]; convertClone?: CloneConverter } = {}) {
   const fake = new FakeMatribox();
   const link = fakeLink(fake);
   const dir = mkdtempSync(join(tmpdir(), 'mb-tools-'));
   const backups = join(dir, 'b');
   const presets = join(dir, 'p', 'matribox');
   const irs = join(dir, 'i');
-  const matribox = new MatriboxSession(() => ({ ...link, close: () => undefined }), { backups, presets, irs }, options.catalog ?? CATALOG);
-  const pocketMaster = new Session(() => Promise.reject(new Error('no Pocket Master in this test')) as never, { backups, presets: join(dir, 'p'), irs, nams: join(dir, 'n') });
+  const nams = join(dir, 'n');
+  const matribox = new MatriboxSession(() => ({ ...link, close: () => undefined }), { backups, presets, irs }, options.catalog ?? CATALOG, options.convertClone);
+  const pocketMaster = new Session(() => Promise.reject(new Error('no Pocket Master in this test')) as never, { backups, presets: join(dir, 'p'), irs, nams });
   const [a, b] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'test', version: '0' });
   await Promise.all([createServer(pocketMaster, { matribox, midiPorts: async () => options.ports ?? ['Matribox II PRO'] }).connect(a), client.connect(b)]);
-  return { client, fake, backups, presets, irs };
+  return { client, fake, backups, presets, irs, nams };
 }
 
 export const text = (r: unknown) => (r as { content: { text: string }[] }).content.map((c) => c.text).join('\n');

@@ -43,7 +43,10 @@ const PREFIXES: ReadonlyArray<[string, MessageKey]> = [
 ];
 
 /** Core messages with values inside, by pattern; the named groups fill the placeholders. */
-const PATTERNS: ReadonlyArray<[RegExp, MessageKey]> = [[/^saved, but (?<slot>P\d\d) is named "(?<got>.*)" instead of "(?<want>.*)"$/, 'error.savedOtherName']];
+const PATTERNS: ReadonlyArray<[RegExp, MessageKey]> = [
+  [/^saved, but (?<slot>P\d\d) is named "(?<got>.*)" instead of "(?<want>.*)"$/, 'error.savedOtherName'],
+  [/^Could not download the reference DI for the conversion \(HTTP (?<status>\d+)\)\.$/, 'error.cloneDi'],
+];
 
 /** Translates errors raised by the web layer; protocol and decoder errors stay as they are. */
 export function translateError(lang: Lang, text: string): string {
@@ -71,6 +74,9 @@ const STEPS: ReadonlyArray<[RegExp, MessageKey]> = [
   [/^Renaming$/, 'progress.renaming'],
   [/^Deleting$/, 'progress.deleting'],
   [/^Uploading$/, 'progress.uploading'],
+  [/^Downloading$/, 'progress.downloading'],
+  [/^Converting$/, 'progress.converting'],
+  [/^Verifying$/, 'progress.verifying'],
   [/^Reading settings$/, 'progress.readingSettings'],
   [/^Factory reset$/, 'progress.factoryReset'],
 ];

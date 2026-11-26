@@ -201,3 +201,7 @@
 @media (prefers-reduced-motion: reduce) {
   .mb-chip, .mb-tile-add, .fold summary::after { transition: none; }
 }
+
+/* Clones panel: the 10 slots, then the name and slot of the capture to write. */
+.mb-clones { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 2px 12px; font-size: 0.875rem; }
+.mb-clone-form { display: flex; flex-wrap: wrap; gap: 8px 12px; }

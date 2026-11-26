@@ -586,12 +586,42 @@ way and renames the slot.
 **Capture (clone), cmd 0x18, 8872 bytes:** u32 slot (9), u32 0, u32 byte sum of the `.clo`,
 20-byte name (`5 RECTIFIER`), then an 8840-byte `.clo`: the same `VTSI` container as the Pocket
 Master's (`packages/core/src/clo/codec.ts`; header and biquad identical). The official editor
-compresses this message for real (LZO1X, 8377 bytes on the wire for 8880); the IR upload happens
-to be all literals, like what we send. Not shipped: the `.clo` the official converter made from
-`5 RECTIFIER.nam` is not what our converter (SonicMaster's port) makes from the same file and
-reference DI: 1136 of 8840 bytes equal, gains `0.0858 / 0.0863 / 747.0 / 753.1` against our
-`0.165 / 0.166 / 1124 / 1020`, arrayA and arrayB off by up to 0.73 and 0.39. The official
-conversion is native code (`namConvertClo` in `HTUSBTools.dylib`), not ported.
+compresses this message for real (LZO1X, 8377 bytes on the wire for 8880); we send it as literals,
+49 pages. The unit answers flag 3, cmd 0x18, `u32 slot, u32 status, u32 0` (status 1 = stored).
+waveod's firmware rebuild (`src/editor/media_msgs.c`) adds what was not captured: the unit keeps
+the first 0x2000 bytes of the `.clo` (IR 2 is played to 1024 taps, so nothing played is lost), and
+**rename** is flag 2, cmd 0x18, `u32 slot` + a 20-byte name, not answered (check it by reading the
+names). The clone names are read with flag 0, cmd 0x18 (`mbReadCloneNames`).
+
+**`mbUploadClone(link, slot, clo, { name, onProgress })`** (core, `matribox/clone.ts`): checks the
+slot (0..9), the name (1..16 printable ASCII) and the `.clo` (size, magic, CRC), sends the 49
+pages, waits up to 10 s for the answer (the unit writes flash first), throws unless status is 1,
+posts the rename when a name is given and reads the names back to check it. Its frames for our
+A/B `.clo` are byte for byte the prepared `opensonicx-5-RECTIFIER-clone9.syx`, whose builder
+rebuilds mb-19 byte for byte from the official `.clo`. It has no builder for the clone delete or
+the bootloader message. The simulated unit (`packages/core/test/fake-matribox.ts`) answers the
+names, takes the upload (checking the sum), acknowledges it and applies the rename.
+
+**Offline CLONE block** (`simulateClo(clo, input)`, core `clo/simulate.ts`): the firmware's chain
+as waveod's bit-exact `src/blocks/clone/clone.c` runs it (gain, IIR 1 in double with the x 1000 /
+x 0.001 scaling, IR 1, the saturator 4x oversampled through the half-band all-pass interpolators
+and decimators, IIR 2, IR 2), with the knobs at 50 (unity gain, flat tone stack). The convolutions
+are direct here: the firmware's partitioned 128-point FFT gives the same linear convolution at
+unity gain. Against waveod's C block, compiled locally, on a random capture and a noise DI the
+difference is 98 dB under the output. `checkClo(clo, cloProbe())` refuses a capture that plays
+silent (under -70 dB RMS), far too loud (over -3 dB RMS or peaks over 4) or NaN on 3 s of the
+synthetic DI at a quarter level; the official 5 RECTIFIER capture plays it at -13.9 dB RMS, peak
+0.67. A test converts the public `ref_input.nam` with `generateMatriboxClo` and plays the result
+through the simulator against the model's own output on a noise DI: level within 1 dB, each
+third octave from 100 Hz to 10 kHz within 6 dB (+0.2 .. +5.3 dB, the bass high).
+
+**Where it is used.** The Matribox editor's Clones panel (pick a `.nam` or `.clo`, convert in a
+web worker with progress and cancel, the simulated check, then the upload after a confirmation),
+the tone assistant's `upload_clone` (the desktop app's AI connection offers it as
+`matribox_upload_clone`; it opens that panel and only the person's confirmation writes), and the
+MCP server's `matribox_upload_clone` (a file in `~/.pocket-master-editor/nams`, an https link or a
+TONE3000 tone; confirm `CLONE<slot>`, an occupied slot only with `replace: true`). All
+experimental: no upload of ours has been checked on the unit yet.
 
 ### The official NAM -> `.clo` conversion (research, 2026-11-24)
 

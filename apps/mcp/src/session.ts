@@ -433,23 +433,34 @@ export class Session {
    * Downloads a TONE3000 model and puts it on the pedal: a NAM capture is converted and written
    * to a profile slot, a cabinet IR (WAV) to a user IR slot.
    */
-  async installTone(options: { toneId: number; modelId?: number; slot: number; confirm: string; replace?: boolean; name?: string }): Promise<string> {
+  /** Downloads a model of a TONE3000 tone (`modelId`, or its only model) with the stored sign-in. */
+  async downloadTone(toneId: number, modelId?: number): Promise<{ bytes: Uint8Array; name: string }> {
     const { api } = this.#tone3000();
     const token = await this.#tone3000Token();
-    const models = await api.listModels(token, options.toneId);
-    const model = options.modelId !== undefined ? models.find((m) => m.id === options.modelId) : models.length === 1 ? models[0] : undefined;
+    const models = await api.listModels(token, toneId);
+    const model = modelId !== undefined ? models.find((m) => m.id === modelId) : models.length === 1 ? models[0] : undefined;
     if (!model) {
       const list = models.map((m) => `- model ${m.id}: ${m.name}${m.size ? ` (${m.size})` : ''}`).join('\n');
-      throw new Error(models.length === 0 ? `tone ${options.toneId} has no models` : `tone ${options.toneId} has several models; pass modelId:\n${list}`);
+      throw new Error(models.length === 0 ? `tone ${toneId} has no models` : `tone ${toneId} has several models; pass modelId:\n${list}`);
     }
-    const bytes = await api.downloadModel(token, model.url);
-    const name = options.name ?? model.name;
+    return { bytes: await api.downloadModel(token, model.url), name: model.name };
+  }
+
+  async installTone(options: { toneId: number; modelId?: number; slot: number; confirm: string; replace?: boolean; name?: string }): Promise<string> {
+    const { bytes, name: modelName } = await this.downloadTone(options.toneId, options.modelId);
+    const name = options.name ?? modelName;
     if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
       return this.#installIr(bytes, { ...options, name: defaultName(name, 10, 'TONE3000') });
     }
     const text = new TextDecoder().decode(bytes);
     if (!text.trimStart().startsWith('{')) throw new Error('the downloaded model is neither a NAM capture nor a WAV IR');
     return this.#installNam(text, { ...options, name: defaultName(name, PROFILE_NAME, 'TONE3000') });
+  }
+
+  /** A .nam or .clo file from the nams folder (also read by matribox_upload_clone). */
+  async readNamsFile(file: string): Promise<Uint8Array> {
+    if (!/\.(nam|clo)$/i.test(file)) throw new Error(`expected a .nam or .clo file, got "${file}"`);
+    return new Uint8Array(await readFile(inside(this.#folders.nams, file)));
   }
 
   /** Converts a .nam from the nams folder and writes it to a profile slot. */

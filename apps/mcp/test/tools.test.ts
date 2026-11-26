@@ -90,6 +90,7 @@ test('the server lists every tool, marking reads read-only and slot writes destr
     'matribox_set_volume',
     'matribox_tap_tempo',
     'matribox_tuner',
+    'matribox_upload_clone',
     'rename_slot',
     'restore_backup',
     'revert_preset',
@@ -103,7 +104,7 @@ test('the server lists every tool, marking reads read-only and slot writes destr
     'which_pedal',
   ]);
   for (const name of ['get_preset', 'list_presets', 'list_models', 'backup_all_presets']) assert.equal(byName[name]!.annotations?.readOnlyHint, true, name);
-  for (const name of ['save_preset', 'restore_backup', 'load_ir', 'matribox_load_ir', 'load_nam', 'install_tone', 'copy_preset', 'delete_slot'])
+  for (const name of ['save_preset', 'restore_backup', 'load_ir', 'matribox_load_ir', 'matribox_upload_clone', 'load_nam', 'install_tone', 'copy_preset', 'delete_slot'])
     assert.equal(byName[name]!.annotations?.destructiveHint, true, name);
   assert.equal(byName.edit_preset!.annotations?.destructiveHint, false);
 });
