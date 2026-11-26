@@ -8,6 +8,21 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Matribox II Pro: **drum machine for practice.** A *Drum machine* panel plays or stops it and
+  picks style and rhythm (the unit's 8 styles and 100 rhythms by name), tempo, following the preset
+  tempo, and volume, read back from the unit and following what changes on it. The tone assistant
+  gets `set_drums` ("play a rock beat at 100 BPM": rhythm, BPM and play in one call) and the MCP
+  server `matribox_set_drums`. Core: `mbWriteDrum` (flag 1, cmd 0x11, subs 0x81..0x86; posted, as
+  the unit leaves some unanswered, then the state read with cmd 0x13 and checked), `drumChange`
+  notices, `MB_DRUM_GENRES` / `MB_DRUM_PATTERNS`. From waveod's firmware rebuild; not captured.
+- Matribox II Pro: **more Global options**, the less used in folded groups: Auto CAB and Bank select;
+  USB audio (recording and monitor levels, AUX IN to USB, recording L/R dry or processed); EXP 2
+  jack (pedal, one or two footswitches) and the external footswitches' functions; MIDI output
+  channels (off, Omni, 1..16), clock source and clock out (TRS, USB). Each is one echoed write
+  (`mbSetGlobal`), layout from waveod; not captured. USB mode, language, display and standby are
+  left out.
+- Matribox II Pro: **rename a user IR** in the new *User IRs* panel (flag 2, cmd 0x14, unanswered,
+  checked by reading the names back; `mbWriteIrName`), and `matribox_rename_ir` in the MCP server.
 - Matribox II Pro: **NAM captures into the CLONE slots.** The editor's Clones panel lists the 10
   slots by name, takes a `.nam` (converted with `generateMatriboxClo` in a web worker, about 35 s,
   with progress and Cancel) or a ready `.clo`, plays it through a simulated CLONE block to refuse

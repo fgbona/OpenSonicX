@@ -19,6 +19,11 @@
  * block in the chain is refused with the overload notice (cause 2, memory). With `cpuOverload`, one that
  * takes the chain past the DSP (here: core's estimate, mbDspLoad) is applied, then every block is switched
  * off with the overload notice (cause 1) and the on/off notice.
+ * The drum machine (zxmarcos/waveod global_msgs.c) answers its state read (cmd 0x13) and takes the
+ * drum settings (flag 1 cmd 0x11, `00 8n 00 00` + u32), answering `{sub, value}` notices like the
+ * firmware: none for play when it already plays, a BPM while it follows a TRS/USB/external clock,
+ * or a volume over 100. A user IR rename (flag 2, cmd 0x14: u32 slot + 20-byte name) renames the slot,
+ * unanswered like the clone rename (waveod media_msgs.c).
  * Never a real device.
  */
 import { readFileSync } from 'node:fs';
@@ -34,7 +39,11 @@ import {
   MB_BIG_MEMORY_MAX,
   MB_WRITE,
   mbAssignments,
+  MB_DRUM_GENRES,
+  mbDrumAnswer,
+  mbDrumWith,
   mbDspLoad,
+  type MbDrumState,
   mbReadCloneNames,
   mbReadIrNames,
   mbReadPreset,
@@ -164,6 +173,10 @@ export class FakeMatribox {
   cpuOverload = false;
   /** When true the unit answers the EQ switch without switching it (to test that the answer is checked). */
   ignoresEqSwitch = false;
+  /** The drum machine as the unit holds it. */
+  drum: MbDrumState = { playing: false, genre: 0, pattern: 0, bpm: 120, follow: false, volume: 50 };
+  /** The drum setting subs written (0x81..0x86), in order. */
+  readonly drumWrites: number[] = [];
   #general: Uint8Array = GENERAL;
   #eq: Uint8Array = new Uint8Array(new Float32Array(EQ).buffer);
   #eqOn = true;
@@ -193,6 +206,11 @@ export class FakeMatribox {
     return { general: this.#general, eq: this.#eq, eqOn: this.#eqOn };
   }
 
+  /** The MIDI clock source (general table byte 45): 0 internal, 1 TRS, 2 USB, 3 external, 4 mixed. */
+  set clockSource(value: number) {
+    this.#general = patched(this.#general, MB_GLOBALS.clockSource.at, [value]);
+  }
+
   stored(index: number): Uint8Array | undefined {
     return this.#stored.get(index);
   }
@@ -219,6 +237,17 @@ export class FakeMatribox {
     if (frame.type === MB_WRITE && message.cmd === 0x05) {
       if (!this.dropsSaves) this.#apply(message.cmd, message.data);
       return; // the unit answers a save with nothing
+    }
+    if (frame.type === MB_WRITE && message.flag === 2 && message.cmd === 0x14) {
+      const slot = u32(message.data, 0);
+      if (message.data.length !== 24 || slot >= MB_IR_SLOTS) throw new Error('fake Matribox: bad IR rename');
+      this.#irNames = patched(this.#irNames, MB_IR_SLOTS * 8 + slot * 17, this.#name17(message.data, 4));
+      return; // no answer
+    }
+    if (frame.type === MB_WRITE && message.flag === 1 && message.cmd === 0x11 && message.data.length === 8 && message.data[1]! >> 4 === 8) {
+      const answers = this.#drumWrite(message.data[1] as number, u32(message.data, 4));
+      if (this.echoes) this.#reply(answers.flatMap(([sub, value]) => replyFrames(wrapMbMessage(1, 0x11, [0, sub, 0, 0, ...le32(value)]))));
+      return;
     }
     if (frame.type === MB_WRITE && message.flag === 2 && message.cmd === 0x18) {
       const slot = u32(message.data, 0);
@@ -333,6 +362,54 @@ export class FakeMatribox {
     return null;
   }
 
+  /** A drum setting as waveod's drum_setting takes it: the answers `[sub high byte, value]` it sends. */
+  #drumWrite(sub: number, value: number): [number, number][] {
+    this.drumWrites.push(sub);
+    const d = this.drum;
+    const set = (change: Partial<MbDrumState>) => {
+      this.drum = mbDrumWith(d, change);
+    };
+    const clock = this.#general[MB_GLOBALS.clockSource.at] as number;
+    const word = () => (this.drum.genre << 16) | this.drum.pattern;
+    switch (sub) {
+      case 0x81:
+        if (d.playing === (value !== 0)) return [];
+        set({ playing: value !== 0 });
+        return [[0x81, value !== 0 ? 1 : 0]];
+      case 0x82:
+        set({ genre: value >>> 16 < MB_DRUM_GENRES.length ? value >>> 16 : 0, pattern: value & 0xffff });
+        return [[0x82, word()]];
+      case 0x83:
+        set({ pattern: value & 0xffff });
+        return [[0x82, word()]];
+      case 0x84:
+        if (d.follow && clock !== 0 && clock !== 4) return [];
+        set({ bpm: value & 0xffff });
+        return [[0x84, this.drum.bpm]];
+      case 0x85:
+        set({ follow: value !== 0 });
+        return value
+          ? [
+              [0x84, this.drum.bpm],
+              [0x85, 1],
+            ]
+          : [[0x85, 0]];
+      case 0x86:
+        if ((value & 0xff) > 100) return [];
+        set({ volume: value & 0xff });
+        return [[0x86, this.drum.volume]];
+      default:
+        throw new Error(`fake Matribox: unknown drum setting 0x${sub.toString(16)}`);
+    }
+  }
+
+  /** A drum setting changed on the unit: applied, and the notice frame it sends returned. */
+  onUnitDrum(sub: number, value: number): Uint8Array {
+    const change = mbDrumAnswer(sub << 8, value);
+    if (change) this.drum = mbDrumWith(this.drum, change);
+    return replyFrames(wrapMbMessage(1, 0x11, [0, sub, 0, 0, ...le32(value)]))[0] as Uint8Array;
+  }
+
   listen(receiver: (bytes: Uint8Array) => void): void {
     this.#receiver = receiver;
   }
@@ -349,6 +426,10 @@ export class FakeMatribox {
     if (flag === 0 && cmd === 0x14 && arg.length === 0) return answer(this.#irNames);
     if (flag === 0 && cmd === 0x18 && arg.length === 0) return answer(this.#cloneNames);
     if (flag === 0 && cmd === 0x11 && arg.length === 0) return answer(this.#general);
+    if (flag === 0 && cmd === 0x13 && arg.length === 0) {
+      const d = this.drum;
+      return answer([d.playing ? 1 : 0, 0, d.genre, 0, d.pattern, 0, d.bpm & 0xff, d.bpm >> 8, d.follow ? 1 : 0, d.volume]);
+    }
     if (flag === 0 && cmd === 0x16 && arg.length === 0) return answer(this.#eq);
     if (flag === 1 && cmd === 0x16 && argHex === EQ_SWITCH) return answer([0, 0, 0, 0, this.#eqOn ? 1 : 0, 0, 0, 0]);
     if (flag === 1 && cmd === 0x10 && argHex === '01000a01') return answer([...arg, ...[this.#current, 0, 0, 0]]);

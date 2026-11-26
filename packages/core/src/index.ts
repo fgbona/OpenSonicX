@@ -51,4 +51,5 @@ export * from './matribox/backup-all.ts';
 export * from './matribox/edit.ts';
 export * from './matribox/dsp-load.ts';
 export * from './matribox/globals.ts';
+export * from './matribox/drum.ts';
 export * from './pedals.ts';

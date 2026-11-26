@@ -10,11 +10,18 @@ import {
   checkMbPresetName,
   mbCheckDspLoad,
   MB_CLONE_SLOTS,
+  MB_DRUM_BPM_MAX,
+  MB_DRUM_BPM_MIN,
+  MB_DRUM_GENRES,
+  mbDrumChangeOf,
+  mbDrumText,
   mbPresetLabel,
   parseMbPresetLabel,
   type ChatTool,
   type JsonSchema,
   type MbCatalog,
+  type MbDrumChange,
+  type MbDrumState,
   type MbPreset,
   type TonePage,
 } from '@pocket-master/core';
@@ -50,6 +57,8 @@ export interface MbAgentHost {
    * the source could not be loaded or converted.
    */
   proposeClone(proposal: { readonly slot: number; readonly name: string; readonly source: CloneSource }): Promise<'uploaded' | 'cancelled'>;
+  /** Changes the drum machine (none: reads it); resolves with its state as the unit reads back, throws when refused. */
+  drums(change: MbDrumChange | null): Promise<MbDrumState>;
   /** TONE3000 search, when the editor has it set up. */
   tone3000?: { signedIn(): boolean; find(query: string): Promise<TonePage> };
 }
@@ -216,6 +225,24 @@ export const MB_CHAT_TOOLS: readonly ChatTool[] = [
       ['slot', 'name'],
     ),
   },
+  {
+    name: 'set_drums',
+    description:
+      "The Matribox's drum machine, for practice: play or stop it, pick a rhythm, set its tempo and volume (all optional; none just reads it). It plays on top of the guitar; nothing is saved to a preset. Returns the state the unit reads back.",
+    parameters: object(
+      {
+        play: { type: 'boolean', description: 'true starts the beat, false stops it' },
+        rhythm: {
+          type: 'string',
+          description: `A style (${MB_DRUM_GENRES.map((g) => g.name).join(', ')}: its first rhythm) or a rhythm name, e.g. "Rock 2", "Hard Rock", "Shuffle", "Funk 3", "Bossanova 1", "Reggae 1", "4/4" (Metronome: 1/4 to 9/8)`,
+        },
+        bpm: { type: 'integer', minimum: MB_DRUM_BPM_MIN, maximum: MB_DRUM_BPM_MAX, description: "The drums' own tempo (it stops following the preset tempo)" },
+        follow_tempo: { type: 'boolean', description: "true: the drums follow the preset's (or the global) tempo instead of their own" },
+        volume: { type: 'integer', minimum: 0, maximum: 100 },
+      },
+      [],
+    ),
+  },
 ];
 
 /** The tools that change the sound (or open the Save dialog or the Clones panel). */
@@ -231,6 +258,7 @@ const INSTRUCTIONS = [
   'The editor shows every change live, and the person can undo. Nothing is stored until save_preset, which opens the editor\'s Save dialog for the person to confirm; propose it only when the person asks to save (e.g. "on 12A"). Never say a tone is saved unless save_preset answered that the person saved it.',
   'A kept tone in the first message is reused with load_saved_tone only when it matches the request: the same instrument, part and reference, as its notes and gear show; a name that merely mentions the band is not enough, and when in doubt, build the tone. When the person says a tone sounds right, offer to keep it with keep_tone, naming the reference in notes.',
   'For gear the unit has no model of, find a NAM capture (search_tone3000, or a link the person gives) and propose it with upload_clone: the editor opens its Clones panel to convert it (about half a minute) and the person confirms the overwrite of the CLONE slot. Never say a capture is written unless upload_clone says the person wrote it.',
+  'To practise ("play a rock beat at 100 BPM"), start the drum machine with set_drums: rhythm, bpm and play: true in one call; say which rhythm plays.',
   'Use as few calls as possible: build_tone and edit_preset already return the resulting preset. Answer in the language the person writes in, in two to four short sentences.',
 ].join(' ');
 
@@ -361,6 +389,12 @@ async function run(host: MbAgentHost, name: string, args: unknown): Promise<stri
       const done = await host.proposeClone({ slot: (slot as number) - 1, name: cloneName, source });
       return done === 'uploaded' ? `The person wrote "${cloneName}" to ${label}.` : `The person closed the Clones dialog; ${label} is unchanged.`;
     }
+    case 'set_drums':
+      return mbDrumText(
+        await host.drums(
+          mbDrumChangeOf({ play: field(args, 'play'), rhythm: field(args, 'rhythm'), bpm: field(args, 'bpm'), followTempo: field(args, 'follow_tempo'), volume: field(args, 'volume') }),
+        ),
+      );
     default:
       throw new Error(`unknown tool "${name}"`);
   }

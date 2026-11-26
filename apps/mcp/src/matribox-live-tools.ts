@@ -5,7 +5,7 @@
  */
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { MB_BPM_MAX, MB_BPM_MIN, MB_CC, MB_FS_FUNCTIONS, mbBpmControlChanges, mbControlChange, mbSwitch } from '@pocket-master/core';
+import { MB_BPM_MAX, MB_BPM_MIN, MB_CC, MB_DRUM_BPM_MAX, MB_DRUM_BPM_MIN, MB_DRUM_GENRES, MB_FS_FUNCTIONS, MB_IR_SLOTS, mbBpmControlChanges, mbControlChange, mbSwitch } from '@pocket-master/core';
 import type { MatriboxSession } from './matribox-session.ts';
 
 type Run = (tool: string, run: () => Promise<string>) => Promise<{ content: { type: 'text'; text: string }[]; isError?: boolean }>;
@@ -159,6 +159,34 @@ export function registerMatriboxLive(server: McpServer, run: Run, matribox: () =
       annotations: LIVE,
     },
     (args) => run('matribox_set_expression_range', () => matribox().setExpressionRange(args)),
+  );
+
+  server.registerTool(
+    'matribox_set_drums',
+    {
+      title: 'Play the Matribox drum machine',
+      description: `Matribox II Pro: the drum machine, for practice: play or stop it, pick a rhythm (a style: ${MB_DRUM_GENRES.map((g) => g.name).join(', ')}, or a rhythm name such as "Rock 2", "Shuffle", "Funk 3", "4/4"), set its own tempo or make it follow the preset tempo, and its volume; all optional, none only reads it. Sent as the editor protocol's drum settings and read back from the unit (prefer it to matribox_drum). Nothing is saved to a preset. ${EXPERIMENTAL}`,
+      inputSchema: {
+        play: z.boolean().optional().describe('true starts the beat, false stops it'),
+        rhythm: z.string().optional().describe('A style (its first rhythm) or a rhythm name'),
+        bpm: z.number().int().min(MB_DRUM_BPM_MIN).max(MB_DRUM_BPM_MAX).optional().describe("The drums' own tempo (stops following the preset tempo)"),
+        follow_tempo: z.boolean().optional().describe("true: follow the preset's (or the global) tempo"),
+        volume: percent.int().optional(),
+      },
+      annotations: LIVE,
+    },
+    (args) => run('matribox_set_drums', () => matribox().setDrums({ play: args.play, rhythm: args.rhythm, bpm: args.bpm, followTempo: args.follow_tempo, volume: args.volume })),
+  );
+
+  server.registerTool(
+    'matribox_rename_ir',
+    {
+      title: 'Rename a Matribox user IR',
+      description: `Matribox II Pro: renames user IR slot 1..20 (1..16 printable ASCII characters); the IR in it stays. Checked by reading the names back. ${EXPERIMENTAL}`,
+      inputSchema: { slot: z.number().int().min(1).max(MB_IR_SLOTS), name: z.string().min(1).max(16) },
+      annotations: LIVE,
+    },
+    (args) => run('matribox_rename_ir', () => matribox().renameIr(args)),
   );
 
   registerCcTools(server, run, matribox);

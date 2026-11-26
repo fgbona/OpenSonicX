@@ -24,11 +24,17 @@ import {
   mbSetPatchVolume,
   mbUploadClone,
   mbWriteGlobalEqOn,
+  mbDrumWith,
+  mbReadDrumState,
+  mbWriteDrum,
+  mbWriteIrName,
   parseMbPreset,
   withMbVolume,
   type MatriboxLink,
   type MbBackupAll,
   type MbCloneStep,
+  type MbDrumChange,
+  type MbDrumState,
   type MbExpressionAssignment,
   type MbGlobalSetting,
   type MbGlobalState,
@@ -60,10 +66,22 @@ export interface MatriboxState {
   readonly globals: MbGlobalState | null;
   /** The unit's last "System overloaded" notice (cpu: every block switched off; memory: a block refused), until closed. */
   readonly overload: 'cpu' | 'memory' | null;
+  /** The drum machine; null until read, or when the unit did not answer. */
+  readonly drum: MbDrumState | null;
 }
 
-const INITIAL: MatriboxState = { unit: null, busy: null, error: null, edited: false, backups: [], storageWarning: false, progress: null, globals: null, overload: null };
+const INITIAL: MatriboxState = { unit: null, busy: null, error: null, edited: false, backups: [], storageWarning: false, progress: null, globals: null, overload: null, drum: null };
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+/** The drum machine's state; null (logged) when the unit does not answer, so the editor still opens. */
+async function readDrum(link: MatriboxLink): Promise<MbDrumState | null> {
+  try {
+    return await mbReadDrumState(link);
+  } catch (e) {
+    console.error('Matribox: could not read the drum machine', e);
+    return null;
+  }
+}
 
 /** The Matribox II Pro editor's state and actions over its open MIDI ports. */
 export function useMatribox(port: MidiPort | null) {
@@ -107,7 +125,7 @@ export function useMatribox(port: MidiPort | null) {
     () =>
       run('Reading', async (unit) => {
         const read = await readUnit(unit);
-        patch({ unit: read, edited: false, globals: await readGlobals(unit) });
+        patch({ unit: read, edited: false, globals: await readGlobals(unit), drum: await readDrum(unit) });
       }),
     [run, patch],
   );
@@ -129,7 +147,8 @@ export function useMatribox(port: MidiPort | null) {
     link.onNotice((notice) => {
       if (notice.kind === 'edited') return patch({ edited: notice.edited });
       if (notice.kind === 'global') return patchGlobals((g) => withGlobal(g, notice.setting, notice.value));
-      if (notice.kind === 'drum') return; // the drum machine is not shown
+      if (notice.kind === 'drum') return patch({ drum: notice });
+      if (notice.kind === 'drumChange') return setState((s) => (s.drum ? { ...s, drum: mbDrumWith(s.drum, notice.change) } : s));
       if (notice.kind === 'overload') return patch({ overload: notice.cause });
       if (notice.kind === 'saved') {
         const saved = { name: notice.name, style: '' };
@@ -438,9 +457,54 @@ export function useMatribox(port: MidiPort | null) {
     [run],
   );
 
+  /**
+   * Drum machine changes, merged while one is on its way (a slider drag sends the newest values once);
+   * shown at once, then as the unit reads back. Resolves with the unit's state, null when it failed
+   * (the state is read again then).
+   */
+  const pendingDrum = useRef<{ change: MbDrumChange; done: Promise<MbDrumState | null> } | null>(null);
+  const setDrum = useCallback(
+    (change: MbDrumChange): Promise<MbDrumState | null> => {
+      if (!link) return Promise.resolve(null);
+      setState((s) => (s.drum ? { ...s, drum: mbDrumWith(s.drum, change) } : s));
+      const queued = pendingDrum.current;
+      if (queued) {
+        pendingDrum.current = { ...queued, change: { ...queued.change, ...change } };
+        return queued.done;
+      }
+      let result: MbDrumState | null = null;
+      const done = run(null, async (unit) => {
+        const latest = pendingDrum.current?.change ?? change;
+        pendingDrum.current = null;
+        try {
+          result = await mbWriteDrum(unit, latest);
+          patch({ drum: result });
+        } catch (e) {
+          patch({ drum: await readDrum(unit) });
+          throw e;
+        }
+      }).then(() => result);
+      pendingDrum.current = { change, done }; // the step starts on a later tick (serialQueue), after this
+      return done;
+    },
+    [link, run, patch],
+  );
+
+  /** Renames user IR `slot` (0-based), checked by reading the names back. False when it failed. */
+  const renameIr = useCallback(
+    (slot: number, name: string) =>
+      run('Renaming', async (unit) => {
+        const irNames = await mbWriteIrName(unit, slot, name);
+        setState((s) => (s.unit ? { ...s, unit: { ...s.unit, irNames } } : s));
+      }),
+    [run],
+  );
+
   return {
     ...state,
     refresh,
+    setDrum,
+    renameIr,
     uploadClone,
     select,
     setParam,

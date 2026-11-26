@@ -313,12 +313,26 @@ restarts the unit in its bootloader. The core has no builder for either.
 | 35 | Current Mode (footswitch mode) | `52` | 0 Stomp, 1 Preset | mb-33: the byte was 0 (mb-30, mb-32), the owner switched Stomp → Preset and the editor wrote 1; waveod's firmware (`0 = stomp`) and matribox-studio agree. Was 0 Preset / 1 Stomp until 2026-11-26: mb-09 and mb-41 hold no table read, so that reading had no capture behind it | Medium-high |
 | 36..37 | MIDI Input Ch (TRS) | `61`, index 0 | i16: 0 Omni, 1..16 | mb-34: the owner's field was labelled "Input Ch (USB)", but the editor wrote `00 61` (index 0) and byte 36 went 0 → 5; waveod and matribox-studio (the official app's names) make index 0 the TRS input | High (write, byte), medium (TRS: the label disagrees) |
 | 38..39 | MIDI Input Ch (USB) | `61`, index 1 | i16: 0 Omni, 1..16 | 0 in every capture; `01 61` from waveod, not captured | Medium |
-| 40..43 | MIDI Output Ch (TRS, USB) | `61`, index 2, 3 | i16: -1 off, 1..16 (waveod) | 0 in every capture; not offered | Medium |
+| 40..43 | MIDI Output Ch (TRS, USB) | `61`, index 2, 3 | i16: -1 off, 0 Omni, 1..16 (waveod clamps above 16) | 0 in every capture; offered (`midiOutTrs`, `midiOutUsb`) | Medium |
 | 44 | MIDI In Source | `62` | 0 TRS Only, 1 USB Only, 2 Mixed | mb-35: Mixed 2 → USB Only 1 (then put back); 0 from the manual's order | High (1, 2), medium (0) |
 | 48..49 | Global Tempo BPM | `26` | u16 40..300 (`FF FF` while never set) | Between mb-36 and mb-38 the tempo was set to 100: `FF FF` → `64 00`. mb-37: the unit's `00 26 00 00` + BPM notices; the write and its echo from waveod | High (read), medium (write: not captured) |
 | 50 | Global Tempo on | `25` | 0/1; the unit reads and answers 0 while the BPM is not set | `00` → `01` with the BPM above; mb-45: the unit sent `00 25 00 00 00` by itself. Write from waveod | High (read), medium (write) |
 | 11 | Brightness | `14` (read only) | percent | Changed on the unit in mb-32 (the official editor does not offer it), 50 → 80; waveod: the screen's backlight, a read with no write | High |
-| 2, 5, 9, 20..22, 45 | Unknown | | `02`, `01`, `01`, `01`, `04` | Never changed | Unknown |
+| 5 | Auto CAB | `05` | 0/1 | `01` in every capture; waveod (record +0x11) | Medium |
+| 18 | USB Rec Level | `31` | dB int8 -20..+20 | 0; waveod (+0x1E) | Medium |
+| 19 | USB Monitor Level | `32` | dB int8 -20..+20 | 0; waveod (+0x1F) | Medium |
+| 20 | AUX To USB | `33` | 0/1 | `01`; waveod (+0x20) | Medium |
+| 21, 22 | USB Rec Mode L / R | `34`, index 0, 1 | 0 dry, 1 processed | `01 01`; waveod (+0x21) | Medium |
+| 24 | EXP 2 jack | `41`, index 1 | 0 EXP, 1 single FS, 2 dual FS | 0; waveod (+0x24) | Medium |
+| 25, 27 | External footswitch 1 / 2 | `42`, index 0, 2 | footswitch function ids (`MB_FS_FUNCTIONS`) | 0; waveod (+0x25, +0x27) | Medium |
+| 33 (and 34) | Bank Sel Mode | `51`, index 0 (index 1 writes the same byte) | 0/1: 0 Wait, 1 Initial assumed from the manual's order | 0; waveod (+0x2D) | Medium (byte), low (labels) |
+| 45 | Clock Source | `63` | 0 Internal, 1 TRS Only, 2 USB Only, 3 External, 4 Mixed | `04`; waveod (+0x79) | Medium |
+| 46 | Clock Out | `64` | bit 0 TRS, bit 1 USB | 0; waveod (+0x7A) | Medium |
+| 2, 9 | Unknown (2: run mode, waveod) | | `02`, `01` | Never changed | Unknown |
+
+Every row marked waveod is written like the captured ones and echoed with the value the firmware
+kept (`mbSetGlobal`); none is captured yet. Not offered: USB mode (`06`, the firmware sets it without
+any answer, and a wrong choice drops the computer connection), language, display and standby.
 
 **Global Tempo.** `00 25` switches it (0/1) and `00 26` sets its BPM (40..300); the unit echoes
 both (waveod; no host write captured: mb-37 was taken on the unit). In the official editor,
@@ -335,6 +349,28 @@ options offers USB Only and Mixed only. The editor's Control Change channel foll
 
 **cmd `13`, 10 bytes**: the drum machine's state (above, "The unit's own messages"):
 `00 00 07 00 00 00 3C 00 00 5D` in every capture.
+
+### Drum machine (waveod, not captured)
+
+`packages/core/src/matribox/drum.ts`. The state read is flag 0, cmd `13`, no argument: u8 playing,
+0, u16 genre 0..7, u16 pattern within the genre, u16 BPM, u8 follows the tempo, u8 volume 0..100.
+A setting is flag 1, cmd `11`, `00 <8n> 00 00` + u32 like a global setting: `81` play/stop (not
+stored), `82` genre << 16 | pattern, `83` pattern in the current genre, `84` BPM 40..300, `85`
+follow the effects' (preset or global) tempo, `86` volume 0..100. waveod's firmware answers with
+`{sub, value}` notices (`82`/`83` both with `82` and the pattern word; `85` on with `84` + the
+BPM it took, then `85`), but sends **nothing** for play when it already plays, for a BPM while it
+follows the tempo with the clock from TRS, USB or external MIDI, and for a volume over 100. So
+`mbWriteDrum` reads the state, posts the writes (rhythm, tempo, volume, then play), reads the state
+back and says which value the unit kept. The answers are `drumChange` notices: the editor follows
+them, and the state reply (`drum`) too. Genres and the 100 pattern names (`MB_DRUM_GENRES`,
+`MB_DRUM_PATTERNS`) are waveod's table from the V1.2.2 application: Rock 30, Blues 10, Funk 7,
+Jazz 7, Pop 8, Electronic 7, World 21, Metronome 10.
+
+In the editor, the *Drum machine* panel plays or stops it and sets style, rhythm, tempo (off while
+it follows the preset tempo), the following and the volume. The tone assistant's `set_drums` and
+the MCP server's `matribox_set_drums` take a style or a rhythm name, a BPM, the following and the
+volume ("play a rock beat at 100 BPM"). The older `matribox_drum` (the manual's Control Changes,
+unanswered) stays for the drum menu.
 
 **cmd `16`, 124 bytes: the global EQ** (`parseMbGlobalEq`), 31 float32 LE. One value is written as
 flag 2, cmd `16`, u32 **word index** + f32 (`mbSetGlobalEqGain`, `mbSetGlobalEqLevel`); the unit
@@ -364,8 +400,10 @@ reads the switch first and sends nothing then.
 **In the editor**: *Global options* (header, beside the preset file buttons; on a phone under ⋯) is
 read on connect (`mbReadGlobalState`, a failure leaves the editor usable and the dialog says it
 could not read) and offers Input Mode, Input Level, AUX Level, Current Mode, Global Tempo (switch
-and BPM), MIDI Input Ch (USB and TRS), MIDI In Source (USB Only, Mixed), the global EQ switch, its
-level and the gains of bands 1..4; brightness and the cut filters are shown only. Each change is one write, the newest value only while a slider moves; a write the unit
+and BPM), Bank Sel Mode, Auto CAB, MIDI Input Ch (USB and TRS), MIDI In Source (USB Only, Mixed),
+the global EQ switch, its level and the gains of bands 1..4; folded groups hold MIDI Output Ch, Clock
+Source and Clock Out, USB audio (rec and monitor levels, AUX to USB, rec L/R dry or processed), and
+the EXP 2 jack with the external footswitches' functions; brightness and the cut filters are shown only. Each change is one write, the newest value only while a slider moves; a write the unit
 does not confirm shows the error and the globals are read again. Not checked on the owner's unit yet.
 
 ## MCP tools
@@ -603,6 +641,11 @@ A/B `.clo` are byte for byte the prepared `opensonicx-5-RECTIFIER-clone9.syx`, w
 rebuilds mb-19 byte for byte from the official `.clo`. It has no builder for the clone delete or
 the bootloader message. The simulated unit (`packages/core/test/fake-matribox.ts`) answers the
 names, takes the upload (checking the sum), acknowledges it and applies the rename.
+
+**User IR rename** (waveod, not captured): flag 2, cmd 0x14, `u32 slot` (0..19) + a 20-byte name,
+not answered, the clone rename's shape (`mbRenameIr`). `mbWriteIrName(link, slot, name)` posts it and
+reads the IR names back to check it. The editor's *User IRs* panel lists the 20 slots and renames
+one in place; the MCP server has `matribox_rename_ir`. The simulated unit applies it.
 
 **Offline CLONE block** (`simulateClo(clo, input)`, core `clo/simulate.ts`): the firmware's chain
 as waveod's bit-exact `src/blocks/clone/clone.c` runs it (gain, IIR 1 in double with the x 1000 /

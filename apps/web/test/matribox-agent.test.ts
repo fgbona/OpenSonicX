@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { matriboxLink, mbAssignments, parseMbPreset, type MbPreset, type TonePage } from '@pocket-master/core';
+import { matriboxLink, mbAssignments, mbReadDrumState, mbWriteDrum, parseMbPreset, type MbPreset, type TonePage } from '@pocket-master/core';
 import { FakeMatribox } from '../../../packages/core/test/fake-matribox.ts';
 import { FAKE_CATALOG } from '../../../packages/core/test/matribox-fake-catalog.ts';
 import { askedToSaveMb, matriboxAgent, type MbAgentHost } from '../lib/matriboxAgent.ts';
@@ -68,6 +68,7 @@ function host() {
         return page;
       },
     },
+    drums: (change) => (change ? mbWriteDrum(unit, change) : mbReadDrumState(unit)),
     tones: () => tones,
     keepTone: async (name, notes) => {
       tones = withTone(tones, mbTone(preset, name, notes, `kept-${tones.length}`));
@@ -75,6 +76,7 @@ function host() {
   };
   return {
     h,
+    fake,
     sent,
     saves,
     clones,
@@ -362,4 +364,24 @@ test('clone names and TONE3000 models are picked by simple rules', () => {
   assert.throws(() => pickToneModel(models, 5), /no model 5/);
   assert.throws(() => pickToneModel([]), /no models/);
   assert.equal(pickToneModel([models[0]!]).id, 1);
+});
+
+test('set_drums starts a rock beat at 100 BPM for practice, on the unit, and says what plays', async () => {
+  const s = host();
+  const agent = matriboxAgent(s.h);
+  assert.ok(agent.tools.some((t) => t.name === 'set_drums'));
+  assert.match(agent.instructions(false), /set_drums/);
+  const run = agent.runner();
+  const r = await run('set_drums', { play: true, rhythm: 'rock', bpm: 100 });
+  assert.deepEqual([r.ok, r.text], [true, 'Drum machine: playing · Rock: Rock 1 · 100 BPM · volume 50']);
+  assert.deepEqual(s.fake.drum, { playing: true, genre: 0, pattern: 0, bpm: 100, follow: false, volume: 50 });
+
+  assert.match((await run('set_drums', { rhythm: 'Bossanova 1', volume: 30 })).text, /playing · Jazz: Bossanova 1 · 100 BPM · volume 30/);
+  assert.match((await run('set_drums', {})).text, /^Drum machine: playing/); // a read
+  assert.match((await run('set_drums', { play: false })).text, /^Drum machine: stopped/);
+
+  const bad = await run('set_drums', { rhythm: 'dubstep' });
+  assert.equal(bad.ok, false);
+  assert.match(bad.text, /no drum rhythm is called "dubstep"/);
+  assert.equal((await run('set_drums', { bpm: 20 })).ok, false);
 });

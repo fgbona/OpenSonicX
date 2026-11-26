@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { MB_GLOBALS, type MbEqBand, type MbGlobalSetting } from '@pocket-master/core';
+import { type ReactNode, useState } from 'react';
+import { MB_FS_FUNCTIONS, MB_GLOBALS, type MbEqBand, type MbGlobalSetting } from '@pocket-master/core';
+import type { MessageKey } from '@/lib/messages';
 import type { Matribox } from '@/lib/useMatribox';
 import { Dialog } from './Dialog';
 import { RigLookSwitch } from './rig/RigLookSwitch';
@@ -9,12 +10,16 @@ import { Segmented } from './SettingsDialog';
 import { useI18n } from './I18n';
 
 const CHANNELS = Array.from({ length: 17 }, (_, i) => i);
+/** Output channels: -1 off, then Omni and 1..16. */
+const OUT_CHANNELS = [-1, ...CHANNELS];
+const CLOCK_TRS = 1;
+const CLOCK_USB = 2;
 /** The cut filters' frequencies that mean off (19 Hz low, 20001 Hz high). */
 const LOW_CUT_OFF = 19;
 const HIGH_CUT_OFF = 20001;
 const { tempoBpm } = MB_GLOBALS;
 
-function Switch(p: { label: string; on: boolean; disabled: boolean; onChange: (on: boolean) => void }) {
+export function Switch(p: { label: string; on: boolean; disabled: boolean; onChange: (on: boolean) => void }) {
   return (
     <div className="settings-row">
       <span className="settings-label">{p.label}</span>
@@ -25,14 +30,26 @@ function Switch(p: { label: string; on: boolean; disabled: boolean; onChange: (o
   );
 }
 
-function ChannelSelect(p: { label: string; value: number; disabled: boolean; onChange: (v: number) => void }) {
+/** A group shown folded: the less used settings stay out of the way. */
+function FoldedGroup(p: { title: string; children: ReactNode }) {
+  return (
+    <details className="settings-group">
+      <summary>
+        <h3>{p.title}</h3>
+      </summary>
+      {p.children}
+    </details>
+  );
+}
+
+function Choice(p: { label: string; value: number; options: readonly (readonly [number, string])[]; disabled: boolean; onChange: (v: number) => void }) {
   return (
     <label className="settings-row">
       <span className="settings-label">{p.label}</span>
       <select className="param-select" value={p.value} disabled={p.disabled} onChange={(e) => p.onChange(Number(e.target.value))}>
-        {CHANNELS.map((c) => (
-          <option key={c} value={c}>
-            {c === 0 ? 'Omni' : c}
+        {p.options.map(([v, text]) => (
+          <option key={v} value={v}>
+            {text}
           </option>
         ))}
       </select>
@@ -40,7 +57,22 @@ function ChannelSelect(p: { label: string; value: number; disabled: boolean; onC
   );
 }
 
-function Slider(p: { label: string; value: number; min: number; max: number; unit?: string; disabled: boolean; onChange: (v: number) => void }) {
+function ChannelSelect(p: { label: string; value: number; disabled: boolean; onChange: (v: number) => void; off?: string }) {
+  return (
+    <label className="settings-row">
+      <span className="settings-label">{p.label}</span>
+      <select className="param-select" value={p.value} disabled={p.disabled} onChange={(e) => p.onChange(Number(e.target.value))}>
+        {(p.off ? OUT_CHANNELS : CHANNELS).map((c) => (
+          <option key={c} value={c}>
+            {c === -1 ? p.off : c === 0 ? 'Omni' : c}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+export function Slider(p: { label: string; value: number; min: number; max: number; unit?: string; disabled: boolean; onChange: (v: number) => void }) {
   const fill = ((p.value - p.min) / (p.max - p.min)) * 100;
   const shown = `${p.unit === 'dB' && p.value > 0 ? '+' : ''}${Math.round(p.value * 10) / 10}${p.unit ? ` ${p.unit}` : ''}`;
   return (
@@ -75,6 +107,9 @@ export function MatriboxGlobals({ mb, icon = false }: { mb: Matribox; icon?: boo
   const off = mb.busy !== null || !g;
   const general = g?.general;
   const set = (setting: MbGlobalSetting) => (v: number) => mb.setGlobal(setting, v);
+  const fsFunctions = MB_FS_FUNCTIONS.map((f) => [f.id, t(`mb.fsFn.${f.id}` as MessageKey)] as const);
+  const levelSlider = (setting: 'usbRecLevel' | 'usbMonitorLevel', label: string) =>
+    general && <Slider label={label} value={general[setting]} min={MB_GLOBALS[setting].min} max={MB_GLOBALS[setting].max} unit="dB" disabled={off} onChange={set(setting)} />;
   const hz = (b: MbEqBand, offAt: number) => (b.on && b.frequency !== offAt ? `${Math.round(b.frequency)} Hz` : t('mbGlobal.cutOff'));
   return (
     <>
@@ -127,6 +162,8 @@ export function MatriboxGlobals({ mb, icon = false }: { mb: Matribox; icon?: boo
             <section className="settings-group" aria-label={t('mbGlobal.functions')}>
               <h3>{t('mbGlobal.functions')}</h3>
               <Segmented label={t('mbGlobal.mode')} value={general.currentMode} options={['Stomp', 'Preset']} disabled={off} onChange={set('currentMode')} />
+              <Segmented label={t('mbGlobal.bankMode')} value={general.bankMode} options={[t('mbGlobal.bankWait'), t('mbGlobal.bankInitial')]} disabled={off} onChange={set('bankMode')} />
+              <Switch label={t('mbGlobal.autoCab')} on={general.autoCab !== 0} disabled={off} onChange={(on) => mb.setGlobal('autoCab', on ? 1 : 0)} />
               <Switch label={t('mbGlobal.tempo')} on={general.tempoOn !== 0} disabled={off} onChange={(on) => mb.setGlobal('tempoOn', on ? 1 : 0)} />
               <Slider
                 label={t('mbGlobal.tempoBpm')}
@@ -159,6 +196,53 @@ export function MatriboxGlobals({ mb, icon = false }: { mb: Matribox; icon?: boo
               </label>
               <p className="muted small">{t('mbGlobal.sourceNote')}</p>
             </section>
+            <FoldedGroup title={t('mbGlobal.midiMore')}>
+              <ChannelSelect label={t('mbGlobal.outUsb')} value={general.midiOutUsb} off={t('mbGlobal.midiOff')} disabled={off} onChange={set('midiOutUsb')} />
+              <ChannelSelect label={t('mbGlobal.outTrs')} value={general.midiOutTrs} off={t('mbGlobal.midiOff')} disabled={off} onChange={set('midiOutTrs')} />
+              <Choice
+                label={t('mbGlobal.clockSource')}
+                value={general.clockSource}
+                options={[
+                  [0, t('mbGlobal.clockInternal')],
+                  [1, t('mbGlobal.sourceTrs')],
+                  [2, t('mbGlobal.sourceUsb')],
+                  [3, t('mbGlobal.clockExternal')],
+                  [4, t('mbGlobal.sourceMixed')],
+                ]}
+                disabled={off}
+                onChange={set('clockSource')}
+              />
+              <Switch
+                label={t('mbGlobal.clockOutUsb')}
+                on={(general.clockOut & CLOCK_USB) !== 0}
+                disabled={off}
+                onChange={(on) => mb.setGlobal('clockOut', on ? general.clockOut | CLOCK_USB : general.clockOut & ~CLOCK_USB)}
+              />
+              <Switch
+                label={t('mbGlobal.clockOutTrs')}
+                on={(general.clockOut & CLOCK_TRS) !== 0}
+                disabled={off}
+                onChange={(on) => mb.setGlobal('clockOut', on ? general.clockOut | CLOCK_TRS : general.clockOut & ~CLOCK_TRS)}
+              />
+            </FoldedGroup>
+            <FoldedGroup title={t('mbGlobal.usb')}>
+              {levelSlider('usbRecLevel', t('mbGlobal.usbRecLevel'))}
+              {levelSlider('usbMonitorLevel', t('mbGlobal.usbMonitorLevel'))}
+              <Switch label={t('mbGlobal.usbRecAux')} on={general.usbRecAux !== 0} disabled={off} onChange={(on) => mb.setGlobal('usbRecAux', on ? 1 : 0)} />
+              <Segmented label={t('mbGlobal.usbRecL')} value={general.usbRecWetL} options={[t('mbGlobal.dry'), t('mbGlobal.wet')]} disabled={off} onChange={set('usbRecWetL')} />
+              <Segmented label={t('mbGlobal.usbRecR')} value={general.usbRecWetR} options={[t('mbGlobal.dry'), t('mbGlobal.wet')]} disabled={off} onChange={set('usbRecWetR')} />
+            </FoldedGroup>
+            <FoldedGroup title={t('mbGlobal.exp2')}>
+              <Segmented
+                label={t('mbGlobal.exp2Jack')}
+                value={general.exp2Jack}
+                options={[t('mbGlobal.exp2Pedal'), t('mbGlobal.exp2One'), t('mbGlobal.exp2Two')]}
+                disabled={off}
+                onChange={set('exp2Jack')}
+              />
+              {general.exp2Jack !== 0 && <Choice label={t('mbGlobal.extFs', { n: 1 })} value={general.extFs1} options={fsFunctions} disabled={off} onChange={set('extFs1')} />}
+              {general.exp2Jack === 2 && <Choice label={t('mbGlobal.extFs', { n: 2 })} value={general.extFs2} options={fsFunctions} disabled={off} onChange={set('extFs2')} />}
+            </FoldedGroup>
             <section className="settings-group" aria-label={t('mbGlobal.eq')}>
               <h3>{t('mbGlobal.eq')}</h3>
               <Switch label={t('mbGlobal.eqOn')} on={g.eqOn} disabled={off} onChange={mb.setEqOn} />

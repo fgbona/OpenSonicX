@@ -8,7 +8,9 @@ facts cross-checked against them (docs/matribox.md) and the DSP figures behind t
 load (`packages/core/src/matribox/dsp-load.ts`: the overload rule, the chain budget, the measured
 costs of the stock Cab/IR, Clone and amps, the memory rule), and the layout of the preset's assignment
 sections and the writes of footswitch functions and quick knobs (`packages/core/src/matribox/write.ts`,
-`assignments.ts`). Both are under this license:
+`assignments.ts`), the drum machine's protocol and its genre and pattern names
+(`packages/core/src/matribox/drum.ts`, from waveod's `src/model/drum_names.c`), the layout of the
+further global settings (`globals.ts`) and the user IR rename (`ir.ts`). Both are under this license:
 
 MIT License
 

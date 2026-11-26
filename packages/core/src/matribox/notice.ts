@@ -9,11 +9,13 @@
  * `00 52` message is the Current Mode changed on the unit, the shape of the host's global write.
  *
  * cmd 0x13 is the drum machine's state, the reply to the editor's connect read (layout cross-checked
- * against zxmarcos/waveod, MIT); decoded here for whoever reads it, not followed by the editor.
+ * against zxmarcos/waveod, MIT). A drum setting's answer (cmd 0x11, `00 8n 00 00` + u32, drum.ts) is a
+ * `drumChange`: the unit sends it for the host's writes, and presumably for changes made on the unit.
  *
  * The preset-change notice has the same bytes as the unit's echo of a host select and its reply to
  * the current-preset read: a link must take those for itself first and pass on only the rest.
  */
+import { mbDrumAnswer, type MbDrumChange } from './drum.ts';
 import { MB_GLOBALS, type MbGlobalSetting } from './globals.ts';
 import type { MbMessage } from './message.ts';
 import { MB_SLOTS } from './write.ts';
@@ -48,6 +50,8 @@ export type MbNotice =
       readonly follow: boolean;
       readonly volume: number;
     }
+  /** cmd 0x11, `00 <81..86> 00 00` + u32: a drum machine setting as the unit now holds it (drum.ts). */
+  | { readonly kind: 'drumChange'; readonly change: MbDrumChange }
   /** `00 00 04 01` + chain (89 bytes): the chain changed on the unit (a model, mb-42, mb-44); read the preset again. */
   | { readonly kind: 'chain' }
   /** cmd 0x05, u32 index + 17-byte name: the loaded preset saved on the unit (mb-44). */
@@ -71,6 +75,8 @@ function generalNotice(data: Uint8Array, view: DataView): MbNotice | null {
     const cause = view.getUint32(4, true);
     return cause === 0 ? null : { kind: 'overload', cause: cause === 2 ? 'memory' : 'cpu' };
   }
+  const drum = mbDrumAnswer(sub, view.getUint32(4, true));
+  if (drum) return { kind: 'drumChange', change: drum };
   const setting = GLOBAL_BY_SUB.get(sub);
   return setting ? { kind: 'global', setting, value: view.getInt32(4, true) } : null;
 }
