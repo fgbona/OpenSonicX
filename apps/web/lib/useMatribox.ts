@@ -53,9 +53,11 @@ export interface MatriboxState {
   readonly progress: Progress | null;
   /** The global settings (Global options); null until read, or when the unit did not answer them. */
   readonly globals: MbGlobalState | null;
+  /** The unit's last "System overloaded" notice (cpu: every block switched off; memory: a block refused), until closed. */
+  readonly overload: 'cpu' | 'memory' | null;
 }
 
-const INITIAL: MatriboxState = { unit: null, busy: null, error: null, edited: false, backups: [], storageWarning: false, progress: null, globals: null };
+const INITIAL: MatriboxState = { unit: null, busy: null, error: null, edited: false, backups: [], storageWarning: false, progress: null, globals: null, overload: null };
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /** The Matribox II Pro editor's state and actions over its open MIDI ports. */
@@ -122,6 +124,7 @@ export function useMatribox(port: MidiPort | null) {
       if (notice.kind === 'edited') return patch({ edited: notice.edited });
       if (notice.kind === 'global') return patchGlobals((g) => withGlobal(g, notice.setting, notice.value));
       if (notice.kind === 'drum') return; // the drum machine is not shown
+      if (notice.kind === 'overload') return patch({ overload: notice.cause });
       if (notice.kind === 'saved') {
         const saved = { name: notice.name, style: '' };
         setState((s) => {
@@ -435,6 +438,7 @@ export function useMatribox(port: MidiPort | null) {
     backupAll,
     restoreAll,
     clearError: () => patch({ error: null }),
+    clearOverload: () => patch({ overload: null }),
   };
 }
 

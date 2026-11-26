@@ -4,6 +4,9 @@ Copyright (c) 2026 Fernando Bona and contributors. Licensed under MIT, see LICEN
 Third-party material
 ====================
 
+zxmarcos/waveod and zxmarcos/matribox-studio (MIT, Copyright (c) 2026 Marcos Medeiros): protocol
+facts and DSP figures, see THIRD_PARTY_NOTICES.md.
+
 The Matribox II Pro model catalog (packages/core/src/matribox/models.json and
 model-text.json) is our own work: a functional map of the unit's models (ids, categories,
 parameter ranges) written by scripts/matribox-map.mjs, and our own model names and

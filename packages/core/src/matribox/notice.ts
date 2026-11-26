@@ -31,6 +31,11 @@ export type MbNotice =
   | { readonly kind: 'volume'; readonly value: number }
   /** cmd 0x11, `00 08 00 00` + u32: 1 once the loaded preset is edited, 0 after a save. */
   | { readonly kind: 'edited'; readonly edited: boolean }
+  /**
+   * cmd 0x11, `00 07 00 00` + u32: the unit showed "System overloaded" (1 the DSP ran out and every block
+   * was switched off, 2 a block refused for memory). From zxmarcos/matribox-studio and waveod; not captured yet.
+   */
+  | { readonly kind: 'overload'; readonly cause: 'cpu' | 'memory' }
   /** cmd 0x11, `<index> <id> 00 00` + i32: a global setting changed on the unit (the host's write has this shape; the tempo's BPM in mb-37). */
   | { readonly kind: 'global'; readonly setting: MbGlobalSetting; readonly value: number }
   /** cmd 0x13, 10 bytes: u8 playing, 0, u16 genre, u16 pattern, u16 BPM, u8 follows the tempo, u8 volume 0..100. */
@@ -52,6 +57,7 @@ export type MbNotice =
 const CHAIN_NOTICE_SIZE = 4 + 12 + 12 + 48 + 12 + 1;
 const SAVE_NOTICE_SIZE = 4 + 17;
 const EDITED = 0x0800;
+const OVERLOAD = 0x0700;
 const DRUM_SIZE = 10;
 /** Settings by their u16 `<index> <id>`. */
 const GLOBAL_BY_SUB = new Map<number, MbGlobalSetting>(Object.entries(MB_GLOBALS).map(([setting, { id, index }]) => [(id << 8) | index, setting as MbGlobalSetting]));
@@ -61,6 +67,10 @@ function generalNotice(data: Uint8Array, view: DataView): MbNotice | null {
   if (data.length !== 8 || data[2] !== 0 || data[3] !== 0) return null;
   const sub = view.getUint16(0, true);
   if (sub === EDITED) return { kind: 'edited', edited: view.getUint32(4, true) !== 0 };
+  if (sub === OVERLOAD) {
+    const cause = view.getUint32(4, true);
+    return cause === 0 ? null : { kind: 'overload', cause: cause === 2 ? 'memory' : 'cpu' };
+  }
   const setting = GLOBAL_BY_SUB.get(sub);
   return setting ? { kind: 'global', setting, value: view.getInt32(4, true) } : null;
 }
