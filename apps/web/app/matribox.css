@@ -21,6 +21,15 @@
   background: color-mix(in srgb, var(--orange) 8%, transparent); color: var(--label-2); font-size: 0.8125rem;
 }
 
+/* Estimated DSP load under the chain: a quiet line, orange near the limit, red past it. */
+.mb-dsp { display: flex; flex-direction: column; gap: 6px; }
+.mb-dsp-load { display: flex; align-items: center; gap: 10px; color: var(--label-2); font-size: 0.8125rem; }
+.mb-dsp-load meter { flex: 1; max-width: 240px; height: 8px; }
+.mb-dsp-high { color: var(--orange); }
+.mb-dsp-over { color: var(--red); font-weight: 600; }
+.mb-dsp-warning { margin: 0; color: var(--label-2); font-size: 0.8125rem; }
+.mb-overload { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; }
+
 /* Preset header: the actions sit beside the patch volume knob. */
 .mb-head-end { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 24px; }
 .mb-head-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }

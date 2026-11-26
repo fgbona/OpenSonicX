@@ -18,6 +18,7 @@ import {
   MB_CATALOG,
   MB_SLOTS,
   mbAddBlock,
+  mbCheckDspLoad,
   mbBackupAllPresets,
   mbChangeModel,
   mbMoveBlock,
@@ -238,10 +239,14 @@ export class MatriboxSession {
       const { catalog, preset } = await this.#loaded(unit);
       const block = findBlock(preset, options.block);
       const { module, model } = findModel(catalog, options.model);
+      const note = mbCheckDspLoad(
+        preset.chain,
+        preset.chain.map((b) => (b === block ? { moduleIndex: module.index } : b)),
+      );
       await unit.write(mbChangeModel(block.slot, module.index, model.fxid));
       const now = findBlock((await this.#loaded(unit)).preset, String(block.position));
       const values = now.params.map((p) => `${p.name} ${round(p.value)}`).join(', ');
-      return experimental([`${module.name}: ${block.model?.name ?? 'unknown model'} → ${modelTitle(model)}${values ? `: ${values}` : ''}`]);
+      return experimental([`${module.name}: ${block.model?.name ?? 'unknown model'} → ${modelTitle(model)}${values ? `: ${values}` : ''}`, ...(note ? [note] : [])]);
     });
   }
 
@@ -251,8 +256,10 @@ export class MatriboxSession {
       const { module, model } = findModel(catalog, options.model, findModule(catalog, options.module));
       const values = modelValues(model, 0, options.params); // checked before the unit is opened
       return this.#use(async (unit) => {
-        const count = (await this.#loaded(unit)).preset.chain.length;
+        const loaded = (await this.#loaded(unit)).preset.chain;
+        const count = loaded.length;
         if (count >= MB_SLOTS) throw new Error(`The chain is full (${MB_SLOTS} blocks): remove one first.`);
+        const note = mbCheckDspLoad(loaded, [...loaded, { moduleIndex: module.index }]);
         const position = options.position ?? count + 1;
         if (!Number.isInteger(position) || position < 1 || position > count + 1) throw new Error(`position must be 1..${count + 1}, got ${position}`);
         await unit.write(mbAddBlock(position - 1, module.index, model.fxid));
@@ -260,7 +267,7 @@ export class MatriboxSession {
         if (slot === undefined) throw new Error(`Matribox II PRO did not add the block at ${position}`);
         const on = options.on ?? true;
         await MatriboxSession.#writeAll(unit, [...MatriboxSession.#paramFrames(modelValues(model, slot, options.params)), ...(on ? [] : [mbSetBlockOn(slot, false)])]);
-        return experimental([`Added ${module.name} ${modelTitle(model)} at ${position}${on ? '' : ' (off)'}${values.length ? `: ${describeValues(model, values)}` : ''}`]);
+        return experimental([`Added ${module.name} ${modelTitle(model)} at ${position}${on ? '' : ' (off)'}${values.length ? `: ${describeValues(model, values)}` : ''}`, ...(note ? [note] : [])]);
       });
     });
   }
@@ -296,6 +303,7 @@ export class MatriboxSession {
       const plan = planTone(catalog, options.blocks); // everything checked before the unit is opened
       return this.#use(async (unit) => {
         const old = (await this.#loaded(unit)).preset.chain;
+        const note = mbCheckDspLoad(old, plan.blocks);
         for (let i = old.length - 1; i >= 0; i--) await unit.write(mbRemoveBlock(i)); // from the end: positions stay put
         for (const [i, b] of plan.blocks.entries()) await unit.write(mbAddBlock(i, b.moduleIndex, b.fxid));
         const added = (await this.#loaded(unit)).preset.chain;
@@ -304,7 +312,7 @@ export class MatriboxSession {
           if (slot === undefined) throw new Error(`Matribox II PRO did not add block ${i + 1}: its chain now has ${added.length} blocks`);
           await MatriboxSession.#writeAll(unit, [...MatriboxSession.#paramFrames(modelValues(b.model, slot, b.params)), mbSetBlockOn(slot, b.on)]);
         }
-        return experimental([...plan.lines, 'Nothing is stored until matribox_save_preset.']);
+        return experimental([...plan.lines, ...(note ? [note] : []), 'Nothing is stored until matribox_save_preset.']);
       });
     });
   }

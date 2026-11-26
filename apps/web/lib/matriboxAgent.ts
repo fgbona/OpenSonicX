@@ -4,7 +4,7 @@
  * them against the catalog and sends them through its validated writes as one Undo step. Saving
  * only opens the editor's Save dialog.
  */
-import { CHAT_INSTRUCTIONS_THOROUGH, checkMbPresetName, mbPresetLabel, parseMbPresetLabel, type ChatTool, type JsonSchema, type MbCatalog, type MbPreset } from '@pocket-master/core';
+import { CHAT_INSTRUCTIONS_THOROUGH, checkMbPresetName, mbCheckDspLoad, mbPresetLabel, parseMbPresetLabel, type ChatTool, type JsonSchema, type MbCatalog, type MbPreset } from '@pocket-master/core';
 import { SAVE_VERB, type ToneAgent } from './assistant.ts';
 import type { Lang } from './i18n.ts';
 import { type ControlChange, controlWrites, MB_FS_FUNCTION_NAMES, mbControlsText } from './matriboxAssign.ts';
@@ -121,13 +121,13 @@ export const MB_CHAT_TOOLS: readonly ChatTool[] = [
   {
     name: 'build_tone',
     description:
-      "Replaces the loaded preset's chain with these blocks, in signal order (input to output, 1 to 12), each with its model, on/off and values. Live only: nothing is saved. Everything is checked before anything is sent. Returns the preset as it now is.",
+      "Replaces the loaded preset's chain with these blocks, in signal order (input to output, 1 to 12), each with its model, on/off and values. Live only: nothing is saved. Everything is checked before anything is sent, the DSP load included: a chain past the unit's estimated DSP budget, or with more than 2 CAB/IR/CLONE blocks, is refused with what to drop. Returns the preset as it now is.",
     parameters: object({ blocks: { type: 'array', items: TONE_BLOCK } }, ['blocks']),
   },
   {
     name: 'edit_preset',
     description:
-      'Small changes to the loaded preset, applied in order (each names blocks as the chain is after the changes before it); a new model starts at its defaults. Live only: nothing is saved. Returns the preset as it now is.',
+      "Small changes to the loaded preset, applied in order (each names blocks as the chain is after the changes before it); a new model starts at its defaults. Live only: nothing is saved. Changes that would take the chain past the unit's estimated DSP budget, or past 2 CAB/IR/CLONE blocks, are refused with what to drop. Returns the preset as it now is.",
     parameters: object({ changes: { type: 'array', items: CHANGE } }, ['changes']),
   },
   {
@@ -179,6 +179,7 @@ const INSTRUCTIONS = [
   'You are the tone assistant of an editor for the Sonicake Matribox II Pro guitar multi-effects. The person usually describes a sound (an artist, a record, a song, or words like "warmer").',
   'Work out the gear used on the reference (pedals, amp, cabinet, effects) and pick the models whose origin, the real gear they are based on, matches it: the first message lists every model with its origin. Then build the whole chain with one build_tone, in signal order, with sensible values; call list_models first for the modules whose parameters you set, or leave them at their defaults.',
   'When the person will play the tone live, or names footswitches, the expression pedal or the knobs, set them with set_controls after the chain (e.g. EXP 1 mode B on the wah position, footswitch B toggling the delay, quick knob 1 on the drive gain) and say which does what.',
+  'The unit\'s DSP is limited: past it the Matribox shows "System overloaded" and switches every block off. Keep chains lean (usually 5 to 9 blocks, at most 2 CAB/IR/CLONE); the preset text gives an estimated DSP load, and a refused chain says what to drop.',
   'For adjustments ("warmer", "less gain") use edit_preset. Values must be within the ranges given. Say what you did in the same terms as the values.',
   'Do not ask for details the person did not give: make reasonable choices, say briefly what you chose and why, naming the real gear, and invite them to ask for adjustments by ear.',
   'The editor shows every change live, and the person can undo. Nothing is stored until save_preset, which opens the editor\'s Save dialog for the person to confirm; propose it only when the person asks to save (e.g. "on 12A"). Never say a tone is saved unless save_preset answered that the person saved it.',
@@ -216,6 +217,13 @@ function tonesText(host: MbAgentHost, catalog: MbCatalog): string {
 
 const field = (args: unknown, name: string): unknown => (typeof args === 'object' && args !== null ? (args as Record<string, unknown>)[name] : undefined);
 
+/** Sends `chain` once its estimated DSP load is checked (mbCheckDspLoad throws past the limit); a warning near it ends the answer. */
+async function applyChecked(host: MbAgentHost, before: readonly MbChainBlock[], chain: readonly MbChainBlock[], now: (p: MbPreset) => string): Promise<string> {
+  const note = mbCheckDspLoad(before, chain);
+  const text = now(await host.apply(chain));
+  return note ? `${text}\n\n${note}` : text;
+}
+
 async function run(host: MbAgentHost, name: string, args: unknown): Promise<string> {
   const { preset, catalog, lang } = host.snapshot();
   const now = (p: MbPreset) => mbPresetText(p, catalog);
@@ -227,10 +235,10 @@ async function run(host: MbAgentHost, name: string, args: unknown): Promise<stri
     case 'build_tone': {
       const blocks = field(args, 'blocks');
       if (!Array.isArray(blocks)) throw new Error('blocks must be a list');
-      return now(await host.apply(planTone(catalog, blocks as ToneBlock[])));
+      return applyChecked(host, preset.chain, planTone(catalog, blocks as ToneBlock[]), now);
     }
     case 'edit_preset':
-      return now(await host.apply(editChain(catalog, preset.chain, field(args, 'changes') as ChainChange[])));
+      return applyChecked(host, preset.chain, editChain(catalog, preset.chain, field(args, 'changes') as ChainChange[]), now);
     case 'get_controls':
       return mbControlsText(preset, catalog);
     case 'set_controls': {

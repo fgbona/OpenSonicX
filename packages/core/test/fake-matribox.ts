@@ -12,6 +12,10 @@
  * (flag 1 cmd 0x11 setting, flag 2 cmd 0x16 EQ value: echoed; flag 1 cmd 0x16 EQ switch: answered
  * `00 00 00 00` + u32, and not at all when it is already so), as captures mb-30 … mb-39 show. Like the
  * unit (zxmarcos/waveod), Global Tempo stays off and its echo says 0 while it has no BPM.
+ * Like the unit (zxmarcos/matribox-studio), an insert or model change that would put a third CAB/IR/CLONE
+ * block in the chain is refused with the overload notice (cause 2, memory). With `cpuOverload`, one that
+ * takes the chain past the DSP (here: core's estimate, mbDspLoad) is applied, then every block is switched
+ * off with the overload notice (cause 1) and the on/off notice.
  * Never a real device.
  */
 import { readFileSync } from 'node:fs';
@@ -23,7 +27,9 @@ import {
   MB_IR_SLOTS,
   MB_PAGE_SIZE,
   MB_READ,
+  MB_BIG_MEMORY_MAX,
   MB_WRITE,
+  mbDspLoad,
   mbReadIrNames,
   mbReadPreset,
   mbReadPresetNames,
@@ -143,6 +149,8 @@ export class FakeMatribox {
   dropsPresetWriteTo: number | null = null;
   /** When false the unit stores whole-preset writes but does not acknowledge them. */
   acksPresetWrites = true;
+  /** When true a chain past the estimated DSP switches every block off, as the unit's overload guard does. */
+  cpuOverload = false;
   /** When true the unit answers the EQ switch without switching it (to test that the answer is checked). */
   ignoresEqSwitch = false;
   #general: Uint8Array = GENERAL;
@@ -337,9 +345,35 @@ export class FakeMatribox {
     return Uint8Array.from([0x00, 0x00, 0x04, 0x01, ...sec4, ...chain.on, focus]);
   }
 
+  /** The unit's "System overloaded" notice: flag 1, cmd 0x11, `00 07 00 00` + u32 cause (1 DSP, 2 memory). */
+  #overload(cause: 1 | 2): void {
+    this.emit(replyFrames(wrapMbMessage(1, 0x11, [0x00, 0x07, 0x00, 0x00, cause, 0, 0, 0]))[0] as Uint8Array);
+  }
+
+  /** An insert or model change as the unit checks it: refused past the memory, every block off past the DSP. */
+  #checkedChain(before: FakeChain, after: FakeChain, focus: number, edit: Uint8Array): Uint8Array {
+    const blocks = (c: FakeChain) => c.order.map((slot) => ({ moduleIndex: c.types[slot] as number }));
+    const load = mbDspLoad(blocks(after));
+    if (load.bigMemory > MB_BIG_MEMORY_MAX && load.bigMemory > mbDspLoad(blocks(before)).bigMemory) {
+      this.#overload(2);
+      this.#edit = edit; // the new block's values were never loaded
+      return this.#setChain(before, NONE);
+    }
+    const notice = this.#setChain(after, focus);
+    if (this.cpuOverload && load.percent > 100) {
+      this.#overload(1);
+      const off = new Array<number>(SLOTS).fill(0);
+      this.#setChain({ ...after, on: off }, NONE);
+      this.emit(replyFrames(wrapMbMessage(1, 0x10, [0x07, 0x00, 0x05, 0x01, ...off]))[0] as Uint8Array);
+    }
+    return notice;
+  }
+
   /** A chain edit; a new model's parameters start at 0 here (the unit loads the model's defaults). */
   #editChain(data: Uint8Array): Uint8Array {
-    const chain = this.#chain();
+    const before = this.#chain();
+    const edit = this.#edit;
+    const chain: FakeChain = { order: [...before.order], types: [...before.types], fxids: [...before.fxids], on: [...before.on] };
     const put = (slot: number, type: number, fxid: number) => {
       chain.types[slot] = type;
       chain.fxids[slot] = fxid;
@@ -349,7 +383,7 @@ export class FakeMatribox {
     if (op === 0x02) {
       const slot = from; // change model names the storage slot
       put(slot, data[5] as number, u32(data, 6));
-      return this.#setChain(chain, slot);
+      return this.#checkedChain(before, chain, slot, edit);
     }
     if (from === NONE) {
       const slot = chain.types.indexOf(NONE);
@@ -357,7 +391,7 @@ export class FakeMatribox {
       put(slot, type, u32(data, 7));
       chain.on[slot] = 1;
       chain.order.splice(to, 0, slot);
-      return this.#setChain(chain, slot);
+      return this.#checkedChain(before, chain, slot, edit);
     }
     const [slot] = chain.order.splice(from, 1) as [number];
     if (to === NONE) {

@@ -1,15 +1,15 @@
 # Third-party notices
 
-OpenSonicX reuses protocol facts and tables from the projects below, under their licenses.
+## zxmarcos/waveod and zxmarcos/matribox-studio
 
-## zxmarcos/waveod
+https://github.com/zxmarcos/waveod (a reimplemented Matribox II Pro firmware) and
+https://github.com/zxmarcos/matribox-studio (an editor and SDK for the unit). Used here: protocol
+facts cross-checked against them (docs/matribox.md) and the DSP figures behind the estimated DSP
+load (`packages/core/src/matribox/dsp-load.ts`: the overload rule, the chain budget, the measured
+costs of the stock Cab/IR, Clone and amps, the memory rule), and the layout of the preset's assignment
+sections and the writes of footswitch functions and quick knobs (`packages/core/src/matribox/write.ts`,
+`assignments.ts`). Both are under this license:
 
-<https://github.com/zxmarcos/waveod>: a reimplemented firmware for the Sonicake Matribox II Pro.
-Used for the layout of the preset's assignment sections (quick knobs, footswitch functions, CTRL
-groups, expression pedal), the editor-protocol writes of footswitch functions and quick knobs, and
-the list of footswitch functions (`packages/core/src/matribox/write.ts`, `assignments.ts`).
-
-```
 MIT License
 
 Copyright (c) 2026 Marcos Medeiros
@@ -31,4 +31,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-```

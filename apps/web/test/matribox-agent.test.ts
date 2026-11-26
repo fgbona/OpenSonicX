@@ -85,7 +85,7 @@ test('build_tone replaces the chain in one step and answers with the preset as i
     ],
   });
   assert.equal(r.ok, true);
-  assert.match(r.text, /^Name: Drive AD\nChain: DRV → AMP\n1\. DRV on Fake Fuzz \(based on Imaginary Fuzz Face\): Fuzz 80/);
+  assert.match(r.text, /^Name: Drive AD\nChain: DRV → AMP\nDSP load \(estimate from the block types\): 18% of the unit's budget\n1\. DRV on Fake Fuzz \(based on Imaginary Fuzz Face\): Fuzz 80/);
   assert.equal(agent.acts.has('build_tone'), true);
   const changes = watch({ loaded: false, saved: false })!;
   assert.deepEqual(changes[0], { what: 'order', from: 'DYN DRV AMP CAB RVB VOL', to: 'DRV AMP' });
@@ -93,6 +93,31 @@ test('build_tone replaces the chain in one step and answers with the preset as i
   const bad = await run('build_tone', { blocks: [{ module: 'DRV', model: 'Nope' }] });
   assert.deepEqual([bad.ok, bad.text], [false, 'Error: No DRV model "Nope". Models: Fake Drive, Fake Fuzz']);
   assert.equal(s.preset().chain.length, 2); // nothing sent
+});
+
+test('build_tone and edit_preset refuse a chain past the estimated DSP, sending nothing, and warn near it', async () => {
+  const s = host();
+  const run = matriboxAgent(s.h).runner();
+  const before = s.preset();
+  const amps = (n: number) => Array.from({ length: n }, () => ({ module: 'AMP', model: 'Fake Plexi' }));
+  const heavy = await run('build_tone', { blocks: amps(11) }); // 11 x ~10%
+  assert.equal(heavy.ok, false);
+  assert.match(heavy.text, /^Error: the chain would be past the unit's DSP: estimated DSP load 110%.*heaviest: AMP ~10%/);
+  assert.equal(s.preset(), before);
+  const memory = await run('edit_preset', {
+    changes: [
+      { kind: 'add', module: 'CLONE', model: 'Clone 1' },
+      { kind: 'add', module: 'IR', model: 'User IR 1' },
+    ],
+  });
+  assert.equal(memory.ok, false);
+  assert.match(memory.text, /3 CAB\/IR\/CLONE blocks; the Matribox II Pro has memory for 2/);
+  assert.equal(s.preset(), before);
+  const near = await run('build_tone', { blocks: amps(9) });
+  assert.equal(near.ok, true);
+  assert.match(near.text, /DSP load \(estimate from the block types\): 90%/);
+  assert.match(near.text, /\n\nNote: estimated DSP load 90% .*near the unit's limit/);
+  assert.match(matriboxAgent(s.h).instructions(false), /System overloaded/);
 });
 
 test('edit_preset, undo_edit, list_models and get_preset', async () => {

@@ -2,7 +2,7 @@
  * The Matribox II Pro as text for the tone assistant (the catalog, a module's models, the loaded
  * preset) and what an answer changed, in the rows the Pocket Master's "What changed" uses.
  */
-import type { Difference, MbCatalog, MbModel, MbParam, MbPreset } from '@pocket-master/core';
+import { mbDspLoad, type Difference, type MbCatalog, type MbModel, type MbParam, type MbPreset } from '@pocket-master/core';
 import type { Lang } from './i18n.ts';
 import { mbFxidHex as fxidHex } from './matriboxLook.ts';
 import { modelOf, moduleName, type MbChainBlock } from './matriboxPlan.ts';
@@ -42,10 +42,11 @@ function blockLine(catalog: MbCatalog, b: MbChainBlock, i: number): string {
   return `${head} ${withGear(model, 'based on ')}${values ? `: ${values}` : ''}`;
 }
 
-/** The loaded preset: name, chain in signal order, each block with its model, gear, on/off and values. */
+/** The loaded preset: name, chain in signal order, its estimated DSP load, each block with its model, gear, on/off and values. */
 export function mbPresetText(preset: Pick<MbPreset, 'name' | 'chain'>, catalog: MbCatalog): string {
   const chain = preset.chain.map((b) => moduleName(catalog, b.moduleIndex)).join(' → ') || 'empty';
-  return [`Name: ${preset.name}`, `Chain: ${chain}`, ...preset.chain.map((b, i) => blockLine(catalog, b, i))].join('\n');
+  const load = `DSP load (estimate from the block types): ${mbDspLoad(preset.chain).percent}% of the unit's budget`;
+  return [`Name: ${preset.name}`, `Chain: ${chain}`, load, ...preset.chain.map((b, i) => blockLine(catalog, b, i))].join('\n');
 }
 
 /**

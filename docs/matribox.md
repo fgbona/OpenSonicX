@@ -859,6 +859,49 @@ it reads the loaded preset again. Undo and Redo cover the chain edits only (the 
 chains). The model catalog is built in (below): nothing is picked or loaded. The e2e tests
 (`apps/web/e2e/matribox.spec.ts`) run the editor against the simulated unit with it.
 
+## DSP load (an estimate)
+
+A preset of 12 blocks made the owner's unit show "CAUTION! System overloaded" (2026-11-26). The
+unit sends no load meter over USB; what is known comes from zxmarcos/matribox-studio
+(`docs/firmware/audio-engine.md`, `docs/effects/testing.md`) and zxmarcos/waveod
+(`src/engine/overload.h`, `docs/bench.md`, `docs/stock_port.md`, `docs/clone_fit.md`), both MIT,
+© 2026 Marcos Medeiros:
+
+| Fact | Value | Confidence |
+|------|-------|------------|
+| Audio block | 64 frames at 44.1 kHz = 1.451 ms = 870 748 cycles of the 600 MHz Cortex-M7 | High |
+| CPU overload rule (stock app) | three blocks in a row over 1.25 ms: every slot switched off (bypassed, not removed), the preset marked edited, the warning shown | High (reimplemented in waveod) |
+| Chain budget | the app's own work ≈ 165 µs, so the chain gets ≈ 1 ms ≈ 600 000 cycles | Medium |
+| Measured costs (stock) | Cab/IR ≈ 190 µs (≈ 114 k cycles), factory Clone ≈ 125 k, the 63 amps 3.78 M in all (≈ 60 k each) | Medium (single measurements) |
+| Memory rule | inserting or replacing a block checks the module pools first: Cab/IR ≈ 70 KB and Clone ≈ 74 KB of the 192 KB fast RAM, so a third CAB/IR/CLONE is refused with the warning | Medium-high |
+| Overload notice | flag 1, cmd `11`, `00 07 00 00` + u32: 1 the DSP ran out, 2 a block refused for memory (matribox-studio's editor reads it; waveod's firmware sends it with 2). A flag-1 read of the same sub returns and clears it | Medium (not captured on the owner's unit) |
+
+`mbDspLoad` (core, `matribox/dsp-load.ts`) is therefore an **estimate**: one cost per module (no
+per-model numbers exist), the measured ones above for AMP, CAB, IR and CLONE and our guesses,
+set high on purpose, for the rest (DYN 25 k, FREQ 80 k, WAH 25 k, DRV 45 k, EQ 20 k, MOD 45 k,
+DLY 50 k, RVB 100 k, routing and VOL 5 k), summed over every block (bypassed ones too: a
+footswitch can switch them on) against 600 k cycles. The guesses were set so that a typical
+12-block chain (DYN, FREQ, two DRV, AMP, CAB, EQ, two MOD, DLY, RVB, VOL) comes out at 106%, as the
+owner's overloaded; "Drive AD" (6 blocks) is 58%. Levels: `high` from 85%, `over` past 100% or
+with more than 2 CAB/IR/CLONE blocks.
+
+- **Editor**: under the chain, "Estimated DSP load: N%" with a meter, a note near the limit and a
+  warning past it; nothing is blocked (the person decides). When the unit sends the overload
+  notice the editor shows it (`parseMbNotice`, `kind: 'overload'`) until closed; after a CPU
+  overload the unit's own on/off notices already show every block off.
+- **Tone assistant and MCP tools** (`mbCheckDspLoad`): `build_tone` and `edit_preset` (web), and
+  `matribox_build_tone`, `matribox_add_block` and `matribox_set_model` (MCP) refuse a chain that is
+  past the limit and heavier than the one loaded, before anything is sent, saying the estimate and
+  the heaviest modules to drop; near the limit the answer ends with a note. An edit that adds no
+  load (a knob, a removal) is never refused. The preset text the assistant reads carries the
+  estimate, and the tool descriptions and instructions tell it to keep chains lean.
+- **Simulated unit**: refuses a third CAB/IR/CLONE with the overload notice (2); with
+  `cpuOverload` it switches every block off past the estimate, with the notice (1).
+
+To make it better: the owner's 12-block preset (which blocks) and the chains that do or do not
+overload on the unit would calibrate the guesses; per-model costs need a measurement on the unit
+(waveod's bench runs only on its own firmware, not used here).
+
 ## Phases
 
 The same gates as the Pocket Master: each phase is validated by the owner on his unit before the
@@ -930,5 +973,7 @@ in the same schema (`packages/core/test/matribox-fake-catalog.ts`).
 
 ## Clean room
 
-Community projects about this unit exist online, but none has a license, so none of their code is
+Community projects about this unit exist online; most have no license, so none of their code is
 used here. Reading them for ideas is allowed; the code is our own, written from our captures.
+zxmarcos/waveod and zxmarcos/matribox-studio are MIT (© 2026 Marcos Medeiros): their protocol
+facts and the DSP figures above are used with attribution (THIRD_PARTY_NOTICES.md).
