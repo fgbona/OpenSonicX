@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { MB_GLOBALS, type MbEqBand, type MbGlobalSetting } from '@pocket-master/core';
 import type { Matribox } from '@/lib/useMatribox';
 import { Dialog } from './Dialog';
+import { RigLookSwitch } from './rig/RigLookSwitch';
 import { Segmented } from './SettingsDialog';
 import { useI18n } from './I18n';
 
@@ -98,6 +99,7 @@ export function MatriboxGlobals({ mb, icon = false }: { mb: Matribox; icon?: boo
         )}
       </button>
       <Dialog open={open} title={t('settings.title')} onClose={() => setOpen(false)}>
+        <RigLookSwitch />
         {!g || !general ? (
           <p className="muted">{mb.busy ? t('settings.reading') : t('settings.unreadable')}</p>
         ) : (

@@ -4,6 +4,7 @@
  * the block's module and model id, so a model always looks the same and two models rarely alike.
  * Drawings are generic shapes and colours: no maker's look, name or logo.
  */
+import { ampSkin } from './ampSkins.ts';
 import { mbAmpSkin, mbModuleKey } from './matriboxLook.ts';
 
 export const RIG_CATEGORIES = ['drive', 'comp', 'eq', 'mod', 'delay', 'reverb', 'treadle', 'head', 'combo', 'cab', 'gate', 'rack', 'clone', 'ir'] as const;
@@ -45,6 +46,32 @@ export function rigCategory(block: BlockLike): RigCategory {
       return 'reverb';
     case 'clone':
       return 'clone';
+    default:
+      return 'rack';
+  }
+}
+
+/** The kind of gear a Pocket Master block is drawn as: its block key, the model for the two FX slots and the IR. */
+export function pmRigCategory(block: { readonly key: string; readonly model: string }, ampMode: 'normal' | 'clone'): RigCategory {
+  const name = block.model;
+  switch (block.key) {
+    case 'nr':
+      return 'gate';
+    case 'fx1':
+    case 'fx2':
+      return /comp/i.test(name) ? 'comp' : /wah/i.test(name) ? 'treadle' : /boost/i.test(name) ? 'drive' : /octave|pitch|detune/i.test(name) ? 'rack' : 'mod';
+    case 'drv':
+      return 'drive';
+    case 'amp':
+      return ampMode === 'clone' ? 'clone' : COMBO_SKINS.has(ampSkin(name) ?? '') ? 'combo' : 'head';
+    case 'ir':
+      return /^user ir/i.test(name) ? 'ir' : 'cab';
+    case 'eq':
+      return 'eq';
+    case 'dly':
+      return 'delay';
+    case 'rvb':
+      return 'reverb';
     default:
       return 'rack';
   }
@@ -119,11 +146,24 @@ export function rigIconSpec(category: RigCategory, id: string, params: number, n
   };
 }
 
-/** Light paints get dark ink for the face's marks, dark paints light ink (relative luminance). */
-export function inkOn(hex: string): string {
+/** Relative luminance (WCAG) of a #rrggbb colour. */
+export function luminance(hex: string): number {
   const [r, g, b] = [1, 3, 5].map((i) => {
     const c = Number.parseInt(hex.slice(i, i + 2), 16) / 255;
     return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
   }) as [number, number, number];
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.3 ? '#1c1c1e' : '#f5f5f7';
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
+
+/** Light paints get dark ink for the face's marks, dark paints light ink. */
+export function inkOn(hex: string): string {
+  return luminance(hex) > 0.3 ? '#1c1c1e' : '#f5f5f7';
+}
+
+/** Text printed on a paint: black or white, whichever contrasts more (at least 4.58:1 on any colour). */
+export function textOn(hex: string): '#000000' | '#ffffff' {
+  return luminance(hex) > 0.179 ? '#000000' : '#ffffff';
+}
+
+/** Every paint a drawing can take, for checks. */
+export const RIG_PAINTS: readonly string[] = [...PEDAL_PAINT, ...TOLEX];

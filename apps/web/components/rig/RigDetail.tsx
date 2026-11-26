@@ -1,32 +1,35 @@
 'use client';
 
 import { useState } from 'react';
-import type { MbResolvedBlock, MbResolvedParam } from '@pocket-master/core';
-import { mbSteps } from '@/lib/matriboxLook';
+import type { RigBlock, RigParam } from '@/lib/rigBlocks';
 import { useI18n } from '../I18n';
 
 /** Parameters a page of the strip shows. */
 export const RIG_PAGE = 5;
 
 interface Props {
-  block: MbResolvedBlock;
-  /** The name the chain shows for the block's model. */
-  model: string;
+  block: RigBlock;
   disabled: boolean;
   expanded: boolean;
   onExpand: () => void;
   onOn: (on: boolean) => void;
   onParam: (id: number, value: number) => void;
+  /** Moves the block one place earlier (-1) or later (+1); absent where the chain cannot move. */
+  onMove?: (step: -1 | 1) => void;
+  first?: boolean;
+  last?: boolean;
+  /** Removes the block from the chain; absent where blocks are fixed. */
+  onRemove?: () => void;
 }
 
 const round = (n: number) => String(Number(n.toFixed(2)));
 
 /** One parameter as a bar: value above, a native range (keyboard and pointer for free), name below. */
-function ParamBar({ param, step, options, disabled, onChange }: { param: MbResolvedParam; step: number; options?: readonly string[]; disabled: boolean; onChange: (v: number) => void }) {
-  const value = Number.isFinite(param.value) ? param.value : param.min;
+function ParamBar({ param, disabled, onChange }: { param: RigParam; disabled: boolean; onChange: (v: number) => void }) {
   const span = param.max - param.min;
-  const fill = span > 0 ? ((value - param.min) / span) * 100 : 0;
-  const shown = options?.[mbSteps({ min: param.min, max: param.max, step }).indexOf(value)] ?? round(value);
+  const fill = span > 0 ? ((param.value - param.min) / span) * 100 : 0;
+  const option = param.options?.[Math.round((param.value - param.min) / param.step)];
+  const shown = param.shown ?? option ?? round(param.value);
   return (
     <label className="rig-param">
       <span className="rig-param-value" aria-hidden="true">
@@ -37,8 +40,8 @@ function ParamBar({ param, step, options, disabled, onChange }: { param: MbResol
         className="rig-range"
         min={param.min}
         max={param.max}
-        step={step}
-        value={value}
+        step={param.step}
+        value={param.value}
         disabled={disabled}
         aria-label={param.name}
         aria-valuetext={shown}
@@ -50,11 +53,18 @@ function ParamBar({ param, step, options, disabled, onChange }: { param: MbResol
   );
 }
 
-/** The selected block under the chain: its switch, model, a way to every control, and its parameters five at a time. */
-export function RigDetail({ block, model, disabled, expanded, onExpand, onOn, onParam }: Props) {
+function Icon({ d }: { d: string }) {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d={d} />
+    </svg>
+  );
+}
+
+/** The selected block under the chain: its switch, model, move and remove, a way to every control, and its parameters five at a time. */
+export function RigDetail({ block, disabled, expanded, onExpand, onOn, onParam, onMove, first, last, onRemove }: Props) {
   const { t } = useI18n();
   const [page, setPage] = useState(0);
-  const name = `${block.position}. ${block.module}`;
   const pages = Math.max(1, Math.ceil(block.params.length / RIG_PAGE));
   const at = Math.min(page, pages - 1);
   const shown = block.params.slice(at * RIG_PAGE, (at + 1) * RIG_PAGE);
@@ -65,7 +75,7 @@ export function RigDetail({ block, model, disabled, expanded, onExpand, onOn, on
           type="button"
           role="switch"
           aria-checked={block.on}
-          aria-label={t(block.on ? 'block.onAria' : 'block.offAria', { block: name })}
+          aria-label={t(block.on ? 'block.onAria' : 'block.offAria', { block: block.name })}
           className={`switch rig-switch${block.on ? ' switch-on' : ''}`}
           disabled={disabled}
           onClick={() => onOn(!block.on)}
@@ -73,22 +83,36 @@ export function RigDetail({ block, model, disabled, expanded, onExpand, onOn, on
           <span className="switch-knob" />
         </button>
         <p className="rig-model">
-          <span className="rig-module">{block.module}</span> {model}
+          <span className="rig-module">{block.module}</span> {block.model}
         </p>
-        <button type="button" className="rig-icon-button" aria-expanded={expanded} aria-label={t(expanded ? 'rig.collapse' : 'rig.expand', { block: name })} onClick={onExpand}>
-          <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-            <path d={expanded ? 'M8 3v5H3M12 17v-5h5' : 'M3 8V3h5M17 12v5h-5'} />
-          </svg>
-        </button>
+        <span className="rig-detail-tools">
+          {onMove && (
+            <>
+              <button type="button" className="rig-icon-button" disabled={disabled || first} aria-label={t('chain.earlier', { name: block.name })} onClick={() => onMove(-1)}>
+                <Icon d="M12 4 6 10l6 6" />
+              </button>
+              <button type="button" className="rig-icon-button" disabled={disabled || last} aria-label={t('chain.later', { name: block.name })} onClick={() => onMove(1)}>
+                <Icon d="m8 4 6 6-6 6" />
+              </button>
+            </>
+          )}
+          {onRemove && (
+            <button type="button" className="rig-icon-button rig-remove" disabled={disabled} aria-label={t('mb.removeAria', { block: block.name })} onClick={onRemove}>
+              <Icon d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10" />
+            </button>
+          )}
+          <button type="button" className="rig-icon-button" aria-expanded={expanded} aria-label={t(expanded ? 'rig.collapse' : 'rig.expand', { block: block.name })} onClick={onExpand}>
+            <Icon d={expanded ? 'M8 3v5H3M12 17v-5h5' : 'M3 8V3h5M17 12v5h-5'} />
+          </button>
+        </span>
       </div>
       {block.params.length === 0 ? (
         <p className="rig-empty">{t('block.noParams')}</p>
       ) : (
         <div className="rig-params" key={at}>
-          {shown.map((p) => {
-            const spec = block.model?.params.find((m) => m.id === p.id);
-            return <ParamBar key={p.id} param={p} step={spec?.step && spec.step > 0 ? spec.step : 1} options={spec?.options} disabled={disabled} onChange={(v) => onParam(p.id, v)} />;
-          })}
+          {shown.map((p) => (
+            <ParamBar key={p.id} param={p} disabled={disabled} onChange={(v) => onParam(p.id, v)} />
+          ))}
         </div>
       )}
       {pages > 1 && (

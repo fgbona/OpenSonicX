@@ -1,9 +1,11 @@
 'use client';
 
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import { MB_CATALOG, mbAssignments, mbPresetLabel, resolveMbPreset, type MbResolvedBlock, type MidiPort } from '@pocket-master/core';
+import { MB_CATALOG, MB_SLOTS, mbAssignments, mbPresetLabel, resolveMbPreset, type MbResolvedBlock, type MidiPort } from '@pocket-master/core';
 import { ccChannelOf } from '@/lib/matriboxGlobals';
 import { mbLookKey } from '@/lib/matriboxLook';
+import { mbRigBlocks } from '@/lib/rigBlocks';
+import { useRigLook } from '@/lib/rigLook';
 import { useMatribox } from '@/lib/useMatribox';
 import { useMatriboxHistory } from '@/lib/useMatriboxHistory';
 import { useUndoKeys } from '@/lib/useUndoKeys';
@@ -11,7 +13,8 @@ import { MatriboxAssistant } from './MatriboxAssistant';
 import { MatriboxBackupAll } from './MatriboxBackupAll';
 import { MatriboxBackups } from './MatriboxBackups';
 import { MatriboxBlockPanel } from './MatriboxBlockPanel';
-import { MatriboxChain } from './MatriboxChain';
+import { MatriboxAddMenu } from './MatriboxAddMenu';
+import { MatriboxChain, mbTileModel } from './MatriboxChain';
 import { MatriboxControls } from './MatriboxControls';
 import { MatriboxDspLoad } from './MatriboxDspLoad';
 import { MatriboxExpression } from './MatriboxExpression';
@@ -75,9 +78,9 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
     if (added.length === 1 && now.length === before.slots.length + 1) setSelected(added[0] ?? null);
   }, [current, slots]);
   const block = chain.find((b) => b.slot === selected) ?? chain.find((b) => mbLookKey(b) === 'amp') ?? chain[0] ?? null;
-  // The rig look is a design preview, opened with ?rig=1; read after mount, so the server's page stays the classic one.
-  const [rig, setRig] = useState(false);
-  useEffect(() => setRig(new URLSearchParams(window.location.search).get('rig') === '1'), []);
+  // The new look (preview): the settings' switch, or ?rig=1.
+  const rig = useRigLook();
+  const dspLoad = <MatriboxDspLoad chain={chain} overload={mb.overload} onClose={mb.clearOverload} />;
 
   const blockPanel = unit && block && (
     <MatriboxBlockPanel
@@ -103,12 +106,6 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
         )}
         <p className="mb-banner" role="status">
           {t('mb.experimental')}
-          {rig && (
-            <>
-              {' '}
-              <a href="?">{t('rig.classic')}</a>
-            </>
-          )}
         </p>
         {!unit || !assignments ? (
           <p className="muted">{t(mb.busy ? 'status.reading' : 'mb.notRead')}</p>
@@ -141,19 +138,27 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
               />
               {rig ? (
                 <RigView
-                  chain={chain}
-                  block={block}
+                  blocks={mbRigBlocks(chain, (b) => mbTileModel(b, userSlot(b)))}
+                  selected={block?.slot ?? null}
                   label={mbPresetLabel(unit.current)}
                   name={unit.preset.name}
                   tempo={assignments.tempo}
                   volume={assignments.volume}
                   disabled={disabled}
-                  userSlot={userSlot}
                   onSelect={setSelected}
                   onOn={(s, on) => void history.setOn(s, on)}
                   onParam={history.setParam}
                   settings={<MatriboxGlobals mb={mb} icon />}
+                  load={dspLoad}
                   panel={blockPanel}
+                  edit={{
+                    onMove: (a, b) => void history.moveBlock(a, b),
+                    onRemove: (p) => void history.removeBlock(p),
+                    add:
+                      chain.length < MB_SLOTS
+                        ? (isInside, onClose) => <MatriboxAddMenu userSlot={userSlot} isInside={isInside} onClose={onClose} onAdd={(m, fxid) => void history.addBlock(chain.length, m, fxid)} />
+                        : undefined,
+                  }}
                 />
               ) : (
                 <>
@@ -167,7 +172,7 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
                     onMove={(a, b) => void history.moveBlock(a, b)}
                     onAdd={(m, fxid) => void history.addBlock(chain.length, m, fxid)}
                   />
-                  <MatriboxDspLoad chain={chain} overload={mb.overload} onClose={mb.clearOverload} />
+                  {dspLoad}
                   {blockPanel}
                 </>
               )}

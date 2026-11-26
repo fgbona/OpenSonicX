@@ -64,7 +64,7 @@ const SCREEN_GUTTER = 8;
  * takes to stay on screen; placed again when the menu (its other step) or the chain resizes. On a
  * phone the menu is a bottom sheet fixed to the screen, which this placing does not move.
  */
-function useMenuUnder(open: boolean, wrap: RefObject<HTMLElement | null>, tile: RefObject<HTMLElement | null>, menu: RefObject<HTMLElement | null>) {
+export function useMenuUnder(open: boolean, wrap: RefObject<HTMLElement | null>, tile: RefObject<HTMLElement | null>, menu: RefObject<HTMLElement | null>) {
   useLayoutEffect(() => {
     const box = wrap.current;
     const add = tile.current;

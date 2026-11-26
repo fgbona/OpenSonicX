@@ -1,18 +1,21 @@
-/* Rig view (preview, ?rig=1): the preset on a device screen, the chain as gear drawings on a snake
+/* Rig view (the settings' "new look", or ?rig=1): the preset on a device screen, the chain as gear drawings on a snake
    from IN to OUT, the selected block's controls in a strip. components/rig/. */
 .rig {
   --rig-screen: #ffffff;
   --rig-well: var(--surface-2);
   --rig-accent: var(--yellow);
   --rig-edge: rgba(0, 0, 0, 0.45);
-  --rig-cell: 72px;
+  --rig-cell-max: 72px;
+  --rig-tag-ink: #48484a;
+  --rig-tag-off: #6e6e73;
+  --rig-tag: 16px;
   --rig-gap: 22px;
   display: grid; gap: 16px;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .rig { --rig-screen: #161618; --rig-well: #232326; --rig-edge: rgba(255, 255, 255, 0.4); }
+  :root:not([data-theme='light']) .rig { --rig-screen: #161618; --rig-well: #232326; --rig-edge: rgba(255, 255, 255, 0.4); --rig-tag-ink: rgba(235, 235, 245, 0.74); --rig-tag-off: rgba(235, 235, 245, 0.54); }
 }
-:root[data-theme='dark'] .rig { --rig-screen: #161618; --rig-well: #232326; --rig-edge: rgba(255, 255, 255, 0.4); }
+:root[data-theme='dark'] .rig { --rig-screen: #161618; --rig-well: #232326; --rig-edge: rgba(255, 255, 255, 0.4); --rig-tag-ink: rgba(235, 235, 245, 0.74); --rig-tag-off: rgba(235, 235, 245, 0.54); }
 
 .rig-screen {
   display: grid; gap: 18px; padding: 14px 16px 18px; border-radius: 22px;
@@ -33,14 +36,16 @@
 .rig-head > .rig-icon-button { justify-self: start; }
 
 /* The chain: wrapped rows, the wire behind the gear (MatriboxChain's snake). */
-.rig-chain { position: relative; padding: 8px 4px; }
+.rig-chain { position: relative; padding: 8px 4px; container-type: inline-size; }
 .rig-wire { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 .rig-wire path { fill: none; stroke: var(--rig-accent); stroke-width: 1.5; stroke-linecap: round; opacity: 0.85; }
 .rig-list {
+  /* Cells shrink so the two rows always fit the screen's width. */
+  --rig-cell: min(var(--rig-cell-max), calc((100cqi - 1px - (var(--cols) - 1) * var(--rig-gap)) / var(--cols)));
   position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 26px var(--rig-gap);
   max-width: calc(var(--cols) * var(--rig-cell) + (var(--cols) - 1) * var(--rig-gap)); margin: 0 auto; padding: 0; list-style: none;
 }
-.rig-list > li { display: grid; place-items: center; width: var(--rig-cell); height: var(--rig-cell); }
+.rig-list > li { display: grid; place-items: center; width: var(--rig-cell); height: calc(var(--rig-cell) + var(--rig-tag)); }
 .rig-node { position: relative; z-index: 1; }
 .rig-socket {
   display: grid; gap: 4px; justify-items: center; padding: 6px 8px; border-radius: 8px;
@@ -48,10 +53,15 @@
 }
 .rig-socket-level { width: 28px; height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--rig-accent) var(--level), var(--fill-strong) var(--level)); }
 .rig-block {
-  display: grid; place-items: center; width: var(--rig-cell); height: var(--rig-cell); padding: 2px; border: none;
+  display: grid; grid-template-rows: minmax(0, 1fr) var(--rig-tag); justify-items: center; width: var(--rig-cell); height: calc(var(--rig-cell) + var(--rig-tag)); padding: 2px 2px 0; border: none;
   border-radius: 16px; background: var(--rig-screen); cursor: pointer;
   transition: box-shadow 220ms cubic-bezier(0.2, 0.8, 0.3, 1), transform 220ms cubic-bezier(0.2, 0.8, 0.3, 1);
 }
+.rig-tag { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.625rem; font-weight: 700; letter-spacing: 0.05em; line-height: var(--rig-tag); color: var(--rig-tag-ink); transition: color 200ms ease-out; }
+/* Bypassed: dimmed like the drawing, still AA (4.5:1) on the screen. */
+.rig-block.is-off .rig-tag { color: var(--rig-tag-off); }
+.rig.rig-tags-inside { --rig-tag: 0px; }
+.rig-icon text { font-family: var(--font-display, system-ui, sans-serif); }
 .rig-block .rig-icon { width: 100%; height: 100%; transition: opacity 200ms ease-out, filter 200ms ease-out; }
 .rig-block:hover { transform: translateY(-1px); }
 .rig-block:active { transform: scale(0.96); }
@@ -61,8 +71,42 @@
   outline: 3px solid color-mix(in srgb, var(--blue) 60%, transparent); outline-offset: 3px;
 }
 
+/* The add slot before OUT, and drag feedback (useTileDrag's classes). */
+.rig-add {
+  display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1.5px dashed var(--label-3); border-radius: 12px;
+  background: var(--rig-screen); color: var(--label-2); cursor: pointer; transition: border-color 160ms ease-out, color 160ms ease-out;
+}
+.rig-add svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.rig-add:hover, .rig-add[aria-expanded='true'] { border-color: var(--rig-accent); color: var(--label); }
+.rig-add:disabled { cursor: default; opacity: 0.5; }
+.rig-add:focus-visible { outline: 3px solid color-mix(in srgb, var(--blue) 60%, transparent); outline-offset: 3px; }
+.rig-list > li[draggable='true'] .rig-block { cursor: grab; }
+.rig-list > li.tile-dragging { opacity: 0.35; }
+.rig-list > li.tile-over { box-shadow: none; }
+.rig-list > li.tile-over::before {
+  content: ''; position: absolute; z-index: 2; top: 6px; bottom: 6px; left: calc(-1 * var(--rig-gap) / 2 - 1.5px); width: 3px;
+  border-radius: 2px; background: var(--rig-accent);
+}
+.rig-list > li { position: relative; }
+.rig-chain .mb-add-menu { z-index: 30; }
+.rig-hint { margin: -8px 0 0; text-align: center; font-size: 0.75rem; color: var(--label-2); }
+/* The DSP load, compact under the chain. */
+.rig .mb-dsp { align-items: center; gap: 4px; }
+.rig .mb-dsp-load { font-size: 0.75rem; }
+.rig .mb-dsp-load meter { width: 160px; height: 6px; }
+.rig .mb-dsp-warning { text-align: center; font-size: 0.75rem; }
+.rig-classic {
+  justify-self: center; padding: 6px 10px; border: none; border-radius: 8px; background: transparent;
+  color: var(--blue); font: inherit; font-size: 0.8125rem; cursor: pointer;
+}
+.rig-classic:hover { text-decoration: underline; }
+.rig-classic:focus-visible { outline: 3px solid color-mix(in srgb, var(--blue) 60%, transparent); outline-offset: 2px; }
+.rig-look { margin-bottom: 18px; }
+
 /* The selected block's strip. */
 .rig-detail { display: grid; gap: 14px; padding: 12px 14px 10px; border-radius: 16px; background: var(--rig-well); }
+.rig-detail-tools { display: flex; gap: 6px; }
+.rig-icon-button:disabled { cursor: default; opacity: 0.4; }
 .rig-detail-head { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; animation: rig-in 240ms cubic-bezier(0.2, 0.8, 0.3, 1); }
 .rig-switch.switch-on { background: var(--green); }
 .rig-model { margin: 0; text-align: center; font-weight: 600; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -89,16 +133,21 @@
 @keyframes rig-in { from { opacity: 0; transform: translateY(4px); } }
 
 @media (max-width: 520px) {
-  .rig { --rig-cell: 56px; --rig-gap: 14px; }
+  .rig { --rig-cell-max: 56px; --rig-gap: 10px; --rig-tag: 13px; }
+  .rig.rig-tags-inside { --rig-tag: 0px; }
+  .rig-tag { font-size: 0.5625rem; letter-spacing: 0.02em; }
   .rig-screen { padding: 12px 10px 14px; border-radius: 18px; }
   .rig-bpm { font-size: 0.75rem; }
   .rig-params { gap: 6px; }
   .rig-param-name { font-size: 0.6875rem; }
+  .rig-add { width: 40px; height: 40px; }
+  .rig-detail-tools { gap: 4px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .rig-detail-head, .rig-params { animation: none; }
   .rig-block, .rig-block .rig-icon, .rig-icon-button, .rig-dot::after { transition: none; }
   .rig-block:hover, .rig-block:active { transform: none; }
+  .rig-add, .rig-tag { transition: none; }
 }
 
 /* Icon sheet (app/preview/rig-icons, development only). */

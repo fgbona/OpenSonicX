@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MB_CATALOG } from '@pocket-master/core';
-import { hash, inkOn, RIG_CATEGORIES, rigCategory, rigIconSpec } from '../lib/rigIcon.ts';
+import { hash, inkOn, luminance, RIG_CATEGORIES, RIG_PAINTS, rigCategory, rigIconSpec, textOn } from '../lib/rigIcon.ts';
 
 const models = MB_CATALOG.modules.flatMap((m) => m.models.map((model) => ({ module: m.name, moduleIndex: m.index, model })));
 
@@ -47,4 +47,12 @@ test('a cabinet counts its speakers from its name', () => {
 test('marks on a paint take the ink that reads on it', () => {
   assert.equal(inkOn('#d6c69a'), '#1c1c1e');
   assert.equal(inkOn('#33363b'), '#f5f5f7');
+});
+
+test('a module name printed on any paint (or grille, base, badge) reads at AA contrast', () => {
+  const contrast = (a: string, b: string) => {
+    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
+    return (hi + 0.05) / (lo + 0.05);
+  };
+  for (const paint of [...RIG_PAINTS, '#3a3a3c', '#2c2c2e', '#c7ccd1']) assert.ok(contrast(textOn(paint), paint) >= 4.5, `${textOn(paint)} on ${paint}`);
 });
