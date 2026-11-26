@@ -3,7 +3,7 @@
  * from a Matribox chain or a Pocket Master preset. Values go back through each editor's own
  * handlers (history.setParam / onEdit), so Undo works as in the classic look.
  */
-import { encodeValue, modelInfo, modelOf, type MbResolvedBlock, type Preset } from '@pocket-master/core';
+import { chainUnits, encodeValue, modelInfo, modelOf, moveInChain, type MbResolvedBlock, type Preset } from '@pocket-master/core';
 import { pmRigCategory, rigCategory, rigIconSpec, type RigIconSpec } from './rigIcon.ts';
 
 export interface RigParam {
@@ -90,4 +90,28 @@ export function pmParamValue(preset: Preset, module: number, alg: number, value:
   const block = preset.chain.find((b) => b.module === module);
   const spec = block && modelOf(preset, block)?.params.find((s) => s.alg === alg);
   return spec ? encodeValue(spec, value) : null;
+}
+
+/**
+ * Moves on the Pocket Master's chain by block index, for the rig view. Its firmware keeps
+ * DRV-AMP-IR-EQ together, so a block moves with its unit: `unit(i)` is the first and last index
+ * that move with block i, and `move(from, to)` gives the new module order (null when nothing moves,
+ * as for a drop inside the block's own unit).
+ */
+export function pmRigMoves(order: readonly number[]) {
+  const units = chainUnits(order);
+  const unitAt = (i: number) => units.findIndex((u) => u.includes(order[i] as number));
+  return {
+    unit: (i: number): readonly [number, number] => {
+      const u = units[unitAt(i)];
+      if (!u) return [i, i];
+      const start = order.indexOf(u[0] as number);
+      return [start, start + u.length - 1];
+    },
+    move: (from: number, to: number): number[] | null => {
+      const target = unitAt(to);
+      if (target < 0 || unitAt(from) < 0 || target === unitAt(from)) return null;
+      return moveInChain(order, order[from] as number, target);
+    },
+  };
 }

@@ -9,10 +9,15 @@ import { useTileDrag } from '../useTileDrag';
 import { RigDetail } from './RigDetail';
 import { RigIcon } from './RigIcon';
 
-/** Editing the chain itself (the Matribox): moves by index, removal, and the add slot. */
+/** Editing the chain itself: moves by index, and on the Matribox removal and the add slot. */
 export interface RigChainEdit {
   onMove: (from: number, to: number) => void;
-  onRemove: (index: number) => void;
+  /** Absent where the blocks are fixed (the Pocket Master's nine). */
+  onRemove?: (index: number) => void;
+  /** The first and last index of the blocks that move with this one (the Pocket Master's DRV-AMP-IR-EQ); each block alone when absent. */
+  unit?: (index: number) => readonly [number, number];
+  /** A line under the drag hint on the pedal's own rule for moves. */
+  hint?: string;
   /** The add slot, shown while the unit has a free slot: the model picker it opens. */
   add?: (isInside: (target: Node) => boolean, onClose: (refocus: boolean) => void) => ReactNode;
 }
@@ -63,8 +68,8 @@ const STEPS: Record<string, -1 | 1> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: 
 /**
  * The "new look" (preview) of either pedal's editor: the preset on a device screen, its chain as
  * gear drawings on a snake from IN to OUT, and the selected block's main controls in a strip below.
- * With `edit` (the Matribox) gear is dragged to reorder (Alt+arrows or the strip's arrows without a
- * mouse), added from the slot before OUT and removed from the strip.
+ * With `edit` gear is dragged to reorder (Alt+arrows or the strip's arrows without a mouse); on the
+ * Matribox it is also added from the slot before OUT and removed from the strip.
  */
 export function RigView({ blocks, selected, label, name, tempo, volume, disabled, onSelect, onOn, onParam, settings, load, panel, edit }: Props) {
   const { t } = useI18n();
@@ -95,10 +100,14 @@ export function RigView({ blocks, selected, label, name, tempo, volume, disabled
     refocus.current = null;
   }, [order]);
 
+  const unitOf = (at: number) => edit?.unit?.(at) ?? ([at, at] as const);
+  // A step leaves the block's unit: onto the block just before or after it.
   const move = (at: number, step: -1 | 1) => {
-    const to = at + step;
+    const [start, end] = unitOf(at);
+    const to = step < 0 ? start - 1 : end + 1;
     if (canEdit && to >= 0 && to < blocks.length) edit.onMove(at, to);
   };
+  const [unitStart, unitEnd] = unitOf(index);
   // Arrow keys walk the chain (focus and selection together); Alt+arrows move the focused gear.
   const walk = (e: KeyboardEvent<HTMLOListElement>) => {
     const step = STEPS[e.key];
@@ -211,6 +220,7 @@ export function RigView({ blocks, selected, label, name, tempo, volume, disabled
         {edit && (
           <p id="rig-keys" className="rig-hint">
             {t('rig.keys')}
+            {edit.hint && ` ${edit.hint}`}
           </p>
         )}
         {load}
@@ -224,9 +234,9 @@ export function RigView({ blocks, selected, label, name, tempo, volume, disabled
             onOn={(on) => onOn(block.id, on)}
             onParam={(id, v) => onParam(block.id, id, v)}
             onMove={edit && ((step) => move(index, step))}
-            first={index === 0}
-            last={index === blocks.length - 1}
-            onRemove={edit && (() => edit.onRemove(index))}
+            first={unitStart === 0}
+            last={unitEnd === blocks.length - 1}
+            onRemove={edit?.onRemove && (() => edit.onRemove?.(index))}
           />
         )}
       </div>

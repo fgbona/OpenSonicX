@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { decodePreset, MB_CATALOG, parseMbPreset, resolveMbPreset } from '@pocket-master/core';
 import { realP08 } from '../../../packages/core/test/fake-pedal.ts';
 import { FakeMatribox } from '../../../packages/core/test/fake-matribox.ts';
-import { mbRigBlocks, pmParamValue, pmRigBlocks } from '../lib/rigBlocks.ts';
+import { mbRigBlocks, pmParamValue, pmRigBlocks, pmRigMoves } from '../lib/rigBlocks.ts';
 import { pmRigCategory } from '../lib/rigIcon.ts';
 import { initialRigLook } from '../lib/rigLook.ts';
 
@@ -80,4 +80,23 @@ test('the strip names the real gear only as plain attribution, never a user IR o
   const preset = decodePreset(realP08());
   const amp = pmRigBlocks(preset, (b) => b.model, ['off', 'on']).find((b) => b.module === 'AMP')!;
   assert.ok(preset.ampMode === 'clone' ? amp.basedOn === undefined : typeof amp.basedOn === 'string' && amp.basedOn.length > 0);
+});
+
+test('Pocket Master moves keep DRV-AMP-IR-EQ together and step over the whole unit', () => {
+  // NR, FX1, DRV, AMP, IR, EQ, FX2, DLY, RVB
+  const order = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+  const m = pmRigMoves(order);
+  assert.deepEqual(m.unit(0), [0, 0]);
+  assert.deepEqual(m.unit(3), [2, 5]);
+  assert.deepEqual(m.unit(8), [8, 8]);
+  assert.deepEqual(m.unit(-1), [-1, -1]);
+  // AMP onto FX2: the unit goes after FX2.
+  assert.deepEqual(m.move(3, 6), [0, 1, 6, 2, 3, 4, 5, 7, 8]);
+  // FX2 onto IR: FX2 goes before the unit.
+  assert.deepEqual(m.move(6, 4), [0, 1, 6, 2, 3, 4, 5, 7, 8]);
+  // NR onto RVB: to the end.
+  assert.deepEqual(m.move(0, 8), [1, 2, 3, 4, 5, 6, 7, 8, 0]);
+  // Inside its own unit, or out of range: nothing.
+  assert.equal(m.move(2, 5), null);
+  assert.equal(m.move(0, 9), null);
 });

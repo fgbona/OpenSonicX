@@ -2,7 +2,7 @@
 
 import { memo, useState } from 'react';
 import { blockModelLabel, presetLabel, type Edit, type Preset } from '@pocket-master/core';
-import { pmParamValue, pmRigBlocks } from '@/lib/rigBlocks';
+import { pmParamValue, pmRigBlocks, pmRigMoves } from '@/lib/rigBlocks';
 import { useRigLook } from '@/lib/rigLook';
 import { ChainTiles } from './ChainTiles';
 import { ModuleEditor } from './ModuleEditor';
@@ -29,6 +29,7 @@ export const ChainView = memo(function ChainView({ preset, presetIndex, presetNa
   const [selected, setSelected] = useState(AMP_MODULE);
   const rig = useRigLook();
   const block = preset.chain.find((b) => b.module === selected) ?? preset.chain[0]!;
+  const moves = pmRigMoves(preset.chain.map((b) => b.module));
   const editor = <ModuleEditor preset={preset} block={block} editable={editable} onEdit={onEdit} irNames={irNames} profileNames={profileNames} />;
   return (
     <section className="preset" aria-label={t('preset.aria')}>
@@ -61,6 +62,14 @@ export const ChainView = memo(function ChainView({ preset, presetIndex, presetNa
             if (value !== null) onEdit({ kind: 'param', module, alg, value });
           }}
           panel={editor}
+          edit={{
+            onMove: (from, to) => {
+              const order = moves.move(from, to);
+              if (order) onEdit({ kind: 'chain', order });
+            },
+            unit: moves.unit,
+            hint: t('rig.pmUnit'),
+          }}
         />
       ) : (
         <>

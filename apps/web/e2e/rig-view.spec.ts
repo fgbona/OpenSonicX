@@ -5,7 +5,7 @@
  * A/AA violations. RIG_SHOTS=<folder> also takes the design pictures.
  */
 import AxeBuilder from '@axe-core/playwright';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { parseMbPreset } from '@pocket-master/core';
 import { expect, loadedMatribox, MODELS, optionName, test } from './matribox-fixtures.ts';
 
@@ -25,6 +25,21 @@ const gear = (page: Page, position: number, module: string) => page.getByRole('b
 const expectRig = (page: Page, modules: string) => expect.poll(async () => (await page.locator('.rig-tag').allTextContents()).join(' → ')).toBe(modules);
 const modules = (unit: { editBuffer: Uint8Array }) => parseMbPreset(unit.editBuffer).chain.map((b) => b.moduleIndex);
 const START = 'DYN → DRV → AMP → CAB → RVB → VOL';
+
+/** Four more blocks from the rig's add slot: 58 % (the start) to 104 %, past the DSP budget. */
+async function overLimit(page: Page, rig: Locator) {
+  for (const type of ['FREQ', 'DLY', 'MOD', 'RVB']) {
+    const add = rig.getByRole('button', { name: 'Add a block…' });
+    await expect(add).toBeEnabled();
+    await add.click();
+    await page.getByRole('listbox', { name: 'Add a block: type' }).getByRole('option', { name: type, exact: true }).click();
+    await page
+      .getByRole('listbox', { name: `Add a block: ${type} model` })
+      .getByRole('option')
+      .nth(1)
+      .click();
+  }
+}
 
 test('the classic look stays the default', async ({ page }) => {
   await page.goto('/');
@@ -85,6 +100,18 @@ test('the chain shows as tagged gear between IN and OUT, with the DSP load; a cl
     await expect(rig.getByText('Product names are trademarks of their owners', { exact: false })).toHaveCount(1);
   } else await expect(model).toHaveText(`DRV ${MODELS.drive.name}`);
   await expect(rig.getByRole('slider')).toHaveCount(Math.min(5, MODELS.drive.params.length));
+});
+
+test('a load past the limit reads "over the limit" with a full drawn bar, never a percent over 100', async ({ page }) => {
+  const rig = await openRig(page);
+  await overLimit(page, rig);
+  const bar = rig.getByRole('meter');
+  await expect(bar).toHaveAccessibleName('Estimated DSP load: over the limit');
+  await expect(bar).toHaveAttribute('aria-valuenow', '100');
+  // Drawn, not an empty grey track: the bar has its width and the fill covers it.
+  const width = async (selector: string) => (await rig.locator(selector).boundingBox())?.width ?? 0;
+  expect(await width('.mb-dsp-bar')).toBeGreaterThan(100);
+  await expect.poll(async () => Math.round((await width('.mb-dsp-fill')) - (await width('.mb-dsp-bar')))).toBe(0);
 });
 
 test('arrow keys walk the chain', async ({ page }) => {
@@ -206,6 +233,16 @@ test.describe('pictures', () => {
     await expect(rig.locator('.tile-over')).toHaveCount(1);
     await rig.screenshot({ path: `${SHOTS}/matribox-dragging.png`, animations: 'disabled' });
     await items.nth(1).dispatchEvent('dragend', { dataTransfer: data });
+  });
+
+  test('DSP load over the limit', async ({ page }) => {
+    const rig = await openRig(page);
+    await overLimit(page, rig);
+    await expect(rig.getByRole('meter')).toHaveAttribute('aria-valuenow', '100');
+    for (const theme of ['dark', 'light'] as const) {
+      await setTheme(page, theme);
+      await rig.screenshot({ path: `${SHOTS}/matribox-dsp-over-${theme}.png`, animations: 'disabled' });
+    }
   });
 
   test('detail strip, gear line and trademark note', async ({ page }) => {

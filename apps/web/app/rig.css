@@ -93,7 +93,7 @@
 /* The DSP load, compact under the chain. */
 .rig .mb-dsp { align-items: center; gap: 4px; }
 .rig .mb-dsp-load { font-size: 0.75rem; }
-.rig .mb-dsp-load meter { width: 160px; height: 6px; }
+.rig .mb-dsp-bar { flex: none; width: 160px; height: 6px; }
 .rig .mb-dsp-warning { text-align: center; font-size: 0.75rem; }
 .rig-classic {
   justify-self: center; padding: 6px 10px; border: none; border-radius: 8px; background: transparent;
