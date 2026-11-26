@@ -13,10 +13,10 @@ const word = (data: ArrayLike<number>) => Array.from(data).slice(0, 4).join(',')
 /**
  * The stock firmware's notice queue (FUN_0003568C, as zxmarcos/waveod src/editor/server.c
  * reimplements it): the same notice again is held (the newest kept) until 150 ms pass without one
- * or 10 are held; any other notice sends the held one first. It answers the patch-volume read
- * through the same queue. `now` is the simulated clock.
+ * or 10 are held; any other notice sends the held one first. It answers the patch-volume and
+ * preset-tempo reads through the same queue. `now` is the simulated clock.
  */
-function holdingUnit(volume: number) {
+function holdingUnit(volume: number, tempo = 120) {
   let receiver: ((bytes: Uint8Array) => void) | null = null;
   let last = '';
   let held: number[] | null = null;
@@ -43,15 +43,18 @@ function holdingUnit(volume: number) {
     port: {
       send: (bytes: Uint8Array) => {
         const { data } = unwrapMbMessage(parseMbFrame(bytes).payload);
-        if (word(data) !== word([0x03, 0x00, 0x05, 0x01])) throw new Error('unexpected request');
+        const value = { [word([3, 0, 5, 1])]: volume, [word([4, 0, 5, 1])]: tempo }[word(data)];
+        if (value === undefined) throw new Error('unexpected request');
         reads.push(now);
-        notify([0x03, 0x00, 0x05, 0x01, volume, 0, 0, 0]);
+        notify([...data.subarray(0, 4), value, 0, 0, 0]);
       },
       listen: (r: ((bytes: Uint8Array) => void) | null) => {
         receiver = r;
       },
     },
     knob: (value: number) => notify([0x01, 0x00, 0x05, 0x01, 2, 0, 0, 0, 0, 0, 0, 0, ...new Uint8Array(Float32Array.of(value).buffer)]),
+    /** Knob 3, the patch volume. */
+    volumeKnob: (value: number) => notify([0x03, 0x00, 0x05, 0x01, value, 0, 0, 0]),
     /** The main loop's flush check, once a millisecond. */
     tick: (ms: number) => {
       now = ms;
@@ -65,7 +68,7 @@ function holdingUnit(volume: number) {
 }
 
 /** A knob turned one step every 20 ms for 1 s (values 1..50); how late the link hands each step on. */
-function turn(t: TestContext, flushMs: number) {
+function turn(t: TestContext, flushMs: number, knob: 'param' | 'volume' = 'param') {
   mock.timers.enable({ apis: ['setTimeout'] });
   t.after(() => mock.timers.reset());
   const unit = holdingUnit(80);
@@ -74,11 +77,11 @@ function turn(t: TestContext, flushMs: number) {
   const volumes: number[] = [];
   let now = 0;
   link.onNotice((n: MbNotice) => {
-    if (n.kind === 'param') seen.push({ at: now, value: n.value });
+    if (n.kind === knob) seen.push({ at: now, value: n.value });
     if (n.kind === 'volume') volumes.push(n.value);
   });
   for (; now <= 3000; now++) {
-    if (now < 1000 && now % 20 === 0) unit.knob(now / 20 + 1);
+    if (now < 1000 && now % 20 === 0) (knob === 'param' ? unit.knob : unit.volumeKnob)(now / 20 + 1);
     unit.tick(now);
     mock.timers.tick(1);
   }
@@ -102,6 +105,22 @@ test('the link lets a held knob notice out every flush period, and stops once th
   // About 20 reads a second while it turns, then 10 quiet ones: nothing after 1.6 s.
   assert.ok(reads.length <= 1000 / MATRIBOX_FLUSH_MS + 12, `${reads.length} reads`);
   assert.ok((reads.at(-1) as number) < 1600, `last read at ${reads.at(-1)} ms`);
-  assert.ok(volumes.every((v) => v === 80)); // the read's answer is the unit's own volume, handed on like its notice
+  assert.deepEqual(volumes, []); // the tempo read's answer is no notice: nothing reaches the editor
   link.onNotice(null);
+});
+
+test('the patch-volume knob (knob 3) is let out as fast as the other knobs, and the flush stops with it', (t) => {
+  const { worst, last, reads, link } = turn(t, MATRIBOX_FLUSH_MS, 'volume');
+  t.diagnostic(`volume knob, flush every ${MATRIBOX_FLUSH_MS} ms: worst ${worst} ms, last step ${last} ms, ${reads.length} reads`);
+  assert.ok(worst <= MATRIBOX_FLUSH_MS, `worst ${worst} ms`);
+  assert.ok(last <= MATRIBOX_FLUSH_MS, `last ${last} ms`);
+  assert.ok(reads.length <= 1000 / MATRIBOX_FLUSH_MS + 12, `${reads.length} reads`);
+  assert.ok((reads.at(-1) as number) < 1600, `last read at ${reads.at(-1)} ms`);
+  link.onNotice(null);
+});
+
+test('without a flush the patch-volume knob is held like the others', (t) => {
+  const { worst } = turn(t, 0, 'volume');
+  t.diagnostic(`volume knob, no flush: worst ${worst} ms`);
+  assert.ok(worst >= HOLD_MS, `worst ${worst} ms`);
 });

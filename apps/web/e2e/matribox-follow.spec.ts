@@ -1,5 +1,5 @@
-import { mbReadPatchVolume, parseMbPreset, toHex, wrapMbMessage } from '@pocket-master/core';
-import { replyFrames } from '../../../packages/core/test/fake-matribox.ts';
+import { mbReadPresetTempo, parseMbPreset, toHex, wrapMbMessage } from '@pocket-master/core';
+import { type FakeMatribox, replyFrames } from '../../../packages/core/test/fake-matribox.ts';
 import type { Page } from '@playwright/test';
 import { blockPanel, connectMatribox, expect, settled, test } from './matribox-fixtures.ts';
 
@@ -76,11 +76,25 @@ test('a knob turned on the unit shows within a frame or two, and the editor lets
   expect(shown!.frames).toBeLessThanOrEqual(2);
   await expect(drive.locator('[role="slider"][aria-valuenow="58"]')).toBeVisible();
 
-  // Then only patch-volume reads (no preset read), a few, and none once the knob stopped.
+  // Then only preset-tempo reads (no preset read), a few, and none once the knob stopped.
+  await expectOnlyFlushReads(unit, before);
+});
+
+test('the patch-volume knob turned on the unit shows in the header, with the same bounded flush', async ({ page, unit }) => {
+  await connectMatribox(page);
+  await settled(unit);
+  const before = unit.received.length;
+  await fromUnit(page, unit.onUnit([0x03, 0x00, 0x05, 0x01, 37, 0, 0, 0]));
+  await expect(page.getByRole('slider', { name: 'Patch volume' })).toHaveAttribute('aria-valuenow', '37');
+  await expectOnlyFlushReads(unit, before);
+});
+
+/** What the editor sent since `before`, once quiet: a few preset-tempo reads and nothing else. */
+async function expectOnlyFlushReads(unit: FakeMatribox, before: number) {
   await settled(unit);
   const sent = unit.received.slice(before);
-  const flush = toHex(mbReadPatchVolume()).replaceAll(' ', '').toLowerCase();
+  const flush = toHex(mbReadPresetTempo()).replaceAll(' ', '').toLowerCase();
   expect(sent.length).toBeGreaterThan(0);
   expect(sent.length).toBeLessThanOrEqual(12);
   expect(sent.every((frame) => frame === flush)).toBe(true);
-});
+}

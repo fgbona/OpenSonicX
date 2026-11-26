@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   matriboxLink,
+  MB_CATALOG,
   mbAssignments,
   mbAddBlock,
   mbExpressionWrites,
@@ -44,8 +45,8 @@ import {
   type Progress,
 } from '@pocket-master/core';
 import { readLoaded, readUnit, saveToSlot, serialQueue, withBlockOn, withNotice, withParam, type MbBackup, type MbUnit } from './matribox';
-import { applyOps } from './matriboxOps';
-import type { MbOp } from './matriboxPlan';
+import { applyChain, MbApplyError } from './matriboxOps';
+import type { MbChainBlock } from './matriboxPlan';
 import { keepMbBackup, loadMbBackups, storeMbBackups } from './matriboxBackups';
 import { importToSlot } from './matriboxPresetFile';
 import { readGlobals, TEMPO_NOT_ACCEPTED, withEqGain, withEqLevel, withEqOn, withGlobal } from './matriboxGlobals';
@@ -171,7 +172,7 @@ export function useMatribox(port: MidiPort | null) {
         return;
       }
       if (notice.kind !== 'preset') {
-        // The link's volume read (it lets held knob notices out) answers like the volume notice: the same volume is no edit.
+        // A volume notice with the volume already shown changes nothing: no edit.
         const same = (s: MatriboxState) => notice.kind === 'volume' && s.unit !== null && mbAssignments(s.unit.preset).volume === notice.value;
         setState((s) => (!s.unit || same(s) ? s : { ...s, edited: true, unit: { ...s.unit, preset: withNotice(s.unit.preset, notice) } }));
         return;
@@ -348,16 +349,27 @@ export function useMatribox(port: MidiPort | null) {
     [run, reloadLoaded, patch],
   );
 
-  /** Chain-position writes (Undo, Redo, the assistant) as one step; the preset as the unit has it, null when it failed. */
+  /**
+   * A whole chain (Undo, Redo, the assistant) as one step, planned from what the unit holds; on a
+   * failure the unit is put back and read again (matriboxOps.ts applyChain), so the screen never
+   * shows a stale chain the next step would be planned from.
+   */
   const apply = useCallback(
-    async (ops: readonly MbOp[]): Promise<MbPreset | null> => {
-      let preset: MbPreset | null = null;
-      const ok = await run('Editing', async (unit) => {
-        const done = await applyOps(unit, ops);
-        preset = done;
-        setState((s) => ({ ...s, edited: true, unit: s.unit ? { ...s.unit, preset: done } : s.unit }));
+    async (target: readonly MbChainBlock[]): Promise<{ readonly preset: MbPreset } | { readonly error: string }> => {
+      let result: { readonly preset: MbPreset } | { readonly error: string } = { error: 'The Matribox is not connected.' };
+      const show = (preset: MbPreset) => setState((s) => ({ ...s, edited: true, unit: s.unit ? { ...s.unit, preset } : s.unit }));
+      await run('Editing', async (unit) => {
+        try {
+          const done = await applyChain(unit, MB_CATALOG, target);
+          show(done);
+          result = { preset: done };
+        } catch (e) {
+          if (e instanceof MbApplyError && e.preset) show(e.preset);
+          result = { error: message(e) };
+          throw e;
+        }
       });
-      return ok ? preset : null;
+      return result;
     },
     [run],
   );

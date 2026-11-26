@@ -138,7 +138,7 @@ export const en = {
   'assistant.keyInvalid': '{provider} did not accept this key. Check that you copied all of it.',
   'assistant.keyUnavailable': 'Could not reach {provider} to check the key. Check your connection and try again.',
   'assistant.keyRejected': '{provider} refused the saved key. Remove it under Keys and add a new one.',
-  'assistant.privacy': "What you write here and the loaded preset go to the provider of your key (Groq or Google). On Gemini's free plan, Google may use them to improve its products.",
+  'assistant.privacy': "What you write here and the loaded preset go to the provider of your key ({providers}). On Gemini's free plan, Google may use them to improve its products.",
   'assistant.hint': 'Describe a sound, or start from one of these (then "warmer", "less gain", "save it on P45"…):',
   'assistant.example1': 'Black Album rhythm tone',
   'assistant.example2': 'Clean tone with a little chorus',
@@ -196,6 +196,9 @@ export const en = {
   'assistant.backToChat': 'Back to the chat',
   'assistant.new': 'New conversation',
   'assistant.error': 'Something went wrong: {reason}',
+  'assistant.stepLimit':
+    'The assistant used every step of this message without finishing. What it changed is listed below (Undo takes it back). Ask for one thing at a time: the chain first, then the adjustments.',
+  'assistant.toolLoop': 'Stopped: {tool} failed twice in a row, so the assistant did not try again. Reason: {reason} Check that the pedal is on and connected, then ask again.',
   'presetFile.export': 'Export preset',
   'presetFile.import': 'Import preset',
   'presetFile.title': 'Import a preset',
@@ -434,7 +437,7 @@ export const en = {
   'mb.restoreAllWorking': 'Keep the Matribox connected and this window open.',
   'mb.restoreAllDone': '{count} presets restored, each checked on the Matribox.',
   'mb.assistantPrivacy':
-    "What you write here, the loaded preset and the model catalog go to the provider of your key (Groq or Google), and nowhere else. On Gemini's free plan, Google may use them to improve its products.",
+    "What you write here, the loaded preset and the model catalog go to the provider of your key ({providers}), and nowhere else. On Gemini's free plan, Google may use them to improve its products.",
   'mb.assistantHint': 'Describe a sound, or start from one of these (then "warmer", "less gain", "save it on 12A"…):',
   'mbGlobal.inOut': 'Input and output',
   'mbGlobal.inputMode': 'Input mode',
@@ -758,7 +761,7 @@ export const pt: Record<MessageKey, string> = {
   'assistant.keyUnavailable': 'Não foi possível falar com o {provider} para conferir a chave. Confira a conexão e tente de novo.',
   'assistant.keyRejected': 'O {provider} recusou a chave salva. Remova em Chaves e adicione uma nova.',
   'assistant.privacy':
-    'O que você escreve aqui e o preset carregado vão para o provedor da sua chave (Groq ou Google). No plano gratuito do Gemini, o Google pode usar esse conteúdo para melhorar os produtos dele.',
+    'O que você escreve aqui e o preset carregado vão para o provedor da sua chave ({providers}). No plano gratuito do Gemini, o Google pode usar esse conteúdo para melhorar os produtos dele.',
   'assistant.hint': 'Descreva um som ou comece por um destes (depois "mais quente", "menos gain", "salva no P45"…):',
   'assistant.example1': 'Timbre de base do Black Album',
   'assistant.example2': 'Clean com um pouco de chorus',
@@ -816,6 +819,9 @@ export const pt: Record<MessageKey, string> = {
   'assistant.backToChat': 'Voltar ao chat',
   'assistant.new': 'Nova conversa',
   'assistant.error': 'Algo deu errado: {reason}',
+  'assistant.stepLimit':
+    'O assistente usou todas as etapas desta mensagem sem terminar. O que ele mudou aparece abaixo (Desfazer volta atrás). Peça uma coisa de cada vez: primeiro a cadeia, depois os ajustes.',
+  'assistant.toolLoop': 'Parei: {tool} falhou duas vezes seguidas, então o assistente não tentou de novo. Motivo: {reason} Confira se o pedal está ligado e conectado e peça de novo.',
   'presetFile.export': 'Exportar preset',
   'presetFile.import': 'Importar preset',
   'presetFile.title': 'Importar um preset',
@@ -1054,7 +1060,7 @@ export const pt: Record<MessageKey, string> = {
   'mb.restoreAllWorking': 'Mantenha a Matribox conectada e esta janela aberta.',
   'mb.restoreAllDone': '{count} presets restaurados, cada um conferido na Matribox.',
   'mb.assistantPrivacy':
-    'O que você escreve aqui, o preset carregado e o catálogo de modelos vão para o provedor da sua chave (Groq ou Google), e para nenhum outro lugar. No plano gratuito do Gemini, o Google pode usar esse conteúdo para melhorar os produtos dele.',
+    'O que você escreve aqui, o preset carregado e o catálogo de modelos vão para o provedor da sua chave ({providers}), e para nenhum outro lugar. No plano gratuito do Gemini, o Google pode usar esse conteúdo para melhorar os produtos dele.',
   'mb.assistantHint': 'Descreva um som ou comece por um destes (depois "mais quente", "menos gain", "salva no 12A"…):',
   'mbGlobal.inOut': 'Entrada e saída',
   'mbGlobal.inputMode': 'Modo de entrada',

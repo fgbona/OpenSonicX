@@ -2,7 +2,8 @@
  * Requests to a Matribox II Pro over any MIDI port (Web MIDI, Node): send one frame, collect the
  * answer's pages, join and decompress them. A read's reply is the message with the request's flag
  * and cmd whose data starts with the request's argument (the unit repeats it); a write is confirmed
- * by the unit's echo (same flag, cmd and data), except a chain edit (01/02 00 04 01: add, move,
+ * by the unit's echo (same flag, cmd and data; a set param or on/off by the echo of its slot and
+ * parameter, which carries the value the unit kept), except a chain edit (01/02 00 04 01: add, move,
  * remove, change model), which the unit answers with its chain notice (00 00 04 01 + the new chain).
  * The whole-preset write (flag 2, paged: mbWritePreset) is answered with flag 0, cmd 0x17,
  * `02 00 00 10` (capture mb-20); a user IR or clone upload (flag 1, cmd 0x14 / 0x18, paged: mbIrUpload, mbCloneUpload) with
@@ -16,12 +17,14 @@
  * zxmarcos/waveod src/editor/server.c, MIT): the same notice again is held, the newest kept, and
  * sent only after 150 ms without one or once 10 are held; mb-42 got a gain knob 0.4 s and 3..4
  * steps apart. Any other notice the unit sends lets the held one out first, and the answer to a
- * patch-volume read is one: while knob notices come, the link sends that read every `flushMs`
- * (0: never), until `FLUSH_QUIET_POLLS` reads bring none. Its answer reaches `onNotice` as a volume notice.
+ * preset-tempo read is one: while knob notices come (knobs 1..3: param and volume), the link sends
+ * that read every `flushMs` (0: never), until `FLUSH_QUIET_POLLS` reads bring none. Its answer is
+ * no notice, so it differs from every knob's (a patch-volume read could not let knob 3's out) and
+ * reaches no one. The read goes only between requests.
  */
 import type { MidiPort } from '../link.ts';
 import { joinMbPages, MB_READ, MB_REPLY, MB_WRITE, parseMbFrame, type MbFrame } from './frame.ts';
-import { mbReadPatchVolume, unwrapMbMessage } from './message.ts';
+import { mbReadPresetTempo, unwrapMbMessage } from './message.ts';
 import { isMbControlChange } from './cc.ts';
 import { parseMbNotice, type MbNotice } from './notice.ts';
 
@@ -66,8 +69,19 @@ const startsWith = (data: Uint8Array, prefix: Uint8Array) => prefix.every((b, i)
 const equal = (a: Uint8Array, b: Uint8Array) => a.length === b.length && startsWith(a, b);
 const CHAIN_NOTICE = Uint8Array.of(0x00, 0x00, 0x04, 0x01);
 const isChainEdit = (data: Uint8Array) => (data[0] === 0x01 || data[0] === 0x02) && startsWith(data.subarray(1), CHAIN_NOTICE.subarray(1));
+const SET_PARAM = Uint8Array.of(0x01, 0x00, 0x05, 0x01);
+const SET_ON = Uint8Array.of(0x02, 0x00, 0x05, 0x01);
+/**
+ * A set param (`01 00 05 01` + slot + id + f32) or on/off (`02 00 05 01` + slot + u32): the unit
+ * echoes the value it kept (snapped to the step, clamped to the range), so the echo names the same
+ * slot (and id) but may carry another value; the caller reads the preset back for the value.
+ */
+const sameTarget = (data: Uint8Array, sent: Uint8Array) => {
+  const head = startsWith(sent, SET_PARAM) ? 12 : startsWith(sent, SET_ON) ? 8 : 0;
+  return head > 0 && data.length === sent.length && startsWith(data, sent.subarray(0, head));
+};
 /** The unit's answer to a write: its echo, or its chain notice for a chain edit. */
-const confirms = (data: Uint8Array, sent: Uint8Array) => equal(data, sent) || (isChainEdit(sent) && startsWith(data, CHAIN_NOTICE));
+const confirms = (data: Uint8Array, sent: Uint8Array) => equal(data, sent) || sameTarget(data, sent) || (isChainEdit(sent) && startsWith(data, CHAIN_NOTICE));
 /** The unit's answer to a whole-preset write: flag 0, cmd 0x17, `02 00 00 10`. */
 const PRESET_ACK = { flag: 0, cmd: 0x17, data: Uint8Array.of(0x02, 0x00, 0x00, 0x10) };
 /** The unit acknowledges an upload with this flag (captures mb-17, mb-17b, mb-17c). */
@@ -109,7 +123,9 @@ export function matriboxLink(port: MidiPort, timeoutMs: number = MATRIBOX_TIMEOU
     flushTimer = null;
     if (!noticeHandler || quietPolls-- <= 0) return;
     flushTimer = setTimeout(flush, flushMs); // first: the answer can bring a knob notice (knobTurning) at once
-    port.send(mbReadPatchVolume());
+    // Only between requests: a request's answer lets the held notice out anyway, and extra traffic
+    // while a write waits for its echo only adds to the unit's queue.
+    if (!exchanging) port.send(mbReadPresetTempo());
   };
   /** A knob notice came: keep letting the next ones out until the knob stops. */
   const knobTurning = () => {
@@ -127,7 +143,7 @@ export function matriboxLink(port: MidiPort, timeoutMs: number = MATRIBOX_TIMEOU
       return; // ponytail: a damaged message nobody asked for is dropped; the next read shows the truth
     }
     if (!notice) return;
-    if (notice.kind === 'param') knobTurning();
+    if (notice.kind === 'param' || notice.kind === 'volume') knobTurning();
     noticeHandler(notice);
   };
   /** Between requests: the unit's notices are single-page messages. */

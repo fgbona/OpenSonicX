@@ -3,7 +3,21 @@
  * (no server in between). Uses the Interactions API in stateless mode (store: false): Google keeps
  * none of the conversation between requests. Tool calls run in the editor through runChatTool.
  */
-import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, RegionError, QuotaError, requestTexts, toToolSchema, type ConverseOptions, type ToneAgent } from './assistant.ts';
+import {
+  BUSY_WAIT_MS,
+  BusyError,
+  guardedRunner,
+  StepLimitError,
+  KeyError,
+  MAX_REQUESTS,
+  post,
+  RegionError,
+  QuotaError,
+  requestTexts,
+  toToolSchema,
+  type ConverseOptions,
+  type ToneAgent,
+} from './assistant.ts';
 import { nextReset } from './aiUsage.ts';
 
 /** Gemini models and their free daily requests (AI Studio, 2026-11). Check aistudio.google.com/rate-limit when they change. */
@@ -79,7 +93,7 @@ export async function converseGeminiModel(modelId: string, options: ConverseOpti
   const input: Step[] = [...options.turns.map((t): Step => (t.role === 'user' ? { type: 'user_input', content: t.text } : { type: 'model_output', content: [{ type: 'text', text: t.text }] }))];
   const text = requestTexts(agent, options.turns, options.message, options.language, options.thorough);
   const asked = input.push({ type: 'user_input', content: text.first }) - 1;
-  const run = agent.runner();
+  const run = guardedRunner(agent);
   for (let request = 0; request < MAX_REQUESTS; request++) {
     onRequest();
     const r = await post(
@@ -117,5 +131,5 @@ export async function converseGeminiModel(modelId: string, options: ConverseOpti
       input.push({ type: 'function_result', name: c.name, call_id: c.id, is_error: !result.ok, result: [{ type: 'text', text: result.text }] });
     }
   }
-  throw new Error('The assistant took too many steps for one message. Try asking again, more simply.');
+  throw new StepLimitError();
 }

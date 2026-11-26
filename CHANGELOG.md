@@ -8,9 +8,49 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
-- Matribox II Pro: the estimated DSP load no longer reads past 100 %: a chain over the budget
-  says "over the limit", and its bar is drawn (full and red) instead of a `<meter>` that showed
-  empty in the dark theme.
+- Matribox II Pro: **a failed write no longer piles blocks up on the unit.** The owner's assistant
+  run ("timbre do Slash em Sweet Child", Claude Haiku, then Sonnet on an empty preset) ended with
+  12 blocks on the unit (the planned WAH, AMP, CAB, DLY, RVB three times over) while the editor
+  showed none: a value write timed out after the unit had applied the adds, the editor kept its
+  old chain, and each retried `build_tone` was planned from that stale chain and added everything
+  again, until the unit refused a block for memory and switched every block off. Now a whole chain
+  (assistant, Undo, Redo) is planned from the preset read from the unit just before; a value or
+  switch the unit already holds is not written (fresh blocks need only the values the tone sets);
+  and a failed write puts the unit back to the chain it had, reads it again and tells the
+  assistant nothing was applied. A set param or on/off is confirmed by the echo of its slot and
+  parameter with whatever value the unit kept (it snaps values to the step), and the link no
+  longer sends its knob-flush read while a request waits for its answer.
+- Matribox II Pro MCP: `matribox_build_tone` puts the old chain back when a write fails.
+- Tone assistant: **the same tool failing twice in one message stops the message** and says which
+  tool failed and why, instead of retrying until the step limit; the step limit now says what to
+  do (ask for one thing at a time). Claude's dated model ids (`claude-haiku-4-5-20251001`) find
+  their price, so the answer's cost shows; "Real usage" links the paid providers' pages too; and
+  the privacy note names the providers that really get the text (Claude included) instead of
+  "Groq or Google".
+- Matribox II Pro: **the patch-volume knob (knob 3) turned on the unit now follows at once too.**
+  The link let held knob notices out with a patch-volume read, but the firmware holds a notice
+  while the same one (cmd and first word) repeats, so that read's answer could not push out a held
+  volume notice, and volume notices did not start the flush at all. The link now sends the
+  preset-tempo read instead (`mbReadPresetTempo`, flag 1, cmd 0x10, `04 00 05 01`: a pure read the
+  firmware answers through its notice queue, waveod sub 0x01050004; not captured), for knob 1/2
+  and knob 3 notices alike, with the same bound (every 50 ms, stopping after 10 quiet reads). Its
+  answer is no notice, so it reaches nothing in the editor: no "edited" mark, no re-read. Against
+  the firmware-queue simulation (a step every 20 ms for 1 s), knob 3's worst lag goes from 309 ms
+  to 29 ms and its last step from 149 ms to 19 ms; knobs 1/2 are unchanged (29 ms, 19 ms).
+  Not yet checked on the unit.
+
+## [1.2.0] - 2026-11-26
+
+The Matribox II Pro gets its tones made by AI end to end. NAM captures convert into the CLONE
+slots the official editor's way and upload from the editor's new Clones panel (on the owner's
+unit, our clone of a capture sounded the same as the official editor's), and the tone assistant
+can now set footswitches, CTRL 1-4, the expression pedal and the quick knobs, keeps chains within
+an estimated DSP budget, and starts the drum machine. The editor gains Global options (inputs,
+AUX, global EQ, Global Tempo, MIDI, USB audio, clock), a drum machine panel, user IR and clone
+renaming, follows knobs turned on the unit at once, and the desktop app serves the editor's tools
+to an AI over a local MCP connection. Protocol facts and the clone fit come from, or were checked
+against, zxmarcos/waveod and zxmarcos/matribox-studio (MIT; see THIRD_PARTY_NOTICES.md). Matribox
+writes added in this release follow those sources and were not all captured on a unit yet.
 
 ### Added
 
@@ -298,6 +338,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Matribox II Pro: the estimated DSP load no longer reads past 100 %: a chain over the budget
+  says "over the limit", and its bar is drawn (full and red) instead of a `<meter>` that showed
+  empty in the dark theme.
 - Matribox II Pro: **a knob turned on the unit now follows in the editor at once.** The unit's
   firmware holds back a repeated knob notice (the newest kept) until 150 ms pass without one or 10
   are held (stock FUN_0003568C, as zxmarcos/waveod reimplements it; capture mb-42 got a gain knob
@@ -1757,7 +1800,8 @@ Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/OpenSonicX/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/fgbona/OpenSonicX/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/fgbona/OpenSonicX/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/fgbona/OpenSonicX/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/fgbona/OpenSonicX/compare/v0.17.1...v1.0.0
 [0.17.1]: https://github.com/fgbona/OpenSonicX/compare/v0.17.0...v0.17.1
