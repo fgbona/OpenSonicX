@@ -277,6 +277,18 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Matribox II Pro: **a knob turned on the unit now follows in the editor at once.** The unit's
+  firmware holds back a repeated knob notice (the newest kept) until 150 ms pass without one or 10
+  are held (stock FUN_0003568C, as zxmarcos/waveod reimplements it; capture mb-42 got a gain knob
+  0.4 s and 3..4 steps apart), but sends the held one first when it has any other notice to send.
+  While knob notices come, the link (`matriboxLink`, when a notice handler is set: the web editor) now sends the patch-volume read
+  (`mbReadPatchVolume`, `03 00 05 01`, answered through that same queue) every 50 ms and stops after
+  10 reads that bring none: about 20 small frames a second, only while a knob turns. Against a
+  simulation of the firmware's queue (a knob step every 20 ms for 1 s) the worst lag goes from
+  309 ms to 29 ms and the last step from 149 ms to 19 ms; the web editor shows a knob notice
+  within 2 frames, without a preset read, and the read's answer (the same volume) does not mark the
+  preset edited. Not yet checked on the unit: if the stock firmware does not answer that read, the
+  follow stays as before.
 - Matribox II Pro, Global options: footswitch mode was read inverted (byte 35 is 0 Stomp,
   1 Preset); the MIDI channel the editor wrote (`00 61`) and read (byte 36) is the TRS input, not
   USB: USB is `01 61`, byte 38, and the tuner and tempo Control Changes now follow it; the EQ words

@@ -59,6 +59,11 @@ export function mbRequest(flag: number, cmd: number, arg: ArrayLike<number> = []
 
 /** Preset list: 240 names and style tags. */
 export const mbReadPresetNames = (): Uint8Array => mbRequest(1, 0x10, [0x00, 0x00, 0x0a, 0x01]);
+/**
+ * The loaded preset's patch volume: answered `03 00 05 01` + u32 0..100, the shape of the unit's
+ * volume notice (waveod src/editor/preset_msgs.c, not captured). The link sends it to let a held knob notice out.
+ */
+export const mbReadPatchVolume = (): Uint8Array => mbRequest(1, 0x10, [0x03, 0x00, 0x05, 0x01]);
 /** Argument of the current-preset-number read; the reply repeats it, then the u32 number. */
 const CURRENT_PRESET_ARG = [0x01, 0x00, 0x0a, 0x01] as const;
 /** The number of the loaded preset (0..239). */
