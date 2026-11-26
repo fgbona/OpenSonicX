@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   matriboxLink,
+  mbAssignments,
   mbAddBlock,
   mbExpressionWrites,
   mbAssignCtrl,
@@ -151,7 +152,9 @@ export function useMatribox(port: MidiPort | null) {
         return;
       }
       if (notice.kind !== 'preset') {
-        setState((s) => (s.unit ? { ...s, edited: true, unit: { ...s.unit, preset: withNotice(s.unit.preset, notice) } } : s));
+        // The link's volume read (it lets held knob notices out) answers like the volume notice: the same volume is no edit.
+        const same = (s: MatriboxState) => notice.kind === 'volume' && s.unit !== null && mbAssignments(s.unit.preset).volume === notice.value;
+        setState((s) => (!s.unit || same(s) ? s : { ...s, edited: true, unit: { ...s.unit, preset: withNotice(s.unit.preset, notice) } }));
         return;
       }
       if (notice.index === currentRef.current) return; // the unit sends it twice

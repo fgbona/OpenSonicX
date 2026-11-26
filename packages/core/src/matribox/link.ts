@@ -11,10 +11,17 @@
  * the unit sends meanwhile, or while no request runs, goes to the `onNotice` handler when it is a
  * notice the unit sends on its own (parseMbNotice: preset change, block toggle, knob turn…).
  * One request at a time: callers queue their calls.
+ *
+ * The unit holds back a knob's notices while it turns (stock FUN_0003568C, reimplemented in
+ * zxmarcos/waveod src/editor/server.c, MIT): the same notice again is held, the newest kept, and
+ * sent only after 150 ms without one or once 10 are held; mb-42 got a gain knob 0.4 s and 3..4
+ * steps apart. Any other notice the unit sends lets the held one out first, and the answer to a
+ * patch-volume read is one: while knob notices come, the link sends that read every `flushMs`
+ * (0: never), until `FLUSH_QUIET_POLLS` reads bring none. Its answer reaches `onNotice` as a volume notice.
  */
 import type { MidiPort } from '../link.ts';
 import { joinMbPages, MB_READ, MB_REPLY, MB_WRITE, parseMbFrame, type MbFrame } from './frame.ts';
-import { unwrapMbMessage } from './message.ts';
+import { mbReadPatchVolume, unwrapMbMessage } from './message.ts';
 import { isMbControlChange } from './cc.ts';
 import { parseMbNotice, type MbNotice } from './notice.ts';
 
@@ -49,6 +56,10 @@ export interface MatriboxLink {
 }
 
 export const MATRIBOX_TIMEOUT_MS = 3000;
+/** How often the link lets out a knob notice the unit holds (about the official editor's own write rate, mb-01). */
+export const MATRIBOX_FLUSH_MS = 50;
+/** Reads with no knob notice in between before the link stops (the knob stopped). */
+const FLUSH_QUIET_POLLS = 10;
 
 const hex = (n: number) => `0x${n.toString(16).padStart(2, '0')}`;
 const startsWith = (data: Uint8Array, prefix: Uint8Array) => prefix.every((b, i) => data[i] === b);
@@ -85,9 +96,27 @@ function tryParse(bytes: Uint8Array): MbFrame | null {
   }
 }
 
-export function matriboxLink(port: MidiPort, timeoutMs: number = MATRIBOX_TIMEOUT_MS): MatriboxLink {
+export function matriboxLink(port: MidiPort, timeoutMs: number = MATRIBOX_TIMEOUT_MS, flushMs: number = MATRIBOX_FLUSH_MS): MatriboxLink {
   let noticeHandler: ((notice: MbNotice) => void) | null = null;
   let exchanging = false;
+  let flushTimer: ReturnType<typeof setTimeout> | null = null;
+  let quietPolls = 0;
+  const stopFlush = () => {
+    if (flushTimer) clearTimeout(flushTimer);
+    flushTimer = null;
+  };
+  const flush = () => {
+    flushTimer = null;
+    if (!noticeHandler || quietPolls-- <= 0) return;
+    flushTimer = setTimeout(flush, flushMs); // first: the answer can bring a knob notice (knobTurning) at once
+    port.send(mbReadPatchVolume());
+  };
+  /** A knob notice came: keep letting the next ones out until the knob stops. */
+  const knobTurning = () => {
+    if (flushMs <= 0) return;
+    quietPolls = FLUSH_QUIET_POLLS;
+    flushTimer ??= setTimeout(flush, flushMs);
+  };
   /** A message no request took: a notice for the handler, or nothing. */
   const toNotice = (joined: Uint8Array) => {
     if (!noticeHandler) return;
@@ -97,7 +126,9 @@ export function matriboxLink(port: MidiPort, timeoutMs: number = MATRIBOX_TIMEOU
     } catch {
       return; // ponytail: a damaged message nobody asked for is dropped; the next read shows the truth
     }
-    if (notice) noticeHandler(notice);
+    if (!notice) return;
+    if (notice.kind === 'param') knobTurning();
+    noticeHandler(notice);
   };
   /** Between requests: the unit's notices are single-page messages. */
   const idle = (bytes: Uint8Array) => {
@@ -180,6 +211,7 @@ export function matriboxLink(port: MidiPort, timeoutMs: number = MATRIBOX_TIMEOU
     },
     onNotice: (handler) => {
       noticeHandler = handler;
+      if (!handler) stopFlush();
       if (!exchanging) listenIdle();
     },
   };
