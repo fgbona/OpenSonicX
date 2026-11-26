@@ -22,6 +22,19 @@ and the project uses [Semantic Versioning](https://semver.org/).
   an Apple-silicon Mac for that model (the model run is most of it; the fit about 2 s). Not yet
   wired to an upload and not yet heard on the owner's unit; the Pocket Master's converter is
   unchanged. `.nam` parsing now reads `sample_rate`, and a `.clo` can carry its own IIR 2.
+- Matribox II Pro: **estimated DSP load** under the chain ("Estimated DSP load: 74%", a meter, a
+  note from 85% and a warning past 100% or with more than 2 CAB/IR/CLONE blocks), after a
+  12-block preset made the owner's unit show "System overloaded". The unit sends no load, so it is
+  an estimate from the block types: measured stock costs for AMP, CAB/IR and CLONE and the
+  1 ms chain budget from zxmarcos/matribox-studio and zxmarcos/waveod (MIT), our deliberately high
+  guesses for the other modules (docs/matribox.md, "DSP load"). The tone assistant's `build_tone`
+  and `edit_preset` and the MCP `matribox_build_tone`, `matribox_add_block` and
+  `matribox_set_model` refuse a chain past the limit before sending anything, saying what to drop,
+  and note when one is near it; the preset text the assistant reads carries the estimate. The
+  unit's own overload notice (cmd 0x11 `00 07`: DSP or memory) is shown when it arrives. Core:
+  `mbDspLoad`, `mbCheckDspLoad`, `parseMbNotice` `kind: 'overload'`; the simulated unit refuses a
+  third CAB/IR/CLONE and, with `cpuOverload`, switches every block off past the estimate. Not yet
+  checked on the owner's unit; THIRD_PARTY_NOTICES.md credits both projects.
 - Matribox II Pro, Global options: Global Tempo can be switched and its BPM set (40..300); when
   the unit does not confirm the switch, the editor says to accept it on the unit's screen (the
   unit asks there first, and answers 0 while it has no BPM). All four global EQ band gains are

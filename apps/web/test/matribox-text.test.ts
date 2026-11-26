@@ -35,6 +35,7 @@ test('the loaded preset: chain in signal order, each block with its gear, on/off
   const text = mbPresetText(preset(), catalog);
   assert.match(text, /^Name: Drive AD$/m);
   assert.match(text, /^Chain: DYN → DRV → AMP → CAB → RVB → VOL$/m);
+  assert.match(text, /^DSP load \(estimate from the block types\): 58% of the unit's budget$/m);
   assert.match(text, /^2\. DRV off Fake Drive \(based on Imaginary Overdrive 808\): Gain 15 \(0\.\.100\), Tone 50 \(0\.\.100\), Volume 14 \(0\.\.100\)$/m);
   assert.match(text, /^4\. CAB on unknown model 0x0a000006$/m);
 });
