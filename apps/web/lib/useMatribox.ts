@@ -46,7 +46,7 @@ import {
 } from '@pocket-master/core';
 import { readLoaded, readUnit, saveToSlot, serialQueue, withBlockOn, withNotice, withParam, type MbBackup, type MbUnit } from './matribox';
 import { applyChain, MbApplyError } from './matriboxOps';
-import type { MbChainBlock } from './matriboxPlan';
+import { modelOf, type MbChainBlock } from './matriboxPlan';
 import { keepMbBackup, loadMbBackups, storeMbBackups } from './matriboxBackups';
 import { importToSlot } from './matriboxPresetFile';
 import { readGlobals, TEMPO_NOT_ACCEPTED, withEqGain, withEqLevel, withEqOn, withGlobal } from './matriboxGlobals';
@@ -87,6 +87,9 @@ async function readDrum(link: MatriboxLink): Promise<MbDrumState | null> {
 /** The Matribox II Pro editor's state and actions over its open MIDI ports. */
 export function useMatribox(port: MidiPort | null) {
   const [state, setState] = useState<MatriboxState>(INITIAL);
+  /** The state as last rendered, for writes queued earlier (a knob's model when its value goes out). */
+  const stateRef = useRef(state);
+  stateRef.current = state;
   const patch = useCallback((p: Partial<MatriboxState>) => setState((s) => ({ ...s, ...p })), []);
   const link = useMemo<MatriboxLink | null>(() => (port ? matriboxLink(port) : null), [port]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: link is the trigger (every link gets its own queue)
@@ -219,7 +222,9 @@ export function useMatribox(port: MidiPort | null) {
       void run(null, async (unit) => {
         const latest = pending.current.get(key);
         pending.current.delete(key);
-        if (latest) await unit.write(mbSetParam(latest.slot, latest.id, latest.value));
+        if (!latest) return;
+        const block = stateRef.current.unit?.preset.chain.find((b) => b.slot === latest.slot);
+        await unit.write(mbSetParam(latest.slot, block ? modelOf(MB_CATALOG, block) : null, latest.id, latest.value));
       });
     },
     [run],

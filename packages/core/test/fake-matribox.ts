@@ -43,6 +43,7 @@ import {
   mbDrumAnswer,
   mbDrumWith,
   mbDspLoad,
+  type MbCatalog,
   type MbDrumState,
   mbReadCloneNames,
   mbReadIrNames,
@@ -153,6 +154,12 @@ export class FakeMatribox {
   noise: Uint8Array[] = [NOTIFICATION];
   /** When false the unit applies writes but sends no echo. */
   echoes = true;
+  /**
+   * The catalog the unit's models follow. When set, a set param names the parameter's order in its
+   * model's list and the echo its widget ID, like the unit (FUN_000213CC / FUN_0002048C: an order
+   * past the list lands on ID 0, capture mb-46); null: the order is the widget ID.
+   */
+  catalog: MbCatalog | null = null;
   /** When true the unit drops saves (to test that a save is checked by reading it back). */
   dropsSaves = false;
   /** Every whole-preset write received, decompressed (u32 index + 1207-byte body). */
@@ -529,7 +536,17 @@ export class FakeMatribox {
     };
     if (cmd === 0x05) return this.#save(u32(data, 0), data.subarray(4, 21));
     if (cmd !== 0x10) throw new Error(`fake Matribox: unknown write cmd ${cmd}`);
-    if (head === '01000501') return edit(5, 4 + u32(data, 4) * 60 + u32(data, 8) * 4, data.subarray(12, 16));
+    if (head === '01000501') {
+      const [slot, order] = [u32(data, 4), u32(data, 8)];
+      const chain = this.#chain();
+      const ids = this.catalog?.modules
+        .find((m) => m.index === chain.types[slot])
+        ?.models.find((m) => m.fxid === chain.fxids[slot])
+        ?.params.map((p) => p.id);
+      const id = ids ? (ids[order] ?? 0) : order;
+      edit(5, 4 + slot * 60 + id * 4, data.subarray(12, 16));
+      return Uint8Array.from([...data.subarray(0, 8), id, 0, 0, 0, ...data.subarray(12, 16)]);
+    }
     if (head === '02000501') return edit(5, 724 + u32(data, 4), [u32(data, 8)]);
     if (head === '01000401' || head === '02000401') return this.#editChain(data);
     if (head === '03000501') return edit(5, 736, [data[4] as number, 0]); // patch volume, u16
