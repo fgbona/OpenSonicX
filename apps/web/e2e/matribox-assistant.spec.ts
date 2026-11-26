@@ -1,5 +1,5 @@
 import type { Page, Route } from '@playwright/test';
-import { parseMbPreset } from '@pocket-master/core';
+import { mbAssignments, parseMbPreset } from '@pocket-master/core';
 import { blockPanel, connectMatribox, expect, expectChain, MODELS, test, turnKnob } from './matribox-fixtures.ts';
 
 // Groq is simulated: every call is answered here, so nothing leaves the machine.
@@ -73,6 +73,32 @@ test('the assistant builds a whole chain on the unit, shows what changed, and Un
   await page.getByRole('button', { name: 'Redo' }).click();
   await chain(page, 'DRV → AMP → DLY');
   expect(loaded(unit).chain[0]!.values[0]).toBe(80);
+});
+
+test('the assistant makes the tone live-ready: EXP, a footswitch and a quick knob, shown in the Controls panels', async ({ page, unit }) => {
+  const requests = await fakeGroq(page, [
+    call('set_controls', {
+      changes: [
+        { kind: 'expression', entry: 4, block: 'DRV', parameter: 'Tone', min: 20, max: 100 },
+        { kind: 'footswitch', footswitch: 'B', block: 'RVB' },
+        { kind: 'quick_knob', knob: 1, target: 'DRV', parameter: 'Gain' },
+      ],
+    }),
+    say('EXP 1 mode B sweeps the drive tone, FS B toggles the reverb, knob 1 is the drive gain.'),
+  ]);
+  await connectMatribox(page);
+  await openChat(page);
+  await ask(page, 'Make it ready to play live');
+  await expect(panel(page).getByText('FS B toggles the reverb')).toBeVisible();
+
+  const a = mbAssignments(loaded(unit));
+  expect(a.expression[3]).toEqual({ entry: 3, slot: 0, paramId: 1, min: 20, max: 100 });
+  expect(a.ctrl[1]).toContain(4);
+  expect(a.quickKnobs[0]).toEqual({ knob: 0, target: 0, paramId: 0 });
+  // The tool answer the model read back lists the controls as the unit has them now.
+  const answer = requests[1]!.messages.at(-1)!.content!;
+  expect(answer).toMatch(/Quick knob 1: 2 DRV Gain/);
+  await expect(page.getByRole('region', { name: 'Footswitches and CTRL (stomp mode)' }).getByRole('switch', { name: 'CTRL 2 switches 5. RVB' })).toHaveAttribute('aria-checked', 'true');
 });
 
 test("Undo and Redo replay the editor's own edits through the unit, from the buttons and the keyboard", async ({ page, unit }) => {

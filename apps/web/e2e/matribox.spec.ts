@@ -154,7 +154,7 @@ test('the add menu works from the keyboard: arrows, Enter, Escape back a step an
   expect(loaded(unit).chain.at(-1)).toMatchObject({ moduleIndex: 3, fxid: last.fxid });
 });
 
-test('patch volume, footswitch and expression assignments reach the unit; tuner and tempo go as Control Changes', async ({ page, unit }) => {
+test('patch volume, footswitch, CTRL, quick knob and expression assignments reach the unit; tuner and tempo go as Control Changes', async ({ page, unit }) => {
   await connectMatribox(page);
   const assigned = () => mbAssignments(loaded(unit));
 
@@ -162,15 +162,42 @@ test('patch volume, footswitch and expression assignments reach the unit; tuner 
   await expect.poll(() => assigned().volume).toBe(80);
 
   // The chip follows the unit: it shows the preset read back after the write.
-  const footswitches = page.getByRole('region', { name: 'Footswitches (stomp mode)' });
-  await expect(footswitches.getByRole('group', { name: 'Footswitch A' }).getByRole('switch', { checked: true })).toHaveText(['1DYN']);
-  const switchC = footswitches.getByRole('switch', { name: 'Footswitch C toggles 2. DRV' });
-  await switchC.click();
-  await expect(switchC).toHaveAttribute('aria-checked', 'true');
-  expect(assigned().footswitches[2]).toContain(0);
-  await switchC.click();
-  await expect(switchC).toHaveAttribute('aria-checked', 'false');
-  expect(assigned().footswitches[2]).not.toContain(0);
+  const footswitches = page.getByRole('region', { name: 'Footswitches and CTRL (stomp mode)' });
+  await expect(footswitches.getByRole('group', { name: 'CTRL 1' }).getByRole('switch', { checked: true })).toHaveText(['1DYN']);
+  await expect(footswitches.getByRole('group', { name: 'CTRL 1' }).getByText('Footswitch A', { exact: true })).toBeVisible();
+  const ctrl3 = footswitches.getByRole('switch', { name: 'CTRL 3 switches 2. DRV' });
+  await ctrl3.click();
+  await expect(ctrl3).toHaveAttribute('aria-checked', 'true');
+  expect(assigned().ctrl[2]).toContain(0);
+  await ctrl3.click();
+  await expect(ctrl3).toHaveAttribute('aria-checked', 'false');
+  expect(assigned().ctrl[2]).not.toContain(0);
+  // What a footswitch runs: D from CTRL 4 to tap tempo; CTRL 4 then has no footswitch.
+  const fsD = footswitches.getByRole('combobox', { name: 'Function of footswitch D' });
+  await expect(fsD).toHaveValue('4');
+  await fsD.selectOption({ label: 'Tap tempo' });
+  await expect.poll(() => assigned().footswitches[3]?.press).toBe(8);
+  await expect(footswitches.getByRole('group', { name: 'CTRL 4' }).getByText('No footswitch')).toBeVisible();
+
+  // Quick knobs: folded away; knob 2 on the DRV's Tone, knob 3 on the tempo.
+  const knobs = page.getByRole('region', { name: 'Quick knobs' });
+  await knobs.getByText('Quick knobs').click();
+  await knobs.getByRole('combobox', { name: 'Target of quick knob 2' }).selectOption({ label: `2. DRV ${MODELS.drive.name}` });
+  await knobs.getByRole('combobox', { name: 'Parameter of quick knob 2' }).selectOption({ label: 'Tone' });
+  await knobs
+    .getByRole('listitem')
+    .filter({ has: page.getByRole('combobox', { name: 'Target of quick knob 2' }) })
+    .getByRole('button', { name: 'Apply' })
+    .click();
+  await expect.poll(() => assigned().quickKnobs[1]).toEqual({ knob: 1, target: 0, paramId: 1 });
+  await knobs.getByRole('combobox', { name: 'Target of quick knob 3' }).selectOption({ label: 'Tempo (BPM)' });
+  await expect(knobs.getByRole('combobox', { name: 'Parameter of quick knob 3' })).toHaveCount(0);
+  await knobs
+    .getByRole('listitem')
+    .filter({ has: page.getByRole('combobox', { name: 'Target of quick knob 3' }) })
+    .getByRole('button', { name: 'Apply' })
+    .click();
+  await expect.poll(() => assigned().quickKnobs[2]?.target).toBe(12);
 
   // Expression: folded away until asked for; entries in their pedal modes.
   const expression = page.getByRole('region', { name: 'Expression pedal' });
