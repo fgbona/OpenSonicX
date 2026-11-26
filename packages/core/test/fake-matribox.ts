@@ -70,7 +70,7 @@ function capturedReplies(): Map<string, Uint8Array[]> {
 const dataOf = (frames: readonly Uint8Array[]) => unwrapMbMessage(joinMbPages(frames.map(parseMbFrame)) as Uint8Array).data;
 
 /** Where each section body starts in a 1211-byte device preset (u32 number, then tag + length + body). */
-const BODY_AT = { 1: 31, 2: 144, 4: 185, 5: 269, 7: 1019, 8: 1122 } as const;
+const BODY_AT = { 1: 31, 2: 144, 3: 162, 4: 185, 5: 269, 7: 1019, 8: 1122 } as const;
 /** Preset list layout: 4 bytes, 240 u32, then the 17-byte names. */
 const NAMES_AT = 4 + 240 * 4;
 const SLOTS = 12;
@@ -381,7 +381,11 @@ export class FakeMatribox {
     if (head === '02000501') return edit(5, 724 + u32(data, 4), [u32(data, 8)]);
     if (head === '01000401' || head === '02000401') return this.#editChain(data);
     if (head === '03000501') return edit(5, 736, [data[4] as number, 0]); // patch volume, u16
-    if (head === '01000801') return edit(8, 9 + u32(data, 4) * 12 + u32(data, 8), [u32(data, 12)]); // footswitch row, slot
+    if (head === '01000801') return edit(8, 9 + u32(data, 4) * 12 + u32(data, 8), [u32(data, 12)]); // CTRL row, slot
+    // Footswitch function (press / hold) and quick knob (target / parameter), as waveod's firmware
+    // takes them (editor/preset_msgs.c): u32 index + u32 value, stored as a byte, echoed as sent.
+    if (head === '01000301' || head === '02000301') return edit(3, (head === '01000301' ? 4 : 8) + u32(data, 4), [u32(data, 8) & 0xff]);
+    if (head === '01000201' || head === '02000201') return edit(2, (head === '01000201' ? 4 : 7) + u32(data, 4), [u32(data, 8) & 0xff]);
     // Expression (owner's unit, 2026-11-24): u32 group + u32 position address entry group*3+position.
     // An assignment sets the target only; like the unit, the range in it is ignored (0..100) and the
     // echo says so, so the range has to follow with the min/max writes.

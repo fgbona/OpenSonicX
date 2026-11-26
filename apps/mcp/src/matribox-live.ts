@@ -7,9 +7,17 @@
  */
 import {
   MB_EXP_ENTRIES,
-  MB_FOOTSWITCHES,
+  MB_QK_BPM,
+  MB_QK_VOLUME,
+  mbAssignCtrl,
+  mbAssignQuickKnob,
+  mbAssignmentsText,
   mbExpressionWrites,
-  mbAssignFootswitch,
+  mbFootswitchToggleWrites,
+  mbFsCtrl,
+  mbFsFunctionId,
+  mbFsFunctionName,
+  mbSetFootswitchFunction,
   mbAssignments,
   mbPresetLabel,
   mbSetExpressionMax,
@@ -56,16 +64,72 @@ export async function setVolume(unit: MatriboxConnection, volume: number): Promi
   return experimental([`Patch volume ${before} → ${volume}`]);
 }
 
-/** Footswitch `footswitch` (A..D) toggles the block, or stops toggling it; checked by reading the preset back. */
+/** Footswitch `footswitch` (A..D) toggles the block in stomp mode, or stops toggling it, through the CTRL its press runs; checked by reading the preset back. */
 export async function assignFootswitch(unit: MatriboxConnection, preset: MbResolvedPreset, options: { footswitch: string; block: string; assign: boolean }): Promise<string> {
   const index = footswitchIndex(options.footswitch);
   const block = findBlock(preset, options.block);
-  await unit.write(mbAssignFootswitch(index, block.slot, options.assign));
-  const slots = mbAssignments(await readLoaded(unit)).footswitches[index] ?? [];
+  for (const frame of mbFootswitchToggleWrites(mbAssignments(await readLoaded(unit)), index, block.slot, options.assign)) await unit.write(frame);
+  const a = mbAssignments(await readLoaded(unit));
+  const ctrl = mbFsCtrl(a.footswitches[index]?.press ?? 0);
+  const slots = ctrl === null ? [] : (a.ctrl[ctrl] ?? []);
   if (slots.includes(block.slot) !== options.assign)
     throw new Error(`the unit echoed the footswitch write, but footswitch ${SWITCHES[index]} ${options.assign ? 'does not toggle' : 'still toggles'} slot ${block.slot + 1} when read back`);
   const names = slots.map((s) => preset.chain.find((b) => b.slot === s)?.module ?? `slot ${s + 1}`);
-  return experimental([`Footswitch ${SWITCHES[index]} ${options.assign ? 'now toggles' : 'no longer toggles'} ${block.position} ${block.module}. It toggles: ${names.join(', ') || 'nothing'}.`]);
+  const via = ctrl === null ? '' : ` (through CTRL ${ctrl + 1})`;
+  return experimental([`Footswitch ${SWITCHES[index]} ${options.assign ? 'now toggles' : 'no longer toggles'} ${block.position} ${block.module}${via}. It toggles: ${names.join(', ') || 'nothing'}.`]);
+}
+
+/** CTRL 1..4 → 0..3. */
+function ctrlIndex(ctrl: number): number {
+  if (!Number.isInteger(ctrl) || ctrl < 1 || ctrl > 4) throw new Error(`CTRL must be 1..4, got ${ctrl}`);
+  return ctrl - 1;
+}
+
+/** Puts the block in CTRL 1..4 or takes it out; checked by reading section 8 back. */
+export async function assignCtrl(unit: MatriboxConnection, preset: MbResolvedPreset, options: { ctrl: number; block: string; assign: boolean }): Promise<string> {
+  const ctrl = ctrlIndex(options.ctrl);
+  const block = findBlock(preset, options.block);
+  await unit.write(mbAssignCtrl(ctrl, block.slot, options.assign));
+  const slots = mbAssignments(await readLoaded(unit)).ctrl[ctrl] ?? [];
+  if (slots.includes(block.slot) !== options.assign) throw new Error(`the unit echoed the CTRL write, but CTRL ${options.ctrl} reads back as slots ${slots.map((s) => s + 1).join(', ') || 'none'}`);
+  return experimental([`CTRL ${options.ctrl} ${options.assign ? 'now holds' : 'no longer holds'} ${block.position} ${block.module}.`]);
+}
+
+/** What a footswitch runs in stomp mode on a press (or a hold); checked by reading section 3 back. */
+export async function setFootswitchFunction(unit: MatriboxConnection, options: { footswitch: string; function: string; hold: boolean }): Promise<string> {
+  const index = footswitchIndex(options.footswitch);
+  const fn = mbFsFunctionId(options.function);
+  await unit.write(mbSetFootswitchFunction(index, fn, options.hold));
+  const read = mbAssignments(await readLoaded(unit)).footswitches[index];
+  const now = options.hold ? read?.hold : read?.press;
+  if (now !== fn) throw new Error(`the unit echoed the footswitch write, but footswitch ${SWITCHES[index]} reads back as ${mbFsFunctionName(now ?? 0)}`);
+  return experimental([`Footswitch ${SWITCHES[index]} ${options.hold ? 'held' : 'pressed'}: ${mbFsFunctionName(fn)} (stomp mode).`]);
+}
+
+const QK_TARGETS: Readonly<Record<string, number | null>> = { none: null, bpm: MB_QK_BPM, tempo: MB_QK_BPM, volume: MB_QK_VOLUME };
+
+/** Quick knob 1..3 edits a block's parameter, the tempo, the patch volume, or nothing; checked by reading section 2 back. */
+export async function assignQuickKnob(unit: MatriboxConnection, preset: MbResolvedPreset, options: { knob: number; target: string; parameter?: string }): Promise<string> {
+  if (!Number.isInteger(options.knob) || options.knob < 1 || options.knob > 3) throw new Error(`knob must be 1..3, got ${options.knob}`);
+  const key = options.target.trim().toLowerCase();
+  let target: number | null;
+  let paramId = 0;
+  let what: string;
+  if (Object.hasOwn(QK_TARGETS, key)) {
+    target = QK_TARGETS[key] ?? null;
+    what = target === null ? 'unused' : target === MB_QK_BPM ? 'tempo (BPM)' : 'patch volume';
+  } else {
+    const block = findBlock(preset, options.target);
+    const model = knownModel(block);
+    if (!options.parameter) throw new Error(`name the parameter of ${block.position} ${block.module} the knob edits: ${model.params.map((p) => p.name).join(', ')}`);
+    const param = findParam(model, options.parameter);
+    [target, paramId, what] = [block.slot, param.id, `${block.position} ${block.module} ${model.name} ${param.name}`];
+  }
+  for (const frame of mbAssignQuickKnob(options.knob - 1, target, paramId)) await unit.write(frame);
+  const read = mbAssignments(await readLoaded(unit)).quickKnobs[options.knob - 1];
+  if (read?.target !== target || (target !== null && read.paramId !== paramId))
+    throw new Error(`the unit echoed the quick-knob write, but knob ${options.knob} reads back as target ${read?.target ?? 'none'}, parameter ${read?.paramId}`);
+  return experimental([`Quick knob ${options.knob} → ${what}`]);
 }
 
 /** Expression entry 1..9 moves a block's parameter between min and max (0..100); checked by reading section 7 back. */
@@ -98,19 +162,17 @@ export async function setExpressionRange(unit: MatriboxConnection, options: { en
 /** The assignments of the loaded preset, for matribox_get_assignments. */
 export function describeAssignments(label: number, preset: MbResolvedPreset, raw: MbPreset): string {
   const a = mbAssignments(raw);
-  const blockName = (slot: number) => {
-    const b = preset.chain.find((c) => c.slot === slot);
-    return b ? `${b.position} ${b.module}` : `slot ${slot + 1} (empty)`;
+  const blockOf = (slot: number) => preset.chain.find((c) => c.slot === slot);
+  const names = {
+    block: (slot: number) => {
+      const b = blockOf(slot);
+      return b ? `${b.position} ${b.module}` : `slot ${slot + 1} (empty)`;
+    },
+    param: (slot: number, id: number) => blockOf(slot)?.model?.params.find((p) => p.id === id)?.name ?? `param ${id}`,
   };
-  const paramName = (slot: number, id: number) => preset.chain.find((c) => c.slot === slot)?.model?.params.find((p) => p.id === id)?.name ?? `param ${id}`;
-  const switches = a.footswitches.map((slots, i) => `Footswitch ${SWITCHES[i]}: ${slots.map(blockName).join(', ') || 'nothing'}`);
-  const entries = a.expression
-    .filter((e) => e.slot !== null)
-    .map((e) => `Expression entry ${e.entry + 1}: ${blockName(e.slot as number)} ${paramName(e.slot as number, e.paramId)}, ${round(e.min)}..${round(e.max)} %`);
   return [
     `${mbPresetLabel(label)} "${preset.name}": patch volume ${a.volume}, tempo ${a.tempo} BPM, EXP 1 mode ${a.expressionMode === 1 ? 'B' : 'A'}`,
-    ...switches,
-    ...(entries.length ? entries : ['Expression: no entry used']),
-    `Footswitches ${SWITCHES.slice(0, MB_FOOTSWITCHES).split('').join(', ')} as stomp-mode rows (section 8). Expression entries 1-3 are EXP 1 mode A, 4-6 mode B, 7-9 EXP 2.`,
+    ...mbAssignmentsText(a, names),
+    'Footswitch functions are the stomp-mode ones; a footswitch on CTRL n toggles the blocks in CTRL n. Expression entries 1-3 are EXP 1 mode A, 4-6 mode B, 7-9 EXP 2.',
   ].join('\n');
 }

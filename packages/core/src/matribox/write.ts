@@ -7,7 +7,9 @@
  *
  * Every builder is byte-exact with a captured host frame. Hardware-validated on the owner's unit
  * (2026-11-24): every builder here but the whole preset and the live controls at the end (patch
- * volume, footswitch and expression assignments: captures mb-01, mb-09, mb-04, not yet sent by us).
+ * volume, CTRL and expression assignments: captures mb-01, mb-09, mb-04, checked on the unit since).
+ * The footswitch-function and quick-knob writes come from waveod's reimplemented firmware
+ * (github.com/zxmarcos/waveod, MIT, (c) 2026 Marcos Medeiros), not from a capture.
  */
 import { buildMbFrame, buildMbFrames, float32LE, MB_WRITE } from './frame.ts';
 import { wrapMbMessage } from './message.ts';
@@ -124,8 +126,46 @@ export function mbWritePreset(index: number, preset: MbPreset): Uint8Array[] {
   return buildMbFrames(MB_WRITE, wrapMbMessage(WHOLE_PRESET_FLAG, SET_CMD, data));
 }
 
-/** Footswitches A..D (A = 0). Section 8 has a fifth row, not known yet (CTRL?): not offered. */
+/** Footswitches A..D (A = 0) of the stomp-mode function table (section 3). */
 export const MB_FOOTSWITCHES = 4;
+/** CTRL 1..4 (0..3): groups of slots a footswitch function switches (section 8 rows; a fifth row, the preset CTRL, is not offered). */
+export const MB_CTRLS = 4;
+/** Quick knobs 1..3 (0..2). */
+export const MB_QUICK_KNOBS = 3;
+/** Quick-knob targets after the 12 slots (waveod, fw/preset_format.h). */
+export const MB_QK_BPM = 12;
+export const MB_QK_VOLUME = 13;
+/**
+ * The footswitch functions the official editor offers, in its order (waveod, model/assign.c; values
+ * from fw/preset_format.h `enum fs_function`). The firmware also knows 24..35, "toggle slot 1..12",
+ * which the editor does not offer: read, never written.
+ */
+export const MB_FS_FUNCTIONS: readonly { readonly id: number; readonly name: string }[] = [
+  [0, 'none'],
+  [1, 'CTRL 1'],
+  [2, 'CTRL 2'],
+  [3, 'CTRL 3'],
+  [4, 'CTRL 4'],
+  [8, 'tap tempo'],
+  [5, 'looper'],
+  [6, 'drum machine'],
+  [19, 'previous rhythm'],
+  [18, 'next rhythm'],
+  [7, 'tuner'],
+  [20, 'EXP A/B'],
+  [12, 'preset down'],
+  [11, 'preset up'],
+  [10, 'bank down'],
+  [9, 'bank up'],
+  [13, 'preset A'],
+  [14, 'preset B'],
+  [15, 'preset C'],
+  [16, 'preset D'],
+  [23, 'footswitch mode'],
+].map(([id, name]) => Object.freeze({ id: id as number, name: name as string }));
+/** The function "CTRL n" (n = 1..4). */
+export const MB_FS_CTRL1 = 1;
+const NONE_U32 = 0xffffffff;
 /** Expression-pedal entries in section 7 (EXP 1 mode A 0..2, mode B 3..5, EXP 2 6..8: the unit addresses them as group and position). */
 export const MB_EXP_ENTRIES = 9;
 const PERCENT = 100;
@@ -145,12 +185,37 @@ export function mbSetPatchVolume(volume: number): Uint8Array {
 }
 
 /**
- * Makes footswitch `footswitch` (A = 0 … D = 3) toggle storage `slot`, or stops it (capture mb-09,
- * stomp mode): `01 00 08 01` + u32 switch + u32 slot + u32 1/0. A switch may toggle several slots.
+ * Puts storage `slot` in CTRL `ctrl` (0..3 = CTRL 1..4) or takes it out: `01 00 08 01` + u32 CTRL +
+ * u32 slot + u32 1/0 (capture mb-09, the official editor's "footswitch A" box: FS A runs CTRL 1 by
+ * default). A footswitch whose function is that CTRL toggles every slot in it.
  */
-export function mbAssignFootswitch(footswitch: number, slot: number, assigned: boolean): Uint8Array {
+export function mbAssignCtrl(ctrl: number, slot: number, member: boolean): Uint8Array {
+  if (!isIn(ctrl, MB_CTRLS)) fail(`CTRL must be 0..${MB_CTRLS - 1} (CTRL 1..4), got ${ctrl}`);
+  return write(SET_CMD, [0x01, 0x00, 0x08, 0x01, ...u32(ctrl), ...u32(checkSlot(slot)), ...u32(member ? 1 : 0)]);
+}
+
+/**
+ * What footswitch `footswitch` (A = 0 … D = 3) does in stomp mode when pressed (or held): `01 00 03 01`
+ * (press) or `02 00 03 01` (hold) + u32 switch + u32 function (waveod, editor/preset_msgs.c sub_fs; not
+ * captured from the official editor). `fn` is an id of MB_FS_FUNCTIONS.
+ */
+export function mbSetFootswitchFunction(footswitch: number, fn: number, hold = false): Uint8Array {
   if (!isIn(footswitch, MB_FOOTSWITCHES)) fail(`footswitch must be 0..${MB_FOOTSWITCHES - 1} (A..D), got ${footswitch}`);
-  return write(SET_CMD, [0x01, 0x00, 0x08, 0x01, ...u32(footswitch), ...u32(checkSlot(slot)), ...u32(assigned ? 1 : 0)]);
+  if (!MB_FS_FUNCTIONS.some((f) => f.id === fn)) fail(`footswitch function ${fn} is not one the editor offers`);
+  return write(SET_CMD, [hold ? 0x02 : 0x01, 0x00, 0x03, 0x01, ...u32(footswitch), ...u32(fn)]);
+}
+
+/**
+ * Points quick knob `knob` (0..2) at `target` (a storage slot 0..11, MB_QK_BPM, MB_QK_VOLUME or null
+ * for none) and its parameter (catalog widget ID; 0 for BPM, volume and none): `01 00 02 01` + u32
+ * knob + u32 target (-1 = none), then `02 00 02 01` + u32 knob + u32 parameter (waveod,
+ * editor/preset_msgs.c sub_quick; not captured from the official editor).
+ */
+export function mbAssignQuickKnob(knob: number, target: number | null, paramId: number): Uint8Array[] {
+  if (!isIn(knob, MB_QUICK_KNOBS)) fail(`quick knob must be 0..${MB_QUICK_KNOBS - 1}, got ${knob}`);
+  if (target !== null && !isIn(target, MB_QK_VOLUME + 1)) fail(`quick knob target must be a slot 0..${MB_SLOTS - 1}, BPM (${MB_QK_BPM}) or volume (${MB_QK_VOLUME}), got ${target}`);
+  if (!isIn(paramId, PARAMS_PER_SLOT)) fail(`parameter id must be 0..${PARAMS_PER_SLOT - 1}, got ${paramId}`);
+  return [write(SET_CMD, [0x01, 0x00, 0x02, 0x01, ...u32(knob), ...u32(target ?? NONE_U32)]), write(SET_CMD, [0x02, 0x00, 0x02, 0x01, ...u32(knob), ...u32(paramId)])];
 }
 
 export interface MbExpressionAssignment {
@@ -194,6 +259,7 @@ function expressionEnd(op: number, what: string, entry: number, value: number): 
  * the assignment goes with the full range and the ends that differ follow as min/max writes.
  */
 export function mbExpressionWrites(a: MbExpressionAssignment): Uint8Array[] {
+  if (a.min > a.max) fail(`expression min (${a.min}) must not be above max (${a.max})`);
   return [mbAssignExpression({ ...a, min: 0, max: 100 }), ...(a.min !== 0 ? [mbSetExpressionMin(a.entry, a.min)] : []), ...(a.max !== 100 ? [mbSetExpressionMax(a.entry, a.max)] : [])];
 }
 

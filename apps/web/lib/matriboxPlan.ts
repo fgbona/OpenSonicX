@@ -69,7 +69,7 @@ export function planTone(catalog: MbCatalog, blocks: readonly ToneBlock[]): read
 }
 
 /** A block by its 1-based chain position ("2") or its module name ("DRV", when the chain has only one). */
-function findBlock(catalog: MbCatalog, chain: readonly MbChainBlock[], block: string): number {
+export function findBlock(catalog: MbCatalog, chain: readonly MbChainBlock[], block: string): number {
   const names = chain.map((b, i) => `${i + 1} ${moduleName(catalog, b.moduleIndex)}`).join(', ');
   const ref = String(block).trim();
   if (/^\d+$/.test(ref) && Number(ref) >= 1 && Number(ref) <= chain.length) return Number(ref) - 1;
@@ -79,7 +79,7 @@ function findBlock(catalog: MbCatalog, chain: readonly MbChainBlock[], block: st
   return byModule[0]!;
 }
 
-function knownModel(catalog: MbCatalog, b: MbChainBlock, position: number): MbModel {
+export function knownModel(catalog: MbCatalog, b: MbChainBlock, position: number): MbModel {
   const model = modelOf(catalog, b);
   if (!model) throw new Error(`Block ${position + 1} holds an unknown model (fxid 0x${b.fxid.toString(16).padStart(8, '0')}): its parameters cannot be named.`);
   return model;

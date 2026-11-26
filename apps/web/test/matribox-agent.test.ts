@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseMbPreset, type MbPreset } from '@pocket-master/core';
+import { matriboxLink, mbAssignments, parseMbPreset, type MbPreset } from '@pocket-master/core';
 import { FakeMatribox } from '../../../packages/core/test/fake-matribox.ts';
 import { FAKE_CATALOG } from '../../../packages/core/test/matribox-fake-catalog.ts';
 import { askedToSaveMb, matriboxAgent, type MbAgentHost } from '../lib/matriboxAgent.ts';
@@ -11,7 +11,10 @@ const catalog = FAKE_CATALOG;
 
 /** A host over plain state: apply sets the chain (slots in order), undo goes back one apply. */
 function host() {
-  let preset: MbPreset = parseMbPreset(new FakeMatribox().editBuffer);
+  const fake = new FakeMatribox();
+  const unit = matriboxLink({ send: (b) => fake.send(b), listen: (r) => fake.listen(r ?? (() => undefined)) }, 1000);
+  let preset: MbPreset = parseMbPreset(fake.editBuffer);
+  const sent: Uint8Array[] = [];
   let current = 66;
   const past: MbPreset[] = [];
   const saves: [number, string][] = [];
@@ -21,6 +24,14 @@ function host() {
     apply: async (chain) => {
       past.push(preset);
       preset = { ...preset, chain: chain.map((b, slot) => ({ ...b, slot })) };
+      return preset;
+    },
+    assign: async (frames) => {
+      for (const frame of frames) {
+        sent.push(frame);
+        await unit.write(frame);
+      }
+      preset = parseMbPreset(fake.editBuffer);
       return preset;
     },
     undo: async () => {
@@ -39,6 +50,7 @@ function host() {
   };
   return {
     h,
+    sent,
     saves,
     tones: () => tones,
     load: (n: number) => {
@@ -156,4 +168,52 @@ test('keep_tone keeps the sound, the next first message lists it, and load_saved
   assert.equal(missing.ok, false);
   assert.match(missing.text, /no kept tone is called "Nope"\. Kept tones:\n- AD Crunch/);
   assert.equal((await run('keep_tone', { name: 'Way too long for a preset', notes: '' })).ok, false);
+});
+
+test('set_controls makes the tone live-ready: EXP on a parameter, a footswitch on a block, a quick knob on a gain', async () => {
+  const s = host();
+  const run = matriboxAgent(s.h).runner();
+  const before = await run('get_controls', {});
+  assert.match(before.text, /^Footswitch A: CTRL 1 \(toggles 1 DYN\)$/m);
+  assert.match(before.text, /^Quick knob 3: patch volume$/m);
+  const r = await run('set_controls', {
+    changes: [
+      { kind: 'expression', entry: 4, block: 'DRV', parameter: 'Tone', min: 10, max: 90 },
+      { kind: 'footswitch', footswitch: 'B', block: 'RVB' },
+      { kind: 'quick_knob', knob: 1, target: 'DRV', parameter: 'gain' },
+      { kind: 'footswitch_function', footswitch: 'D', function: 'tap tempo' },
+    ],
+  });
+  assert.equal(r.ok, true, r.text);
+  assert.match(r.text, /^Expression entry 4: 2 DRV Tone, 10\.\.90 %$/m);
+  assert.match(r.text, /^Footswitch B: CTRL 2 \(toggles .*5 RVB.*\)$/m);
+  assert.match(r.text, /^Quick knob 1: 2 DRV Gain$/m);
+  assert.match(r.text, /^Footswitch D: tap tempo$/m);
+  const a = mbAssignments(s.preset());
+  assert.deepEqual(a.expression[3], { entry: 3, slot: 0, paramId: 1, min: 10, max: 90 });
+  assert.equal(a.footswitches[3]?.press, 8);
+});
+
+test('set_controls checks every change before sending anything', async () => {
+  const s = host();
+  const run = matriboxAgent(s.h).runner();
+  for (const [changes, message] of [
+    [
+      [
+        { kind: 'quick_knob', knob: 1, target: 'BPM' },
+        { kind: 'expression', entry: 1, block: 'DRV', parameter: 'Tone', min: 80, max: 20 },
+      ],
+      /min \(80\) must not be above max/,
+    ],
+    [[{ kind: 'ctrl', ctrl: 5, block: 'DRV' }], /ctrl must be 1\.\.4/],
+    [[{ kind: 'footswitch', footswitch: 'E', block: 'DRV' }], /footswitch must be A, B, C or D/],
+    [[{ kind: 'footswitch_function', footswitch: 'A', function: 'boost' }], /no footswitch function "boost"/],
+    [[{ kind: 'quick_knob', knob: 2, target: 'DLY' }], /No block "DLY"/],
+    [[{ kind: 'quick_knob', knob: 2, target: 'DRV' }], /name the parameter/],
+  ] as const) {
+    const r = await run('set_controls', { changes });
+    assert.equal(r.ok, false);
+    assert.match(r.text, message);
+  }
+  assert.equal(s.sent.length, 0);
 });

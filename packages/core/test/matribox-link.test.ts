@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mbReadPresetNames, mbRequest, parseMbPresetNames } from '../src/matribox/message.ts';
-import { mbAddBlock, mbExpressionWrites, mbAssignFootswitch, mbSavePreset, mbSetBlockOn, mbSetExpressionMax, mbSetPatchVolume } from '../src/matribox/write.ts';
+import { mbAddBlock, mbExpressionWrites, mbAssignCtrl, mbAssignQuickKnob, mbSetFootswitchFunction, mbSavePreset, mbSetBlockOn, mbSetExpressionMax, mbSetPatchVolume } from '../src/matribox/write.ts';
 import { MB_CC, mbControlChange } from '../src/matribox/cc.ts';
 import { mbAssignments } from '../src/matribox/assignments.ts';
 import { parseMbPreset } from '../src/matribox/preset.ts';
@@ -48,13 +48,26 @@ test('control sends a Control Change as is and refuses anything else; the new wr
   assert.deepEqual(fake.controls, ['b03a7f']);
   assert.throws(() => unit.control(mbSetBlockOn(0, true)), /Control Change/);
   await unit.write(mbSetPatchVolume(80));
-  await unit.write(mbAssignFootswitch(1, 2, true));
+  await unit.write(mbAssignCtrl(1, 2, true));
+  await unit.write(mbSetFootswitchFunction(2, 7));
+  await unit.write(mbSetFootswitchFunction(0, 8, true));
+  for (const frame of mbAssignQuickKnob(1, 4, 3)) await unit.write(frame);
+  for (const frame of mbAssignQuickKnob(0, null, 0)) await unit.write(frame);
   // Like the unit: an assignment's own range is ignored (echoed as 0..100), so the ends follow.
   for (const frame of mbExpressionWrites({ entry: 3, slot: 4, paramId: 2, min: 10, max: 90 })) await unit.write(frame);
   await unit.write(mbSetExpressionMax(3, 80));
   const a = mbAssignments(parseMbPreset(fake.editBuffer));
   assert.equal(a.volume, 80);
-  assert.deepEqual(a.footswitches[1], [0, 2]); // Drive AD's switch B already toggles slot 0
+  assert.deepEqual(a.ctrl[1], [0, 2]); // Drive AD's CTRL 2 already holds slot 0
+  assert.deepEqual(a.footswitches.slice(0, 3), [
+    { press: 1, hold: 8 },
+    { press: 2, hold: 0 },
+    { press: 7, hold: 0 },
+  ]);
+  assert.deepEqual(a.quickKnobs.slice(0, 2), [
+    { knob: 0, target: null, paramId: 0 },
+    { knob: 1, target: 4, paramId: 3 },
+  ]);
   assert.deepEqual(a.expression[3], { entry: 3, slot: 4, paramId: 2, min: 10, max: 80 });
 });
 

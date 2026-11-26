@@ -45,7 +45,7 @@ import {
   type MbResolvedBlock,
   type MbResolvedPreset,
 } from '@pocket-master/core';
-import { assignExpression, assignFootswitch, CC_NOTE, describeAssignments, setExpressionRange, setVolume } from './matribox-live.ts';
+import { assignCtrl, assignExpression, assignFootswitch, assignQuickKnob, CC_NOTE, setFootswitchFunction, describeAssignments, setExpressionRange, setVolume } from './matribox-live.ts';
 import { MATRIBOX_DEVICE, readMatriboxBackup, readMatriboxBackupAll, readMatriboxPrst, writeMatriboxBackupAll, writeMatriboxPrstFile } from './matribox-files.ts';
 import { prepareMatriboxIr, uploadMatriboxIr, type MatriboxIrOptions } from './matribox-ir.ts';
 import type { MatriboxConnection } from './devices.ts';
@@ -323,6 +323,18 @@ export class MatriboxSession {
 
   assignFootswitch(options: { footswitch: string; block: string; assign: boolean }): Promise<string> {
     return this.#use(async (unit) => assignFootswitch(unit, (await this.#loaded(unit)).preset, options));
+  }
+
+  assignCtrl(options: { ctrl: number; block: string; assign: boolean }): Promise<string> {
+    return this.#use(async (unit) => assignCtrl(unit, (await this.#loaded(unit)).preset, options));
+  }
+
+  setFootswitchFunction(options: { footswitch: string; function: string; hold: boolean }): Promise<string> {
+    return this.#use((unit) => setFootswitchFunction(unit, options));
+  }
+
+  assignQuickKnob(options: { knob: number; target: string; parameter?: string }): Promise<string> {
+    return this.#use(async (unit) => assignQuickKnob(unit, (await this.#loaded(unit)).preset, options));
   }
 
   assignExpression(options: { entry: number; block: string; parameter: string; min?: number; max?: number }): Promise<string> {

@@ -20,6 +20,7 @@ import { MatriboxHeader } from './MatriboxHeader';
 import { MatriboxLibrary } from './MatriboxLibrary';
 import { MatriboxPresetFile } from './MatriboxPresetFile';
 import { MatriboxPresets } from './MatriboxPresets';
+import { MatriboxQuickKnobs } from './MatriboxQuickKnobs';
 import { MatriboxSaveDialog } from './MatriboxSaveDialog';
 import { useI18n } from './I18n';
 
@@ -138,7 +139,15 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
                 />
               )}
             </section>
-            <MatriboxFootswitches footswitches={assignments.footswitches} chain={chain} disabled={disabled} onFootswitch={(f, s, on) => void mb.assignFootswitch(f, s, on)} />
+            <MatriboxFootswitches
+              footswitches={assignments.footswitches}
+              ctrl={assignments.ctrl}
+              chain={chain}
+              disabled={disabled}
+              onFunction={(f, fn) => void mb.setFootswitchFunction(f, fn)}
+              onCtrl={(c, s, on) => void mb.assignCtrl(c, s, on)}
+            />
+            <MatriboxQuickKnobs quickKnobs={assignments.quickKnobs} chain={chain} disabled={disabled} onAssign={(k, target, p) => void mb.assignQuickKnob(k, target, p)} />
             <MatriboxExpression expression={assignments.expression} chain={chain} disabled={disabled} onExpression={(a) => void mb.assignExpression(a)} />
             <MatriboxControls tempo={assignments.tempo} unitChannel={ccChannelOf(mb.globals)} onControl={(m) => void mb.control(m)} />
             <MatriboxSaveDialog

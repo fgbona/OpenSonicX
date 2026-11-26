@@ -64,7 +64,7 @@ test('the model menu opens as a sheet inside the screen and the panels fit', asy
 
   await page.getByText('Expression pedal').tap();
   expect(await sideways(page)).toBeLessThanOrEqual(0);
-  for (const control of [page.getByRole('switch', { name: 'Footswitch D toggles 6. VOL' }), page.getByRole('button', { name: 'Set BPM' })]) {
+  for (const control of [page.getByRole('switch', { name: 'CTRL 4 switches 6. VOL' }), page.getByRole('button', { name: 'Set BPM' })]) {
     await control.scrollIntoViewIfNeeded();
     const b = (await control.boundingBox())!;
     expect(b.x + b.width).toBeLessThanOrEqual(screen.width);

@@ -45,7 +45,7 @@ during a capture.
 | 8 | `mb-08-exp-sweep.mmon` | No editor action: move the expression pedal slowly heel → toe → heel | The unit's expression-pedal message (maybe the unknown `08 00 05 01` one) |
 | 9 | `mb-09-fs-assign.mmon` | Change what footswitch A toggles (stomp mode) to a different block. Read-back | The footswitch-assignment write; which section 8 row is switch A |
 | 10 | `mb-10-fs-press.mmon` | No editor action: in stomp mode press A, B, C, D (and CTRL or the external switches if connected), in that order, 2 s apart. Note the order | Which physical switch each section 8 row is, and what row 4 is |
-| 11 | `mb-11-knob-assign.mmon` | Change the target of one of the unit's three knobs (quick knobs / CTRL), if the editor offers it. Read-back | The knob-assignment write; section 2 layout; what knob 3's target `0D` means |
+| 11 | `mb-11-knob-assign.mmon` | Change the target of one of the unit's three knobs (quick knobs / CTRL), if the editor offers it. Read-back | The knob-assignment write; section 2 layout; what knob 3's target `0D` means. Now taken from waveod (`01/02 00 02 01`, `0D` = volume): this capture would confirm it on the unit |
 | 12 | `mb-12-knob-turns.mmon` | No editor action: turn knob 1, then knob 2, then knob 3 (and the MASTER knob), each a little, 2 s apart | Which slot and parameter each knob edits; what knob 3's `03 00 05 01` value is |
 | 13 | `mb-13-rename.mmon` | Rename the loaded preset only (e.g. "TESTE OSX" → "TESTE REN"), without saving | Whether rename is its own message or only part of save (cmd `05`) |
 | 14 | `mb-14-style.mmon` | Change the preset's style tag (e.g. "" → "Rock"). Read-back | The write for section 1 at 95; the list of style values |

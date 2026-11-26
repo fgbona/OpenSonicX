@@ -5,7 +5,7 @@
  */
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { MB_BPM_MAX, MB_BPM_MIN, MB_CC, mbBpmControlChanges, mbControlChange, mbSwitch } from '@pocket-master/core';
+import { MB_BPM_MAX, MB_BPM_MIN, MB_CC, MB_FS_FUNCTIONS, mbBpmControlChanges, mbControlChange, mbSwitch } from '@pocket-master/core';
 import type { MatriboxSession } from './matribox-session.ts';
 
 type Run = (tool: string, run: () => Promise<string>) => Promise<{ content: { type: 'text'; text: string }[]; isError?: boolean }>;
@@ -54,7 +54,7 @@ export function registerMatriboxLive(server: McpServer, run: Run, matribox: () =
     {
       title: 'Get the Matribox assignments',
       description:
-        "Matribox II Pro: the loaded preset's patch volume, tempo, which blocks each footswitch A-D toggles (stomp mode), and the expression-pedal entries (block, parameter, min..max). Reads only.",
+        "Matribox II Pro: the loaded preset's patch volume, tempo, what each footswitch A-D runs in stomp mode (and which blocks it toggles), the blocks in CTRL 1-4, what quick knobs 1-3 edit, and the expression-pedal entries (block, parameter, min..max). Reads only.",
       annotations: READ,
     },
     () => run('matribox_get_assignments', () => matribox().getAssignments()),
@@ -75,11 +75,60 @@ export function registerMatriboxLive(server: McpServer, run: Run, matribox: () =
     'matribox_assign_footswitch',
     {
       title: 'Assign a Matribox footswitch',
-      description: live('makes footswitch A, B, C or D toggle a block in stomp mode (assign true), or stops it (false). A switch may toggle several blocks. Read back to check.'),
+      description: live(
+        'makes footswitch A, B, C or D toggle a block in stomp mode (assign true), or stops it (false): the block goes in or out of the CTRL the switch runs (A runs CTRL 1 by default); a switch set to something else (tuner, tap...) is set to its own CTRL first. A switch may toggle several blocks. Read back to check.',
+      ),
       inputSchema: { footswitch: z.enum(['A', 'B', 'C', 'D']), block, assign: z.boolean().optional().describe('true (default) to assign, false to remove') },
       annotations: LIVE,
     },
     (args) => run('matribox_assign_footswitch', () => matribox().assignFootswitch({ ...args, assign: args.assign ?? true })),
+  );
+
+  server.registerTool(
+    'matribox_assign_ctrl',
+    {
+      title: 'Put a block in a Matribox CTRL',
+      description: live(
+        'puts a block in CTRL 1, 2, 3 or 4 (assign true) or takes it out (false). A CTRL is a group of blocks that a footswitch set to it (or CC 71..74) switches on and off together. Read back to check.',
+      ),
+      inputSchema: { ctrl: z.number().int().min(1).max(4).describe('CTRL 1..4'), block, assign: z.boolean().optional().describe('true (default) to add, false to remove') },
+      annotations: LIVE,
+    },
+    (args) => run('matribox_assign_ctrl', () => matribox().assignCtrl({ ...args, assign: args.assign ?? true })),
+  );
+
+  server.registerTool(
+    'matribox_set_footswitch_function',
+    {
+      title: 'Set what a Matribox footswitch does',
+      description: live(
+        "sets what footswitch A, B, C or D runs in stomp mode when pressed (or held, hold true): a CTRL (its blocks toggle), tap tempo, tuner, looper, preset or bank changes... (decoded from waveod's reimplemented firmware, not from a capture). Read back to check.",
+      ),
+      inputSchema: {
+        footswitch: z.enum(['A', 'B', 'C', 'D']),
+        function: z.enum(MB_FS_FUNCTIONS.map((f) => f.name) as [string, ...string[]]).describe('What the switch runs'),
+        hold: z.boolean().optional().describe('true to set the long press instead of the press (default false)'),
+      },
+      annotations: LIVE,
+    },
+    (args) => run('matribox_set_footswitch_function', () => matribox().setFootswitchFunction({ ...args, hold: args.hold ?? false })),
+  );
+
+  server.registerTool(
+    'matribox_assign_quick_knob',
+    {
+      title: 'Assign a Matribox quick knob',
+      description: live(
+        'points quick knob 1, 2 or 3 (the knobs under the screen) at a block\'s parameter, the preset tempo ("BPM"), the patch volume ("volume") or nothing ("none") (decoded from waveod\'s reimplemented firmware, not from a capture). Read back to check.',
+      ),
+      inputSchema: {
+        knob: z.number().int().min(1).max(3).describe('Quick knob 1..3'),
+        target: z.string().describe('A block of the loaded preset (as for the other tools), or "BPM", "volume" or "none"'),
+        parameter: z.string().optional().describe('Parameter name of that block, as matribox_get_preset shows it (only for a block)'),
+      },
+      annotations: LIVE,
+    },
+    (args) => run('matribox_assign_quick_knob', () => matribox().assignQuickKnob(args)),
   );
 
   server.registerTool(

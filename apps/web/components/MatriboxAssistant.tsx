@@ -32,6 +32,11 @@ export function MatriboxAssistant({ mb, history, proposeSave }: Props) {
           return { current: now.unit.current, preset: steps.preset() ?? now.unit.preset, catalog: MB_CATALOG, lang: language };
         },
         apply: (chain) => latest.current.history.applyChain(chain),
+        assign: async (frames) => {
+          const read = await latest.current.mb.assignFrames(frames);
+          if (!read) throw new Error('The Matribox did not take the change (see the error above the chain).');
+          return read;
+        },
         undo: () => latest.current.history.undo(),
         proposeSave: (index, name) => latest.current.proposeSave(index, name),
         tones: mbLibraryNow,

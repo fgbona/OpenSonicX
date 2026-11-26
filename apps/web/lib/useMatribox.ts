@@ -5,7 +5,9 @@ import {
   matriboxLink,
   mbAddBlock,
   mbExpressionWrites,
-  mbAssignFootswitch,
+  mbAssignCtrl,
+  mbAssignQuickKnob,
+  mbSetFootswitchFunction,
   mbBackupAllPresets,
   mbChangeModel,
   mbMoveBlock,
@@ -90,9 +92,10 @@ export function useMatribox(port: MidiPort | null) {
     [link, queue, patch],
   );
 
-  const reloadLoaded = useCallback(async (unit: MatriboxLink) => {
+  const reloadLoaded = useCallback(async (unit: MatriboxLink): Promise<MbPreset> => {
     const loaded = await readLoaded(unit);
     setState((s) => ({ ...s, unit: s.unit ? { ...s.unit, ...loaded } : s.unit }));
+    return loaded.preset;
   }, []);
 
   const refresh = useCallback(
@@ -284,13 +287,17 @@ export function useMatribox(port: MidiPort | null) {
   );
 
   /** An assignment write (footswitch, expression), then the loaded preset is read again to show what the unit holds. */
+  /** Assignment writes, then the loaded preset is read again; resolves with it, null when it failed. */
   const assign = useCallback(
-    (frames: () => readonly Uint8Array[]) =>
-      run('Editing', async (unit) => {
+    async (frames: () => readonly Uint8Array[]): Promise<MbPreset | null> => {
+      let read: MbPreset | null = null;
+      await run('Editing', async (unit) => {
         for (const frame of frames()) await unit.write(frame);
-        await reloadLoaded(unit);
+        read = await reloadLoaded(unit);
         patch({ edited: true });
-      }),
+      });
+      return read;
+    },
     [run, reloadLoaded, patch],
   );
 
@@ -421,7 +428,10 @@ export function useMatribox(port: MidiPort | null) {
     moveBlock: (from: number, to: number) => chainEdit(() => mbMoveBlock(from, to)),
     removeBlock: (position: number) => chainEdit(() => mbRemoveBlock(position)),
     setVolume,
-    assignFootswitch: (footswitch: number, slot: number, on: boolean) => assign(() => [mbAssignFootswitch(footswitch, slot, on)]),
+    assignCtrl: (ctrl: number, slot: number, on: boolean) => assign(() => [mbAssignCtrl(ctrl, slot, on)]),
+    setFootswitchFunction: (footswitch: number, fn: number) => assign(() => [mbSetFootswitchFunction(footswitch, fn)]),
+    assignQuickKnob: (knob: number, target: number | null, paramId: number) => assign(() => mbAssignQuickKnob(knob, target, paramId)),
+    assignFrames: (frames: readonly Uint8Array[]) => assign(() => frames),
     assignExpression: (a: MbExpressionAssignment) => assign(() => mbExpressionWrites(a)),
     control,
     setGlobal,

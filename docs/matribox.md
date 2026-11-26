@@ -145,8 +145,8 @@ a body that starts `00 00 <id> 01`. Ids and body sizes are fixed: 0 (11), 1 (105
 
 A slot is a storage slot, not a chain position (live edits address the slot). Values at positions
 the slot's model does not use are left over from earlier models: only the model's widget IDs are read.
-Sections 0, 3 and 9 are constant; 2, 7 and 8 hold the knob, expression pedal and footswitch
-assignments, partly decoded: see [Unknown sections](#unknown-sections).
+Sections 0 and 9 are constant; 2, 3, 7 and 8 hold the quick-knob, footswitch-function, expression
+pedal and CTRL assignments: see [Unknown sections](#unknown-sections).
 
 `parseMbPreset` (core) takes either size and returns a frozen preset: number (null for a `.prst`),
 name, style, chain (slot, module index, fxid, on, the 15 values) and every section raw, for
@@ -174,7 +174,27 @@ lists the captures that would settle each open point.
 | 9 | u8 | Knob 3's parameter: `00` everywhere | Constant | Low |
 
 So the table is three `(slot, param)` pairs stored as `[slot1 slot2 slot3][param1 param2 param3]`.
-Slot numbers must be remapped when slots are renumbered.
+Slot numbers must be remapped when slots are renumbered. waveod's firmware (zxmarcos/waveod,
+`fw/preset_format.h`, MIT) settles the rest: a target is a slot 0..11, `0C` the preset tempo (BPM),
+`0D` the patch volume, `FF` none (so knob 3's `0D` is the volume, as the hardware capture showed).
+
+### Section 3 (15 bytes): footswitch functions (stomp mode)
+
+From waveod (`fw/preset_format.h`, `editor/preset_msgs.c` `fs_list`), and it fits all our samples
+(`01 02 03 04` / `00 00 00 00` / `07 00 05` in "Drive AD"):
+
+| Offset | Type | Meaning |
+|--------|------|---------|
+| 4..7 | u8 × 4 | Function of footswitch A..D on a press |
+| 8..11 | u8 × 4 | Function on a hold (long press) |
+| 12..14 | u8 × 3 | Functions of the pairs A+B, B+C, C+D |
+
+Functions (waveod `enum fs_function`, listed in the official editor's order by `model/assign.c`):
+0 none, 1..4 CTRL 1..4, 8 tap tempo, 5 looper, 6 drum machine, 19 / 18 previous / next rhythm,
+7 tuner, 20 EXP A/B, 12 / 11 preset down / up, 10 / 9 bank down / up, 13..16 preset A..D, 23
+footswitch mode. 24..35 toggle slot 1..12 directly: the firmware knows them, the editor does not
+offer them, so we only read them. Factory presets: A..D = CTRL 1..4, pairs tuner, looper, mode.
+The preset-mode table (FS A..D = preset A..D) lives only in the stored record, not in this section.
 
 ### Section 7 (95 bytes): expression pedal assignments
 
@@ -190,18 +210,18 @@ Reading of the 9 entries (low): three targets per controller, entries 0..2 = EXP
 volume), 3..5 = EXP 1 mode B (wah, switched by the toe switch), 6..8 = EXP 2 (an external pedal on
 the EXP/CTRL jack). Only entries 0 and 3 were ever used in our samples.
 
-### Section 8 (69 bytes): footswitch assignments
+### Section 8 (69 bytes): CTRL groups
 
 | Offset | Type | Meaning | Evidence | Confidence |
 |--------|------|---------|----------|------------|
 | 4..8 | 5 bytes | Junk: differs between two reads of the same unchanged preset; zero in one `.prst` that the editor imports | Two "Drive AD" reads, two "TESTE OSX" reads | High (that it is junk) |
-| 9 + row × 12 + slot | u8 | 1 = switch `row` (0..4) toggles `slot` | Hardware capture: pressing the footswitches on "Cry&Cry" flipped slots 0, 4, 3, 5 in turn (bulk on/off notices, below), the slots its rows 0..4 name. The rig presets map the same musical layout onto different slots | High (row = switch, column = slot) |
+| 9 + row × 12 + slot | u8 | 1 = `slot` is in CTRL `row + 1` (rows 0..3 = CTRL 1..4, row 4 = the preset CTRL) | Hardware capture: pressing the footswitches on "Cry&Cry" flipped slots 0, 4, 3, 5 in turn (bulk on/off notices, below), the slots its rows 0..4 name. The rig presets map the same musical layout onto different slots | High (row = switch, column = slot) |
 
-Row 0 is footswitch A: the official editor's footswitch write (capture mb-09, the unit in stomp mode)
-takes switch 0 for A, and our reading of a row is `9 + switch × 12 + slot` (high for A, medium for
-B..D). Row 4 is not known (low): five rows for four switches A–D, so it may be the CTRL/external
-switch. Rows 3 and 4 are identical in 21 of the 24 presets that assign switches. The tools offer
-A..D only.
+The rows are CTRL groups (waveod: `u8 member[12]` for CTRL 1-4 and the preset CTRL), not
+footswitches: a footswitch whose function (section 3) is CTRL n toggles every slot of row n - 1.
+With the factory functions FS A runs CTRL 1, which is why the official editor's "footswitch A"
+write (capture mb-09, `01 00 08 01` + u32 0 + slot + 1/0) lands in row 0. The tools offer CTRL 1..4;
+the preset CTRL (preset mode, pressing the active preset's switch again) is not offered.
 
 ### Rest of sections 1, 5 and 9; sections 0 and 3
 
@@ -390,9 +410,13 @@ rows A–D and assignment, expression assignment and range, tuner, BPM, tap temp
 CCs; CTRL 1–4 and the quick-knob CCs were not tried; see "Live controls" and
 "MIDI Control Change"):
 
-- `matribox_get_assignments`: the loaded preset's patch volume, tempo, footswitch A–D blocks and
-  expression entries (reads only).
-- `matribox_set_volume` (0..100), `matribox_assign_footswitch` (A..D, a block, assign or not),
+- `matribox_get_assignments`: the loaded preset's patch volume, tempo, footswitch A–D functions
+  (and the blocks they toggle), CTRL 1–4, quick knobs and expression entries (reads only).
+- `matribox_set_volume` (0..100), `matribox_assign_footswitch` (A..D, a block, assign or not:
+  through the CTRL the switch runs, setting a switch on another function to its own CTRL first),
+  `matribox_assign_ctrl` (CTRL 1..4, a block), `matribox_set_footswitch_function` (A..D, a
+  function by name, press or hold), `matribox_assign_quick_knob` (1..3, a block's parameter,
+  "BPM", "volume" or "none"),
   `matribox_assign_expression` (entry 1..9, a block's parameter by name, min and max 0..100) and
   `matribox_set_expression_range`: SysEx writes, echoed; the assignments are read back.
 - `matribox_tuner`, `matribox_tap_tempo`, `matribox_set_bpm` (40..300), `matribox_looper`,
@@ -688,13 +712,18 @@ Every write above but the whole preset and the live controls has been checked on
 The official editor streams the patch volume while its slider moves (`03 00 05 01` + u32, the
 message knob 3 sends from the unit) and the unit echoes some of them; a footswitch box and the
 expression pedal's assign, min and max are single writes, each echoed. Builders in
-`packages/core/src/matribox/write.ts` (`mbSetPatchVolume`, `mbAssignFootswitch`,
+`packages/core/src/matribox/write.ts` (`mbSetPatchVolume`, `mbAssignCtrl`, `mbSetFootswitchFunction`, `mbAssignQuickKnob`,
 `mbAssignExpression`, `mbSetExpressionMin`/`Max`), tested against the captured host frames
 (`packages/core/test/fixtures/matribox-controls.txt`). `mbAssignments` (core) reads the volume,
 tempo, footswitch rows and expression entries back from a preset.
 
-- **Footswitch:** switch A = 0 (capture mb-09: assign A to slot 0, unassign it, assign A to
-  slot 1). A switch can toggle several slots (one section 8 row). Captured in stomp mode only.
+- **CTRL (was "footswitch"):** CTRL 1 = 0 (capture mb-09: the editor's footswitch A box put slot
+  0 in, out, then slot 1; FS A runs CTRL 1). A CTRL can hold several slots (one section 8 row).
+- **Footswitch function** (waveod, not captured): `01 00 03 01` (press) or `02 00 03 01` (hold) +
+  u32 switch 0..3 + u32 function; the unit echoes it. Stomp mode only.
+- **Quick knob** (waveod, not captured): `01 00 02 01` + u32 knob 0..2 + u32 target (slot, 12 BPM,
+  13 volume, `FFFFFFFF` none), then `02 00 02 01` + u32 knob + u32 parameter; each echoed.
+  `mbAssignQuickKnob` sends both. The AI tools and `mbAssignmentsText` read them back.
 - **Expression assign:** settled on the owner's unit (2026-11-24; capture mb-04 had every field at
   0): u32 **group** (0 = EXP 1 mode A, 1 = mode B, 2 = EXP 2), u32 **position** in the group
   (0..2), u32 **slot**, u32 **parameter**, f32 min, f32 max. Entry = group × 3 + position, the
@@ -787,8 +816,9 @@ write"): select the target (the loaded slot by default), keep what it stores in 
 write the preset whole, read it back (sections 2, 3, 4, 5, 7, 9). The target stays loaded, under
 the name the file carries (no cmd `05`); unsaved edits of the loaded preset are lost, which the
 dialog says. A Pocket Master `.prst` (515 bytes, starts with "Pocket Master") and anything else
-that is not a Matribox preset are refused before anything is sent. It also shows the patch volume (a slider, newest value only, like a knob), a grid of which blocks
-footswitches A–D toggle, the nine expression entries (block, parameter, min, max, Apply) and a
+that is not a Matribox preset are refused before anything is sent. It also shows the patch volume (a slider, newest value only, like a knob), the **Footswitches
+and CTRL** panel (what footswitches A–D run in stomp mode, and a grid of the blocks in CTRL 1–4),
+**Quick knobs** (each knob's block and parameter, BPM or volume, Apply), the nine expression entries (block, parameter, min, max, Apply) and a
 tuner / tap tempo / BPM row sent as Control Changes on a chosen MIDI channel; after an assignment
 it reads the loaded preset again. Undo and Redo cover the chain edits only (the history replays
 chains). The model catalog is built in (below): nothing is picked or loaded. The e2e tests
