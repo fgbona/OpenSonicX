@@ -171,7 +171,7 @@ export function useMatribox(port: MidiPort | null) {
         return;
       }
       if (notice.kind !== 'preset') {
-        // The link's volume read (it lets held knob notices out) answers like the volume notice: the same volume is no edit.
+        // A volume notice with the volume already shown changes nothing: no edit.
         const same = (s: MatriboxState) => notice.kind === 'volume' && s.unit !== null && mbAssignments(s.unit.preset).volume === notice.value;
         setState((s) => (!s.unit || same(s) ? s : { ...s, edited: true, unit: { ...s.unit, preset: withNotice(s.unit.preset, notice) } }));
         return;

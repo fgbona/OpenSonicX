@@ -6,6 +6,20 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Matribox II Pro: **the patch-volume knob (knob 3) turned on the unit now follows at once too.**
+  The link let held knob notices out with a patch-volume read, but the firmware holds a notice
+  while the same one (cmd and first word) repeats, so that read's answer could not push out a held
+  volume notice, and volume notices did not start the flush at all. The link now sends the
+  preset-tempo read instead (`mbReadPresetTempo`, flag 1, cmd 0x10, `04 00 05 01`: a pure read the
+  firmware answers through its notice queue, waveod sub 0x01050004; not captured), for knob 1/2
+  and knob 3 notices alike, with the same bound (every 50 ms, stopping after 10 quiet reads). Its
+  answer is no notice, so it reaches nothing in the editor: no "edited" mark, no re-read. Against
+  the firmware-queue simulation (a step every 20 ms for 1 s), knob 3's worst lag goes from 309 ms
+  to 29 ms and its last step from 149 ms to 19 ms; knobs 1/2 are unchanged (29 ms, 19 ms).
+  Not yet checked on the unit.
+
 ## [1.2.0] - 2026-11-26
 
 The Matribox II Pro gets its tones made by AI end to end. NAM captures convert into the CLONE
