@@ -8,6 +8,21 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Matribox II Pro: **NAM -> clone (.clo) conversion the official editor's way** (core
+  `generateMatriboxClo`, `packages/core/src/clo/startclone.ts`), a TypeScript port of waveod's
+  reconstruction of the editor's `HTKPA::startClone` (github.com/zxmarcos/waveod, MIT, Marcos
+  Medeiros; see NOTICE). The model runs once over the 70 s reference DI at the `.nam`'s own
+  `sample_rate` (prewarmed on silence like NeuralAmpModelerCore), its output x 0.31 kept at
+  16 bits; the saturator comes from the rising sine's peaks, IR 1 and IR 2 from the quiet-noise,
+  loud-sweep and pink-noise passes of `iterAmpCoeff` and a last IR 2 correction over the music,
+  both resampled to 44.1 kHz with our r8brain port. On `5 RECTIFIER.nam` against the official
+  editor's own `.clo`: saturator gains within 0.4 % (were 35-93 % off), arrayB within 0.5 dB per
+  1/3 octave from 40 Hz to 12.5 kHz (was up to 14.6 dB), arrayA's shape within 0.5 dB from 160 Hz
+  to 4 kHz (was up to 22 dB) but its level still about 4 dB under the official's. About 35 s on
+  an Apple-silicon Mac for that model (the model run is most of it; the fit about 2 s). Not yet
+  wired to an upload and not yet heard on the owner's unit; the Pocket Master's converter is
+  unchanged. `.nam` parsing now reads `sample_rate`, and a `.clo` can carry its own IIR 2.
+
 - Matribox II Pro: **Global options** (the header, beside the preset file buttons; on a phone
   under ⋯). Decoded from the owner's captures of the official editor's global settings window
   (mb-30 … mb-39): Input Mode, Input Level, AUX Level, footswitch mode (Preset / Stomp), MIDI
