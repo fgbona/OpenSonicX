@@ -444,8 +444,19 @@ The write tools (experimental: every answer says so until the owner validates th
   slot label; the slot is read first and kept in `~/.pocket-master-editor/backups`
   (`<time>-matribox-<label>.json`: label, index, name and the 1211 bytes as hex).
 
-Each write waits for the unit's echo of it (same flag, cmd and data; 3 s). Tests run against a
+Each write waits for the unit's echo of it (same flag, cmd and data; 3 s; a set param or on/off
+takes the echo of its slot and parameter whatever value it carries, since the unit echoes the
+value it kept). When a write of `matribox_build_tone` fails, the old chain is put back (removed,
+added again, its values written) and the error says nothing was applied. Tests run against a
 simulated unit that applies the writes to an in-memory preset and echoes them.
+
+The web editor sends a whole chain (Undo, Redo, the assistant) planned from what the unit holds,
+read just before, not from the screen; a value or switch the unit already has is not written
+(fresh blocks come on, with their model's defaults). When a write fails it puts the unit back the
+same way and reads it again. Before 2026-11-26 a failed write left the screen stale: the unit had
+applied the adds, the next build planned from the empty chain on screen and added the whole chain
+again, until the unit refused a third CAB for memory (`00 07` notice, 2) and its CPU guard switched
+every block off (FUN_00022514), the "(off)" blocks of the owner's 12-block result.
 
 Live controls (experimental, **checked on the owner's unit, 2026-11-24**: volume, footswitch
 rows A–D and assignment, expression assignment and range, tuner, BPM, tap tempo, looper and drum

@@ -3,7 +3,7 @@
  * with the person's own paid key. The browser header is what Anthropic asks of calls made from a
  * page; the key goes only in x-api-key.
  */
-import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, QuotaError, requestTexts, toToolSchema, type ConverseOptions, type ToneAgent } from './assistant.ts';
+import { BUSY_WAIT_MS, BusyError, guardedRunner, StepLimitError, KeyError, MAX_REQUESTS, post, QuotaError, requestTexts, toToolSchema, type ConverseOptions, type ToneAgent } from './assistant.ts';
 
 const API = 'https://api.anthropic.com/v1';
 /** A tone's edit list and a few sentences fit well within this. */
@@ -42,7 +42,7 @@ export async function converseClaude(model: string, options: ConverseOptions): P
   const messages: Message[] = options.turns.map((t) => ({ role: t.role, content: t.text }));
   const text = requestTexts(agent, options.turns, options.message, options.language, options.thorough);
   const asked = messages.push({ role: 'user', content: text.first }) - 1;
-  const run = agent.runner();
+  const run = guardedRunner(agent);
   for (let request = 0; request < MAX_REQUESTS; request++) {
     onRequest();
     const r = await post(
@@ -83,5 +83,5 @@ export async function converseClaude(model: string, options: ConverseOptions): P
     }
     messages.push({ role: 'user', content: results });
   }
-  throw new Error('The assistant took too many steps for one message. Try asking again, more simply.');
+  throw new StepLimitError();
 }

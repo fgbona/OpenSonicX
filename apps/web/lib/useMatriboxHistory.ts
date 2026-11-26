@@ -1,15 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { MB_CATALOG, type MbPreset } from '@pocket-master/core';
+import type { MbPreset } from '@pocket-master/core';
 import { EMPTY_HISTORY, record, redo as redoStep, undo as undoStep, type History } from './history';
-import { transition, type MbChainBlock } from './matriboxPlan';
+import type { MbChainBlock } from './matriboxPlan';
 import type { Matribox } from './useMatribox';
 
 /**
  * Undo and Redo for the Matribox editor's live edits (values, on/off, models, add, move, remove,
  * and each assistant answer as one step). A step back or forward is sent as the writes that turn
- * the chain on the unit into the one kept (matriboxPlan.ts `transition`): the same validated writes.
+ * the chain the unit holds into the one kept (matriboxOps.ts `applyChain`): the same validated writes.
  */
 export function useMatriboxHistory(mb: Matribox) {
   const [history, setHistory] = useState<History<MbPreset>>(EMPTY_HISTORY);
@@ -30,14 +30,13 @@ export function useMatriboxHistory(mb: Matribox) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: current is the trigger (another preset loaded)
   useEffect(() => commit(EMPTY_HISTORY), [current, commit]);
 
-  /** Sends `target`'s chain; the preset as the unit has it, null when the editor refused (its error shows). */
+  /** Sends `target`'s chain (planned from what the unit holds); the preset as the unit has it, or why it was refused (the error also shows). */
   const send = useCallback(
-    async (target: readonly MbChainBlock[]): Promise<MbPreset | null> => {
-      const now = presetRef.current;
-      if (!now) return null;
-      const preset = await apply(transition(MB_CATALOG, now.chain, target));
-      if (preset) presetRef.current = preset;
-      return preset;
+    async (target: readonly MbChainBlock[]): Promise<{ readonly preset: MbPreset } | { readonly error: string }> => {
+      if (!presetRef.current) return { error: 'No preset is loaded.' };
+      const result = await apply(target);
+      if ('preset' in result) presetRef.current = result.preset;
+      return result;
     },
     [apply],
   );
@@ -51,7 +50,7 @@ export function useMatriboxHistory(mb: Matribox) {
       if (!moved) return false;
       stepping.current = true;
       try {
-        if (!(await send(moved.target.chain))) return false;
+        if (!('preset' in (await send(moved.target.chain)))) return false;
         commit(moved.history);
         return true;
       } finally {
@@ -88,10 +87,10 @@ export function useMatriboxHistory(mb: Matribox) {
     /** The assistant's chain, as one step; throws when the editor refused it. */
     applyChain: async (chain: readonly MbChainBlock[]): Promise<MbPreset> => {
       const before = presetRef.current;
-      const preset = await send(chain);
-      if (!before || !preset) throw new Error('The Matribox did not take the change (see the error above the chain).');
-      push(before, null);
-      return preset;
+      const result = await send(chain);
+      if ('error' in result) throw new Error(result.error);
+      if (before) push(before, null);
+      return result.preset;
     },
   };
 }

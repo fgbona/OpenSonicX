@@ -4,7 +4,7 @@ import { decodePreset, applyEdit, type Edit, type Preset, type ToneHost } from '
 import { pocketMasterAgent } from '../lib/pocketAgent.ts';
 import { realP08 } from '../../../packages/core/test/fake-pedal.ts';
 import { converseClaude, listClaudeModels } from '../lib/anthropic.ts';
-import { BusyError, KeyError, QuotaError } from '../lib/assistant.ts';
+import { BusyError, KeyError, QuotaError, StepLimitError, ToolLoopError } from '../lib/assistant.ts';
 
 const KEY = 'fake-anthropic-key-unit-0000';
 const SLOTS = { irNames: [null, null, null, null, null], profileNames: [null, null, null, null, null] };
@@ -101,4 +101,24 @@ test("Claude reports each request's token usage", async () => {
   const reply = { body: { stop_reason: 'end_turn', content: [{ type: 'text', text: 'ok' }], usage: { input_tokens: 4000, output_tokens: 300 } } };
   await converseClaude('m', { ...options(h, scripted(reply).fetchFn), onUsage: (i, o) => usage.push([i, o]) });
   assert.deepEqual(usage, [[4000, 300]]);
+});
+
+test('the same tool failing twice in one message stops it at once, naming the tool and why (no step budget burnt)', async () => {
+  const { h } = host();
+  const broken: ToneHost = { ...h, applyEdits: async () => Promise.reject(new Error('Matribox II PRO did not confirm the write')) };
+  const change = { changes: [{ kind: 'model', block: 'amp', model: 'Calif DualM' }] };
+  const { fetchFn, requests } = scripted(toolUse('edit_preset', change, 'a'), toolUse('edit_preset', change, 'b'), toolUse('edit_preset', change, 'c'), say('never'));
+  await assert.rejects(converseClaude('claude-test-haiku', options(broken, fetchFn)), (e: unknown) => {
+    assert.ok(e instanceof ToolLoopError);
+    assert.equal(e.tool, 'edit_preset');
+    assert.match(e.reason, /did not confirm the write/);
+    return true;
+  });
+  assert.equal(requests.length, 2);
+});
+
+test('the step limit is its own error, so the panel can say what to do', async () => {
+  const { h } = host();
+  const { fetchFn } = scripted(...Array.from({ length: 8 }, (_, i) => toolUse('get_preset', {}, `g${i}`)));
+  await assert.rejects(converseClaude('claude-test-haiku', options(h, fetchFn)), StepLimitError);
 });

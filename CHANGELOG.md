@@ -8,6 +8,25 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Matribox II Pro: **a failed write no longer piles blocks up on the unit.** The owner's assistant
+  run ("timbre do Slash em Sweet Child", Claude Haiku, then Sonnet on an empty preset) ended with
+  12 blocks on the unit (the planned WAH, AMP, CAB, DLY, RVB three times over) while the editor
+  showed none: a value write timed out after the unit had applied the adds, the editor kept its
+  old chain, and each retried `build_tone` was planned from that stale chain and added everything
+  again, until the unit refused a block for memory and switched every block off. Now a whole chain
+  (assistant, Undo, Redo) is planned from the preset read from the unit just before; a value or
+  switch the unit already holds is not written (fresh blocks need only the values the tone sets);
+  and a failed write puts the unit back to the chain it had, reads it again and tells the
+  assistant nothing was applied. A set param or on/off is confirmed by the echo of its slot and
+  parameter with whatever value the unit kept (it snaps values to the step), and the link no
+  longer sends its knob-flush read while a request waits for its answer.
+- Matribox II Pro MCP: `matribox_build_tone` puts the old chain back when a write fails.
+- Tone assistant: **the same tool failing twice in one message stops the message** and says which
+  tool failed and why, instead of retrying until the step limit; the step limit now says what to
+  do (ask for one thing at a time). Claude's dated model ids (`claude-haiku-4-5-20251001`) find
+  their price, so the answer's cost shows; "Real usage" links the paid providers' pages too; and
+  the privacy note names the providers that really get the text (Claude included) instead of
+  "Groq or Google".
 - Matribox II Pro: **the patch-volume knob (knob 3) turned on the unit now follows at once too.**
   The link let held knob notices out with a patch-volume read, but the firmware holds a notice
   while the same one (cmd and first word) repeats, so that read's answer could not push out a held

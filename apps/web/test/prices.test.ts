@@ -27,3 +27,9 @@ test("an answer's cost: the provider's own figure when it gives one, else tokens
   assert.equal(answerCost({ input: 1000, output: 200 }, null), null);
   assert.equal(answerCost({ input: 0, output: 0 }, price), null, 'no usage reported');
 });
+
+test("Anthropic's dated model ids (claude-haiku-4-5-20251001) find the catalog's undated price", () => {
+  const prices = parsePrices({ data: [{ id: 'anthropic/claude-haiku-4.5', pricing: { prompt: '0.000001', completion: '0.000005' } }] });
+  assert.deepEqual(priceOf(prices, 'claude-haiku-4-5-20251001'), { input: 0.000001, output: 0.000005 });
+  assert.equal(priceOf(prices, 'claude-haiku-4-6-20251001'), null);
+});

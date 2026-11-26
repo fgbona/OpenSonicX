@@ -4,7 +4,21 @@
  * the person's own key. One message runs one tool loop; quotas, overloads and refused keys become
  * the router's errors.
  */
-import { BUSY_WAIT_MS, BusyError, KeyError, MAX_REQUESTS, post, QuotaError, requestTexts, toToolSchema, type ConverseOptions, type Provider, type ToneAgent } from './assistant.ts';
+import {
+  BUSY_WAIT_MS,
+  BusyError,
+  guardedRunner,
+  StepLimitError,
+  KeyError,
+  MAX_REQUESTS,
+  post,
+  QuotaError,
+  requestTexts,
+  toToolSchema,
+  type ConverseOptions,
+  type Provider,
+  type ToneAgent,
+} from './assistant.ts';
 
 /** When a 429 does not say how long to wait. */
 const DEFAULT_WAIT_MS = 60_000;
@@ -78,7 +92,7 @@ export async function converseChat(endpoint: ChatEndpoint, options: ConverseOpti
   const messages: Message[] = [{ role: 'system', content: agent.instructions(options.thorough ?? false) }, ...options.turns.map((t): Message => ({ role: t.role, content: t.text }))];
   const text = requestTexts(agent, options.turns, options.message, options.language, options.thorough);
   const asked = messages.push({ role: 'user', content: text.first }) - 1;
-  const run = agent.runner();
+  const run = guardedRunner(agent);
   let retriedToolCall = false;
   let waited = 0;
   for (let request = 0; request < MAX_REQUESTS; request++) {
@@ -143,5 +157,5 @@ export async function converseChat(endpoint: ChatEndpoint, options: ConverseOpti
       messages.push({ role: 'tool', tool_call_id: c.id, name: c.function.name, content: result.text });
     }
   }
-  throw new Error('The assistant took too many steps for one message. Try asking again, more simply.');
+  throw new StepLimitError();
 }
