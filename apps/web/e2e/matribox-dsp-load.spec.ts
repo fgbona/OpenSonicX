@@ -31,12 +31,14 @@ test('the DSP load estimate warns near and past the limit, and the unit overload
   await addBlocks(page, ['FREQ', 'DLY', 'MOD']);
   await expectChain(page, 'DYN → DRV → AMP → CAB → RVB → VOL → FREQ → DLY → MOD');
   await expect(load).toHaveText('Estimated DSP load: 87%');
+  await expect(load.locator('.mb-dsp-fill')).toHaveAttribute('style', /width: 87%/);
   await expect(page.getByRole('status').filter({ hasText: 'Close to the limit' })).toBeVisible();
   const alert = page.getByRole('alert').filter({ hasText: 'The pedal reported “System overloaded”' });
   await expect(alert).toHaveCount(0);
 
   await addBlocks(page, ['RVB']);
-  await expect(load).toHaveText('Estimated DSP load: 104%');
+  await expect(load).toHaveText('Estimated DSP load: over the limit'); // 104%: never shown past 100
+  await expect(load.locator('.mb-dsp-fill')).toHaveAttribute('style', /width: 100%/);
   await expect(page.getByRole('status').filter({ hasText: 'Likely too heavy for the pedal' })).toBeVisible();
   await expect(alert).toBeVisible();
   await alert.getByRole('button', { name: 'Close' }).click();

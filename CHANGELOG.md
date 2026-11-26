@@ -6,6 +6,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Matribox II Pro: the estimated DSP load no longer reads past 100 %: a chain over the budget
+  says "over the limit", and its bar is drawn (full and red) instead of a `<meter>` that showed
+  empty in the dark theme.
+
 ### Added
 
 - Matribox II Pro: **drum machine for practice.** A *Drum machine* panel plays or stops it and
