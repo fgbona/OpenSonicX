@@ -413,6 +413,9 @@ test('Claude added as a paid provider answers through its own API, with the brow
   await ask(page, 'black album rhythm tone');
   await expect(panel(page).getByText('From Claude.')).toBeVisible();
   await expect(panel(page).getByText('Answered by Claude (Anthropic) · claude-test-haiku')).toBeVisible();
+  // Its own usage page, and the privacy note names the provider the text really goes to.
+  await expect(panel(page).getByRole('link', { name: 'Claude (Anthropic)' })).toHaveAttribute('href', 'https://console.anthropic.com/settings/limits');
+  await expect(panel(page).getByText(/go to the provider of your key \(Claude \(Anthropic\)\)/)).toBeVisible();
   expect(sent[0]!.headers['x-api-key']).toBe('fake-anthropic-key-e2e-0000');
   expect(sent[0]!.headers['anthropic-dangerous-direct-browser-access']).toBe('true');
   expect(sent[0]!.body.model).toBe('claude-test-haiku');

@@ -330,25 +330,56 @@ export class MatriboxSession {
 
   /**
    * Replaces the loaded preset's chain with `blocks` in signal order: removes every block, adds the
-   * new ones (the unit picks their slots), then writes every parameter and on/off by slot.
+   * new ones (the unit picks their slots), then writes every parameter and on/off by slot. When a
+   * write fails the old chain is put back, so a retried call never finds extra blocks.
    */
   buildTone(options: { blocks: readonly ToneBlock[] }): Promise<string> {
     return Promise.resolve(this.#catalog).then((catalog) => {
       const plan = planTone(catalog, options.blocks); // everything checked before the unit is opened
       return this.#use(async (unit) => {
-        const old = (await this.#loaded(unit)).preset.chain;
-        const note = mbCheckDspLoad(old, plan.blocks);
-        for (let i = old.length - 1; i >= 0; i--) await unit.write(mbRemoveBlock(i)); // from the end: positions stay put
-        for (const [i, b] of plan.blocks.entries()) await unit.write(mbAddBlock(i, b.moduleIndex, b.fxid));
-        const added = (await this.#loaded(unit)).preset.chain;
-        for (const [i, b] of plan.blocks.entries()) {
-          const slot = added[i]?.slot;
-          if (slot === undefined) throw new Error(`Matribox II PRO did not add block ${i + 1}: its chain now has ${added.length} blocks`);
-          await MatriboxSession.#writeAll(unit, [...MatriboxSession.#paramFrames(modelValues(b.model, slot, b.params)), mbSetBlockOn(slot, b.on)]);
+        const { raw } = await this.#loaded(unit);
+        const note = mbCheckDspLoad(raw.chain, plan.blocks);
+        try {
+          await this.#replaceChain(
+            unit,
+            plan.blocks.map((b) => ({ ...b, writes: (slot: number) => modelValues(b.model, slot, b.params) })),
+          );
+        } catch (error) {
+          try {
+            await this.#replaceChain(
+              unit,
+              raw.chain.map((b) => ({ ...b, writes: (slot: number) => this.#valuesOf(catalog, b, slot) })),
+            );
+          } catch (rollback) {
+            throw new Error(`${reason(error)} The chain stopped part way and could not be put back (${reason(rollback)}): check it with matribox_get_preset.`);
+          }
+          throw new Error(`${reason(error)} Nothing was applied: the Matribox is back as it was.`);
         }
         return experimental([...plan.lines, ...(note ? [note] : []), 'Nothing is stored until matribox_save_preset.']);
       });
     });
+  }
+
+  /** The values a block of the loaded preset holds, for the parameters its model names (none for an unknown model). */
+  #valuesOf(catalog: MbCatalog, block: MbPreset['chain'][number], slot: number): readonly ParamWrite[] {
+    const model = catalog.modules.find((m) => m.index === block.moduleIndex)?.models.find((m) => m.fxid === block.fxid);
+    return (model?.params ?? []).map((p) => ({ slot, id: p.id, value: block.values[p.id] ?? p.defaultValue }));
+  }
+
+  /** Removes every block from the end, adds `blocks` in order, then writes each one's values and on/off by its new slot. */
+  async #replaceChain(
+    unit: MatriboxConnection,
+    blocks: readonly { readonly moduleIndex: number; readonly fxid: number; readonly on: boolean; readonly writes: (slot: number) => readonly ParamWrite[] }[],
+  ): Promise<void> {
+    const old = (await this.#loaded(unit)).preset.chain;
+    for (let i = old.length - 1; i >= 0; i--) await unit.write(mbRemoveBlock(i)); // from the end: positions stay put
+    for (const [i, b] of blocks.entries()) await unit.write(mbAddBlock(i, b.moduleIndex, b.fxid));
+    const added = (await this.#loaded(unit)).preset.chain;
+    for (const [i, b] of blocks.entries()) {
+      const slot = added[i]?.slot;
+      if (slot === undefined) throw new Error(`Matribox II PRO did not add block ${i + 1}: its chain now has ${added.length} blocks`);
+      await MatriboxSession.#writeAll(unit, [...MatriboxSession.#paramFrames(b.writes(slot)), mbSetBlockOn(slot, b.on)]);
+    }
   }
 
   /** Patch volume, footswitch and expression assignments, and assignments read (matribox-live.ts). */

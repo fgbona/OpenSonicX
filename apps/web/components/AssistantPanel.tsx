@@ -4,10 +4,26 @@ import { useEffect, useRef, useState } from 'react';
 import type { Difference } from '@pocket-master/core';
 import { forgetKeys, loadKey, loadOrder, loadPaid, loadRemember, loadRotate, maskKey, removeKey, saveKey, saveOrder, savePaid, saveRemember, saveRotate, type PaidEntry } from '@/lib/aiKey';
 import { nextReset, recordRequest, usedToday, useAiUsage } from '@/lib/aiUsage';
-import { ask, BusyError, KeyError, providerOf, QuotaError, RegionError, ROUTE, type AiModel, type Converse, type Cooldown, type Provider, type ToneAgent, type Turn } from '@/lib/assistant';
+import {
+  ask,
+  BusyError,
+  KeyError,
+  providerOf,
+  QuotaError,
+  RegionError,
+  ROUTE,
+  StepLimitError,
+  ToolLoopError,
+  type AiModel,
+  type Converse,
+  type Cooldown,
+  type Provider,
+  type ToneAgent,
+  type Turn,
+} from '@/lib/assistant';
 import { converseGemini, GEMINI_MODELS, testGeminiKey } from '@/lib/gemini';
 import { converseGroq, GROQ_MODEL, testGroqKey } from '@/lib/groq';
-import { converseWith, paidById, paidName } from '@/lib/providers';
+import { converseWith, PAID, paidById, paidName } from '@/lib/providers';
 import { moveInOrder, orderRoute, rotated } from '@/lib/route-order';
 import { answerCost, loadPrices, priceOf, type Usage } from '@/lib/prices';
 import { recordSpend, spentToday } from '@/lib/spend';
@@ -237,6 +253,14 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
     ...FREE_CONVERSE,
     ...Object.fromEntries(paid.map((e) => [e.id, converseWith(paidById(e.id)!, e.model)])),
   };
+  // Where the text goes: the providers with a key, by name (all of them before any key is set up).
+  const withKey = (Object.keys(allKeys) as Provider[]).map((p) => providerName(p, t('assistant.paidTag')));
+  const providers = (withKey.length > 0 ? withKey : [...Object.values(FREE_NAME), ...PAID.map((p) => p.name)]).join(', ');
+  /** Each provider's own usage page: the free ones', then the paid ones' (spend and limits). */
+  const usageLinks = [
+    ...SETUP.filter((s) => keys[s.provider]).map((s) => ({ provider: s.provider as Provider, href: s.usage })),
+    ...paid.map((e) => ({ provider: e.id as Provider, href: paidById(e.id)!.limits })),
+  ];
   const modelName = (m: AiModel) => MODELS[m]?.name ?? `${providerName(m as Provider, t('assistant.paidTag'))} · ${paid.find((e) => e.id === m)?.model ?? ''}`;
 
   /** Asked to save, but the model did not propose it: open the Save dialog itself; nothing is written until confirmed. */
@@ -320,7 +344,11 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
                   ? t('assistant.keyRejected', { provider: providerName(error.provider, t('assistant.paidTag')) })
                   : error instanceof RegionError
                     ? t('assistant.region')
-                    : t('assistant.error', { reason: error instanceof Error ? error.message : String(error) });
+                    : error instanceof ToolLoopError
+                      ? t('assistant.toolLoop', { tool: error.tool, reason: error.reason })
+                      : error instanceof StepLimitError
+                        ? t('assistant.stepLimit')
+                        : t('assistant.error', { reason: error instanceof Error ? error.message : String(error) });
       // The next answer is told this one was cut, so a model does not lose the request (the preset it gets is current).
       setTurns((h) => [...h, { role: 'user', text: message }, { role: 'assistant', text: `(This answer was interrupted: ${error instanceof Error ? error.message : String(error)})` }]);
       const link = error instanceof RegionError ? { href: REGIONS, text: t('assistant.regionLink') } : undefined;
@@ -453,7 +481,7 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
                 </button>
               )}
             </div>
-            <p className="muted small">{t(privacy)}</p>
+            <p className="muted small">{t(privacy, { providers })}</p>
           </>
         ) : (
           <>
@@ -524,16 +552,16 @@ export function AssistantPanel({ agent, hint = 'assistant.hint', privacy = 'assi
             </ul>
             <p className="muted small">
               {t('assistant.realUsage')}{' '}
-              {SETUP.filter((s) => keys[s.provider]).map((s, i) => (
-                <span key={s.provider}>
+              {usageLinks.map((u, i) => (
+                <span key={u.provider}>
                   {i > 0 && ' · '}
-                  <a href={s.usage} target="_blank" rel="noreferrer">
-                    {providerName(s.provider)}
+                  <a href={u.href} target="_blank" rel="noreferrer">
+                    {providerName(u.provider, t('assistant.paidTag'))}
                   </a>
                 </span>
               ))}
             </p>
-            <p className="muted small">{t(privacy)}</p>
+            <p className="muted small">{t(privacy, { providers })}</p>
           </>
         )}
       </div>

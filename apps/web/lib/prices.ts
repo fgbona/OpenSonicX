@@ -35,7 +35,10 @@ export function parsePrices(catalog: unknown): Prices {
   return prices;
 }
 
-export const priceOf = (prices: Prices, modelId: string): Price | null => prices.get(key(modelId)) ?? null;
+/** A snapshot date at the end ("claude-haiku-4-5-20251001"): the catalog lists the model without it. */
+const DATED = /[-_@]\d{8}$/;
+
+export const priceOf = (prices: Prices, modelId: string): Price | null => prices.get(key(modelId)) ?? prices.get(key(modelId.replace(DATED, ''))) ?? null;
 
 /** Tokens an answer used over its requests, and the cost when the provider reported it (OpenRouter). */
 export interface Usage {

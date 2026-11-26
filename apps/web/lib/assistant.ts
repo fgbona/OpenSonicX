@@ -39,6 +39,41 @@ export function askedToSave(message: string): number | null {
 /** Model requests per message: a tone takes one or two; more means the model is going in circles. */
 export const MAX_REQUESTS = 6;
 
+/** The model used every request of a message without answering. */
+export class StepLimitError extends Error {
+  constructor() {
+    super('The assistant took too many steps for one message.');
+  }
+}
+
+/** The same tool failed twice in one message: the message stops there, with the tool and its last error. */
+export class ToolLoopError extends Error {
+  readonly tool: string;
+  readonly reason: string;
+  constructor(tool: string, reason: string) {
+    super(`${tool} failed twice: ${reason}`);
+    this.tool = tool;
+    this.reason = reason;
+  }
+}
+
+/**
+ * The agent's tool runner for one message, stopped (ToolLoopError) the second time the same tool
+ * fails: a model retrying a failing write only repeats it until the step limit.
+ */
+export function guardedRunner(agent: ToneAgent): (name: string, args: unknown) => Promise<{ ok: boolean; text: string }> {
+  const run = agent.runner();
+  const failed = new Set<string>();
+  return async (name, args) => {
+    const result = await run(name, args);
+    if (!result.ok) {
+      if (failed.has(name)) throw new ToolLoopError(name, result.text.replace(/^Error:\s*/, ''));
+      failed.add(name);
+    }
+    return result;
+  };
+}
+
 /** The model's free quota is used up; it takes requests again at `retryAt`. */
 export class QuotaError extends Error {
   readonly retryAt: Date;
