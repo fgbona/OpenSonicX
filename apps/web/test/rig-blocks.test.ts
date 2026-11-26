@@ -67,3 +67,17 @@ test("a Matribox chain becomes the rig's blocks by storage slot, named by positi
   assert.equal(blocks[1]?.name, `2. ${chain[1]?.module}`);
   for (const b of blocks) for (const p of b.params) assert.ok(p.step > 0 && Number.isFinite(p.value));
 });
+
+test('the strip names the real gear only as plain attribution, never a user IR or capture', () => {
+  const chain = resolveMbPreset(parseMbPreset(new FakeMatribox().editBuffer), MB_CATALOG).chain;
+  const blocks = mbRigBlocks(chain, (b) => b.model?.name ?? '?');
+  for (const [i, b] of blocks.entries()) {
+    const source = chain[i]!;
+    if (source.module === 'IR' || source.module === 'CLONE') assert.equal(b.basedOn, undefined);
+    else assert.equal(b.basedOn, source.model?.basedOn?.trim() || undefined);
+  }
+  for (const m of MB_CATALOG.modules.flatMap((x) => x.models)) assert.doesNotMatch(m.basedOn ?? '', /[®™©]/, m.name);
+  const preset = decodePreset(realP08());
+  const amp = pmRigBlocks(preset, (b) => b.model, ['off', 'on']).find((b) => b.module === 'AMP')!;
+  assert.ok(preset.ampMode === 'clone' ? amp.basedOn === undefined : typeof amp.basedOn === 'string' && amp.basedOn.length > 0);
+});

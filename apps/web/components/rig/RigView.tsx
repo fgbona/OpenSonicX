@@ -116,6 +116,7 @@ export function RigView({ blocks, selected, label, name, tempo, volume, disabled
     next.focus();
     onSelect(Number(next.dataset.id));
   };
+  const gearLabel = (b: RigBlock) => t('tile.select', { block: b.name, model: b.basedOn ? `${b.model}, ${t('editor.basedOn', { gear: b.basedOn })}` : b.model });
   const closeAdd = (back: boolean) => {
     setAdding(false);
     if (back) addRef.current?.focus();
@@ -165,7 +166,8 @@ export function RigView({ blocks, selected, label, name, tempo, volume, disabled
                     className={`rig-node rig-block${isSelected ? ' is-selected' : ''}${b.on ? '' : ' is-off'}`}
                     data-id={b.id}
                     aria-pressed={isSelected}
-                    aria-label={t('tile.select', { block: b.name, model: b.model })}
+                    aria-label={gearLabel(b)}
+                    title={gearLabel(b)}
                     onClick={() => onSelect(b.id)}
                   >
                     <RigIcon spec={b.spec} tag={inside ? b.module : undefined} />

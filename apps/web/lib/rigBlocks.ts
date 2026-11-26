@@ -3,7 +3,7 @@
  * from a Matribox chain or a Pocket Master preset. Values go back through each editor's own
  * handlers (history.setParam / onEdit), so Undo works as in the classic look.
  */
-import { encodeValue, modelOf, type MbResolvedBlock, type Preset } from '@pocket-master/core';
+import { encodeValue, modelInfo, modelOf, type MbResolvedBlock, type Preset } from '@pocket-master/core';
 import { pmRigCategory, rigCategory, rigIconSpec, type RigIconSpec } from './rigIcon.ts';
 
 export interface RigParam {
@@ -26,6 +26,8 @@ export interface RigBlock {
   readonly name: string;
   readonly module: string;
   readonly model: string;
+  /** The real gear the model is modelled on (plain attribution), when the catalog names one. */
+  readonly basedOn?: string;
   readonly on: boolean;
   readonly spec: RigIconSpec;
   readonly params: readonly RigParam[];
@@ -40,6 +42,8 @@ export function mbRigBlocks(chain: readonly MbResolvedBlock[], model: (b: MbReso
       name: `${b.position}. ${b.module}`,
       module: b.module,
       model: name,
+      // A user IR or capture plays the person's own file: no model attribution.
+      basedOn: (b.module === 'IR' || b.module === 'CLONE' ? undefined : b.model?.basedOn?.trim()) || undefined,
       on: b.on,
       spec: rigIconSpec(rigCategory(b), `${b.moduleIndex}:${b.fxid}`, b.params.length, name),
       params: b.params.map((p) => {
@@ -56,13 +60,16 @@ export function mbRigBlocks(chain: readonly MbResolvedBlock[], model: (b: MbReso
  */
 export function pmRigBlocks(preset: Preset, model: (b: Preset['chain'][number]) => string, onOff: readonly [string, string]): RigBlock[] {
   return preset.chain.map((b) => {
-    const specs = modelOf(preset, b)?.params ?? [];
+    const found = modelOf(preset, b);
+    const specs = found?.params ?? [];
     const name = model(b);
+    const clone = b.key === 'amp' && preset.ampMode === 'clone';
     return {
       id: b.module,
       name: b.label,
       module: b.label,
       model: name,
+      basedOn: (found && !clone ? modelInfo(b.key, found.name)?.basedOn : undefined) || undefined,
       on: b.on,
       spec: rigIconSpec(pmRigCategory(b, preset.ampMode), `${b.key}:${b.code}`, b.params.length, name),
       params: b.params.map((p) => {

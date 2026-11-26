@@ -82,8 +82,10 @@ export function RigDetail({ block, disabled, expanded, onExpand, onOn, onParam, 
         >
           <span className="switch-knob" />
         </button>
+        {/* The real gear leads (plain attribution); our model name follows, smaller. An original design shows its name only. */}
         <p className="rig-model">
-          <span className="rig-module">{block.module}</span> {block.model}
+          <span className="rig-module">{block.module}</span> {block.basedOn ? t('editor.basedOn', { gear: block.basedOn }) : block.model}
+          {block.basedOn && <span className="rig-model-name">{block.model}</span>}
         </p>
         <span className="rig-detail-tools">
           {onMove && (

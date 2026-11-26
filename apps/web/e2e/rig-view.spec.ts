@@ -77,7 +77,13 @@ test('the chain shows as tagged gear between IN and OUT, with the DSP load; a cl
   await expect(gear(page, 3, 'AMP')).toHaveAttribute('aria-pressed', 'true');
   await gear(page, 2, 'DRV').click();
   await expect(gear(page, 2, 'DRV')).toHaveAttribute('aria-pressed', 'true');
-  await expect(rig.locator('.rig-model')).toHaveText(`DRV ${MODELS.drive.name}`);
+  // The real gear leads the strip ("Based on …"); our model name follows, smaller.
+  const model = rig.locator('.rig-model');
+  if (MODELS.drive.basedOn) {
+    await expect(model).toContainText(`DRV Based on ${MODELS.drive.basedOn}`);
+    await expect(model.locator('.rig-model-name')).toHaveText(MODELS.drive.name);
+    await expect(gear(page, 2, 'DRV')).toHaveAccessibleName(`Edit 2. DRV: ${MODELS.drive.name}, Based on ${MODELS.drive.basedOn}`);
+  } else await expect(model).toHaveText(`DRV ${MODELS.drive.name}`);
   await expect(rig.getByRole('slider')).toHaveCount(Math.min(5, MODELS.drive.params.length));
 });
 
@@ -105,6 +111,8 @@ test('a gear dragged onto another place moves the block; Undo puts it back', asy
 
 test('Alt+arrows and the strip arrows move the selected block without a mouse', async ({ page }) => {
   const rig = await openRig(page);
+  // Moves wait for the editor's first read to end (the gear is not movable while it is busy).
+  await expect(rig.getByRole('button', { name: 'Add a block…' })).toBeEnabled();
   await gear(page, 2, 'DRV').focus();
   await page.keyboard.press('Alt+ArrowRight');
   await expectRig(page, 'DYN → AMP → DRV → CAB → RVB → VOL');
@@ -198,6 +206,15 @@ test.describe('pictures', () => {
     await expect(rig.locator('.tile-over')).toHaveCount(1);
     await rig.screenshot({ path: `${SHOTS}/matribox-dragging.png`, animations: 'disabled' });
     await items.nth(1).dispatchEvent('dragend', { dataTransfer: data });
+  });
+
+  test('detail strip, based-on line', async ({ page }) => {
+    const rig = await openRig(page);
+    for (const theme of ['dark', 'light'] as const) {
+      await setTheme(page, theme);
+      await gear(page, 2, 'DRV').click();
+      await rig.locator('.rig-detail').screenshot({ path: `${SHOTS}/strip-based-on-${theme}.png`, animations: 'disabled' });
+    }
   });
 
   test('add picker', async ({ page }) => {
