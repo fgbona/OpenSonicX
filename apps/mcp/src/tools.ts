@@ -4,6 +4,7 @@ import packageJson from '../package.json' with { type: 'json' };
 import { describePedals } from './devices.ts';
 import type { MatriboxSession } from './matribox-session.ts';
 import { registerMatriboxLive } from './matribox-live-tools.ts';
+import { fetchCapture } from './matribox-clone.ts';
 import type { Session } from './session.ts';
 
 const { version: VERSION } = packageJson;
@@ -60,6 +61,7 @@ async function reply(tool: string, options: ServerOptions, run: () => Promise<st
 const READ = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
 const LIVE = { readOnlyHint: false, destructiveHint: false, openWorldHint: false } as const;
 const WRITE_SLOT = { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false } as const;
+const WRITE_SLOT_OPEN = { ...WRITE_SLOT, openWorldHint: true } as const;
 
 export function createServer(session: Session, options: ServerOptions = {}): McpServer {
   const server = new McpServer(
@@ -72,7 +74,7 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
         'save_preset and restore_backup overwrite a user slot: only call them when the user asked for that slot, and pass its label as confirm.',
         'Before building a tone from a reference, call list_preset_files: if an approved tone matches the request, load it with import_preset instead of rebuilding it.',
         'To match a reference tone (an artist, a record, a song), work out the gear used on it, call list_models once to see which pedal models are based on that gear (model names are disguised, e.g. "Calif DualM" is a Mesa/Boogie Dual Rectifier), then build the whole chain with one edit_preset: drive, amp, cabinet, EQ, gate, modulation, delay and reverb, with sensible values. Do not ask for details the user did not give: make reasonable choices, say briefly what you chose and why, and invite them to ask for adjustments by ear. When the user says a tone sounds right, offer to keep it with export_preset and notes naming the reference, so next time it loads at once.',
-        'Matribox II Pro: matribox_get_preset shows the loaded preset (chain in signal order, each block\'s model and the real gear it is based on, on/off, parameters with ranges); matribox_list_models is the palette, with each model\'s origin (the real gear: e.g. a model based on "Ibanez TS808" is the Tube Screamer). To plan a tone from a reference, work out the gear used, then find the models whose origin matches it. matribox_build_tone sends a whole chain in one call; matribox_set_param, matribox_set_module_on, matribox_set_model, matribox_add_block, matribox_remove_block and matribox_move_block adjust it. They change the loaded preset only: matribox_save_preset stores it (confirm with the slot label; the slot is backed up first). Matribox writes are experimental (validated on one unit so far): after writing, check with matribox_get_preset and tell the user. matribox_export_preset and matribox_import_preset move whole presets as .prst files, and matribox_restore_backup undoes a matribox_save_preset (both overwrite a slot only with confirm); matribox_backup_all_presets keeps all 240 presets in one file and matribox_restore_all_presets puts them back (confirm "ALL"); they store the whole preset in the slot in one write, assignments, volume and tempo included (experimental). matribox_get_assignments shows the patch volume, tempo, footswitch functions, CTRL 1-4, quick knobs and expression-pedal assignments; matribox_set_volume, matribox_assign_footswitch, matribox_assign_ctrl, matribox_set_footswitch_function, matribox_assign_quick_knob, matribox_assign_expression and matribox_set_expression_range change them live (after a tone for live use, set them: e.g. EXP on the wah, a footswitch on the delay, a quick knob on the drive gain); matribox_tuner, matribox_tap_tempo, matribox_set_bpm, matribox_looper, matribox_drum, matribox_ctrl and matribox_quick_knob send the manual\'s MIDI Control Changes, which the unit does not answer (all experimental). matribox_load_ir loads a WAV from ~/.pocket-master-editor/irs into a user IR slot (confirm "IR<slot>"; an occupied slot only with replace: true; experimental).',
+        'Matribox II Pro: matribox_get_preset shows the loaded preset (chain in signal order, each block\'s model and the real gear it is based on, on/off, parameters with ranges); matribox_list_models is the palette, with each model\'s origin (the real gear: e.g. a model based on "Ibanez TS808" is the Tube Screamer). To plan a tone from a reference, work out the gear used, then find the models whose origin matches it. matribox_build_tone sends a whole chain in one call; matribox_set_param, matribox_set_module_on, matribox_set_model, matribox_add_block, matribox_remove_block and matribox_move_block adjust it. They change the loaded preset only: matribox_save_preset stores it (confirm with the slot label; the slot is backed up first). Matribox writes are experimental (validated on one unit so far): after writing, check with matribox_get_preset and tell the user. matribox_export_preset and matribox_import_preset move whole presets as .prst files, and matribox_restore_backup undoes a matribox_save_preset (both overwrite a slot only with confirm); matribox_backup_all_presets keeps all 240 presets in one file and matribox_restore_all_presets puts them back (confirm "ALL"); they store the whole preset in the slot in one write, assignments, volume and tempo included (experimental). matribox_get_assignments shows the patch volume, tempo, footswitch functions, CTRL 1-4, quick knobs and expression-pedal assignments; matribox_set_volume, matribox_assign_footswitch, matribox_assign_ctrl, matribox_set_footswitch_function, matribox_assign_quick_knob, matribox_assign_expression and matribox_set_expression_range change them live (after a tone for live use, set them: e.g. EXP on the wah, a footswitch on the delay, a quick knob on the drive gain); matribox_tuner, matribox_tap_tempo, matribox_set_bpm, matribox_looper, matribox_drum, matribox_ctrl and matribox_quick_knob send the manual\'s MIDI Control Changes, which the unit does not answer (all experimental). matribox_load_ir loads a WAV from ~/.pocket-master-editor/irs into a user IR slot (confirm "IR<slot>"; an occupied slot only with replace: true; experimental). For gear the Matribox has no model of, find a NAM capture (search_tone3000, a link the user gave, or a file in ~/.pocket-master-editor/nams) and matribox_upload_clone writes it to a CLONE slot (converted, checked in a simulated CLONE block; confirm "CLONE<slot>"; an occupied slot only with replace: true; experimental), then pick it in a CLONE block.',
         'Keep calls few: edit_preset, select_preset, save_preset and import_preset already return the resulting preset, and list_models only needs to be called once per conversation.',
       ].join(' '),
     },
@@ -402,7 +404,7 @@ export function createServer(session: Session, options: ServerOptions = {}): Mcp
     ({ file }) => reply('import_preset', options, () => session.importPreset(file)),
   );
 
-  registerMatriboxTools(server, options);
+  registerMatriboxTools(server, options, session);
   return server;
 }
 
@@ -411,7 +413,7 @@ const noMatribox = (): never => {
 };
 
 /** which_pedal and the Matribox II Pro's tools (prefixed: the Pocket Master's names are frozen). */
-function registerMatriboxTools(server: McpServer, options: ServerOptions): void {
+function registerMatriboxTools(server: McpServer, options: ServerOptions, session: Session): void {
   const matribox = () => options.matribox ?? noMatribox();
 
   server.registerTool(
@@ -474,6 +476,38 @@ function registerMatriboxTools(server: McpServer, options: ServerOptions): void 
       annotations: READ,
     },
     () => reply('matribox_list_captures', options, () => matribox().listCaptures()),
+  );
+
+  server.registerTool(
+    'matribox_upload_clone',
+    {
+      title: 'Write a NAM capture to a Matribox CLONE slot',
+      description:
+        'Matribox II Pro: turns a NAM capture (.nam, converted the way Sonicake\'s editor does; about half a minute to a few minutes) or a ready capture (.clo) into CLONE slot 1..10, which the CLONE module plays. Source: exactly one of file (in ~/.pocket-master-editor/nams), url (an https link the user gave) or toneId (+ modelId) from search_tone3000. The capture is played through a simulated CLONE block first and refused when silent or far too loud. The unit cannot send a capture back, so an occupied slot (its name is not the default "Clone n") is only overwritten with replace: true; only call it when the user asked for that slot, with confirm "CLONE<slot>". matribox_list_captures shows the slots. Experimental: not checked on the unit yet.',
+      inputSchema: {
+        file: z.string().optional().describe('.nam or .clo file name inside ~/.pocket-master-editor/nams'),
+        url: z.string().optional().describe('https link to a .nam or .clo the user gave'),
+        toneId: z.number().int().optional().describe('TONE3000 tone id from search_tone3000 (a NAM capture)'),
+        modelId: z.number().int().optional().describe('TONE3000 model id when the tone has several (the error lists them)'),
+        slot: z.number().int().min(1).max(10).describe('CLONE slot 1..10'),
+        confirm: z.string().describe('Must be "CLONE<slot>", e.g. "CLONE9", confirming the user asked to write that slot'),
+        name: z.string().max(16).optional().describe('Name shown on the unit, 1..16 printable ASCII characters; default: the file or model name cut to 16'),
+        replace: z.boolean().default(false).describe('Overwrite a slot that already holds a capture (it cannot be backed up)'),
+      },
+      annotations: WRITE_SLOT_OPEN,
+    },
+    (args) =>
+      reply('matribox_upload_clone', options, async () => {
+        const sources = [args.file, args.url, args.toneId].filter((v) => v !== undefined);
+        if (sources.length !== 1) throw new Error('give exactly one of file, url or toneId');
+        const source =
+          args.file !== undefined
+            ? { bytes: await session.readNamsFile(args.file), name: args.file }
+            : args.url !== undefined
+              ? { bytes: await fetchCapture(args.url), name: decodeURIComponent(new URL(args.url).pathname) }
+              : await session.downloadTone(args.toneId as number, args.modelId);
+        return matribox().uploadClone(source.bytes, source.name, args);
+      }),
   );
 
   registerMatriboxWrites(server, options, matribox);

@@ -10,7 +10,7 @@ import { finishClo, parseNam, parseReferenceDi, PROBE_LEVELS, REFERENCE_DI, refe
 
 export type Converter = (namJson: string, onProgress?: (done: number, total: number) => void) => Promise<CloArrays>;
 
-async function referenceDi(cacheDir: string): Promise<Float32Array> {
+export async function referenceDi(cacheDir: string): Promise<Float32Array> {
   const path = join(cacheDir, 'nam_reference_di_44100.f32');
   try {
     return await parseReferenceDi(new Uint8Array(await readFile(path)));

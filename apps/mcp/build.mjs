@@ -3,7 +3,7 @@
 import { build } from 'esbuild';
 
 await build({
-  entryPoints: ['src/server.ts', 'src/convert-worker.ts'],
+  entryPoints: ['src/server.ts', 'src/convert-worker.ts', 'src/clone-worker.ts'],
   bundle: true,
   platform: 'node',
   format: 'esm',

@@ -48,6 +48,7 @@
   "matribox_set_volume": "{ volume: integer }",
   "matribox_tap_tempo": "{ channel?: integer }",
   "matribox_tuner": "{ on: boolean, channel?: integer }",
+  "matribox_upload_clone": "{ file?: string, url?: string, toneId?: integer, modelId?: integer, slot: integer, confirm: string, name?: string, replace?: boolean }",
   "rename_slot": "{ kind: \"ir\" | \"profile\", slot: integer, name: string }",
   "restore_backup": "{ file: string, slot?: string, confirm: string }",
   "revert_preset": "{  }",
