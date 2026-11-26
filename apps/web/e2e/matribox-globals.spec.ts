@@ -57,7 +57,7 @@ test('Global options shows what the unit holds and writes each change to it', as
   await expect.poll(() => readFloat32LE(unit.globals.eq, 14 * 4)).toBe(3);
   await dialog.getByRole('slider', { name: /^Band 4 · 5000 Hz/ }).fill('-5');
   await expect.poll(() => readFloat32LE(unit.globals.eq, 22 * 4)).toBe(-5);
-  await expect(dialog.getByText('Low cut 80 Hz · high cut 8000 Hz')).toBeVisible();
+  await expect(dialog.getByText('Lo Cut 80 Hz · Hi Cut 8000 Hz')).toBeVisible();
 
   // The tuner and tempo controls now go on the unit's channel.
   await dialog.getByRole('button', { name: 'Done' }).click();

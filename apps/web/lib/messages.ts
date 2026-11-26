@@ -406,7 +406,7 @@ export const en = {
   'mbGlobal.eqOn': 'Global EQ on',
   'mbGlobal.eqLevel': 'Level',
   'mbGlobal.band': 'Band {n} · {freq}',
-  'mbGlobal.cuts': 'Low cut {low} · high cut {high}',
+  'mbGlobal.cuts': 'Lo Cut {low} · Hi Cut {high}',
   'mbGlobal.cutOff': 'off',
   'error.mbTempoNotAccepted': "The Matribox did not switch Global Tempo on: accept it on the unit's screen (it needs a BPM first), then try again.",
   'mb.controls': 'Tuner and tempo',
