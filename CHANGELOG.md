@@ -6,11 +6,18 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Fixed
+## [1.2.0] - 2026-11-26
 
-- Matribox II Pro: the estimated DSP load no longer reads past 100 %: a chain over the budget
-  says "over the limit", and its bar is drawn (full and red) instead of a `<meter>` that showed
-  empty in the dark theme.
+The Matribox II Pro gets its tones made by AI end to end. NAM captures convert into the CLONE
+slots the official editor's way and upload from the editor's new Clones panel (on the owner's
+unit, our clone of a capture sounded the same as the official editor's), and the tone assistant
+can now set footswitches, CTRL 1-4, the expression pedal and the quick knobs, keeps chains within
+an estimated DSP budget, and starts the drum machine. The editor gains Global options (inputs,
+AUX, global EQ, Global Tempo, MIDI, USB audio, clock), a drum machine panel, user IR and clone
+renaming, follows knobs turned on the unit at once, and the desktop app serves the editor's tools
+to an AI over a local MCP connection. Protocol facts and the clone fit come from, or were checked
+against, zxmarcos/waveod and zxmarcos/matribox-studio (MIT; see THIRD_PARTY_NOTICES.md). Matribox
+writes added in this release follow those sources and were not all captured on a unit yet.
 
 ### Added
 
@@ -298,6 +305,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Matribox II Pro: the estimated DSP load no longer reads past 100 %: a chain over the budget
+  says "over the limit", and its bar is drawn (full and red) instead of a `<meter>` that showed
+  empty in the dark theme.
 - Matribox II Pro: **a knob turned on the unit now follows in the editor at once.** The unit's
   firmware holds back a repeated knob notice (the newest kept) until 150 ms pass without one or 10
   are held (stock FUN_0003568C, as zxmarcos/waveod reimplements it; capture mb-42 got a gain knob
@@ -1757,7 +1767,8 @@ Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/OpenSonicX/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/fgbona/OpenSonicX/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/fgbona/OpenSonicX/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/fgbona/OpenSonicX/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/fgbona/OpenSonicX/compare/v0.17.1...v1.0.0
 [0.17.1]: https://github.com/fgbona/OpenSonicX/compare/v0.17.0...v0.17.1
