@@ -4,16 +4,11 @@ export const EQ_FS = 48000;
 export const EQ_MIN_HZ = 20;
 export const EQ_MAX_HZ = 20000;
 
-// ponytail: the unit's real filter shapes are not known. Each band's Q comes from the globals when it is a
-// usable number (docs/matribox.md "Global EQ": Q words 2, 9, 13, 17, 21, 29); the fallbacks are Q 1 for a
-// band and 0.707 for a cut, and the cuts are drawn as 2nd-order filters. Ceiling: the curve is an estimate,
-// not a measurement. Upgrade path: compare it with a sweep of the unit and fix the shapes that differ.
-const BAND_Q = 1;
-const CUT_Q = Math.SQRT1_2;
+// Every filter takes the Q the unit stores (docs/matribox.md "Global EQ"); one with no usable Q is left out.
 
 export interface EqFilter {
   readonly frequency: number;
-  readonly q?: number;
+  readonly q: number;
 }
 export interface EqBandSpec extends EqFilter {
   readonly gain: number;
@@ -29,7 +24,7 @@ export interface EqSpec {
 
 type Biquad = readonly [b0: number, b1: number, b2: number, a0: number, a1: number, a2: number];
 
-const usableQ = (q: number | undefined, fallback: number) => (q !== undefined && Number.isFinite(q) && q > 0 ? q : fallback);
+const usable = (q: number) => Number.isFinite(q) && q > 0;
 
 function peaking(f: number, q: number, gainDb: number): Biquad {
   const A = 10 ** (gainDb / 40);
@@ -67,10 +62,10 @@ function power([b0, b1, b2, a0, a1, a2]: Biquad, f: number): number {
 /** The filters the spec turns on, as biquads. */
 export function eqBiquads(spec: EqSpec): Biquad[] {
   const filters: Biquad[] = [];
-  if (spec.lowCut) filters.push(highPass(spec.lowCut.frequency, usableQ(spec.lowCut.q, CUT_Q)));
-  if (spec.highCut) filters.push(lowPass(spec.highCut.frequency, usableQ(spec.highCut.q, CUT_Q)));
+  if (spec.lowCut && usable(spec.lowCut.q)) filters.push(highPass(spec.lowCut.frequency, spec.lowCut.q));
+  if (spec.highCut && usable(spec.highCut.q)) filters.push(lowPass(spec.highCut.frequency, spec.highCut.q));
   for (const b of spec.bands) {
-    if (b.on !== false && b.gain !== 0) filters.push(peaking(b.frequency, usableQ(b.q, BAND_Q), b.gain));
+    if (b.on !== false && b.gain !== 0 && usable(b.q)) filters.push(peaking(b.frequency, b.q, b.gain));
   }
   return filters;
 }

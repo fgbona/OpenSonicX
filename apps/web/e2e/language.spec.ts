@@ -88,6 +88,6 @@ test('the whole editor speaks Portuguese', async ({ page, pedal }) => {
   await page.getByRole('button', { name: pt['action.cancel'] }).click();
 
   await page.getByRole('button', { name: pt['settings.open'] }).click();
-  await expect(page.getByRole('dialog', { name: pt['settings.title'] })).toBeVisible();
+  await expect(page.getByRole('region', { name: pt['settings.title'] })).toBeVisible();
   await expectPortuguese(page, 'global options');
 });

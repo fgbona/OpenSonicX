@@ -86,11 +86,16 @@ function Body({ block, look }: { block: MbResolvedBlock; look: string }) {
   return null;
 }
 
+/** Whether BlockScreen draws something for this block (gates, compressors, delays, reverbs, EQs). */
+export function blockHasScreen(block: MbResolvedBlock): boolean {
+  const key = mbLookKey(block);
+  return block.model !== null && (key === 'dyn' ? isGate(block) || block.model?.type === 'Comp' : ['dly', 'rvb', 'eq'].includes(key));
+}
+
 /** The block's live "screen": a small display that redraws from its parameters; nothing for other modules. */
 export function BlockScreen({ block }: { block: MbResolvedBlock }) {
   const key = mbLookKey(block);
-  const drawn = key === 'dyn' ? isGate(block) || block.model?.type === 'Comp' : ['dly', 'rvb', 'eq'].includes(key);
-  if (!block.model || !drawn) return null;
+  if (!blockHasScreen(block)) return null;
   return (
     <svg className="viz-screen" viewBox={`0 0 ${W} ${H}`} aria-hidden="true" focusable="false">
       <Grid />

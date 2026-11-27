@@ -8,7 +8,9 @@ import { AmpDecor } from './AmpDecor';
 import { MatriboxParam } from './MatriboxParam';
 import { ModelPicker } from './ModelPicker';
 import { ModuleIcon } from './ModuleIcon';
-import { BlockScreen } from './workstation/BlockScreen';
+import { BlockScreen, blockHasScreen } from './workstation/BlockScreen';
+import { rigCategory, rigIconSpec } from '@/lib/rigIcon';
+import { RigIcon } from './rig/RigIcon';
 import { useI18n } from './I18n';
 import { useState } from 'react';
 
@@ -112,18 +114,32 @@ export function MatriboxBlockPanel({ block, values, userSlot, disabled, onParam,
                   ))}
                 </div>
               )}
-              <BlockScreen block={block} />
-              <div className="editor-params">
-                {shown.map((p) => (
-                  <MatriboxParam
-                    key={p.id}
-                    param={p}
-                    spec={block.model?.params.find((m) => m.id === p.id)}
-                    disabled={disabled}
-                    dirty={paramDirty?.(p.id, p.value) ?? false}
-                    onChange={(v) => onParam(block.slot, p.id, v)}
-                  />
-                ))}
+              <div className={amp ? 'ws-face-row' : 'ws-face-row has-visual'}>
+                {/* Beside the knobs: the block's live screen, or its gear drawing and model. */}
+                {!amp && (
+                  <div className="ws-face-visual">
+                    {blockHasScreen(block) ? (
+                      <BlockScreen block={block} />
+                    ) : (
+                      <>
+                        <RigIcon spec={rigIconSpec(rigCategory(block), `${block.moduleIndex}:${block.fxid}`, block.params.length, block.model.name)} size={96} />
+                        <span className="ws-face-model">{block.model.name}</span>
+                      </>
+                    )}
+                  </div>
+                )}
+                <div className="editor-params">
+                  {shown.map((p) => (
+                    <MatriboxParam
+                      key={p.id}
+                      param={p}
+                      spec={block.model?.params.find((m) => m.id === p.id)}
+                      disabled={disabled}
+                      dirty={paramDirty?.(p.id, p.value) ?? false}
+                      onChange={(v) => onParam(block.slot, p.id, v)}
+                    />
+                  ))}
+                </div>
               </div>
             </>
           )

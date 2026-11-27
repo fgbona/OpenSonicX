@@ -1,6 +1,6 @@
 # Workstation UI (design proposal, branch `design/workstation-ui`)
 
-Status: **second pass, for the owner to evaluate**. Not for merge until approved.
+Status: **approved by the owner as the default interface** (2026-11-27). It will keep improving after it lands.
 
 The goal is an editor that works like a multi-effects workstation (HX Edit, Axe-Edit, Tone Studio,
 Neural DSP): **one fixed screen**, not a long page. The pedal stays the source of truth: the screen
@@ -122,7 +122,7 @@ chassis with the same layout; the OLED stays dark.
 | Controls     | Footswitches/CTRL, quick knobs, expression, tempo/MIDI, drums | — (the pedal's controls are in ⚙)     |
 | Library      | Tone library                                                 | Preset files (export/import), tone library |
 | Backups      | Back up / restore all, backups, desktop AI connection        | Backups, desktop AI connection, SysEx log |
-| Global & EQ  | Button to the global options and EQ dialog                   | Button to the ⚙ dialog (incl. factory reset) |
+| Global & EQ  | The global options and the EQ graph, inline (no dialog)      | The global options, inline (incl. factory reset); read when the tab first opens |
 
 ## Stacked (721–1279 px) and phone
 
@@ -135,6 +135,12 @@ Assistant → Clones & IRs → Controls → Library → Backups → Global & EQ 
 ```
 
 ## Block panel
+
+A model with few knobs does not leave the panel half empty. The knob row is centred, and beside
+it sits the block's live screen (compressor, gate, delay, reverb, EQ) or, for other blocks, its
+gear drawing and model name. The model's description is a small secondary line under the knobs.
+The Matribox's experimental notice is an amber LED in the preset bar; hovering or focusing it
+shows the full text.
 
 ```
 ┌ 3. AMP block ────────────────────────────────────────────────────────────┐
@@ -168,18 +174,22 @@ but the preset still is.
 
 ## Matribox units
 
-`models.json` and `model-text.json` give ranges, steps, defaults and option labels, but **no
-units**, so none are shown. The global EQ in the Global options dialog already shows Hz and dB:
-`docs/matribox.md` documents those. Missing, and likely from the ranges, but not confirmed, so not
-shown:
-- DLY Time (20..300 / 20..4000, likely ms)
-- CAB/IR Low Cut (19..2000) and High Cut (2000..20001), likely Hz with 19 / 20001 meaning off
-- RVB/MOD Pre Delay (0..100 / 0..300)
-- MOD/WAH Rate (0.1..10, likely Hz)
-- every 0..100 level/tone knob (a percentage scale)
+Units come from the owner's manual (v1.2.2), read for facts only. They are stored in
+`packages/core/src/matribox/units.json` (keyed `MODULE:Label`, with a per-model `MODULE:fxid:Label`
+override) and shown by `mbFormatValue` (`"-3 dB"`, `"1.2 kHz"`). A parameter keeps no unit when the
+manual does not state one.
 
-Confirming them on the unit and adding a `unit` field to `models.json` would make the knobs show
-them with no UI change.
+| Module / label        | Unit  | Why it is certain                    |
+|-----------------------|-------|--------------------------------------|
+| FREQ Low/Hi Pitch     | st    | the manual says semitones            |
+| FREQ Fine (ring mod)  | Hz    | the manual gives ±50 Hz              |
+| MOD Detune            | cents | the manual gives ±50 cents           |
+| DLY Time R%           | %     | a ratio, named so by the unit        |
+
+These are left without a unit (likely, not stated): DLY Time (ms, from the 20..4000 range only), Rate
+(0.1..10, likely Hz), gate Attack/Release/Hold, RVB Pre Delay, CAB/IR Low/High Cut (Hz with 19 / 20001 =
+off), EQ block gains (−50..50, not dB), and the 0..100 levels. The global EQ shows Hz, dB and Q, which
+`docs/matribox.md` documents.
 
 ## Trade-offs
 

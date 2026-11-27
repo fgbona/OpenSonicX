@@ -239,7 +239,7 @@ test('the firmware version shows in Global options, and a different one gets a n
   await connect(page, pedal);
   await expect(page.getByText(/the editor was tested on/)).toBeHidden();
   await page.getByRole('button', { name: 'Global options' }).click();
-  await expect(page.getByRole('dialog', { name: 'Global options' }).getByText('V1.3.3')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Global options' }).getByText('V1.3.3')).toBeVisible();
   await page.keyboard.press('Escape');
 
   pedal.globals = Uint8Array.from(pedal.globals.map((b, i) => (i === 6 ? 0 : i === 7 ? 4 : b))); // 00 04 01 01: V1.4.0

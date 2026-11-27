@@ -34,6 +34,8 @@ interface Props {
   role?: PresetRole | 'free';
   /** "Bank 17": the bank the slot is in. */
   bank?: string;
+  /** A notice shown as a small LED beside the actions (the experimental support). */
+  notice?: ReactNode;
 }
 
 /** The loaded Matribox preset as the Pocket Master's preset header: big label and name, its actions, patch volume as a knob.
@@ -60,6 +62,7 @@ export function MatriboxHeader(p: Props) {
       </div>
       <div className="mb-head-end">
         <div className="mb-head-actions">
+          {p.notice}
           <button type="button" className="btn btn-icon" disabled={p.disabled || !p.canUndo} aria-label={t('action.undo')} title={t('action.undo')} onClick={p.onUndo}>
             <UndoIcon />
           </button>

@@ -15,7 +15,8 @@ const fromUnit = (page: Page, frame: Uint8Array) => page.evaluate((bytes) => win
 async function openGlobals(page: Page) {
   await connectMatribox(page);
   await page.getByRole('button', { name: 'Global options' }).click();
-  return page.getByRole('dialog', { name: 'Global options' });
+  // No dialog: the button opens the dock's Global & EQ tab, where the settings live.
+  return page.getByRole('region', { name: 'Global options' });
 }
 
 test('Global options shows what the unit holds and writes each change to it', async ({ page, unit }) => {
@@ -59,7 +60,7 @@ test('Global options shows what the unit holds and writes each change to it', as
   // The EQ: the ON button, the Level knob, and a node per band on the graph.
   const eqWord = (word: number) => readFloat32LE(unit.globals.eq, word * 4);
   const node2 = dialog.getByRole('slider', { name: /^Band 2 · 500 Hz/ });
-  const node4 = dialog.getByRole('slider', { name: /^Band 4 · 5000 Hz/ });
+  const node4 = dialog.getByRole('slider', { name: /^Band 4 · 5 kHz/ });
   await expect(dialog.getByRole('slider', { name: /^Band \d · / })).toHaveCount(4);
   await expect(node2).toHaveAttribute('aria-valuenow', '0');
   await expect(node4).toHaveAttribute('aria-valuetext', '+1 dB');
@@ -104,12 +105,43 @@ test('Global options shows what the unit holds and writes each change to it', as
   await dialog.getByRole('slider', { name: /^Band 4 gain/ }).press('ArrowUp');
   await expect.poll(() => eqWord(22)).toBe(-19);
 
-  // The cuts are shown only.
-  await expect(dialog.getByText('80 Hz', { exact: true })).toBeVisible();
-  await expect(dialog.getByText('8000 Hz', { exact: true })).toBeVisible();
+  // The cuts: nodes L and H, and their frequency knobs.
+  await expect(dialog.getByRole('slider', { name: 'Lo Cut · 80 Hz' })).toHaveAttribute('aria-valuenow', '80');
+  await expect(dialog.getByRole('slider', { name: 'Hi Cut · 8 kHz' })).toHaveAttribute('aria-valuenow', '8000');
+  await expect(dialog.getByRole('slider', { name: 'Lo Cut frequency' })).toHaveAttribute('aria-valuetext', '80 Hz');
+  await typeKnob(dialog, 'Lo Cut frequency', '120');
+  await expect.poll(() => eqWord(1)).toBe(120);
+  await typeKnob(dialog, 'Hi Cut frequency', '9000');
+  await expect.poll(() => eqWord(28)).toBe(9000);
+  await dialog.getByRole('slider', { name: /^Lo Cut · / }).dblclick(); // a double-click turns the cut off
+  await expect.poll(() => eqWord(1)).toBe(19);
+  await expect(dialog.getByRole('slider', { name: 'Lo Cut frequency' })).toHaveAttribute('aria-valuetext', 'off');
+  const hiNode = dialog.getByRole('slider', { name: /^Hi Cut · / });
+  await hiNode.focus();
+  await hiNode.press('ArrowLeft');
+  await expect.poll(() => eqWord(28)).toBeLessThan(9000);
+
+  // Frequency and Q of a band: the knobs, the keyboard and a sideways drag.
+  await typeKnob(dialog, 'Band 2 frequency', '600');
+  await expect.poll(() => eqWord(12)).toBe(600);
+  await expect(dialog.getByRole('slider', { name: /^Band 2 · 600 Hz/ })).toBeVisible();
+  await typeKnob(dialog, 'Band 2 Q', '2');
+  await expect.poll(() => eqWord(13)).toBeCloseTo(2, 3);
+  const band2 = dialog.getByRole('slider', { name: /^Band 2 · / });
+  await band2.focus();
+  await band2.press('Alt+ArrowUp');
+  await expect.poll(() => eqWord(13)).toBeCloseTo(2.1, 3);
+  await band2.press('ArrowRight');
+  await expect.poll(() => eqWord(12)).toBeGreaterThan(600);
+  const band1 = dialog.getByRole('slider', { name: /^Band 1 · / });
+  const at = (await band1.boundingBox())!;
+  await page.mouse.move(at.x + at.width / 2, at.y + at.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(at.x + at.width / 2 + 50, at.y + at.height / 2, { steps: 5 });
+  await page.mouse.up();
+  await expect.poll(() => eqWord(8)).toBeGreaterThan(250);
 
   // The tuner and tempo controls now go on the unit's channel.
-  await dialog.getByRole('button', { name: 'Done' }).click();
   await openDock(page, 'Controls');
   await expect(page.getByRole('combobox', { name: 'MIDI channel' })).toHaveValue('5');
 });
@@ -129,7 +161,7 @@ test('a global write the unit does not confirm is an error, and the unit is read
   const dialog = await openGlobals(page);
   unit.echoes = false; // the unit takes the write but does not confirm it
   await dialog.getByRole('radiogroup', { name: 'Input mode' }).getByRole('radio', { name: 'Line' }).click();
-  await expect(dialog.getByRole('alert')).toContainText('did not confirm the write', { timeout: 10_000 });
+  await expect(page.getByRole('alert').filter({ hasText: 'did not confirm the write' })).toBeVisible({ timeout: 10_000 });
   // The read after the failure shows what the unit holds (it did take it here).
   await expect(dialog.getByRole('radiogroup', { name: 'Input mode' }).getByRole('radio', { name: 'Line' })).toHaveAttribute('aria-checked', 'true');
 });
@@ -140,7 +172,7 @@ test('Global Tempo switched on but not accepted on the unit says so', async ({ p
   await expect.poll(() => unit.globals.general[MB_GLOBALS.tempoBpm.at]).toBe(120);
   unit.echoes = false; // the unit waits for the prompt on its screen to be accepted
   await dialog.getByRole('switch', { name: 'Global tempo' }).click();
-  await expect(dialog.getByRole('alert')).toContainText("accept it on the unit's screen", { timeout: 10_000 });
+  await expect(page.getByRole('alert').filter({ hasText: "accept it on the unit's screen" })).toBeVisible({ timeout: 10_000 });
 });
 
 test('the folded groups write USB audio, EXP 2, MIDI outputs and clock, Auto CAB and bank select', async ({ page, unit }) => {

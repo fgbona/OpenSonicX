@@ -8,8 +8,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- **Workstation UI (design proposal, `design/workstation-ui`, not for merge until approved).**
-  See [docs/design/workstation-ui.md](docs/design/workstation-ui.md) for the layouts, the
+- **The workstation UI is the editor's new default interface.**
+  See [docs/design/workstation-ui.md](docs/design/workstation-ui.md) for the layouts, the visual system
+  and what is still open.
   decisions and what is still open.
   - **Fixed-screen shell from 1280 px up**, like HX Edit or Axe-Edit. The page itself never
     scrolls; only the bank list, the block panel and the open dock tab do.
@@ -49,7 +50,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
     - Compressor, gate, delay, reverb and EQ blocks draw their behaviour on a small screen in their
       panel, and the expression pedal shows its heel-to-toe range.
     - The global settings' level sliders are now knobs.
-  - A model with more than eight parameters shows its knobs in pages of eight.
+  - A model with more than eight parameters shows its knobs in pages of eight. Beside the knobs, the
+    block panel shows the block's screen, or its gear drawing and model. The model description is a
+    quiet line under them.
+  - **Global options are no longer a dialog.** They are the dock's Global & EQ tab, which the
+    Global options button (Matribox) or ⚙ (Pocket Master) opens.
+  - The Matribox's experimental notice is now an LED in the preset bar, with the full text in a
+    tooltip.
   - Matribox knobs show no units: its model data has none (the missing ones are listed in the
     design doc).
 

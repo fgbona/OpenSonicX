@@ -10,6 +10,7 @@ import { useTone3000 } from '@/lib/useTone3000';
 import { useUndoKeys } from '@/lib/useUndoKeys';
 import { useMatriboxDevice } from '@/lib/workstation/useDevice';
 import { Dock } from './workstation/Dock';
+import { StatusLed } from './workstation/StatusLed';
 import { FootswitchStrip } from './workstation/FootswitchStrip';
 import { slotRole } from '@/lib/workstation/banks';
 import type { CloneSource } from '@/lib/cloneSource';
@@ -92,7 +93,12 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
 
   // The dock's open tab (null: folded). The assistant's capture upload opens the Clones tab.
   const [dock, setDock] = useState<string | null>(null);
-  const [globalsOpen, setGlobalsOpen] = useState(false);
+  // Global options are the dock's Global & EQ tab; below the shell the button scrolls to them.
+  const openGlobals = () => {
+    mb.clearError();
+    setDock('ws-global');
+    requestAnimationFrame(() => document.getElementById('ws-global')?.scrollIntoView({ block: 'start' }));
+  };
   // While it asks, the Clones tab shows (its confirmation lives there); then the tab the person was on comes back.
   const before = useRef<string | null>(null);
   useEffect(() => {
@@ -113,9 +119,11 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
             {te(mb.error)}
           </p>
         )}
-        <p className="mb-banner" role="status">
-          {t('mb.experimental')}
-        </p>
+        {!unit && (
+          <p className="mb-banner" role="status">
+            {t('mb.experimental')}
+          </p>
+        )}
         {!unit || !assignments ? (
           <p className="muted">{t(mb.busy ? 'status.reading' : 'mb.notRead')}</p>
         ) : (
@@ -139,12 +147,15 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
                   setSaveOpen(true);
                 }}
                 device={device}
+                notice={<StatusLed label={t('ws.experimental')} text={t('mb.experimental')} />}
                 role={slotRole(unit.current, 4)}
                 bank={t('ws.bank', { n: Math.floor(unit.current / 4) + 1 })}
                 files={
                   <>
                     <MatriboxPresetFile mb={mb} />
-                    <MatriboxGlobals mb={mb} open={globalsOpen} onOpen={setGlobalsOpen} />
+                    <button type="button" className="btn" onClick={openGlobals}>
+                      {t('settings.open')}
+                    </button>
                   </>
                 }
               />
@@ -245,22 +256,7 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
                 {
                   id: 'ws-global',
                   label: 'ws.rack.global',
-                  content: (
-                    <section className="panel ws-global">
-                      <p className="muted">{t('ws.globalNote')}</p>
-                      <button
-                        type="button"
-                        className="btn"
-                        disabled={disabled}
-                        onClick={() => {
-                          mb.clearError();
-                          setGlobalsOpen(true);
-                        }}
-                      >
-                        {t('ws.globalEdit')}
-                      </button>
-                    </section>
-                  ),
+                  content: <MatriboxGlobals mb={mb} />,
                 },
               ]}
             />

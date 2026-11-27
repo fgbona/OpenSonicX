@@ -1,10 +1,9 @@
 'use client';
 
-import { type ReactNode, useState } from 'react';
+import type { ReactNode } from 'react';
 import { MB_FS_FUNCTIONS, MB_GLOBALS, type MbGlobalSetting } from '@pocket-master/core';
 import type { MessageKey } from '@/lib/messages';
 import type { Matribox } from '@/lib/useMatribox';
-import { Dialog } from './Dialog';
 import { Knob } from './Knob';
 import { Segmented } from './SettingsDialog';
 import { useI18n } from './I18n';
@@ -84,13 +83,10 @@ export function Slider(p: { label: string; value: number; min: number; max: numb
  * Global options of the Matribox II Pro: the settings whose write was captured from the official
  * editor (core globals.ts), read when the editor connects and kept up to date with what is changed
  * on the unit. Each change is one write, confirmed by the unit; brightness and the EQ's frequencies are shown only.
+ * They live in the workstation dock's Global & EQ tab, a page of the unit rather than a dialog.
  */
-/** `open`/`onOpen`: the dialog opened from elsewhere too (the workstation dock's Global tab). */
-export function MatriboxGlobals({ mb, open: shown, onOpen }: { mb: Matribox; open?: boolean; onOpen?: (open: boolean) => void }) {
-  const { t, te } = useI18n();
-  const [own, setOwn] = useState(false);
-  const open = shown ?? own;
-  const setOpen = onOpen ?? setOwn;
+export function MatriboxGlobals({ mb }: { mb: Matribox }) {
+  const { t } = useI18n();
   const g = mb.globals;
   const off = mb.busy !== null || !g;
   const general = g?.general;
@@ -99,19 +95,11 @@ export function MatriboxGlobals({ mb, open: shown, onOpen }: { mb: Matribox; ope
   const levelSlider = (setting: 'usbRecLevel' | 'usbMonitorLevel', label: string) =>
     general && <Slider label={label} value={general[setting]} min={MB_GLOBALS[setting].min} max={MB_GLOBALS[setting].max} unit="dB" disabled={off} onChange={set(setting)} />;
   return (
-    <>
-      <button
-        type="button"
-        className="btn"
-        disabled={mb.busy !== null}
-        onClick={() => {
-          mb.clearError();
-          setOpen(true);
-        }}
-      >
-        {t('settings.open')}
-      </button>
-      <Dialog open={open} title={t('settings.title')} onClose={() => setOpen(false)}>
+    <section className="panel ws-globals" aria-label={t('settings.title')}>
+      <div className="panel-head">
+        <h2>{t('settings.title')}</h2>
+      </div>
+      <div className="ws-globals-body">
         {!g || !general ? (
           <p className="muted">{mb.busy ? t('settings.reading') : t('settings.unreadable')}</p>
         ) : (
@@ -222,21 +210,11 @@ export function MatriboxGlobals({ mb, open: shown, onOpen }: { mb: Matribox; ope
             </FoldedGroup>
             <section className="settings-group" aria-label={t('mbGlobal.eq')}>
               <h3>{t('mbGlobal.eq')}</h3>
-              <EqGraph eq={g.eq} eqOn={g.eqOn} disabled={off} onOn={mb.setEqOn} onLevel={mb.setEqLevel} onGain={mb.setEqGain} />
+              <EqGraph eq={g.eq} eqOn={g.eqOn} disabled={off} onOn={mb.setEqOn} onLevel={mb.setEqLevel} onGain={mb.setEqGain} onFrequency={mb.setEqFrequency} onQ={mb.setEqQ} />
             </section>
           </div>
         )}
-        {mb.error && (
-          <p className="alert" role="alert">
-            {te(mb.error)}
-          </p>
-        )}
-        <div className="sheet-actions">
-          <button type="button" className="btn btn-primary" onClick={() => setOpen(false)}>
-            {t('action.done')}
-          </button>
-        </div>
-      </Dialog>
-    </>
+      </div>
+    </section>
   );
 }

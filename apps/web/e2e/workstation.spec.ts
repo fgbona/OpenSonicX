@@ -155,9 +155,13 @@ test('the dock has real tabs: one panel at a time, arrow keys move, the open tab
   await expect(page.getByRole('tabpanel', { name: 'Controls' }).getByText('Footswitch A', { exact: true }).first()).toBeVisible();
 
   await tabs.getByRole('tab', { name: 'Global & EQ' }).click();
-  await page.getByRole('button', { name: 'Edit global settings and EQ…' }).click();
-  await expect(page.getByRole('dialog', { name: 'Global options' })).toBeVisible();
-  await page.getByRole('dialog', { name: 'Global options' }).getByRole('button', { name: 'Done' }).click();
+  // Global options are this tab, not a dialog: the settings and the EQ graph are right there.
+  await expect(page.getByRole('region', { name: 'Global options' }).getByRole('img', { name: 'Global EQ response' })).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  // The preset bar's Global options button opens the same tab.
+  await tabs.getByRole('tab', { name: 'Assistant' }).click();
+  await page.getByRole('button', { name: 'Global options', exact: true }).click();
+  await expect(tabs.getByRole('tab', { name: 'Global & EQ' })).toHaveAttribute('aria-selected', 'true');
 
   await tabs.getByRole('tab', { name: 'Global & EQ' }).click();
   await expect(page.getByRole('tabpanel')).toHaveCount(0);

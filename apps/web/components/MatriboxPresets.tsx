@@ -32,7 +32,10 @@ export function MatriboxPresets({ names, current, edited, onLoad }: Props) {
     const f = filter.trim().toLowerCase();
     const shown = names.map((p, i) => ({ i, name: p.name, label: mbPresetLabel(i) })).filter((p) => !f || p.name.toLowerCase().includes(f) || p.label.toLowerCase() === f);
     const bankOf = (i: number) => Math.floor(i / BANK_SIZE) + 1;
-    return [...new Set(shown.map((p) => bankOf(p.i)))].map((bank) => ({ bank, presets: shown.filter((p) => bankOf(p.i) === bank) }));
+    return [...new Set(shown.map((p) => bankOf(p.i)))].map((bank) => {
+      const presets = shown.filter((p) => bankOf(p.i) === bank);
+      return { bank, presets, prefix: sharedPrefix(presets.map((p) => p.name)) };
+    });
   }, [names, filter]);
 
   // The loaded preset in view: the list is long (60 banks). Only the list scrolls, never the page.
@@ -58,11 +61,11 @@ export function MatriboxPresets({ names, current, edited, onLoad }: Props) {
       </button>
       <input className="sidebar-search" type="search" value={filter} placeholder={t('presets.filter')} aria-label={t('presets.filter')} onChange={(e) => setFilter(e.target.value)} />
       <ul className="sidebar-list mb-banks" ref={listRef}>
-        {banks.map(({ bank, presets }) => (
+        {banks.map(({ bank, presets, prefix }) => (
           <li key={bank} className="mb-bank">
             <span className="mb-bank-label" id={`mb-bank-${bank}`}>
               {t('mb.bank', { n: bank })}
-              {sharedPrefix(presets.map((p) => p.name)) && <span className="ws-bank-prefix"> · {sharedPrefix(presets.map((p) => p.name))}</span>}
+              {prefix && <span className="ws-bank-prefix"> · {prefix}</span>}
             </span>
             <ul className="mb-bank-presets" aria-labelledby={`mb-bank-${bank}`}>
               {presets.map((p) => (

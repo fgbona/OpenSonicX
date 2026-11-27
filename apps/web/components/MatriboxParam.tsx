@@ -1,6 +1,6 @@
 'use client';
 
-import type { MbParam, MbResolvedParam } from '@pocket-master/core';
+import { mbFormatValue, type MbParam, type MbResolvedParam } from '@pocket-master/core';
 import { mbControl, mbSteps } from '@/lib/matriboxLook';
 import { Knob } from './Knob';
 import { useI18n } from './I18n';
@@ -79,9 +79,9 @@ export function MatriboxParam({ param, spec, disabled, dirty = false, onChange }
       min={param.min}
       max={param.max}
       step={range.step > 0 ? range.step : 1}
-      display={round(value)}
+      display={mbFormatValue(value, spec ?? {})}
       defaultValue={spec?.defaultValue}
-      hint={percent ? undefined : `${round(param.min)} … ${round(param.max)}`}
+      hint={percent ? undefined : `${round(param.min)} … ${round(param.max)}${spec?.unit ? ` ${spec.unit}` : ''}`}
       disabled={disabled}
       dirty={dirty}
       onChange={onChange}

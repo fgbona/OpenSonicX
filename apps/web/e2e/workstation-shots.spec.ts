@@ -25,6 +25,10 @@ for (const t of ['dark', 'light'] as const) {
     await connectMatribox(page);
     await edited(page);
     await page.screenshot({ path: `${dir}/mb-1440-${t}.png` });
+    // The DRV has three knobs: the panel fills with its gear and model beside them.
+    await page.locator('section.editor').screenshot({ path: `${dir}/mb-1440-${t}-block-3knobs.png` });
+    await page.getByRole('tab', { name: 'Global & EQ' }).click();
+    await page.screenshot({ path: `${dir}/mb-1440-${t}-dock-global.png` });
     await page.getByRole('tab', { name: 'Clones & IRs' }).click();
     await page.screenshot({ path: `${dir}/mb-1440-${t}-dock-clones.png` });
     await page.getByRole('tab', { name: 'Controls' }).click();

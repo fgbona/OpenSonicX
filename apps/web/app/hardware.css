@@ -275,3 +275,70 @@
 }
 /* A block brought into view keeps a little room around it, clear of the screen's edge. */
 .tile, .mb-tile-add { scroll-margin: 16px; }
+
+/* ── The experimental notice as an LED with a tooltip, in the preset bar ──────────────────── */
+.ws-status-led { position: relative; display: inline-flex; }
+.ws-status-led-button {
+  display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 5px; cursor: help;
+  background: var(--ws-recess); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+:root[data-theme='light'] .ws-status-led-button { background: #f3f4f6; }
+.ws-status-led-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ws-amber); box-shadow: 0 0 8px var(--ws-amber); }
+.ws-status-led-button:focus-visible { outline: 2px solid var(--ws-amber); outline-offset: 2px; }
+.ws-status-led-tip {
+  position: absolute; z-index: 20; top: calc(100% + 8px); left: 0; width: max-content; max-width: min(360px, 80vw);
+  padding: 10px 12px; border-radius: 5px; font-size: 0.8125rem; line-height: 1.4; color: var(--ws-ink);
+  background: var(--ws-panel-2); box-shadow: var(--ws-bevel), 0 0 0 1px rgba(0, 0, 0, 0.6), 0 12px 28px rgba(0, 0, 0, 0.5);
+  visibility: hidden; opacity: 0; transition: opacity 140ms var(--ws-ease), visibility 0s linear 140ms;
+}
+.ws-status-led:hover .ws-status-led-tip, .ws-status-led:focus-within .ws-status-led-tip { visibility: visible; opacity: 1; transition: opacity 140ms var(--ws-ease); }
+@media (prefers-reduced-motion: reduce) { .ws-status-led-tip { transition: none; } }
+
+/* ── Block panel fill: the screen (or the gear) beside a centred row of knobs ─────────────── */
+.ws-face-row.has-visual { display: grid; grid-template-columns: minmax(200px, 300px) minmax(0, 1fr); gap: 18px 32px; align-items: center; }
+.ws-face-row.has-visual > .editor-params { justify-content: center; }
+.face-amp .ws-face-row { display: contents; }
+.ws-face-visual {
+  display: grid; justify-items: center; align-content: center; gap: 8px; min-height: 120px; padding: 12px; border-radius: 5px;
+  background: var(--ws-display); box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+.ws-face-visual .viz-screen { width: 100%; height: auto; }
+.ws-face-visual:has(.viz-screen) { padding: 0; background: none; box-shadow: none; }
+.ws-face-model { font-family: var(--font-readout-stack); font-size: 0.9375rem; color: var(--ws-display-ink); text-align: center; }
+/* The model's description: a quiet secondary line under the knobs, not a box. */
+:root:root .editor-face:not(.face-amp) .editor-info { margin: 12px 0 0; padding: 0; background: none; box-shadow: none; font-size: 0.75rem; line-height: 1.45; color: var(--ws-ink-2); max-width: 90ch; }
+@media (max-width: 720px) {
+  .ws-face-row.has-visual { grid-template-columns: minmax(0, 1fr); }
+  .ws-face-visual { min-height: 0; }
+  .ws-face-visual:not(:has(.viz-screen)) { display: none; }
+}
+
+/* ── Global & EQ tab: the unit's settings pages side by side, the EQ display first and wide ──── */
+.ws-globals { background: transparent; box-shadow: none; }
+:root:root .ws-globals { background: transparent; box-shadow: none; }
+.ws-globals-body { padding: 4px 0 0; }
+.ws-globals .settings {
+  max-height: none; overflow: visible; padding: 0; display: grid; gap: 14px; align-items: start;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+.ws-globals .settings-group {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 18px; padding: 14px 16px; border-radius: 6px;
+  background: var(--ws-panel-2); box-shadow: var(--ws-bevel), 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+:root[data-theme='light'] .ws-globals .settings-group { box-shadow: var(--ws-bevel), 0 0 0 1px rgba(0, 0, 0, 0.12); }
+.ws-globals .settings-group > :is(h3, p, .settings-row:not(.settings-knob), summary, .muted) { flex-basis: 100%; }
+.ws-globals .settings-group h3, .ws-globals .settings-group summary h3 { font-family: var(--font-label-stack); letter-spacing: 0.16em; color: var(--ws-ink-2); }
+.ws-globals details.settings-group { display: flex; }
+.ws-globals details.settings-group:not([open]) > :not(summary) { display: none; }
+/* The EQ: first, across the whole tab. */
+.ws-globals .settings-group:has(.eq-panel) { grid-column: 1 / -1; order: -1; }
+.ws-globals .settings-group:has(.eq-panel) .eq-panel { flex-basis: 100%; }
+.ws-globals .settings-knob { flex: none; }
+/* Wide: the EQ display on the left, its ON/Level and Freq/Q/Gain strip on the right, like the unit's page. */
+@media (min-width: 1100px) {
+  .ws-globals .eq-panel { display: grid; grid-template-columns: minmax(380px, 1.15fr) minmax(0, 1fr); column-gap: 24px; row-gap: 12px; align-items: start; }
+  .ws-globals .eq-plot { grid-column: 1; grid-row: 1 / span 3; width: 100%; }
+  .ws-globals .eq-hint { grid-column: 1; }
+  .ws-globals .eq-panel > :not(.eq-plot, .eq-hint) { grid-column: 2; }
+  .ws-globals .eq-panel { grid-auto-flow: row dense; }
+}

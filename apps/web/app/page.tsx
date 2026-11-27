@@ -60,6 +60,7 @@ export default function EditorPage() {
       // storage blocked: the choice lasts for this page only
     }
   };
+  // The global settings are read once asked for (the ⚙ button or their tab), then kept on show.
   const [settingsOpen, setSettingsOpen] = useState(false);
   // The tone assistant loads and saves through the same confirmations a person sees.
   const [assistantLoad, setAssistantLoad] = useState<{ index: number; resolve: (loaded: boolean) => void } | null>(null);
@@ -200,20 +201,22 @@ export default function EditorPage() {
           id: 'ws-global',
           label: 'ws.rack.global',
           content: (
-            <section className="panel ws-global">
-              <p className="muted">{t('ws.globalNote')}</p>
-              <button
-                type="button"
-                className="btn"
-                disabled={pm.busy !== null}
-                onClick={() => {
-                  pm.clearError();
-                  setSettingsOpen(true);
-                }}
-              >
-                {t('ws.globalEdit')}
-              </button>
-            </section>
+            <SettingsDialog
+              inline
+              open={settingsOpen}
+              onOpen={() => setSettingsOpen(true)}
+              firmware={pm.firmware}
+              onClose={() => {
+                setSettingsOpen(false);
+                setDock(null);
+              }}
+              exclusive={pm.exclusive}
+              writeGlobal={pm.writeGlobal}
+              busy={pm.busy !== null}
+              error={pm.error}
+              factoryReset={pm.factoryReset}
+              onReset={pm.reconnect}
+            />
           ),
         },
       ]
@@ -255,20 +258,11 @@ export default function EditorPage() {
         onSettings={() => {
           pm.clearError();
           setSettingsOpen(true);
+          setDock('ws-global');
+          requestAnimationFrame(() => document.getElementById('ws-global')?.scrollIntoView({ block: 'start' }));
         }}
         onBluetooth={pm.connectBle}
         matribox={matribox !== null}
-      />
-      <SettingsDialog
-        open={settingsOpen}
-        firmware={pm.firmware}
-        onClose={() => setSettingsOpen(false)}
-        exclusive={pm.exclusive}
-        writeGlobal={pm.writeGlobal}
-        busy={pm.busy !== null}
-        error={pm.error}
-        factoryReset={pm.factoryReset}
-        onReset={pm.reconnect}
       />
       {matribox ? (
         <>
@@ -318,7 +312,19 @@ export default function EditorPage() {
                 <p className="muted small">{t('empty.firmware')}</p>
               </section>
             )}
-            {shell ? <Dock active={dock} onActive={setDock} tabs={dockTabs} /> : dockTabs.map((tab) => <Fragment key={tab.id}>{tab.content}</Fragment>)}
+            {shell ? (
+              <Dock
+                active={dock}
+                onActive={(id) => {
+                  // The settings are read the first time their tab opens.
+                  if (id === 'ws-global') setSettingsOpen(true);
+                  setDock(id);
+                }}
+                tabs={dockTabs}
+              />
+            ) : (
+              dockTabs.map((tab) => <Fragment key={tab.id}>{tab.content}</Fragment>)
+            )}
             <Dialog
               open={assistantLoad !== null}
               title={t('presets.unsavedTitle')}
