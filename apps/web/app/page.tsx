@@ -26,15 +26,26 @@ import { MatriboxEditor } from '@/components/MatriboxEditor';
 import { AiConnectionPanel } from '@/components/AiConnectionPanel';
 import { useAiAgent } from '@/lib/aiBridge';
 import { SITE_TITLE } from '@/lib/seo';
+import { usePocketDevice } from '@/lib/workstation/useDevice';
+import { type RackItem, RackNav } from '@/components/workstation/RackNav';
 
 const STEPS = ['empty.step1', 'empty.step2'] as const;
 const LOG_KEY = 'pocket-master-editor.showLog';
 // The desktop app grants MIDI itself: there is no permission to give.
 const DESKTOP_STEPS = ['empty.step1'] as const;
 const APP_NAME = 'OpenSonicX';
+/** The workstation's sections for the Pocket Master, in page order (its controls live in the ⚙ dialog). */
+const RACK: readonly RackItem[] = [
+  { id: 'ws-chain', label: 'ws.rack.chain' },
+  { id: 'ws-assistant', label: 'ws.rack.assistant' },
+  { id: 'ws-library', label: 'ws.rack.library' },
+  { id: 'ws-clones', label: 'ws.rack.clones' },
+  { id: 'ws-backups', label: 'ws.rack.backups' },
+];
 
 export default function EditorPage() {
   const pm = usePocketMaster();
+  const device = usePocketDevice(pm);
   const { t, te } = useI18n();
   const desktop = useIsDesktop();
   const [saveOpen, setSaveOpen] = useState(false);
@@ -185,30 +196,21 @@ export default function EditorPage() {
                 {t('firmware.untested', { firmware: pm.firmware, tested: TESTED_FIRMWARE })}
               </p>
             )}
-            {pm.preset && (
-              <PresetFiles
-                connected={connected}
-                current={pm.preset}
-                busy={pm.busy}
-                error={pm.error}
-                pending={importing}
-                onPick={setImporting}
-                onExport={pm.exportPreset}
-                onImport={importPreset}
-                onError={pm.showError}
-              />
-            )}
+            {connected && pm.preset && <RackNav items={RACK} />}
             {pm.preset ? (
-              <ChainView
-                preset={pm.preset}
-                presetIndex={pm.presetIndex}
-                presetName={pm.presetIndex !== null ? (pm.names?.[pm.presetIndex] ?? null) : null}
-                editable={pm.busy === null}
-                modified={pm.modified}
-                onEdit={pm.edit}
-                irNames={pm.irNames}
-                profileNames={pm.profileNames}
-              />
+              <div className="ws-rack" id="ws-chain">
+                <ChainView
+                  preset={pm.preset}
+                  presetIndex={pm.presetIndex}
+                  presetName={pm.presetIndex !== null ? (pm.names?.[pm.presetIndex] ?? null) : null}
+                  editable={pm.busy === null}
+                  modified={pm.modified}
+                  onEdit={pm.edit}
+                  irNames={pm.irNames}
+                  profileNames={pm.profileNames}
+                  device={connected ? device : undefined}
+                />
+              </div>
             ) : (
               <section className="empty">
                 <h1>{t('empty.title')}</h1>
@@ -224,39 +226,71 @@ export default function EditorPage() {
             )}
             {connected && (
               <>
-                {pm.preset && <AssistantPanel agent={toneAgent} />}
-                <Tone3000Panel connected={connected} busy={pm.busy !== null} irNames={pm.irNames} profileNames={pm.profileNames} exclusive={pm.exclusive} error={pm.error} />
-                <SlotsPanel connected={connected} busy={pm.busy !== null} irNames={pm.irNames} profileNames={pm.profileNames} exclusive={pm.exclusive} error={pm.error} />
+                <div className="ws-rack" id="ws-assistant">
+                  {pm.preset && <AssistantPanel agent={toneAgent} />}
+                </div>
+                <div className="ws-rack" id="ws-library">
+                  {pm.preset && (
+                    <PresetFiles
+                      connected={connected}
+                      current={pm.preset}
+                      busy={pm.busy}
+                      error={pm.error}
+                      pending={importing}
+                      onPick={setImporting}
+                      onExport={pm.exportPreset}
+                      onImport={importPreset}
+                      onError={pm.showError}
+                    />
+                  )}
+                  <PresetLibrary
+                    disabled={pm.busy !== null || !pm.preset}
+                    onLoad={(file) => {
+                      pm.clearError();
+                      setImporting(file);
+                    }}
+                  />
+                </div>
+                <div className="ws-rack" id="ws-clones">
+                  <Tone3000Panel connected={connected} busy={pm.busy !== null} irNames={pm.irNames} profileNames={pm.profileNames} exclusive={pm.exclusive} error={pm.error} />
+                  <SlotsPanel connected={connected} busy={pm.busy !== null} irNames={pm.irNames} profileNames={pm.profileNames} exclusive={pm.exclusive} error={pm.error} />
+                </div>
               </>
             )}
-            {connected && (
-              <PresetLibrary
-                disabled={pm.busy !== null || !pm.preset}
-                onLoad={(file) => {
+            {!connected && pm.preset && (
+              <PresetFiles
+                connected={connected}
+                current={pm.preset}
+                busy={pm.busy}
+                error={pm.error}
+                pending={importing}
+                onPick={setImporting}
+                onExport={pm.exportPreset}
+                onImport={importPreset}
+                onError={pm.showError}
+              />
+            )}
+            <div className="ws-rack" id="ws-backups">
+              <BackupsPanel
+                backups={pm.backups}
+                connected={connected}
+                busy={pm.busy}
+                error={pm.error}
+                flowBackups={pm.flowBackups}
+                storageWarning={pm.storageWarning}
+                onDownload={pm.downloadBackup}
+                onImport={pm.importBackup}
+                onDelete={pm.deleteBackup}
+                onPreset={(file) => {
                   pm.clearError();
                   setImporting(file);
                 }}
+                onRestore={pm.restore}
+                onBackupAll={pm.backupAll}
+                onRestoreAll={pm.restoreAll}
               />
-            )}
-            <BackupsPanel
-              backups={pm.backups}
-              connected={connected}
-              busy={pm.busy}
-              error={pm.error}
-              flowBackups={pm.flowBackups}
-              storageWarning={pm.storageWarning}
-              onDownload={pm.downloadBackup}
-              onImport={pm.importBackup}
-              onDelete={pm.deleteBackup}
-              onPreset={(file) => {
-                pm.clearError();
-                setImporting(file);
-              }}
-              onRestore={pm.restore}
-              onBackupAll={pm.backupAll}
-              onRestoreAll={pm.restoreAll}
-            />
-            <AiConnectionPanel />
+              <AiConnectionPanel />
+            </div>
             {showLog && <SysexLog log={pm.log} onClear={pm.clearLog} />}
             <p className="page-tools">
               <button type="button" className="btn-link" onClick={toggleLog}>

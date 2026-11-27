@@ -1,6 +1,8 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import type { DeviceView } from '@/lib/workstation/device';
+import { SyncStatus } from './workstation/SyncStatus';
 import { Knob } from './Knob';
 import { MatriboxMore } from './MatriboxMore';
 import { RedoIcon, UndoIcon } from './icons';
@@ -24,6 +26,8 @@ interface Props {
   onSave: () => void;
   /** Preset-file buttons beside Save (export, import). */
   files?: ReactNode;
+  /** The workstation's view of the unit: the sync chip. */
+  device?: DeviceView;
 }
 
 /** The loaded Matribox preset as the Pocket Master's preset header: big label and name, its actions, patch volume as a knob.
@@ -42,6 +46,7 @@ export function MatriboxHeader(p: Props) {
           {p.label}
           <span className="preset-title"> {p.name}</span>
         </h1>
+        {p.device && <SyncStatus device={p.device} />}
       </div>
       <div className="mb-head-end">
         <div className="mb-head-actions">

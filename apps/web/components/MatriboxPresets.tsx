@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { mbPresetLabel, type MbPresetName } from '@pocket-master/core';
 import { Dialog } from './Dialog';
 import { useI18n } from './I18n';
+import { sharedPrefix } from '@/lib/workstation/banks';
+import { RoleChip } from './workstation/RoleButtons';
 
 interface Props {
   names: readonly MbPresetName[];
@@ -60,6 +62,7 @@ export function MatriboxPresets({ names, current, edited, onLoad }: Props) {
           <li key={bank} className="mb-bank">
             <span className="mb-bank-label" id={`mb-bank-${bank}`}>
               {t('mb.bank', { n: bank })}
+              {sharedPrefix(presets.map((p) => p.name)) && <span className="ws-bank-prefix"> · {sharedPrefix(presets.map((p) => p.name))}</span>}
             </span>
             <ul className="mb-bank-presets" aria-labelledby={`mb-bank-${bank}`}>
               {presets.map((p) => (
@@ -73,6 +76,8 @@ export function MatriboxPresets({ names, current, edited, onLoad }: Props) {
                   >
                     <span className="sidebar-badge">{p.label}</span>
                     <span className={`sidebar-name${p.name.trim() ? '' : ' muted'}`}>{p.name.trim() || t('mb.unnamed')}</span>
+                    <RoleChip name={p.name} />
+                    {p.i === current && edited && <span className="ws-dirty-dot" aria-hidden="true" />}
                   </button>
                 </li>
               ))}

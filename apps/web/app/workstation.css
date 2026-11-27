@@ -1,0 +1,144 @@
+/* Workstation look (docs/design/workstation-ui.md): a dark stage theme with high contrast and big
+   targets, the preset as a hardware display, and the sync and edited states always in sight.
+   Loaded after globals.css and matribox.css; it only overrides tokens and looks, never layout logic. */
+
+:root {
+  --ws-amber: #8a4f00;   /* edited, not stored: 5.9:1 on white */
+  --ws-green: #1d7a35;
+  --ws-display: #e9eef2;
+  --ws-display-ink: #0b0d10;
+  --ws-target: 44px;
+}
+
+/* Stage: near-black, warm-grey surfaces, labels well past AA. */
+:root[data-theme='dark'] {
+  --bg: #0b0c0e;
+  --surface: #16181b;
+  --surface-2: #202327;
+  --label: #f5f6f7;
+  --label-2: #b9bec6;
+  --label-3: rgba(235, 238, 245, 0.38);
+  --separator: rgba(160, 166, 176, 0.28);
+  --fill: rgba(150, 156, 168, 0.16);
+  --fill-strong: rgba(150, 156, 168, 0.3);
+  --bar: rgba(11, 12, 14, 0.94);
+  --ws-amber: #ffb224;
+  --ws-green: #3ddc6f;
+  --ws-display: #0d1a14;
+  --ws-display-ink: #c9f5d9;
+}
+
+body { background: var(--bg); }
+
+/* Toolbar: a head unit strip. */
+.toolbar { border-bottom: 1px solid var(--separator); }
+.brand-mark { color: var(--ws-amber); }
+
+/* Big targets: a hand on a guitar neck must hit them. A phone keeps the compact sizes its rows are laid out for. */
+/* No fade on enable/disable: the state reads at once (and contrast checks never catch a half-faded button). */
+.btn { transition: transform 100ms ease-out; }
+@media (min-width: 721px) {
+  .btn { min-height: 40px; padding: 8px 18px; font-weight: 600; }
+  .btn-small { min-height: 32px; padding: 5px 14px; }
+  .btn-icon { min-width: 40px; }
+  .theme-toggle { width: 40px; height: 40px; }
+  .lang-switch button { min-height: 34px; padding: 4px 10px; }
+  .sidebar-item { min-height: var(--ws-target); }
+  .sidebar-search { min-height: 40px; }
+  /* The display takes the whole first row; the actions and the volume sit under it. */
+  .preset-head > div:first-child { flex: 1 1 100%; }
+}
+
+/* The preset as the unit's display: slot, name and the sync chip. */
+.preset-head > div:first-child {
+  padding: 12px 18px 14px; border-radius: 12px; min-width: min(100%, 360px);
+  background: var(--ws-display); color: var(--ws-display-ink);
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.35), 0 0 0 1px var(--separator);
+}
+.preset-head > div:first-child .eyebrow, .preset-head > div:first-child .preset-title { color: color-mix(in srgb, var(--ws-display-ink) 78%, transparent); }
+.preset-head .preset-name { font-variant-numeric: tabular-nums; }
+
+/* Sync chip: green in sync, amber edited, grey while reading or sending. */
+.ws-sync {
+  display: inline-flex; align-items: center; gap: 8px; margin: 8px 0 0; padding: 4px 12px; border-radius: 999px;
+  font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.02em;
+  background: rgba(127, 127, 127, 0.18); color: inherit;
+}
+.ws-sync-dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
+.ws-sync-synced .ws-sync-dot { background: var(--ws-green); box-shadow: 0 0 8px var(--ws-green); }
+.ws-sync-dirty { background: color-mix(in srgb, var(--ws-amber) 22%, transparent); }
+.ws-sync-dirty .ws-sync-dot { background: var(--ws-amber); box-shadow: 0 0 8px var(--ws-amber); }
+.ws-sync-reading .ws-sync-dot, .ws-sync-writing .ws-sync-dot { animation: busy-pulse 1s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .ws-sync .ws-sync-dot { animation: none; } }
+
+/* Rack nav: the editor's sections as one row of big tabs; it scrolls sideways on a phone. */
+.ws-rack-nav {
+  display: flex; gap: 6px; overflow-x: auto; padding: 4px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--separator);
+}
+.ws-rack-nav a {
+  flex: none; display: inline-flex; align-items: center; min-height: var(--ws-target); padding: 0 16px; border-radius: 9px;
+  color: var(--label); font-weight: 700; font-size: 0.9375rem; text-decoration: none;
+}
+.ws-rack-nav a:hover { background: var(--fill); }
+.ws-rack-nav a:focus-visible { outline: 3px solid color-mix(in srgb, var(--blue) 60%, transparent); outline-offset: 1px; }
+.ws-rack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; scroll-margin-top: 80px; }
+.ws-rack:empty { display: none; }
+
+/* Chain: pedals on a dark board, the LED easier to hit, an amber dot on an edited block. */
+.tile {
+  background: var(--surface); box-shadow: inset 0 -10px 18px rgba(0, 0, 0, 0.18), var(--shadow);
+  border: 1px solid var(--separator); border-top: 3px solid var(--tint);
+}
+.tile-off { border-top-color: var(--separator); }
+.tile-selected { border-color: var(--tint); border-top-width: 3px; }
+.tile-led { height: 12px; width: 52px; border-radius: 6px; }
+.tile-dirty-dot {
+  position: absolute; top: 6px; right: 6px; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--ws-amber); box-shadow: 0 0 0 2px var(--surface), 0 0 8px var(--ws-amber);
+}
+
+/* Block panel: a faceplate under the chain. */
+.editor { border: 1px solid var(--separator); border-top: 4px solid var(--tint); }
+.editor-off { border-top-color: var(--separator); }
+
+/* Knobs: bigger, the value is a button that turns into a field to type in. */
+.knob { min-width: 84px; }
+.knob-dial { width: 72px; height: 72px; }
+.knob-dial svg { width: 72px; height: 72px; }
+.editor-params:has(.knob-hint) :is(.knob, .editor-toggle) { grid-template-rows: 1.6em 72px auto 1.2em; }
+.knob-value {
+  min-height: 1.6em; min-width: 4.5ch; padding: 1px 8px; border: 0; border-radius: 6px;
+  background: transparent; color: inherit; font: inherit; font-size: 0.9375rem; font-weight: 700;
+  font-variant-numeric: tabular-nums; text-align: center;
+}
+button.knob-value { cursor: text; }
+button.knob-value:hover { background: var(--fill); }
+button.knob-value:focus-visible, .knob-input:focus-visible { outline: 3px solid color-mix(in srgb, var(--blue) 60%, transparent); }
+.knob-input { width: 7ch; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--separator); color: var(--label); }
+.knob-label { font-size: 0.75rem; color: var(--label-2); }
+/* Bottom-aligned rows: the taller dial moves its centre up 4 px, so a switch or list keeps level with it. */
+.editor-params:not(:has(.knob-hint)) .editor-toggle > .knob-label { margin-top: 4px; }
+
+/* Bank browser: banks, the shared prefix, role chips and the edited dot. */
+.mb-bank-label .ws-bank-prefix { color: var(--label); font-weight: 700; }
+.ws-role-chip {
+  flex: none; margin-left: auto; padding: 1px 6px; border-radius: 5px; font-size: 0.625rem; font-weight: 800; letter-spacing: 0.06em;
+  border: 1px solid currentColor; background: var(--surface);
+}
+.ws-role-clean { color: var(--cyan); }
+.ws-role-rhy { color: var(--orange); }
+.ws-role-lead { color: var(--red); }
+.ws-dirty-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--ws-amber); }
+.ws-role-chip + .ws-dirty-dot { margin-left: 6px; }
+.sidebar-name + .ws-dirty-dot { margin-left: auto; }
+
+/* Save dialogs: CLEAN / RHY / LEAD buttons that rename the preset within its bank. */
+.ws-roles { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; padding: 0; border: 0; }
+.ws-roles legend { float: left; margin-right: 4px; font-size: 0.8125rem; color: var(--label-2); }
+.ws-role {
+  min-height: 40px; min-width: 72px; padding: 0 12px; border-radius: 9px; border: 1.5px solid currentColor;
+  background: transparent; font-weight: 800; letter-spacing: 0.06em; cursor: pointer;
+}
+.ws-role[aria-pressed='true'] { background: color-mix(in srgb, currentColor 18%, transparent); }
+.ws-role:disabled { opacity: 0.4; cursor: default; }

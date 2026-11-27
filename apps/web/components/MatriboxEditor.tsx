@@ -8,6 +8,8 @@ import { useMatribox } from '@/lib/useMatribox';
 import { useMatriboxHistory } from '@/lib/useMatriboxHistory';
 import { useTone3000 } from '@/lib/useTone3000';
 import { useUndoKeys } from '@/lib/useUndoKeys';
+import { useMatriboxDevice } from '@/lib/workstation/useDevice';
+import { type RackItem, RackNav } from './workstation/RackNav';
 import type { CloneSource } from '@/lib/cloneSource';
 import { MatriboxAssistant } from './MatriboxAssistant';
 import { MatriboxBackupAll } from './MatriboxBackupAll';
@@ -30,12 +32,23 @@ import { MatriboxQuickKnobs } from './MatriboxQuickKnobs';
 import { MatriboxSaveDialog } from './MatriboxSaveDialog';
 import { useI18n } from './I18n';
 
+/** The workstation's sections for the Matribox, in page order. */
+const RACK: readonly RackItem[] = [
+  { id: 'ws-chain', label: 'ws.rack.chain' },
+  { id: 'ws-controls', label: 'ws.rack.controls' },
+  { id: 'ws-assistant', label: 'ws.rack.assistant' },
+  { id: 'ws-library', label: 'ws.rack.library' },
+  { id: 'ws-clones', label: 'ws.rack.clones' },
+  { id: 'ws-backups', label: 'ws.rack.backups' },
+];
+
 /** The Matribox II Pro editor, shown when the connected pedal is one. */
 /** `footer`: shown at the end of the editor (the desktop app's AI connection). */
 export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: ReactNode }) {
   const mb = useMatribox(port);
   const { t, te } = useI18n();
   const history = useMatriboxHistory(mb);
+  const device = useMatriboxDevice(mb);
   useUndoKeys(history.undo, history.redo);
   const [saveOpen, setSaveOpen] = useState(false);
   // The assistant's save: the same dialog, filled in; it tells the assistant whether the person saved.
@@ -101,7 +114,8 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
           <p className="muted">{t(mb.busy ? 'status.reading' : 'mb.notRead')}</p>
         ) : (
           <>
-            <section className="preset" aria-label={t('preset.aria')}>
+            <RackNav items={RACK} />
+            <section className="preset ws-rack" id="ws-chain" aria-label={t('preset.aria')}>
               <MatriboxHeader
                 label={mbPresetLabel(unit.current)}
                 name={unit.preset.name}
@@ -119,6 +133,7 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
                   mb.clearError();
                   setSaveOpen(true);
                 }}
+                device={device}
                 files={
                   <>
                     <MatriboxPresetFile mb={mb} />
@@ -135,6 +150,7 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
                 onOn={(s, on) => void history.setOn(s, on)}
                 onMove={(a, b) => void history.moveBlock(a, b)}
                 onAdd={(m, fxid) => void history.addBlock(chain.length, m, fxid)}
+                dirty={device.dirtyBlocks}
               />
               <MatriboxDspLoad chain={chain} overload={mb.overload} onClose={mb.clearOverload} />
               {block && (
@@ -150,18 +166,20 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
                 />
               )}
             </section>
-            <MatriboxFootswitches
-              footswitches={assignments.footswitches}
-              ctrl={assignments.ctrl}
-              chain={chain}
-              disabled={disabled}
-              onFunction={(f, fn) => void mb.setFootswitchFunction(f, fn)}
-              onCtrl={(c, s, on) => void mb.assignCtrl(c, s, on)}
-            />
-            <MatriboxQuickKnobs quickKnobs={assignments.quickKnobs} chain={chain} disabled={disabled} onAssign={(k, target, p) => void mb.assignQuickKnob(k, target, p)} />
-            <MatriboxExpression expression={assignments.expression} chain={chain} disabled={disabled} onExpression={(a) => void mb.assignExpression(a)} />
-            <MatriboxControls tempo={assignments.tempo} unitChannel={ccChannelOf(mb.globals)} onControl={(m) => void mb.control(m)} />
-            <MatriboxDrums mb={mb} />
+            <div className="ws-rack" id="ws-controls">
+              <MatriboxFootswitches
+                footswitches={assignments.footswitches}
+                ctrl={assignments.ctrl}
+                chain={chain}
+                disabled={disabled}
+                onFunction={(f, fn) => void mb.setFootswitchFunction(f, fn)}
+                onCtrl={(c, s, on) => void mb.assignCtrl(c, s, on)}
+              />
+              <MatriboxQuickKnobs quickKnobs={assignments.quickKnobs} chain={chain} disabled={disabled} onAssign={(k, target, p) => void mb.assignQuickKnob(k, target, p)} />
+              <MatriboxExpression expression={assignments.expression} chain={chain} disabled={disabled} onExpression={(a) => void mb.assignExpression(a)} />
+              <MatriboxControls tempo={assignments.tempo} unitChannel={ccChannelOf(mb.globals)} onControl={(m) => void mb.control(m)} />
+              <MatriboxDrums mb={mb} />
+            </div>
             <MatriboxSaveDialog
               open={saveOpen}
               current={proposal?.index ?? unit.current}
@@ -174,15 +192,23 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
               onSave={save}
               onClose={closeSave}
             />
-            <MatriboxAssistant mb={mb} history={history} proposeSave={proposeSave} proposeClone={proposeClone} t3k={t3k} />
-            <MatriboxLibrary mb={mb} history={history} />
-            <MatriboxClones mb={mb} t3k={t3k} proposal={cloneProposal} onProposalEnd={() => setCloneProposal(null)} />
-            <MatriboxIrs mb={mb} />
-            <MatriboxBackupAll mb={mb} loaded={mbPresetLabel(unit.current)} />
+            <div className="ws-rack" id="ws-assistant">
+              <MatriboxAssistant mb={mb} history={history} proposeSave={proposeSave} proposeClone={proposeClone} t3k={t3k} />
+            </div>
+            <div className="ws-rack" id="ws-library">
+              <MatriboxLibrary mb={mb} history={history} />
+            </div>
+            <div className="ws-rack" id="ws-clones">
+              <MatriboxClones mb={mb} t3k={t3k} proposal={cloneProposal} onProposalEnd={() => setCloneProposal(null)} />
+              <MatriboxIrs mb={mb} />
+            </div>
           </>
         )}
-        {mb.backups.length > 0 && <MatriboxBackups backups={mb.backups} />}
-        {footer}
+        <div className="ws-rack" id="ws-backups">
+          {unit && <MatriboxBackupAll mb={mb} loaded={mbPresetLabel(unit.current)} />}
+          {mb.backups.length > 0 && <MatriboxBackups backups={mb.backups} />}
+          {footer}
+        </div>
       </main>
     </div>
   );

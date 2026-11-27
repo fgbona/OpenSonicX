@@ -6,6 +6,33 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Workstation look (design proposal, `design/workstation-ui`, not for merge until approved).**
+  The editor is laid out like a multi-effects workstation editor: see
+  [docs/design/workstation-ui.md](docs/design/workstation-ui.md) for the screens, the trade-offs
+  and the open questions.
+  - **Sync state**: the preset display shows whether the edit buffer is in sync with the pedal, edited
+    and not stored in its slot, or being read or sent. An edited block gets an amber dot on its
+    tile, and the loaded preset gets one in the list. Both pedals go through one read-only adapter
+    (`lib/workstation/device.ts`, `useDevice.ts`); the protocol hooks are unchanged.
+  - **Knobs**: click the value (or press Enter on a knob) to type a number. It is clamped and
+    snapped to the step, and Escape cancels. Drag, wheel, keys and double-click reset work as before.
+    The knobs are bigger (72 px).
+  - **Rack nav**: big links to every section (Chain, Controls, Assistant, Library, Clones & IRs,
+    Backups). All sections stay on the page.
+  - **Banks of three**: the Pocket Master list is grouped in banks of three, and the Matribox list by
+    its own banks. A name ending in -CLEAN, -RHY or -LEAD shows a role chip, and the bank shows the
+    prefix its presets share. The save dialogs have CLEAN / RHY / LEAD buttons that rename the
+    preset within its bank (`MTL-RHY` → `MTL-LEAD`), within the name length limit.
+  - **Stage theme**: dark by default with higher contrast, a display-like preset header, and bigger
+    targets on desktop and tablet (40 px buttons, 44 px list rows and nav links).
+
+### Changed
+
+- The Pocket Master's preset file buttons (export/import) moved from above the chain into the Library
+  section.
+
 ## [1.2.2] - 2026-11-27
 
 The tone assistant works with Claude models that think on their own (claude-fable-5-2), which

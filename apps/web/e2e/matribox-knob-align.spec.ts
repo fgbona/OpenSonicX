@@ -9,7 +9,7 @@ import { connectMatribox, expect, test } from './matribox-fixtures.ts';
 const SHOTS = process.env.KNOB_SHOTS;
 const { defaultBrowserType: _, ...pixel } = devices['Pixel 7'];
 /** The dial's height: a switch or selector is centred on a dial this tall. */
-const DIAL = 64;
+const DIAL = 72; // the workstation knob (app/workstation.css)
 
 interface Item {
   top: number;
