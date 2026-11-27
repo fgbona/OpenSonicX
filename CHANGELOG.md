@@ -6,6 +6,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Matribox expression pedal: choosing "Unused" for an entry now enables Apply and clears it
+  on the unit. Before, Apply stayed greyed out, so a pedal assigned to a parameter (a drive's
+  Gain, say) kept setting it from the pedal position every time the preset loaded.
+
 ## [1.2.2] - 2026-11-27
 
 The tone assistant works with Claude models that think on their own (claude-fable-5-2), which
