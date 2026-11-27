@@ -4,7 +4,7 @@ import { useMemo, useRef } from 'react';
 import { mbPresetLabel, presetLabel, type MbPreset } from '@pocket-master/core';
 import type { Matribox } from '../useMatribox.ts';
 import type { usePocketMaster } from '../usePocketMaster.ts';
-import { type DeviceView, mbDirtySlots, pocketDirtyModules, syncState } from './device.ts';
+import { type DeviceView, mbDirtySlots, mbParamDirty, pocketDirtyModules, pocketParamDirty, syncState } from './device.ts';
 
 type PocketMaster = ReturnType<typeof usePocketMaster>;
 
@@ -15,8 +15,12 @@ export function usePocketDevice(pm: PocketMaster): DeviceView {
   const dirtyBlocks = useMemo(() => pocketDirtyModules(pm.preset, pm.restorePoint), [pm.preset, pm.restorePoint]);
   const sync = syncState({ linked, busy, dirty: pm.modified });
   const slot = pm.presetIndex === null ? '' : presetLabel(pm.presetIndex);
+  const { preset, restorePoint } = pm;
   // One object while nothing changes: the memoised chain view takes it.
-  return useMemo(() => ({ sync, slot, dirtyBlocks }), [sync, slot, dirtyBlocks]);
+  return useMemo(
+    () => ({ sync, slot, dirtyBlocks, paramDirty: (module: number, alg: number, value: number) => pocketParamDirty(preset, restorePoint, module, alg, value) }),
+    [sync, slot, dirtyBlocks, preset, restorePoint],
+  );
 }
 
 /**
@@ -32,5 +36,9 @@ export function useMatriboxDevice(mb: Matribox): DeviceView {
   const dirtyBlocks = useMemo(() => (mb.edited ? mbDirtySlots(preset, stored) : new Set<number>()), [mb.edited, preset, stored]);
   const sync = syncState({ linked: mb.unit !== null, busy: mb.busy, dirty: mb.edited });
   const slot = mb.unit ? mbPresetLabel(mb.unit.current) : '';
-  return useMemo(() => ({ sync, slot, dirtyBlocks }), [sync, slot, dirtyBlocks]);
+  const edited = mb.edited;
+  return useMemo(
+    () => ({ sync, slot, dirtyBlocks, paramDirty: (block: number, id: number, value: number) => edited && mbParamDirty(preset, stored, block, id, value) }),
+    [sync, slot, dirtyBlocks, edited, preset, stored],
+  );
 }

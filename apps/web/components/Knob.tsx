@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import { useI18n } from './I18n';
+import { DirtyMark } from './workstation/DirtyMark';
 
 interface Props {
   label: string;
@@ -15,6 +16,8 @@ interface Props {
   /** A note under the label, e.g. the range "-80 … 0". */
   hint?: string;
   disabled?: boolean;
+  /** The value differs from what the pedal stores: an amber dot says so. */
+  dirty?: boolean;
   onChange: (value: number) => void;
 }
 
@@ -46,7 +49,7 @@ export const typedNumber = (text: string) => {
  * A rotary control: drag up/down (Shift: fine), wheel, arrow keys; click the value (or Enter) to type
  * one; double-click returns to the default.
  */
-export function Knob({ label, value, min, max, step = 1, display, defaultValue, hint, disabled = false, onChange }: Props) {
+export function Knob({ label, value, min, max, step = 1, display, defaultValue, hint, disabled = false, dirty = false, onChange }: Props) {
   const id = useId();
   const { t } = useI18n();
   const [typing, setTyping] = useState(false);
@@ -82,7 +85,8 @@ export function Knob({ label, value, min, max, step = 1, display, defaultValue, 
   const angle = -SWEEP / 2 + ((value - min) / span) * SWEEP;
   const [dx, dy] = polar(angle);
   return (
-    <div className={`knob${disabled ? ' is-disabled' : ''}`}>
+    <div className={`knob${disabled ? ' is-disabled' : ''}${dirty ? ' is-dirty' : ''}`}>
+      {dirty && <DirtyMark />}
       {typing ? (
         <input
           className="knob-value knob-input"

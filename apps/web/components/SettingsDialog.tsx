@@ -119,20 +119,9 @@ export function SettingsDialog({ open, firmware, onClose, exclusive, writeGlobal
           </section>
           <section className="settings-group">
             <h3>{t('settings.device')}</h3>
-            <label className="settings-row">
-              <span className="settings-label">{t('settings.backlight')}</span>
-              <input
-                type="range"
-                className="param-slider"
-                min={0}
-                max={100}
-                value={values.backlight ?? 0}
-                disabled={off}
-                onChange={(e) => set('backlight', Number(e.target.value))}
-                style={{ '--fill': `${values.backlight ?? 0}%` } as React.CSSProperties}
-              />
-              <span className="param-value">{values.backlight ?? '—'}</span>
-            </label>
+            <div className="settings-row">
+              <Knob label={t('settings.backlight')} value={values.backlight ?? 0} min={0} max={100} display={String(values.backlight ?? '—')} disabled={off} onChange={(v) => set('backlight', v)} />
+            </div>
             {firmware && (
               <div className="settings-row">
                 <span className="settings-label">{t('settings.firmware')}</span>

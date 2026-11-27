@@ -8,6 +8,8 @@ import { snakePath } from '@/lib/snakePath';
 import { PedalTile, TileMove } from './TileStrip';
 import { useI18n } from './I18n';
 import { useTileDrag } from './useTileDrag';
+import { rigCategory, rigIconSpec } from '@/lib/rigIcon';
+import { RigIcon } from './rig/RigIcon';
 
 interface Props {
   chain: readonly MbResolvedBlock[];
@@ -133,6 +135,7 @@ export function MatriboxChain({ chain, selected, disabled, userSlot, onSelect, o
                 onSelect={() => onSelect(block.slot)}
                 onToggle={() => onOn(block.slot, !block.on)}
                 dirtyLabel={dirty?.has(block.slot) ? t('ws.blockEdited') : undefined}
+                drawing={<RigIcon spec={rigIconSpec(rigCategory(block), `${block.moduleIndex}:${block.fxid}`, block.params.length, block.model?.name ?? '')} size={56} />}
               />
               {!disabled && (
                 <TileMove

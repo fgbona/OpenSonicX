@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { mbPresetLabel, type MbPresetName } from '@pocket-master/core';
 import { Dialog } from './Dialog';
 import { useI18n } from './I18n';
-import { sharedPrefix } from '@/lib/workstation/banks';
+import { sharedPrefix, slotRole } from '@/lib/workstation/banks';
 import { RoleChip } from './workstation/RoleButtons';
 
 interface Props {
@@ -76,7 +76,7 @@ export function MatriboxPresets({ names, current, edited, onLoad }: Props) {
                   >
                     <span className="sidebar-badge">{p.label}</span>
                     <span className={`sidebar-name${p.name.trim() ? '' : ' muted'}`}>{p.name.trim() || t('mb.unnamed')}</span>
-                    <RoleChip name={p.name} />
+                    <RoleChip role={slotRole(p.i, BANK_SIZE)} />
                     {p.i === current && edited && <span className="ws-dirty-dot" aria-hidden="true" />}
                   </button>
                 </li>

@@ -1,6 +1,6 @@
 'use client';
 
-import { ROLES, presetRole, withRole } from '@/lib/workstation/banks';
+import { type PresetRole, ROLES, presetRole, withRole } from '@/lib/workstation/banks';
 import { useI18n } from '../I18n';
 
 interface Props {
@@ -35,12 +35,12 @@ export function RoleButtons({ name, max, disabled = false, onName }: Props) {
   );
 }
 
-/** The role chip a preset list shows beside a name ending in -CLEAN, -RHY or -LEAD. */
-export function RoleChip({ name }: { name: string }) {
-  const role = presetRole(name);
-  return role ? (
-    <span className={`ws-role-chip ws-role-${role}`} aria-hidden="true">
-      {role.toUpperCase()}
-    </span>
-  ) : null;
+/** The role chip a preset list or display shows for a slot (slotRole): CLEAN, RHY, LEAD or FREE. */
+export function RoleChip({ role }: { role: PresetRole | 'free' | null }) {
+  const { t } = useI18n();
+  if (!role) return null;
+  return (
+    // The label is drawn by CSS (::before): a hint, not part of the preset's name or its button's text.
+    <span className={`ws-role-chip ws-role-${role}`} data-label={role === 'free' ? t('ws.free') : role.toUpperCase()} aria-hidden="true" />
+  );
 }

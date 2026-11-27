@@ -16,6 +16,7 @@ import {
   type Preset,
 } from '@pocket-master/core';
 import { Knob } from './Knob';
+import { DirtyMark } from './workstation/DirtyMark';
 import { AmpDecor } from './AmpDecor';
 import { ModelPicker, type PickerGroup, type PickerOption } from './ModelPicker';
 import { noteFor, useSlotNotes } from '@/lib/slotNotes';
@@ -31,12 +32,14 @@ interface Props {
   onEdit: (edit: Edit) => void;
   irNames: readonly (string | null)[] | null;
   profileNames: readonly (string | null)[] | null;
+  /** Whether a parameter (by alg) differs from the restore point. */
+  paramDirty?: (alg: number, value: number) => boolean;
 }
 
 const SINGLE_MODEL = new Set(['nr']);
 
 /** The selected block: model, on/off, every parameter as a knob, switch or list. */
-export function ModuleEditor({ preset, block, editable, onEdit, irNames, profileNames }: Props) {
+export function ModuleEditor({ preset, block, editable, onEdit, irNames, profileNames, paramDirty }: Props) {
   const { t, lang } = useI18n();
   const notes = useSlotNotes();
   // The pedal's own name (what its screen shows), and what it is in plain words beside it.
@@ -125,6 +128,7 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
           <div className="editor-params">
             {block.params.map((p) => {
               const spec = paramSpecFor(preset, block, p.alg);
+              const dirty = paramDirty?.(p.alg, p.value) ?? false;
               if (p.kind === 'number' && spec) {
                 return (
                   <Knob
@@ -137,6 +141,7 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
                     display={p.display}
                     defaultValue={spec.default}
                     disabled={!editable}
+                    dirty={dirty}
                     onChange={(v) => send(p.alg, v)}
                   />
                 );
@@ -144,7 +149,8 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
               if (p.kind === 'switch') {
                 const on = p.value >= 0.5;
                 return (
-                  <div key={p.alg} className="editor-toggle">
+                  <div key={p.alg} className={`editor-toggle${dirty ? ' is-dirty' : ''}`}>
+                    {dirty && <DirtyMark />}
                     <span className="knob-value" aria-hidden="true">
                       {on ? t('block.on') : t('block.off')}
                     </span>
@@ -164,7 +170,8 @@ export function ModuleEditor({ preset, block, editable, onEdit, irNames, profile
                 );
               }
               return (
-                <div key={p.alg} className="editor-toggle">
+                <div key={p.alg} className={`editor-toggle${dirty ? ' is-dirty' : ''}`}>
+                  {dirty && <DirtyMark />}
                   <span className="knob-value" aria-hidden="true">
                     {p.display}
                   </span>

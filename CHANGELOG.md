@@ -8,30 +8,54 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- **Workstation look (design proposal, `design/workstation-ui`, not for merge until approved).**
-  The editor is laid out like a multi-effects workstation editor: see
-  [docs/design/workstation-ui.md](docs/design/workstation-ui.md) for the screens, the trade-offs
-  and the open questions.
-  - **Sync state**: the preset display shows whether the edit buffer is in sync with the pedal, edited
-    and not stored in its slot, or being read or sent. An edited block gets an amber dot on its
-    tile, and the loaded preset gets one in the list. Both pedals go through one read-only adapter
-    (`lib/workstation/device.ts`, `useDevice.ts`); the protocol hooks are unchanged.
-  - **Knobs**: click the value (or press Enter on a knob) to type a number. It is clamped and
-    snapped to the step, and Escape cancels. Drag, wheel, keys and double-click reset work as before.
-    The knobs are bigger (72 px).
-  - **Rack nav**: big links to every section (Chain, Controls, Assistant, Library, Clones & IRs,
-    Backups). All sections stay on the page.
-  - **Banks of three**: the Pocket Master list is grouped in banks of three, and the Matribox list by
-    its own banks. A name ending in -CLEAN, -RHY or -LEAD shows a role chip, and the bank shows the
-    prefix its presets share. The save dialogs have CLEAN / RHY / LEAD buttons that rename the
-    preset within its bank (`MTL-RHY` → `MTL-LEAD`), within the name length limit.
-  - **Stage theme**: dark by default with higher contrast, a display-like preset header, and bigger
-    targets on desktop and tablet (40 px buttons, 44 px list rows and nav links).
+- **Workstation UI (design proposal, `design/workstation-ui`, not for merge until approved).**
+  See [docs/design/workstation-ui.md](docs/design/workstation-ui.md) for the layouts, the
+  decisions and what is still open.
+  - **Fixed-screen shell from 1280 px up**, like HX Edit or Axe-Edit. The page itself never
+    scrolls; only the bank list, the block panel and the open dock tab do.
+    - The top bar holds the preset display (slot, name, bank role, sync chip) and the actions.
+    - Under it are the bank browser on the left, the signal chain with the rig-view gear drawings,
+      and the selected block's panel.
+    - A **bottom dock with real tabs** holds Assistant, Clones & IRs, Controls, Library, Backups
+      and Global & EQ. It can fold, and an assistant capture upload opens its tab by itself.
+  - Below 1280 px the same parts stack, with every dock panel shown. The phone layout is unchanged.
+  - **Sync state**:
+    - The preset bar shows whether the edit buffer is in sync with the pedal, edited and not
+      stored in its slot, or being read or sent.
+    - Amber dots mark the loaded preset in the bank list, each edited block, and **each edited
+      knob, switch or list**. They compare against the value last read from or saved to the pedal.
+    - Both pedals go through one read-only adapter (`lib/workstation/device.ts`,
+      `useDevice.ts`); the protocol hooks are unchanged.
+  - **Knobs**: click the value (or press Enter on a knob) to type a number; it is clamped and
+    snapped, and Escape cancels. Knobs are 88 px in the block panel and 72 px elsewhere.
+  - **Banks of three**: banks show CLEAN / RHY / LEAD by position (the Matribox's A/B/C, its D
+    marked FREE; the Pocket Master's user presets in threes) as a hint only, never a rename. The
+    save dialogs' CLEAN / RHY / LEAD buttons rename a preset within its bank (`MTL-RHY` →
+    `MTL-LEAD`).
+  - **Visual system:** the editor is drawn as hardware.
+    - The stage: a near-black chassis with grain and machined panels instead of web cards. The
+      preset shows on an OLED-style display (a glowing number, the name, bank, role and sync LED).
+    - The chain: a pedalboard of square, category-coloured blocks, with gear drawings, a lit cable,
+      IN/OUT jacks and LED bypass switches.
+    - Controls: footswitches A–D as stomp caps with LED rings, under the chain and clickable;
+      keys instead of pills, lit buttons with an LED for every on/off switch, and recessed
+      selectors.
+    - Type: Barlow Condensed labels and Share Tech Mono readouts, both self-hosted through
+      next/font. Dark is the default; the light theme is a brushed-alloy chassis.
+  - **Domain displays:**
+    - The Global EQ is a frequency-response graph, computed from the unit's bands with RBJ
+      biquads. Each band has a node you drag, scroll, use the keys on or double-click to reset,
+      and hardware controls sit under the graph.
+    - Compressor, gate, delay, reverb and EQ blocks draw their behaviour on a small screen in their
+      panel, and the expression pedal shows its heel-to-toe range.
+    - The global settings' level sliders are now knobs.
+  - A model with more than eight parameters shows its knobs in pages of eight.
+  - Matribox knobs show no units: its model data has none (the missing ones are listed in the
+    design doc).
 
 ### Changed
 
-- The Pocket Master's preset file buttons (export/import) moved from above the chain into the Library
-  section.
+- The Pocket Master's preset file buttons (export/import) moved into the Library section.
 
 ## [1.2.2] - 2026-11-27
 

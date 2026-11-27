@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { MbPreset, Preset } from '@pocket-master/core';
-import { bankPrefix, presetRole, sharedPrefix, withRole } from '../lib/workstation/banks.ts';
-import { mbDirtySlots, pocketDirtyModules, syncState } from '../lib/workstation/device.ts';
+import { bankPrefix, presetRole, sharedPrefix, slotRole, withRole } from '../lib/workstation/banks.ts';
+import { mbDirtySlots, mbParamDirty, pocketDirtyModules, pocketParamDirty, syncState } from '../lib/workstation/device.ts';
 
 test('sync state: offline, reading, writing, synced and dirty', () => {
   assert.equal(syncState({ linked: false, busy: null, dirty: true }), 'offline');
@@ -57,4 +57,28 @@ test('a bank shares a prefix only when its role-named presets agree', () => {
   assert.equal(sharedPrefix(['MTL-CLEAN', 'MTL-RHY', 'MTL-LEAD', 'spare']), 'MTL');
   assert.equal(sharedPrefix(['MTL-CLEAN', 'GNR-RHY']), null);
   assert.equal(sharedPrefix(['Drive AD', 'Clean']), null);
+});
+
+test('a slot takes its role from its place in the bank; a fourth slot is free', () => {
+  assert.deepEqual(
+    [0, 1, 2, 3, 4].map((i) => slotRole(i, 4)),
+    ['clean', 'rhy', 'lead', 'free', 'clean'],
+  );
+  assert.deepEqual(
+    [0, 1, 2, 3].map((i) => slotRole(i, 3)),
+    ['clean', 'rhy', 'lead', 'clean'],
+  );
+});
+
+test('a parameter is edited when it differs from the stored value, or its block changed model', () => {
+  const stored = pm(pmBlock(1, true, [1, 2], 7));
+  assert.equal(pocketParamDirty(pm(pmBlock(1, true, [1, 3], 7)), stored, 1, 1, 3), true);
+  assert.equal(pocketParamDirty(pm(pmBlock(1, true, [1, 3], 7)), stored, 1, 0, 1), false);
+  assert.equal(pocketParamDirty(pm(pmBlock(1, true, [1, 2], 8)), stored, 1, 0, 1), true);
+  assert.equal(pocketParamDirty(stored, null, 1, 0, 9), false);
+  const base = mb(mbBlock(0, true, [1, 2]));
+  assert.equal(mbParamDirty(mb(mbBlock(0, true, [1, 5])), base, 0, 1, 5), true);
+  assert.equal(mbParamDirty(mb(mbBlock(0, true, [1, 5])), base, 0, 0, 1), false);
+  assert.equal(mbParamDirty(mb(mbBlock(0, true, [1, 2], 9)), base, 0, 0, 1), true);
+  assert.equal(mbParamDirty(mb(mbBlock(3, true, [0])), base, 3, 0, 0), true);
 });

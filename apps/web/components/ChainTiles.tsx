@@ -4,6 +4,8 @@ import { type Block, blockModelLabel, chainUnits, type Edit, moveInChain } from 
 import { PedalTile, TileMove, TileStrip } from './TileStrip';
 import { useI18n } from './I18n';
 import { useTileDrag } from './useTileDrag';
+import { pmRigCategory, rigIconSpec } from '@/lib/rigIcon';
+import { RigIcon } from './rig/RigIcon';
 
 interface Props {
   chain: readonly Block[];
@@ -60,6 +62,7 @@ export function ChainTiles({ chain, editable, selected, onSelect, onEdit, irName
                   onSelect={() => onSelect(m)}
                   onToggle={() => onEdit({ kind: 'on', module: b.module, on: !b.on })}
                   dirtyLabel={dirty?.has(m) ? t('ws.blockEdited') : undefined}
+                  drawing={<RigIcon spec={rigIconSpec(pmRigCategory(b, ampMode), `${b.key}:${b.code}`, b.params.length, b.model)} size={56} />}
                 />
               );
             })}

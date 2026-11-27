@@ -3,6 +3,8 @@
 import type { ReactNode } from 'react';
 import type { DeviceView } from '@/lib/workstation/device';
 import { SyncStatus } from './workstation/SyncStatus';
+import { RoleChip } from './workstation/RoleButtons';
+import type { PresetRole } from '@/lib/workstation/banks';
 import { Knob } from './Knob';
 import { MatriboxMore } from './MatriboxMore';
 import { RedoIcon, UndoIcon } from './icons';
@@ -28,6 +30,10 @@ interface Props {
   files?: ReactNode;
   /** The workstation's view of the unit: the sync chip. */
   device?: DeviceView;
+  /** The slot's place in its bank (CLEAN, RHY, LEAD or free), a hint shown beside the name. */
+  role?: PresetRole | 'free';
+  /** "Bank 17": the bank the slot is in. */
+  bank?: string;
 }
 
 /** The loaded Matribox preset as the Pocket Master's preset header: big label and name, its actions, patch volume as a knob.
@@ -43,9 +49,13 @@ export function MatriboxHeader(p: Props) {
           {p.style && <span className="mb-style">{p.style}</span>}
         </p>
         <h1 className="preset-name">
-          {p.label}
+          <span className="preset-number">{p.label}</span>
           <span className="preset-title"> {p.name}</span>
         </h1>
+        <span className="ws-lcd-tags">
+          {p.bank && <span className="ws-lcd-bank">{p.bank}</span>}
+          <RoleChip role={p.role ?? null} />
+        </span>
         {p.device && <SyncStatus device={p.device} />}
       </div>
       <div className="mb-head-end">

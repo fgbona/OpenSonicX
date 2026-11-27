@@ -115,21 +115,80 @@ test('the save dialog names a preset by its bank role', async ({ page }) => {
   await expect(dialog.getByRole('button', { name: 'Set as the LEAD preset of the bank' })).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('the rack nav jumps to every section', async ({ page }) => {
+test('the shell fills a 1440×900 screen: no page scroll, the bank list and the panels scroll inside', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   await connectMatribox(page);
-  const nav = page.getByRole('navigation', { name: 'Editor sections' });
-  for (const [link, id] of [
-    ['Controls', 'ws-controls'],
-    ['Assistant', 'ws-assistant'],
-    ['Library', 'ws-library'],
-    ['Clones & IRs', 'ws-clones'],
-    ['Backups', 'ws-backups'],
-    ['Chain', 'ws-chain'],
-  ] as const) {
-    await nav.getByRole('link', { name: link }).click();
-    await expect(page).toHaveURL(new RegExp(`#${id}$`));
-    await expect(page.locator(`#${id}`)).toBeInViewport();
-  }
+  const page_ = await page.evaluate(() => ({ height: document.documentElement.scrollHeight, view: window.innerHeight, width: document.documentElement.scrollWidth, wide: window.innerWidth }));
+  expect(page_.height).toBeLessThanOrEqual(page_.view);
+  expect(page_.width).toBeLessThanOrEqual(page_.wide);
+  await page.mouse.move(140, 500);
+  await page.mouse.wheel(0, 2000);
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  const list = page.locator('.sidebar-list');
+  await expect.poll(() => list.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+  // The chain, the selected block and the dock's tabs are all on screen at once.
+  await expect(page.getByRole('list', { name: 'Signal chain' })).toBeInViewport();
+  await expect(page.getByRole('region', { name: '3. AMP block' })).toBeInViewport();
+  await expect(page.getByRole('tablist', { name: 'Workstation dock' })).toBeInViewport();
+  // Opening the dock still keeps the page itself from scrolling.
+  await page.getByRole('tab', { name: 'Assistant' }).click();
+  expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true);
+});
+
+test('the dock has real tabs: one panel at a time, arrow keys move, the open tab folds it', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await connectMatribox(page);
+  const tabs = page.getByRole('tablist', { name: 'Workstation dock' });
+  await expect(tabs.getByRole('tab')).toHaveText(['Assistant', 'Clones & IRs', 'Controls', 'Library', 'Backups', 'Global & EQ']);
+  // Folded at first: the chain and the block get the room.
+  await expect(page.getByRole('tabpanel')).toHaveCount(0);
+  await tabs.getByRole('tab', { name: 'Clones & IRs' }).click();
+  await expect(page.getByRole('tabpanel', { name: 'Clones & IRs' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Clones' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'User IRs' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Tone assistant' })).toBeHidden();
+
+  await tabs.getByRole('tab', { name: 'Clones & IRs' }).press('ArrowRight');
+  await expect(tabs.getByRole('tab', { name: 'Controls' })).toBeFocused();
+  await expect(tabs.getByRole('tab', { name: 'Controls' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('region', { name: 'Clones' })).toBeHidden();
+  await expect(page.getByRole('tabpanel', { name: 'Controls' }).getByText('Footswitch A', { exact: true }).first()).toBeVisible();
+
+  await tabs.getByRole('tab', { name: 'Global & EQ' }).click();
+  await page.getByRole('button', { name: 'Edit global settings and EQ…' }).click();
+  await expect(page.getByRole('dialog', { name: 'Global options' })).toBeVisible();
+  await page.getByRole('dialog', { name: 'Global options' }).getByRole('button', { name: 'Done' }).click();
+
+  await tabs.getByRole('tab', { name: 'Global & EQ' }).click();
+  await expect(page.getByRole('tabpanel')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Open the dock' }).click();
+  await expect(page.getByRole('tabpanel', { name: 'Assistant' })).toBeVisible();
+});
+
+test('below 1280 px the dock stacks: no tabs, every panel on the page', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await connectMatribox(page);
+  await expect(page.getByRole('tablist', { name: 'Workstation dock' })).toBeHidden();
+  for (const region of ['Tone assistant', 'Clones', 'User IRs', 'Tone library', 'All presets']) await expect(page.getByRole('region', { name: region })).toBeAttached();
+  await page.getByRole('region', { name: 'Clones' }).scrollIntoViewIfNeeded();
+  await expect(page.getByRole('region', { name: 'Clones' })).toBeInViewport();
+});
+
+test('a knob whose value differs from the unit gets its own edited dot, gone once it is back', async ({ page }) => {
+  await connectMatribox(page);
+  const amp = page.getByRole('region', { name: '3. AMP block' });
+  const knob = (name: string) => amp.locator('.knob').filter({ has: page.getByRole('slider', { name }) });
+  const mark = (name: string) => knob(name).getByRole('img', { name: 'Edited, not stored' });
+  await expect(mark('Gain')).toHaveCount(0);
+  await amp.getByRole('button', { name: 'Type a value for “Gain”' }).click();
+  await amp.getByRole('textbox', { name: 'Gain value' }).fill('64');
+  await amp.getByRole('textbox', { name: 'Gain value' }).press('Enter');
+  await expect(mark('Gain')).toHaveCount(1);
+  await expect(mark('Presence')).toHaveCount(0);
+  // Back to what the unit stores: no longer edited, though the preset as a whole still says so.
+  await amp.getByRole('slider', { name: 'Gain' }).dblclick();
+  await expect(ampGain(page)).toHaveAttribute('aria-valuenow', '30');
+  await expect(mark('Gain')).toHaveCount(0);
 });
 
 pmTest('Pocket Master: a typed value and the edited state', async ({ page, pedal }) => {

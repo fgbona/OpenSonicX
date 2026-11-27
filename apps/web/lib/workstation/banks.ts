@@ -7,6 +7,15 @@ export type PresetRole = (typeof ROLES)[number];
 
 const SUFFIX = /[\s_-]+(CLEAN|RHY|LEAD)$/i;
 
+/**
+ * The role a slot has by its place in its bank, a visual hint only (presets are never renamed for
+ * it): the first three of a bank are CLEAN, RHY and LEAD; a fourth (the Matribox's D) is free.
+ */
+export function slotRole(index: number, bankSize: number): PresetRole | 'free' {
+  const at = index % bankSize;
+  return at < ROLES.length ? (ROLES[at] as PresetRole) : 'free';
+}
+
 /** The role a preset name ends with, or null. */
 export function presetRole(name: string): PresetRole | null {
   const m = SUFFIX.exec(name.trim());

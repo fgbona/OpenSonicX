@@ -17,6 +17,8 @@ export interface DeviceView {
   readonly slot: string;
   /** Ids of the blocks whose stored values the edit buffer no longer matches (DeviceBlockId). */
   readonly dirtyBlocks: ReadonlySet<number>;
+  /** Whether a block's parameter (Pocket Master: module and alg; Matribox: slot and widget id) differs from the stored value. */
+  readonly paramDirty: (block: number, param: number, value: number) => boolean;
 }
 
 /** Busy steps that read the unit (both hooks name their steps in English). */
@@ -67,4 +69,26 @@ export function mbDirtySlots(preset: MbPreset | null, baseline: MbPreset | null)
       })
       .map((b) => b.slot),
   );
+}
+
+/**
+ * Pocket Master: whether a parameter differs from the restore point. A block whose model changed
+ * has every parameter edited (the stored values belong to another model).
+ */
+export function pocketParamDirty(preset: Preset | null, stored: Preset | null, module: number, alg: number, value: number): boolean {
+  if (!preset || !stored) return false;
+  const before = stored.chain.find((b) => b.module === module);
+  const now = preset.chain.find((b) => b.module === module);
+  if (!before || !now || before.code !== now.code) return true;
+  const p = before.params.find((x) => x.alg === alg);
+  return !p || !Object.is(p.value, value);
+}
+
+/** Matribox: whether a block's value (by widget id) differs from the baseline; a new block or another model is edited throughout. */
+export function mbParamDirty(preset: MbPreset | null, baseline: MbPreset | null, slot: number, id: number, value: number): boolean {
+  if (!preset || !baseline) return false;
+  const before = baseline.chain.find((b) => b.slot === slot);
+  const now = preset.chain.find((b) => b.slot === slot);
+  if (!before || !now || before.fxid !== now.fxid || before.moduleIndex !== now.moduleIndex) return true;
+  return !Object.is(before.values[id], value);
 }

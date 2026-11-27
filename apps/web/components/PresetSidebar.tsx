@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { presetLabel, USER_PRESETS } from '@pocket-master/core';
 import { Dialog } from './Dialog';
 import { useI18n } from './I18n';
-import { sharedPrefix } from '@/lib/workstation/banks';
+import { sharedPrefix, slotRole } from '@/lib/workstation/banks';
 import { RoleChip } from './workstation/RoleButtons';
 
 interface Props {
@@ -85,7 +85,7 @@ export function PresetSidebar({ names, current, modified, disabled, onReadNames,
                     >
                       <span className="sidebar-badge">{p.label}</span>
                       <span className="sidebar-name">{p.name}</span>
-                      <RoleChip name={p.name} />
+                      <RoleChip role={p.i < USER_PRESETS ? slotRole(p.i, BANK_SIZE) : null} />
                       {p.i === current && modified && <span className="ws-dirty-dot" aria-hidden="true" />}
                     </button>
                   </li>
