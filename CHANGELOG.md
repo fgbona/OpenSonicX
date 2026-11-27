@@ -6,6 +6,16 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-11-26
+
+The Matribox II Pro tone assistant now builds tones that need a CAB, an IR or the 5150 amp, and
+a failed write no longer piles blocks up on the unit. A value write to a model whose parameter IDs
+skip (every CAB and IR, the 5150, two delays and two FREQ blocks) used the widget ID where the unit
+takes the parameter's order, so it timed out or moved the wrong knob, also from the editor's own
+knobs in 1.2.0. Each chain is now planned from the unit's current preset and rolled back when a
+write fails; the assistant stops after the same tool fails twice, shows an animated busy dial and
+renders Markdown; and the patch-volume knob turned on the unit follows at once.
+
 ### Added
 
 - Tone assistant: the "working" bubble now has a small amp-knob dial that turns while the assistant
@@ -20,9 +30,6 @@ and the project uses [Semantic Versioning](https://semver.org/).
   elements; anything else, including HTML-looking text, stays plain text.
 - The privacy note under the assistant only mentions Google's free-plan use of the conversation when
   a Gemini key is in play (or no key is set up yet), not with only an Anthropic or Groq key.
-
-### Fixed
-
 - Matribox II Pro: **a value write to a CAB, an IR, the Peavey 5150 amp or any model whose
   parameter IDs skip now reaches the right knob and is confirmed.** The owner's "Van Halen, Jump"
   tone failed every time (capture mb-46): the CAB's Low Cut (widget ID 5) was sent as is, but the
@@ -36,7 +43,6 @@ and the project uses [Semantic Versioning](https://semver.org/).
   once with that said, not after 3 s; a write that fails names its block, model, parameter and
   value ("Block 3 (CAB …), Low Cut = 80: …") and logs the frame sent and the unit's last 10
   messages to the console. The timeout, rollback and loop-guard messages read in Portuguese too.
-
 - Matribox II Pro: **a failed write no longer piles blocks up on the unit.** The owner's assistant
   run ("timbre do Slash em Sweet Child", Claude Haiku, then Sonnet on an empty preset) ended with
   12 blocks on the unit (the planned WAH, AMP, CAB, DLY, RVB three times over) while the editor
@@ -1829,7 +1835,8 @@ Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/OpenSonicX/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/fgbona/OpenSonicX/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/fgbona/OpenSonicX/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/fgbona/OpenSonicX/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/fgbona/OpenSonicX/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/fgbona/OpenSonicX/compare/v0.17.1...v1.0.0
