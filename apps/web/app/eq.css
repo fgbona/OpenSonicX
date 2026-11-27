@@ -8,7 +8,7 @@
 .eq-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .eq-grid line { stroke: var(--ws-display-dim); stroke-opacity: 0.22; stroke-width: 1; }
 .eq-grid .eq-zero line { stroke-opacity: 0.55; }
-.eq-grid text { fill: var(--ws-display-dim); font: 11px var(--font-readout-stack); }
+.eq-grid text { fill: currentColor; color: var(--ws-display-dim); font: 11px var(--font-readout-stack); }
 .eq-curve {
   fill: none; stroke: var(--ws-amber); stroke-width: 2.4; stroke-linejoin: round;
   filter: drop-shadow(0 0 4px var(--ws-amber)) drop-shadow(0 0 10px color-mix(in srgb, var(--ws-amber) 60%, transparent));

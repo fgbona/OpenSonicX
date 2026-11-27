@@ -11,7 +11,7 @@
 rect.viz-dim { stroke: none; stroke-dasharray: none; }
 .viz-dot { fill: var(--ws-display); stroke: var(--tint, var(--ws-display-ink)); stroke-width: 2; filter: drop-shadow(0 0 3px var(--tint, var(--ws-display-ink))); }
 .viz-muted { fill: var(--ws-display-dim); fill-opacity: 0.18; }
-.viz-text { fill: var(--ws-display-ink); font: 10px var(--font-readout-stack); letter-spacing: 0.08em; }
+.viz-text { fill: currentColor; color: var(--ws-display-ink); font: 10px var(--font-readout-stack); letter-spacing: 0.08em; }
 @media (prefers-reduced-motion: reduce) { .viz-trace, .viz-dim { transition: none; } }
 
 /* Expression sweep: heel to toe, the min..max range lit. */
