@@ -109,6 +109,28 @@ test('the Claude model list checks the key and lists the model ids', async () =>
   assert.equal(await listClaudeModels(KEY, scripted({ status: 500, body: {} }).fetchFn), 'unavailable');
 });
 
+test('Claude caches the system prompt, tools and the first prompt (the model list), so later requests read them at a tenth of the price', async () => {
+  const { h } = host();
+  const { fetchFn, requests } = scripted(toolUse('edit_preset', { changes: [{ kind: 'model', block: 'amp', model: 'Calif DualM' }] }), say('ok'));
+  await converseClaude('m', options(h, fetchFn));
+  for (const r of requests) {
+    const system = r.body.system as { type: string; cache_control?: unknown }[];
+    assert.deepEqual(system.at(-1)!.cache_control, { type: 'ephemeral' }, 'system prompt (and tools before it) cached');
+  }
+  const first = (requests[0]!.body.messages as { content: { cache_control?: unknown }[] }[]).at(-1)!.content;
+  assert.deepEqual(first.at(-1)!.cache_control, { type: 'ephemeral' }, 'first prompt cached');
+});
+
+test('cached input counts toward the cost at its own price (writes 1.25x, reads 0.1x)', async () => {
+  const { h } = host();
+  const usage: [number, number][] = [];
+  const reply = {
+    body: { stop_reason: 'end_turn', content: [{ type: 'text', text: 'ok' }], usage: { input_tokens: 100, cache_creation_input_tokens: 4000, cache_read_input_tokens: 10000, output_tokens: 300 } },
+  };
+  await converseClaude('m', { ...options(h, scripted(reply).fetchFn), onUsage: (i, o) => usage.push([i, o]) });
+  assert.deepEqual(usage, [[100 + 5000 + 1000, 300]]);
+});
+
 test("Claude reports each request's token usage", async () => {
   const { h } = host();
   const usage: [number, number][] = [];

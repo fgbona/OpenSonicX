@@ -10,6 +10,8 @@ const API = 'https://api.anthropic.com/v1';
 const MAX_TOKENS = 4096;
 /** When a 429 does not say how long to wait. */
 const DEFAULT_WAIT_MS = 60_000;
+/** Prompt caching: what is cached is billed 1.25x once, then read at 0.1x for 5 minutes. */
+const CACHE = { type: 'ephemeral' } as const;
 
 const headers = (key: string) => ({
   'x-api-key': key,
@@ -22,8 +24,12 @@ type Block =
   | { type: 'thinking' | 'redacted_thinking' }
   | { type: 'tool_use'; id: string; name: string; input: unknown }
   | { type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean };
-type Message = { role: 'user' | 'assistant'; content: string | Block[] };
+type Message = { role: 'user' | 'assistant'; content: string | (Block & { cache_control?: typeof CACHE })[] };
 type ApiError = { error?: { type?: string; message?: string } };
+
+type Usage = { input_tokens?: number; cache_creation_input_tokens?: number; cache_read_input_tokens?: number; output_tokens?: number };
+/** Input tokens priced as uncached ones: cache writes cost 1.25x, cache reads 0.1x. */
+const billedInput = (u: Usage) => (u.input_tokens ?? 0) + Math.round((u.cache_creation_input_tokens ?? 0) * 1.25 + (u.cache_read_input_tokens ?? 0) * 0.1);
 
 const tools = (agent: ToneAgent) => agent.tools.map((t) => ({ name: t.name, description: t.description, input_schema: toToolSchema(t.parameters) }));
 
@@ -45,7 +51,10 @@ export async function converseClaude(model: string, options: ConverseOptions): P
   const { key, agent, onRequest, onStep, onUsage, fetchFn = fetch, now = () => new Date() } = options;
   const messages: Message[] = options.turns.map((t) => ({ role: t.role, content: t.text }));
   const text = requestTexts(agent, options.turns, options.message, options.language, options.thorough);
-  const asked = messages.push({ role: 'user', content: text.first }) - 1;
+  // The first prompt carries the model list, the bulk of every request: cached with the system
+  // prompt and tools before it, so each tool round trip reads it instead of paying it again.
+  const asked = messages.push({ role: 'user', content: [{ type: 'text', text: text.first, cache_control: CACHE }] }) - 1;
+  const system = [{ type: 'text', text: agent.instructions(options.thorough ?? false), cache_control: CACHE }];
   const run = guardedRunner(agent);
   let signed = false;
   for (let request = 0; request < MAX_REQUESTS; request++) {
@@ -56,12 +65,12 @@ export async function converseClaude(model: string, options: ConverseOptions): P
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers(key) },
-        body: JSON.stringify({ model, max_tokens: MAX_TOKENS, system: agent.instructions(options.thorough ?? false), tools: tools(agent), messages }),
+        body: JSON.stringify({ model, max_tokens: MAX_TOKENS, system, tools: tools(agent), messages }),
       },
       now,
     );
-    const body = (await r.json().catch(() => ({}))) as ApiError & { content?: Block[]; usage?: { input_tokens?: number; output_tokens?: number } };
-    if (body.usage) onUsage?.(body.usage.input_tokens ?? 0, body.usage.output_tokens ?? 0);
+    const body = (await r.json().catch(() => ({}))) as ApiError & { content?: Block[]; usage?: Usage };
+    if (body.usage) onUsage?.(billedInput(body.usage), body.usage.output_tokens ?? 0);
     if (r.status === 429) {
       const seconds = Number(r.headers.get('retry-after'));
       throw new QuotaError(new Date(now().getTime() + (Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : DEFAULT_WAIT_MS)));
