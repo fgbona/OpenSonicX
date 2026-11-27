@@ -393,5 +393,13 @@ test("the first message lists the person's own captures by CLONE model, and the 
   assert.match(context, /Your captures \(CLONE slots\):\n- Clone 2: "Plexi"/);
   assert.doesNotMatch(context, /Clone 3: "/, 'empty slots are not listed');
   assert.match(agent.instructions(false), /captures/i);
-  assert.match(agent.instructions(false), /full-rig/i);
+  assert.match(agent.instructions(false), /already boosted/i);
+});
+
+test("playing into an amp's FX return: the first message says no CAB or IR; headphones or PA say nothing", () => {
+  const s = host();
+  const intoReturn = matriboxAgent({ ...s.h, rig: () => 'amp-return' });
+  assert.match(intoReturn.context(false), /How the person plays: into a real amp's FX return[^\n]*no CAB or IR/);
+  assert.doesNotMatch(matriboxAgent(s.h).context(false), /How the person plays/);
+  assert.doesNotMatch(matriboxAgent({ ...s.h, rig: () => 'full' }).context(false), /How the person plays/);
 });
