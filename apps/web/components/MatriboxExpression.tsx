@@ -46,7 +46,19 @@ export function MatriboxExpression({ expression, chain, disabled, onExpression, 
 }
 
 /** One entry: block, parameter, heel (min) and toe (max), sent together with Apply. */
-function ExpressionRow({ entry, chain, disabled, onApply, onClear }: { entry: MbExpressionEntry; chain: readonly MbResolvedBlock[]; disabled: boolean; onApply: (a: MbExpressionAssignment) => void; onClear: (entry: number) => void }) {
+function ExpressionRow({
+  entry,
+  chain,
+  disabled,
+  onApply,
+  onClear,
+}: {
+  entry: MbExpressionEntry;
+  chain: readonly MbResolvedBlock[];
+  disabled: boolean;
+  onApply: (a: MbExpressionAssignment) => void;
+  onClear: (entry: number) => void;
+}) {
   const { t } = useI18n();
   const [slot, setSlot] = useState<number | null>(entry.slot);
   const [paramId, setParamId] = useState(entry.paramId);

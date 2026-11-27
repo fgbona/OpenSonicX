@@ -159,7 +159,13 @@ export function MatriboxEditor({ port, footer }: { port: MidiPort; footer?: Reac
               onCtrl={(c, s, on) => void mb.assignCtrl(c, s, on)}
             />
             <MatriboxQuickKnobs quickKnobs={assignments.quickKnobs} chain={chain} disabled={disabled} onAssign={(k, target, p) => void mb.assignQuickKnob(k, target, p)} />
-            <MatriboxExpression expression={assignments.expression} chain={chain} disabled={disabled} onExpression={(a) => void mb.assignExpression(a)} onClear={(entry) => void mb.clearExpression(entry)} />
+            <MatriboxExpression
+              expression={assignments.expression}
+              chain={chain}
+              disabled={disabled}
+              onExpression={(a) => void mb.assignExpression(a)}
+              onClear={(entry) => void mb.clearExpression(entry)}
+            />
             <MatriboxControls tempo={assignments.tempo} unitChannel={ccChannelOf(mb.globals)} onControl={(m) => void mb.control(m)} />
             <MatriboxDrums mb={mb} />
             <MatriboxSaveDialog
