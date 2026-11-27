@@ -11,8 +11,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - Matribox II Pro tone assistant: **it uses your own captures.** The first message lists the filled
   CLONE slots by name ("Clone 10": "OSX RECTIFIER"), and the assistant puts a capture in place of
   the built-in AMP model when its name matches the amp or drive the reference calls for (never a
-  capture of other gear just because it is there), with no CAB after it unless the name says amp
-  only, nor a boost before one already boosted ("TS", "808" in the name). The owner found his
+  capture of other gear just because it is there), with a CAB after it only when the output needs
+  one, and no boost before one already boosted ("TS", "808" in the name). The owner found his
   Rectifier capture far fuller and stronger than the built-in amp and cab.
 - Matribox II Pro tone assistant: **"The assistant builds for:"** headphones, PA or interface (with
   cabinet), or an amp's FX return (no cabinet), kept per browser. Into a return the first message
