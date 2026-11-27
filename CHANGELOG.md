@@ -6,6 +6,19 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Tone assistant: **Claude models that think on their own (claude-fable-5-2 and the like) no longer
+  fail after their first tool call** with "400 Invalid `signature` in `thinking` block". The
+  assistant sends the long first prompt (with the model list) once and then swaps it for a short
+  one, but a reply's signed thinking is bound to every message before it, so the swap broke it.
+  Once a reply carries thinking, the first prompt now stays as it was sent.
+- Tone assistant: **Claude answers cost much less.** The system prompt, the tools and the first prompt
+  (with the model list, the bulk of every request) are sent with prompt caching, so each tool round
+  trip after the first reads them at a tenth of the price instead of paying them again (the owner's
+  "Ain't Talkin' 'bout Love" tone with claude-fable-5-2 cost about US$ 1.60 without it). The cost
+  estimate counts cache writes at 1.25x and reads at 0.1x.
+
 ## [1.2.1] - 2026-11-26
 
 The Matribox II Pro tone assistant now builds tones that need a CAB, an IR or the 5150 amp, and
