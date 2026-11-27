@@ -17,7 +17,11 @@ const headers = (key: string) => ({
   'anthropic-dangerous-direct-browser-access': 'true',
 });
 
-type Block = { type: 'text'; text: string } | { type: 'tool_use'; id: string; name: string; input: unknown } | { type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean };
+type Block =
+  | { type: 'text'; text: string }
+  | { type: 'thinking' | 'redacted_thinking' }
+  | { type: 'tool_use'; id: string; name: string; input: unknown }
+  | { type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean };
 type Message = { role: 'user' | 'assistant'; content: string | Block[] };
 type ApiError = { error?: { type?: string; message?: string } };
 
@@ -43,6 +47,7 @@ export async function converseClaude(model: string, options: ConverseOptions): P
   const text = requestTexts(agent, options.turns, options.message, options.language, options.thorough);
   const asked = messages.push({ role: 'user', content: text.first }) - 1;
   const run = guardedRunner(agent);
+  let signed = false;
   for (let request = 0; request < MAX_REQUESTS; request++) {
     onRequest();
     const r = await post(
@@ -66,7 +71,11 @@ export async function converseClaude(model: string, options: ConverseOptions): P
     if (!r.ok) throw new Error(`Claude answered ${r.status}${body.error?.message ? `: ${body.error.message}` : ''}`);
     const content = body.content;
     if (!Array.isArray(content)) throw new Error('Claude sent no answer this editor understands. Try again in a moment.');
-    messages[asked] = { role: 'user', content: text.later }; // answered once: the model list is not sent again
+    // Answered once: the model list is not sent again, unless a reply carries signed thinking
+    // (Claude 4.5+ / 5.x may think unasked). That signature is bound to every message before it, so
+    // rewriting the prompt then makes the API refuse the next request with 400 "Invalid signature".
+    if (!signed && content.some((b) => b.type === 'thinking' || b.type === 'redacted_thinking')) signed = true;
+    if (!signed) messages[asked] = { role: 'user', content: text.later };
     const calls = content.filter((b): b is Extract<Block, { type: 'tool_use' }> => b.type === 'tool_use');
     if (calls.length === 0)
       return content

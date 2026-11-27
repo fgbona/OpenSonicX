@@ -72,6 +72,20 @@ test('a tone through Claude: tool use, then the answer; the key only in x-api-ke
   assert.doesNotMatch(JSON.stringify(second!.body.messages), /AMP models:/, 'model list only in the first request');
 });
 
+test('a reply with a signed thinking block keeps the message it was made for (no 400 "Invalid signature")', async () => {
+  const { h } = host();
+  const thought = { type: 'thinking', thinking: 'Plexi for brown sound.', signature: 'sig-bound-to-first' };
+  const reply = toolUse('edit_preset', { changes: [{ kind: 'model', block: 'amp', model: 'Calif DualM' }] });
+  reply.body.content = [thought, ...reply.body.content] as typeof reply.body.content;
+  const { fetchFn, requests } = scripted(reply, say('Done.'));
+  await converseClaude('claude-test-fable', options(h, fetchFn));
+  const [first, second] = requests;
+  const firstMsgs = first!.body.messages as unknown[];
+  const secondMsgs = second!.body.messages as { content: unknown }[];
+  assert.deepEqual(secondMsgs[0], firstMsgs[0], 'the user message the thinking was signed against is sent unchanged');
+  assert.deepEqual((secondMsgs[1]!.content as unknown[])[0], thought, 'the thinking block goes back as it came');
+});
+
 test("Claude errors become the router's: 401 key, 429 quota with retry-after, 529 busy", async () => {
   const { h } = host();
   const now = new Date('2026-11-22T20:00:00Z');

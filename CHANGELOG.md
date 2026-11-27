@@ -6,6 +6,14 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Tone assistant: **Claude models that think on their own (claude-fable-5-2 and the like) no longer
+  fail after their first tool call** with "400 Invalid `signature` in `thinking` block". The
+  assistant sends the long first prompt (with the model list) once and then swaps it for a short
+  one, but a reply's signed thinking is bound to every message before it, so the swap broke it.
+  Once a reply carries thinking, the first prompt now stays as it was sent.
+
 ## [1.2.1] - 2026-11-26
 
 The Matribox II Pro tone assistant now builds tones that need a CAB, an IR or the 5150 amp, and
