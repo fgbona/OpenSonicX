@@ -385,3 +385,13 @@ test('set_drums starts a rock beat at 100 BPM for practice, on the unit, and say
   assert.match(bad.text, /no drum rhythm is called "dubstep"/);
   assert.equal((await run('set_drums', { bpm: 20 })).ok, false);
 });
+
+test("the first message lists the person's own captures by CLONE model, and the instructions prefer a matching one", () => {
+  const s = host();
+  const agent = matriboxAgent(s.h);
+  const context = agent.context(false);
+  assert.match(context, /Your captures \(CLONE slots\):\n- Clone 2: "Plexi"/);
+  assert.doesNotMatch(context, /Clone 3: "/, 'empty slots are not listed');
+  assert.match(agent.instructions(false), /captures/i);
+  assert.match(agent.instructions(false), /full-rig/i);
+});

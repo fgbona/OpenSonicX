@@ -6,6 +6,14 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Matribox II Pro tone assistant: **it uses your own captures.** The first message lists the filled
+  CLONE slots by name ("Clone 10": "OSX RECTIFIER"), and the assistant puts a capture in place of
+  the built-in AMP model when its name matches the amp or drive the reference calls for (never a
+  capture of other gear just because it is there), with no CAB after it unless the name says amp
+  only. The owner found his Rectifier capture far fuller and stronger than the built-in amp and cab.
+
 ### Fixed
 
 - Tone assistant: **Claude models that think on their own (claude-fable-5-2 and the like) no longer
