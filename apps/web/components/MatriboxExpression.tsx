@@ -18,10 +18,11 @@ interface Props {
   chain: readonly MbResolvedBlock[];
   disabled: boolean;
   onExpression: (assignment: MbExpressionAssignment) => void;
+  onClear: (entry: number) => void;
 }
 
 /** The nine expression-pedal entries, three a pedal mode; folded away until asked for. */
-export function MatriboxExpression({ expression, chain, disabled, onExpression }: Props) {
+export function MatriboxExpression({ expression, chain, disabled, onExpression, onClear }: Props) {
   const { t } = useI18n();
   const used = expression.filter((e) => e.slot !== null).length;
   return (
@@ -34,7 +35,7 @@ export function MatriboxExpression({ expression, chain, disabled, onExpression }
               <legend>{t(title)}</legend>
               <ul className="mb-exp">
                 {expression.slice(group * GROUP_SIZE, (group + 1) * GROUP_SIZE).map((e) => (
-                  <ExpressionRow key={`${e.entry}:${e.slot}:${e.paramId}:${e.min}:${e.max}`} entry={e} chain={chain} disabled={disabled} onApply={onExpression} />
+                  <ExpressionRow key={`${e.entry}:${e.slot}:${e.paramId}:${e.min}:${e.max}`} entry={e} chain={chain} disabled={disabled} onApply={onExpression} onClear={onClear} />
                 ))}
               </ul>
             </fieldset>
@@ -46,7 +47,19 @@ export function MatriboxExpression({ expression, chain, disabled, onExpression }
 }
 
 /** One entry: block, parameter, heel (min) and toe (max), sent together with Apply. */
-function ExpressionRow({ entry, chain, disabled, onApply }: { entry: MbExpressionEntry; chain: readonly MbResolvedBlock[]; disabled: boolean; onApply: (a: MbExpressionAssignment) => void }) {
+function ExpressionRow({
+  entry,
+  chain,
+  disabled,
+  onApply,
+  onClear,
+}: {
+  entry: MbExpressionEntry;
+  chain: readonly MbResolvedBlock[];
+  disabled: boolean;
+  onApply: (a: MbExpressionAssignment) => void;
+  onClear: (entry: number) => void;
+}) {
   const { t } = useI18n();
   const [slot, setSlot] = useState<number | null>(entry.slot);
   const [paramId, setParamId] = useState(entry.paramId);
@@ -55,7 +68,8 @@ function ExpressionRow({ entry, chain, disabled, onApply }: { entry: MbExpressio
   const block = chain.find((b) => b.slot === slot);
   const params = block?.model?.params ?? [];
   const inRange = (n: number) => Number.isFinite(n) && n >= 0 && n <= 100;
-  const ready = slot !== null && params.some((p) => p.id === paramId) && inRange(min) && inRange(max);
+  // "Unused" applies too when the entry holds a block, clearing it.
+  const ready = slot === null ? entry.slot !== null : params.some((p) => p.id === paramId) && inRange(min) && inRange(max);
   const n = entry.entry + 1;
   return (
     <li className="mb-exp-row">
@@ -112,7 +126,7 @@ function ExpressionRow({ entry, chain, disabled, onApply }: { entry: MbExpressio
           onChange={(e) => setMax(Number(e.target.value))}
         />
       </label>
-      <button type="button" className="btn btn-small" disabled={disabled || !ready} onClick={() => slot !== null && onApply({ entry: entry.entry, slot, paramId, min, max })}>
+      <button type="button" className="btn btn-small" disabled={disabled || !ready} onClick={() => (slot === null ? onClear(entry.entry) : onApply({ entry: entry.entry, slot, paramId, min, max }))}>
         {t('mb.expApply')}
       </button>
       <span className="viz-sweep" aria-hidden="true">

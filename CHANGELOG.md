@@ -57,12 +57,18 @@ and the project uses [Semantic Versioning](https://semver.org/).
     Global options button (Matribox) or ⚙ (Pocket Master) opens.
   - The Matribox's experimental notice is now an LED in the preset bar, with the full text in a
     tooltip.
-  - Matribox knobs show no units: its model data has none (the missing ones are listed in the
-    design doc).
+  - Matribox knobs show a unit only where the manual states it (pitch in semitones, ring-mod
+    Fine in Hz, Detune in cents, Time R in %); the rest are listed in the design doc.
 
 ### Changed
 
 - The Pocket Master's preset file buttons (export/import) moved into the Library section.
+
+### Fixed
+
+- Matribox expression pedal: choosing "Unused" for an entry now enables Apply and clears it
+  on the unit. Before, Apply stayed greyed out, so a pedal assigned to a parameter (a drive's
+  Gain, say) kept setting it from the pedal position every time the preset loaded.
 
 ## [1.2.2] - 2026-11-27
 
