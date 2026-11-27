@@ -21,6 +21,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
   amps played cranked (Plexi, JCM800, AC30) it gets the drive from the amp gain and the boost, not
   from EQ cuts (its Van Halen tone had the EP booster at 10 and the amp at 48).
 
+## [1.2.2] - 2026-11-27
+
+The tone assistant works with Claude models that think on their own (claude-fable-5-2), which
+failed after their first tool call, and Claude answers cost much less: the system prompt, tools
+and model list are sent with prompt caching, so each tool round trip reads them at a tenth of the
+price.
+
 ### Fixed
 
 - Tone assistant: **Claude models that think on their own (claude-fable-5-2 and the like) no longer
@@ -1863,7 +1870,8 @@ Container image: `ghcr.io/fgbona/sonicake-pocket-master-editor:v0.1.0`.
 - An out-of-range preset index from the pedal shows an error instead of
   crashing the page.
 
-[Unreleased]: https://github.com/fgbona/OpenSonicX/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/fgbona/OpenSonicX/compare/v1.2.2...HEAD
+[1.2.2]: https://github.com/fgbona/OpenSonicX/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/fgbona/OpenSonicX/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/fgbona/OpenSonicX/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/fgbona/OpenSonicX/compare/v1.0.0...v1.1.0
